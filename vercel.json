@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/close-auctions",
+      "schedule": "* * * * *"
+    }
+  ],
+  "functions": {
+    "app/api/cron/close-auctions/route.ts": { "maxDuration": 300 },
+    "app/api/auctions/[auctionId]/close/route.ts": { "maxDuration": 300 }
+  }
+}

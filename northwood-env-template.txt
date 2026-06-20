@@ -1,0 +1,40 @@
+# ── NORTHWOOD BIDS — .env.local template ──
+# Copy this file to ~/northwoodbids/.env.local and fill in each value
+# Every service below needs its OWN account/project separate from PurposeBid
+
+# ── Clerk (create new app at clerk.com) ──
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...
+CLERK_SECRET_KEY=sk_live_...
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+
+# ── Supabase (create new project at supabase.com) ──
+# Settings → Database → Connection string → URI (use "Transaction" mode for DIRECT_URL)
+DATABASE_URL=postgresql://...?pgbouncer=true
+DIRECT_URL=postgresql://...
+
+# ── Stripe (can reuse account, but create new webhook endpoint) ──
+STRIPE_SECRET_KEY=sk_live_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...   # from webhook endpoint for northwoodbids.com
+
+# ── Pusher (create new Channels app at pusher.com) ──
+PUSHER_APP_ID=...
+NEXT_PUBLIC_PUSHER_KEY=...
+PUSHER_SECRET=...
+NEXT_PUBLIC_PUSHER_CLUSTER=mt1
+
+# ── Supabase Storage (for item photos) ──
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+
+# ── Cron security ──
+CRON_SECRET=make-up-a-random-string-here
+
+# ── Super admin (your Clerk user ID in the NEW Clerk app) ──
+SUPER_ADMIN_IDS=user_xxxx
+
+# ── GHL webhooks (optional — set up new GHL workflows for Northwood) ──
+GHL_AUCTION_ENDING_WEBHOOK=https://...
+GHL_AUCTION_STARTED_WEBHOOK=https://...

@@ -1,0 +1,266 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum OrgStatus {
+  APPROVED
+  LIVE
+  REJECTED
+}
+
+model Organization {
+  id                     String      @id @default(cuid())
+  name                   String
+  slug                   String      @unique
+  description            String?
+  logoUrl                String?
+  status                 OrgStatus   @default(APPROVED)
+  stripeAccountId        String?     @unique
+  stripeChargesEnabled   Boolean     @default(false)
+  stripePayoutsEnabled   Boolean     @default(false)
+  stripeDetailsSubmitted Boolean     @default(false)
+  platformFeePercent     Decimal     @default(20) @db.Decimal(5, 2)
+  taxPercent             Decimal     @default(0) @db.Decimal(5, 2)
+  taxExempt              Boolean     @default(true)
+  isActive               Boolean     @default(true)
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+  auctions               Auction[]
+  items                  Item[]
+  members                OrgMember[]
+  invites                OrgInvite[]
+  bidderCustomers        BidderStripeCustomer[]
+  bidderFollowers        BidderProfile[]
+}
+
+model OrgMember {
+  id             String       @id @default(cuid())
+  clerkUserId    String
+  organizationId String
+  role           OrgRole      @default(STAFF)
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([clerkUserId, organizationId])
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  STAFF
+}model Auction {
+  id                   String        @id @default(cuid())
+  organizationId       String
+  title                String
+  description          String?
+  startAt              DateTime
+  endAt                DateTime
+  status               AuctionStatus @default(DRAFT)
+  slug                 String
+  endingSoonNotifiedAt DateTime?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  organization         Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  items                Item[]
+
+  @@unique([organizationId, slug])
+  @@index([status])
+  @@index([organizationId, status])
+}
+
+enum AuctionStatus {
+  DRAFT
+  OPEN
+  CLOSING
+  CLOSED
+  SETTLED
+}model Item {
+  id              String       @id @default(cuid())
+  organizationId  String
+  auctionId       String?
+  uniqueId        String       @unique @default(cuid())
+  title           String
+  description     String?
+  condition       Condition    @default(GOOD)
+  category        String?
+  retailValue     Decimal?     @db.Decimal(10, 2)
+  startingBid     Decimal      @default(0) @db.Decimal(10, 2)
+  reservePrice    Decimal?     @db.Decimal(10, 2)
+  currentBid      Decimal      @default(0) @db.Decimal(10, 2)
+  donorName       String?
+  taxDeductible   Boolean      @default(false)
+  storageLocation String?
+  notes           String?
+  status          ItemStatus   @default(DRAFT)
+  itemEndAt       DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  auction         Auction?     @relation(fields: [auctionId], references: [id], onDelete: SetNull)
+  photos          ItemPhoto[]
+  bids            Bid[]
+  payments        Payment[]
+  proxyBids       ProxyBid[]
+
+  @@index([status, itemEndAt])
+  @@index([auctionId, status])
+}
+
+enum Condition {
+  NEW
+  LIKE_NEW
+  GOOD
+  FAIR
+  POOR
+}
+
+enum ItemStatus {
+  DRAFT
+  ACTIVE
+  SOLD
+  UNSOLD
+  PENDING_PICKUP
+  PICKED_UP
+}model ItemPhoto {
+  id        String   @id @default(cuid())
+  itemId    String
+  url       String
+  order     Int      @default(0)
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+}
+
+model Bid {
+  id          String    @id @default(cuid())
+  itemId      String
+  clerkUserId String
+  amount      Decimal   @db.Decimal(10, 2)
+  status      BidStatus @default(ACTIVE)
+  isProxy     Boolean   @default(false)
+  placedAt    DateTime  @default(now())
+  item        Item      @relation(fields: [itemId], references: [id])
+
+  @@index([itemId, status, amount])
+  @@index([clerkUserId])
+}
+
+model ProxyBid {
+  id          String   @id @default(cuid())
+  itemId      String
+  clerkUserId String
+  maxAmount   Decimal  @db.Decimal(10, 2)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  item        Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, clerkUserId])
+  @@index([itemId, isActive])
+}
+
+enum BidStatus {
+  ACTIVE
+  OUTBID
+  WON
+  CANCELLED
+}
+
+model Payment {
+  id                    String        @id @default(cuid())
+  clerkUserId           String
+  itemId                String
+  amount                Decimal       @db.Decimal(10, 2)
+  applicationFeeAmount  Decimal?      @db.Decimal(10, 2)
+  taxAmount             Decimal?      @db.Decimal(10, 2)
+  stripePaymentIntentId String?
+  status                PaymentStatus @default(PENDING)
+  autoChargeAttemptedAt DateTime?
+  failureReason         String?
+  createdAt             DateTime      @default(now())
+  item                  Item          @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, clerkUserId])
+  @@index([stripePaymentIntentId])
+}
+
+model BidderStripeCustomer {
+  id                     String       @id @default(cuid())
+  clerkUserId            String
+  organizationId         String
+  stripeCustomerId       String
+  defaultPaymentMethodId String?
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+  organization           Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([clerkUserId, organizationId])
+  @@index([clerkUserId])
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+  FAILED
+}
+model BidderProfile {
+  id             String        @id @default(cuid())
+  clerkUserId    String        @unique
+  phone          String?
+  email          String?
+  name           String?
+  preferredOrgId String?
+  preferredOrg   Organization? @relation(fields: [preferredOrgId], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @default(now()) @updatedAt
+}
+
+model OrgApplication {
+  id           String            @id @default(cuid())
+  clerkUserId  String
+  orgName      String
+  slug         String
+  description  String?
+  website      String?
+  contactName  String
+  contactEmail String
+  contactPhone String?
+  status       ApplicationStatus @default(PENDING)
+  reviewedBy   String?
+  reviewNote   String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([clerkUserId])
+  @@index([status])
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model OrgInvite {
+  id             String       @id @default(cuid())
+  organizationId String
+  email          String
+  role           OrgRole      @default(STAFF)
+  token          String       @unique @default(cuid())
+  clerkUserId    String?
+  accepted       Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  expiresAt      DateTime
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([token])
+}
+
