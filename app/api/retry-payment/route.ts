@@ -71,9 +71,9 @@ export async function POST(request: NextRequest) {
     const bidAmount = Number(wonBid.amount);
     // Tax only collected if org is not exempt (set by Northwood Bids).
     const taxRate = org.taxExempt ? 0 : Number(org.taxPercent);
-    const taxAmount = Math.round(bidAmount * taxRate / 100 * 100); // cents
+    // Buyer's premium on top of the bid; tax applies to bid + premium.
     const feeAmount = Math.round(bidAmount * Number(org.platformFeePercent) / 100 * 100); // cents
-    // Fee + tax ADDED ON TOP; Northwood Bids holds both; org nets exactly the bid.
+    const taxAmount = Math.round((bidAmount * 100 + feeAmount) * taxRate / 100); // cents
     const chargeAmount = Math.round(bidAmount * 100) + feeAmount + taxAmount; // total cents
 
     // Create fresh PaymentIntent directly on the platform account

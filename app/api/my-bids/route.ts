@@ -127,7 +127,7 @@ export async function GET() {
               const feePercent = Number(auction.organization.platformFeePercent);
               const taxPercent = auction.organization.taxExempt ? 0 : Number(auction.organization.taxPercent);
               const feeCents = Math.round(Number(item.currentBid) * feePercent / 100 * 100);
-              const taxCents = Math.round(Number(item.currentBid) * taxPercent / 100 * 100);
+              const taxCents = Math.round((bidCents + feeCents) * taxPercent / 100);
               return {
                 feePercent,
                 taxPercent,
@@ -190,7 +190,7 @@ export async function GET() {
               const feePercent = Number(auction.organization.platformFeePercent);
               const taxPercent = auction.organization.taxExempt ? 0 : Number(auction.organization.taxPercent);
               const feeCents = Math.round(Number(item.currentBid) * feePercent / 100 * 100);
-              const taxCents = Math.round(Number(item.currentBid) * taxPercent / 100 * 100);
+              const taxCents = Math.round((bidCents + feeCents) * taxPercent / 100);
               return {
                 feePercent,
                 taxPercent,

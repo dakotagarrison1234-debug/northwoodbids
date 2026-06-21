@@ -75,8 +75,8 @@ export async function POST(request: NextRequest) {
     // Same fee/tax math as retry-payment
     const bidAmount = Number(wonBid.amount);
     const taxRate = org.taxExempt ? 0 : Number(org.taxPercent);
-    const taxAmount = Math.round(bidAmount * taxRate / 100 * 100); // cents
     const feeAmount = Math.round(bidAmount * Number(org.platformFeePercent) / 100 * 100); // cents
+    const taxAmount = Math.round((bidAmount * 100 + feeAmount) * taxRate / 100); // cents (bid + premium)
 
     await prisma.payment.upsert({
       where: { itemId_clerkUserId: { itemId, clerkUserId: userId } },

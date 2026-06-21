@@ -144,9 +144,10 @@ async function chargeWinners(
 
     // Calculate totals (all in cents for Stripe)
     const totalBidAmount = winner.items.reduce((s, i) => s + i.amount, 0);
-    // Tax only collected if org is not exempt (set by Northwood Bids).
-    const taxAmountCents = Math.round(totalBidAmount * taxPercent / 100 * 100);
+    // Buyer's premium added on top of the bid.
     const feeAmountCents = Math.round(totalBidAmount * platformFeePercent / 100 * 100);
+    // Tax applies to the full purchase (bid + buyer's premium). Zero if exempt.
+    const taxAmountCents = Math.round((totalBidAmount * 100 + feeAmountCents) * taxPercent / 100);
     // Fee AND tax ADDED ON TOP of the bid — buyer pays bid + fee + tax.
     // Northwood Bids holds fee + tax via application_fee_amount; org nets exactly the bid.
     const chargeAmountCents = Math.round(totalBidAmount * 100) + feeAmountCents + taxAmountCents;

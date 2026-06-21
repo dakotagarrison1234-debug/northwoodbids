@@ -690,10 +690,9 @@ export default function ItemPage() {
                         if (!Number.isFinite(amt) || amt <= 0) return null;
                         const feePct = item.org?.platformFeePercent ?? 0;
                         const taxPct = item.org?.taxPercent ?? 0;
-                        const totalCents =
-                          Math.round(amt * 100) +
-                          Math.round(amt * feePct / 100 * 100) +
-                          Math.round(amt * taxPct / 100 * 100);
+                        const feeC = Math.round(amt * feePct / 100 * 100);
+                        const taxC = Math.round((amt * 100 + feeC) * taxPct / 100);
+                        const totalCents = Math.round(amt * 100) + feeC + taxC;
                         return (
                           <p className="text-xs text-[#8a7559] mt-2">
                             Worst case if your max wins:{" "}
@@ -756,7 +755,7 @@ export default function ItemPage() {
                     const baseBid = Number.isFinite(entered) && entered > 0 ? entered : minBid;
                     const bidCents = Math.round(baseBid * 100);
                     const feeCents = Math.round(baseBid * feePct / 100 * 100);
-                    const taxCents = Math.round(baseBid * taxPct / 100 * 100);
+                    const taxCents = Math.round((bidCents + feeCents) * taxPct / 100);
                     const totalCents = bidCents + feeCents + taxCents;
                     const fmt = (c: number) =>
                       (c / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
