@@ -34,15 +34,17 @@ export async function GET() {
   const outstanding = payments.filter((p) => p.status === "PENDING" || p.status === "FAILED");
 
   // ── Totals on PAID sales ──
-  let grossSales = 0;   // sum of winning-bid amounts
-  let taxCollected = 0; // sum of sales tax (owed to Michigan)
-  let totalCharged = 0; // what buyers actually paid (bid + tax + any fee)
+  let grossSales = 0;       // sum of winning-bid (hammer) amounts
+  let taxCollected = 0;     // sum of sales tax (owed to Michigan)
+  let premiumCollected = 0; // sum of buyer's premium (yours to keep)
+  let totalCharged = 0;     // what buyers actually paid (bid + premium + tax)
   for (const p of paid) {
     const amt = num(p.amount);
     const tax = num(p.taxAmount);
     const fee = num(p.applicationFeeAmount);
     grossSales += amt;
     taxCollected += tax;
+    premiumCollected += fee;
     totalCharged += amt + tax + fee;
   }
 
@@ -118,6 +120,7 @@ export async function GET() {
   return NextResponse.json({
     totals: {
       grossSales: round(grossSales),
+      premiumCollected: round(premiumCollected),
       taxCollected: round(taxCollected),
       totalCharged: round(totalCharged),
       stripeFees: round(stripeFees),

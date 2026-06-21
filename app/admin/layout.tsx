@@ -48,7 +48,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           name: "Northwood Bids",
           slug: "northwood-bids",
           status: "LIVE",
-          platformFeePercent: 0,
+          // 15% buyer's premium added on top of every winning bid.
+          platformFeePercent: 15,
           // Michigan sales tax — 6% added to every winning bid.
           taxExempt: false,
           taxPercent: 6,

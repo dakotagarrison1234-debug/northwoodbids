@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 interface Ower { name: string; email: string; phone: string; amountDue: number; items: string[]; }
 interface ReportData {
   totals: {
-    grossSales: number; taxCollected: number; totalCharged: number;
+    grossSales: number; premiumCollected: number; taxCollected: number; totalCharged: number;
     stripeFees: number; netDeposited: number; netProfit: number;
     itemsSold: number; txnCount: number;
   };
@@ -98,6 +98,7 @@ export default function ReportsPage() {
             <table className="w-full text-base">
               <tbody className="divide-y divide-[#e3d6bf]">
                 <tr><td className="py-3 text-[#4a3a2b]">Item sales (winning bids)</td><td className="py-3 text-right font-semibold">{money(totals.grossSales)}</td></tr>
+                <tr><td className="py-3 text-[#4a3a2b]">+ Buyer&apos;s premium (15%)</td><td className="py-3 text-right font-semibold">{money(totals.premiumCollected)}</td></tr>
                 <tr><td className="py-3 text-[#4a3a2b]">+ Sales tax charged to buyers</td><td className="py-3 text-right font-semibold">{money(totals.taxCollected)}</td></tr>
                 <tr><td className="py-3 text-[#4a3a2b]">= Total charged to buyers</td><td className="py-3 text-right font-semibold">{money(totals.totalCharged)}</td></tr>
                 <tr><td className="py-3 text-[#4a3a2b]">− Stripe fees ({totals.txnCount} charge{totals.txnCount !== 1 ? "s" : ""} × 2.9% + 30¢)</td><td className="py-3 text-right font-semibold text-red-600">−{money(totals.stripeFees)}</td></tr>

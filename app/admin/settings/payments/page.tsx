@@ -31,7 +31,7 @@ export default function PaymentsSettingsPage() {
         </div>
         <p className="text-base text-[#6f5b46]">
           Payments run directly through your Stripe account. Winners are charged automatically
-          when an auction closes — no platform fee.
+          when an auction closes — winning bid + 15% buyer&apos;s premium + tax.
         </p>
         <a
           href="https://dashboard.stripe.com"
@@ -64,9 +64,9 @@ export default function PaymentsSettingsPage() {
       <div className="bg-white border border-[#e3d6bf] rounded-2xl p-6 sm:p-7">
         <h2 className="text-sm font-semibold text-[#6f5b46] uppercase tracking-wider mb-3">How it works</h2>
         <ul className="text-base text-[#6f5b46] space-y-2 list-disc pl-5">
-          <li>Payments run directly through your Stripe account — no platform fee.</li>
+          <li>Payments run directly through your Stripe account.</li>
           <li>Winners are charged automatically the moment an auction closes.</li>
-          <li>Bidders pay the winning bid plus any applicable sales tax.</li>
+          <li>Bidders pay the winning bid + 15% buyer&apos;s premium + 6% sales tax.</li>
           <li>Payouts and bank details are managed in your Stripe Dashboard.</li>
         </ul>
       </div>
