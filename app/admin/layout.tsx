@@ -18,6 +18,7 @@ function AdminNavIcon({ name }: { name: string }) {
   if (name === "users") return <svg {...s}><circle cx="6" cy="5" r="2.5"/><path d="M1 14c0-3 2-4.5 5-4.5s5 1.5 5 4.5"/><circle cx="12" cy="5" r="2"/><path d="M12 10c2 0 3 1 3 3.5"/></svg>;
   if (name === "settings") return <svg {...s}><circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"/></svg>;
   if (name === "mybids") return <svg {...s}><path d="M8 2v4l3 3"/><circle cx="8" cy="8" r="6"/></svg>;
+  if (name === "chart") return <svg {...s}><path d="M2 2v12h12"/><path d="M5 11V8M8 11V5M11 11V9"/></svg>;
   return null;
 }
 
@@ -48,6 +49,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           slug: "northwood-bids",
           status: "LIVE",
           platformFeePercent: 0,
+          // Michigan sales tax — 6% added to every winning bid.
+          taxExempt: false,
+          taxPercent: 6,
           stripeChargesEnabled: true,
           stripePayoutsEnabled: true,
           stripeDetailsSubmitted: true,
@@ -66,6 +70,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Overview", href: "/admin/dashboard", icon: "grid" },
     { label: "Auctions", href: "/admin/auctions", icon: "gavel" },
     { label: "Pickup", href: "/admin/pickup", icon: "package" },
+    ...(isOwnerOrAdmin ? [{ label: "Reports", href: "/admin/reports", icon: "chart" }] : []),
     ...(isOwnerOrAdmin ? [{ label: "Team", href: "/admin/staff", icon: "users" }] : []),
     ...(isOwnerOrAdmin ? [{ label: "Settings", href: "/admin/settings", icon: "settings" }] : []),
   ];
