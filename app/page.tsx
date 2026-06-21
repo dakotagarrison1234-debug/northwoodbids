@@ -94,9 +94,9 @@ export default async function HomePage() {
         <div className="relative max-w-3xl mx-auto text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="https://assets.cdn.filesafe.space/U1S2bq3S7QBjnH50rEhn/media/6a380945f2131051b829edf3.png"
+            src="https://assets.cdn.filesafe.space/TwuL7EwKfW8oGIV0Zo5q/media/6a373b261c5d711b35bf4e56.png"
             alt="Northwood Bids"
-            className="h-28 sm:h-36 w-auto max-w-[300px] object-contain mx-auto mb-6 drop-shadow-sm"
+            className="h-40 sm:h-52 w-auto max-w-[420px] object-contain mx-auto mb-6 drop-shadow-sm"
           />
           {activeAuctions.length > 0 && (
             <a href="#live-auctions" className="inline-flex items-center gap-2 bg-[#6c4d39]/10 border border-[#6c4d39]/30 text-[#6c4d39] text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-full mb-6 hover:bg-[#6c4d39]/15 transition-colors">
