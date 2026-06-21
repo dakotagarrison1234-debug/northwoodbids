@@ -38,6 +38,22 @@ interface Appointment {
   items: ApptItem[];
   bidder: Bidder;
 }
+interface TransferItem {
+  id: string;
+  title: string;
+  fromLocationName: string | null;
+  storageLocation: string | null;
+}
+interface Transfer {
+  id: string;
+  status: "REQUESTED" | "COMPLETED" | "CANCELLED";
+  createdAt: string;
+  completedAt: string | null;
+  clerkUserId: string;
+  toLocation: { id: string; name: string };
+  bidder: Bidder;
+  items: TransferItem[];
+}
 
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const WEEKDAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -108,9 +124,10 @@ function localInputToIso(local: string) {
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function AdminPickupPage() {
-  const [tab, setTab] = useState<"appointments" | "locations">("appointments");
+  const [tab, setTab] = useState<"appointments" | "locations" | "transfers">("appointments");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
+  const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
@@ -126,10 +143,16 @@ export default function AdminPickupPage() {
       .then((d) => setLocations(d.locations ?? []))
       .catch(() => {});
   }, []);
+  const loadTransfers = useCallback(() => {
+    return fetch("/api/admin/pickup/transfers")
+      .then((r) => r.json())
+      .then((d) => setTransfers(d.transfers ?? []))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
-    Promise.all([loadAppointments(), loadLocations()]).finally(() => setLoading(false));
-  }, [loadAppointments, loadLocations]);
+    Promise.all([loadAppointments(), loadLocations(), loadTransfers()]).finally(() => setLoading(false));
+  }, [loadAppointments, loadLocations, loadTransfers]);
 
   const flash = (text: string, ok: boolean) => {
     setMsg({ text, ok });
@@ -200,6 +223,25 @@ export default function AdminPickupPage() {
     }
   };
 
+  // ── Transfer actions ─────────────────────────────────────────────────────
+  const completeTransfer = async (id: string) => {
+    if (!confirm("Mark this transfer complete? The items will be set to their new location and the bidder can schedule a pickup.")) return;
+    try {
+      const res = await fetch(`/api/admin/pickup/transfers/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "COMPLETED" }),
+      });
+      const d = await res.json();
+      if (d.success) {
+        flash("Transfer completed.", true);
+        loadTransfers();
+      } else flash(d.error || "Could not complete transfer.", false);
+    } catch {
+      flash("Something went wrong.", false);
+    }
+  };
+
   // ── Location actions ─────────────────────────────────────────────────────
   const [newLoc, setNewLoc] = useState({ name: "", address: "", instructions: "" });
   const addLocation = async () => {
@@ -262,24 +304,32 @@ export default function AdminPickupPage() {
 
   const scheduled = appointments.filter((a) => a.status === "SCHEDULED");
   const collected = appointments.filter((a) => a.status === "COLLECTED");
+  const pendingTransfers = transfers.filter((t) => t.status === "REQUESTED");
 
   return (
     <>
       <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-4">
         <h1 className="text-2xl sm:text-3xl font-semibold">Pickup Scheduling</h1>
         <p className="text-[#8a7559] text-base mt-0.5">Manage appointments and pickup hours</p>
-        <div className="flex gap-2 mt-4">
-          {(["appointments", "locations"] as const).map((t) => (
+        <div className="flex gap-2 mt-4 flex-wrap">
+          {(["appointments", "locations", "transfers"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-5 py-2.5 rounded-xl text-base font-semibold transition-colors ${
+              className={`relative px-5 py-2.5 rounded-xl text-base font-semibold transition-colors ${
                 tab === t
                   ? "bg-[#6c4d39] text-white"
                   : "bg-white border border-[#e3d6bf] text-[#6f5b46] hover:bg-[#efe3d0]"
               }`}
             >
-              {t === "appointments" ? "Appointments" : "Locations & Hours"}
+              {t === "appointments" ? "Appointments" : t === "locations" ? "Locations & Hours" : "Transfers"}
+              {t === "transfers" && pendingTransfers.length > 0 && (
+                <span className={`ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full text-sm font-bold ${
+                  tab === t ? "bg-white text-[#6c4d39]" : "bg-[#6c4d39] text-white"
+                }`}>
+                  {pendingTransfers.length}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -437,6 +487,65 @@ export default function AdminPickupPage() {
                   ))}
                 </div>
               </div>
+            )}
+          </div>
+        ) : tab === "transfers" ? (
+          // ── Transfers ──
+          <div className="space-y-4 max-w-3xl">
+            <h2 className="text-xl font-semibold">
+              Pending transfers ({pendingTransfers.length})
+            </h2>
+            {pendingTransfers.length === 0 ? (
+              <div className="text-base text-[#8a7559] bg-white border border-[#e3d6bf] rounded-xl px-5 py-8 text-center">
+                No transfers waiting. When a bidder asks for their items to be moved to another location, it shows up here.
+              </div>
+            ) : (
+              pendingTransfers.map((t) => (
+                <div key={t.id} className="bg-white border border-[#cdbda3] rounded-xl px-5 py-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-lg font-semibold text-[#241a12]">
+                        {t.bidder.name || "Unknown Bidder"}
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-0.5 text-base text-[#6f5b46]">
+                        {t.bidder.email && <span>{t.bidder.email}</span>}
+                        {t.bidder.phone && <span>{t.bidder.phone}</span>}
+                      </div>
+                    </div>
+                    <span className="text-sm bg-[#6c4d39]/15 text-[#6c4d39] px-3 py-1 rounded-full font-semibold shrink-0">
+                      Requested {fmtDateTime(t.createdAt)}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 text-lg font-semibold text-[#5f7a45]">
+                    → Move to {t.toLocation.name}
+                  </div>
+
+                  <div className="mt-3">
+                    <div className="text-sm font-semibold text-[#8a7559] uppercase tracking-wide mb-2">
+                      {t.items.length} item{t.items.length !== 1 ? "s" : ""} to gather
+                    </div>
+                    <ul className="space-y-2">
+                      {t.items.map((it) => (
+                        <li key={it.id} className="flex items-start gap-2 bg-[#f1e7d5] rounded-xl px-4 py-2.5">
+                          <span className="text-[#5f7a45] mt-0.5">☐</span>
+                          <span className="text-base text-[#241a12]">
+                            <span className="font-semibold">{it.title}</span>
+                            {" "}— now at {it.fromLocationName || "Unassigned"} · {it.storageLocation || "no spot"}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <button
+                    onClick={() => completeTransfer(t.id)}
+                    className="mt-4 w-full bg-[#5f7a45] hover:bg-[#4f6639] text-white font-semibold text-base py-3.5 rounded-xl transition-colors"
+                  >
+                    Transfer Complete
+                  </button>
+                </div>
+              ))
             )}
           </div>
         ) : (

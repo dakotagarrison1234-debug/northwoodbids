@@ -230,11 +230,12 @@ function NewItemForm() {
   const [uploading, setUploading] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
   const [auctions, setAuctions] = useState<{ id: string; title: string }[]>([]);
+  const [pickupLocations, setPickupLocations] = useState<{ id: string; name: string }[]>([]);
   const [orgId, setOrgId] = useState<string>("");
   const [formData, setFormData] = useState({
     title: "", description: "", condition: "GOOD", category: "",
     retailValue: "", startingBid: "", reservePrice: "", donorName: "",
-    taxDeductible: false, storageLocation: "", notes: "",
+    taxDeductible: false, storageLocation: "", locationId: "", notes: "",
     auctionId: preselectedAuctionId,
   });
 
@@ -244,6 +245,12 @@ function NewItemForm() {
       if (d.auctions) setAuctions(d.auctions.filter((a: { id: string; title: string; status: string }) =>
         ["DRAFT","OPEN","CLOSING"].includes(a.status)
       ));
+    }).catch(() => {});
+    fetch("/api/admin/pickup/locations").then(r => r.json()).then(d => {
+      if (d.locations) setPickupLocations(
+        d.locations.filter((l: { isActive: boolean }) => l.isActive)
+          .map((l: { id: string; name: string }) => ({ id: l.id, name: l.name }))
+      );
     }).catch(() => {});
   }, []);
 
@@ -450,6 +457,15 @@ function NewItemForm() {
               placeholder="e.g. Room B / Shelf 2 / Bin 4"
               className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]" />
             <p className="text-[#8a7559] text-sm mt-2">Used by staff to locate item during pickup</p>
+            <div className="mt-4">
+              <label className="text-base text-[#6f5b46] mb-1.5 block">Location</label>
+              <select name="locationId" value={formData.locationId} onChange={handleChange}
+                className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]">
+                <option value="">—</option>
+                {pickupLocations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </select>
+              <p className="text-[#8a7559] text-sm mt-2">Which pickup location this item lives at</p>
+            </div>
           </div>
 
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">

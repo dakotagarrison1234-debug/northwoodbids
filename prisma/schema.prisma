@@ -39,6 +39,7 @@ model Organization {
   bidderFollowers        BidderProfile[]
   pickupLocations        PickupLocation[]
   pickupAppointments     PickupAppointment[]
+  transferRequests       TransferRequest[]
 }
 
 model OrgMember {
@@ -112,10 +113,15 @@ enum AuctionStatus {
   pickedUpAt          DateTime?
   pickupAppointmentId String?
   pickupAppointment   PickupAppointment? @relation(fields: [pickupAppointmentId], references: [id], onDelete: SetNull)
+  locationId          String?
+  location            PickupLocation?    @relation("ItemLocation", fields: [locationId], references: [id], onDelete: SetNull)
+  transferRequestId   String?
+  transferRequest     TransferRequest?   @relation(fields: [transferRequestId], references: [id], onDelete: SetNull)
 
   @@index([status, itemEndAt])
   @@index([auctionId, status])
   @@index([pickupAppointmentId])
+  @@index([locationId])
 }
 
 model PickupLocation {
@@ -129,6 +135,8 @@ model PickupLocation {
   organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   windows        PickupWindow[]
   appointments   PickupAppointment[]
+  items          Item[]             @relation("ItemLocation")
+  transfersTo    TransferRequest[]  @relation("TransferTo")
 
   @@index([organizationId])
 }
@@ -168,6 +176,29 @@ model PickupAppointment {
 enum PickupApptStatus {
   SCHEDULED
   COLLECTED
+  CANCELLED
+}
+
+model TransferRequest {
+  id             String         @id @default(cuid())
+  organizationId String
+  clerkUserId    String
+  toLocationId   String
+  status         TransferStatus @default(REQUESTED)
+  notes          String?
+  createdAt      DateTime       @default(now())
+  completedAt    DateTime?
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  toLocation     PickupLocation @relation("TransferTo", fields: [toLocationId], references: [id], onDelete: Cascade)
+  items          Item[]
+
+  @@index([organizationId, status])
+  @@index([clerkUserId, status])
+}
+
+enum TransferStatus {
+  REQUESTED
+  COMPLETED
   CANCELLED
 }
 

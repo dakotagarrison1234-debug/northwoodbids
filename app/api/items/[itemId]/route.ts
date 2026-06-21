@@ -132,6 +132,7 @@ export async function PATCH(
         donorName: body.donorName || null,
         taxDeductible: body.taxDeductible || false,
         storageLocation: body.storageLocation || null,
+        ...(body.locationId !== undefined && { locationId: body.locationId || null }),
         notes: body.notes || null,
         auctionId: body.auctionId || null,
         ...(autoActivate ? { status: "ACTIVE" } : {}),

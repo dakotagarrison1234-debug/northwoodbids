@@ -13,10 +13,11 @@ export default function EditItemPage() {
   const [uploading, setUploading] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
   const [auctions, setAuctions] = useState<{ id: string; title: string }[]>([]);
+  const [pickupLocations, setPickupLocations] = useState<{ id: string; name: string }[]>([]);
   const [formData, setFormData] = useState({
     title: "", description: "", condition: "GOOD", category: "",
     retailValue: "", startingBid: "", reservePrice: "", donorName: "",
-    taxDeductible: false, storageLocation: "", notes: "", auctionId: "",
+    taxDeductible: false, storageLocation: "", locationId: "", notes: "", auctionId: "",
   });
 
   useEffect(() => {
@@ -30,7 +31,8 @@ export default function EditItemPage() {
           startingBid: item.startingBid?.toString() || "",
           reservePrice: item.reservePrice?.toString() || "",
           donorName: item.donorName || "", taxDeductible: item.taxDeductible || false,
-          storageLocation: item.storageLocation || "", notes: item.notes || "",
+          storageLocation: item.storageLocation || "", locationId: item.locationId || "",
+          notes: item.notes || "",
           auctionId: item.auctionId || "",
         });
         if (item.photos) setPhotos(item.photos.map((p: { url: string }) => p.url));
@@ -44,6 +46,12 @@ export default function EditItemPage() {
         ));
       }
     });
+    fetch("/api/admin/pickup/locations").then(r => r.json()).then(d => {
+      if (d.locations) setPickupLocations(
+        d.locations.filter((l: { isActive: boolean }) => l.isActive)
+          .map((l: { id: string; name: string }) => ({ id: l.id, name: l.name }))
+      );
+    }).catch(() => {});
   }, [itemId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -220,7 +228,17 @@ export default function EditItemPage() {
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4">Storage Location</h2>
             <input name="storageLocation" value={formData.storageLocation} onChange={handleChange}
-              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]" />
+              placeholder="e.g. Room B / Shelf 2 / Bin 4"
+              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]" />
+            <div className="mt-4">
+              <label className="text-base text-[#6f5b46] mb-1.5 block">Location</label>
+              <select name="locationId" value={formData.locationId} onChange={handleChange}
+                className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]">
+                <option value="">—</option>
+                {pickupLocations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </select>
+              <p className="text-[#8a7559] text-sm mt-2">Which pickup location this item lives at</p>
+            </div>
           </div>
 
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">

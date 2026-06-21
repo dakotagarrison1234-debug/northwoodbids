@@ -10,6 +10,15 @@ interface ItemCard {
   title: string;
   photo: string | null;
   auctionTitle: string | null;
+  locationId?: string | null;
+  locationName?: string | null;
+}
+interface PendingTransfer {
+  id: string;
+  toLocationId: string;
+  toLocationName: string;
+  createdAt: string;
+  items: { id: string; title: string }[];
 }
 interface ApptLocation {
   id: string;
@@ -38,6 +47,7 @@ interface PickupData {
   appointment: Appointment | null;
   unscheduledItems: ItemCard[];
   locations: SchedLocation[];
+  pendingTransfer: PendingTransfer | null;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -101,6 +111,10 @@ function Scheduler({
   initialLocationId,
   initialSelected,
   submitLabel,
+  unscheduledItems = [],
+  pendingTransfer = null,
+  onRequestTransfer,
+  transferBusy = false,
 }: {
   locations: SchedLocation[];
   onBook: (locationId: string, startsAt: string) => void;
@@ -108,12 +122,21 @@ function Scheduler({
   initialLocationId?: string;
   initialSelected?: string;
   submitLabel: string;
+  unscheduledItems?: ItemCard[];
+  pendingTransfer?: PendingTransfer | null;
+  onRequestTransfer?: (toLocationId: string) => void;
+  transferBusy?: boolean;
 }) {
   const [locationId, setLocationId] = useState<string>(initialLocationId ?? locations[0]?.id ?? "");
   const [selected, setSelected] = useState<string | null>(initialSelected ?? null);
 
   const location = locations.find((l) => l.id === locationId);
   const slots = location?.slots ?? [];
+
+  // Items that currently live at a DIFFERENT location than the chosen one.
+  const itemsElsewhere = unscheduledItems.filter(
+    (it) => it.locationId != null && it.locationId !== locationId
+  );
 
   // group slots by day
   const days: { key: string; label: string; slots: Slot[] }[] = [];
@@ -155,48 +178,97 @@ function Scheduler({
         </div>
       </div>
 
-      {/* Slots */}
-      <div>
-        <label className="block text-base font-semibold text-[#241a12] mb-2">Pick a day & time (Michigan time)</label>
-        {days.length === 0 ? (
-          <div className="rounded-xl border border-[#e3d6bf] bg-white px-4 py-6 text-base text-[#8a7559]">
-            No times are available at this location right now. Please check back soon.
+      {/* Transfer pending → no slot picker, just a status card */}
+      {pendingTransfer ? (
+        <div className="rounded-2xl border-2 border-[#6c4d39]/25 bg-[#efe3d0] px-5 py-5">
+          <div className="text-lg font-semibold text-[#241a12]">
+            Your items are being moved to {pendingTransfer.toLocationName}.
           </div>
-        ) : (
-          <div className="space-y-5">
-            {days.map((d) => (
-              <div key={d.key}>
-                <div className="text-base font-semibold text-[#6f5b46] mb-2">{d.label}</div>
-                <div className="flex flex-wrap gap-2">
-                  {d.slots.map((s) => (
-                    <button
-                      key={s.startsAt}
-                      type="button"
-                      onClick={() => setSelected(s.startsAt)}
-                      className={`rounded-xl border-2 px-4 py-3 text-base font-semibold transition-colors ${
-                        selected === s.startsAt
-                          ? "border-[#6c4d39] bg-[#6c4d39] text-white"
-                          : "border-[#e3d6bf] bg-white text-[#241a12] hover:bg-[#efe3d0]"
-                      }`}
-                    >
-                      {fmtTime(s.startsAt)}
-                    </button>
-                  ))}
-                </div>
-              </div>
+          <p className="text-base text-[#6f5b46] mt-2">
+            You&apos;ll be able to pick a pickup time once the team confirms they&apos;ve arrived.
+          </p>
+          {pendingTransfer.items.length > 0 && (
+            <ul className="mt-3 space-y-1 text-base text-[#241a12]">
+              {pendingTransfer.items.map((it) => (
+                <li key={it.id}>• {it.title}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ) : itemsElsewhere.length > 0 ? (
+        /* Items live elsewhere → offer a transfer instead of the slot picker */
+        <div className="rounded-2xl border-2 border-[#6c4d39]/25 bg-white px-5 py-5">
+          <div className="text-lg font-semibold text-[#241a12]">
+            Some of your items aren&apos;t at {location?.name ?? "this location"} yet
+          </div>
+          <p className="text-base text-[#6f5b46] mt-2">
+            Before you can pick a time here, these items need to be moved to {location?.name ?? "this location"}:
+          </p>
+          <ul className="mt-3 space-y-1.5 text-base text-[#241a12]">
+            {itemsElsewhere.map((it) => (
+              <li key={it.id} className="flex flex-wrap items-baseline gap-x-2">
+                <span className="font-medium">{it.title}</span>
+                <span className="text-[#8a7559] text-sm">
+                  currently at {it.locationName ?? "another location"}
+                </span>
+              </li>
             ))}
+          </ul>
+          <button
+            type="button"
+            disabled={transferBusy || !onRequestTransfer}
+            onClick={() => onRequestTransfer?.(locationId)}
+            className="mt-5 w-full bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-base py-3.5 rounded-xl transition-colors"
+          >
+            {transferBusy ? "Requesting…" : `Request Transfer to ${location?.name ?? "this location"}`}
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* Slots */}
+          <div>
+            <label className="block text-base font-semibold text-[#241a12] mb-2">Pick a day & time (Michigan time)</label>
+            {days.length === 0 ? (
+              <div className="rounded-xl border border-[#e3d6bf] bg-white px-4 py-6 text-base text-[#8a7559]">
+                No times are available at this location right now. Please check back soon.
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {days.map((d) => (
+                  <div key={d.key}>
+                    <div className="text-base font-semibold text-[#6f5b46] mb-2">{d.label}</div>
+                    <div className="flex flex-wrap gap-2">
+                      {d.slots.map((s) => (
+                        <button
+                          key={s.startsAt}
+                          type="button"
+                          onClick={() => setSelected(s.startsAt)}
+                          className={`rounded-xl border-2 px-4 py-3 text-base font-semibold transition-colors ${
+                            selected === s.startsAt
+                              ? "border-[#6c4d39] bg-[#6c4d39] text-white"
+                              : "border-[#e3d6bf] bg-white text-[#241a12] hover:bg-[#efe3d0]"
+                          }`}
+                        >
+                          {fmtTime(s.startsAt)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      <button
-        type="button"
-        disabled={!selected || busy}
-        onClick={() => selected && onBook(locationId, selected)}
-        className="w-full bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-base py-3.5 rounded-xl transition-colors"
-      >
-        {busy ? "Saving…" : selected ? `${submitLabel} — ${fmtDateTime(selected)}` : submitLabel}
-      </button>
+          <button
+            type="button"
+            disabled={!selected || busy}
+            onClick={() => selected && onBook(locationId, selected)}
+            className="w-full bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-base py-3.5 rounded-xl transition-colors"
+          >
+            {busy ? "Saving…" : selected ? `${submitLabel} — ${fmtDateTime(selected)}` : submitLabel}
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -208,6 +280,7 @@ export default function PickupPage() {
   const [data, setData] = useState<PickupData | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [transferBusy, setTransferBusy] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [rescheduling, setRescheduling] = useState(false);
 
@@ -278,6 +351,32 @@ export default function PickupPage() {
     }
   };
 
+  const requestTransfer = async (toLocationId: string) => {
+    setTransferBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/pickup/transfer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ toLocationId }),
+      });
+      const d = await res.json();
+      if (res.ok && d.needed === false) {
+        // Nothing to move — items are already here; just refresh so the slot picker shows.
+        load();
+      } else if (res.ok && d.success) {
+        setMsg({ text: "Transfer requested. We'll let you know when your items arrive.", ok: true });
+        load();
+      } else {
+        setMsg({ text: d.error || "Could not request a transfer. Please try again.", ok: false });
+      }
+    } catch {
+      setMsg({ text: "Something went wrong. Please try again.", ok: false });
+    } finally {
+      setTransferBusy(false);
+    }
+  };
+
   const cancel = async () => {
     if (!data?.appointment) return;
     if (!confirm("Cancel this pickup appointment? Your items will go back to the waiting list.")) return;
@@ -312,7 +411,7 @@ export default function PickupPage() {
   }
   if (!data) return null;
 
-  const { appointment, unscheduledItems, locations } = data;
+  const { appointment, unscheduledItems, locations, pendingTransfer } = data;
 
   return (
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
@@ -462,7 +561,16 @@ export default function PickupPage() {
               </div>
             ) : (
               <div className="bg-white border border-[#e3d6bf] rounded-2xl px-6 py-6">
-                <Scheduler locations={locations} onBook={book} busy={busy} submitLabel="Schedule pickup" />
+                <Scheduler
+                  locations={locations}
+                  onBook={book}
+                  busy={busy}
+                  submitLabel="Schedule pickup"
+                  unscheduledItems={unscheduledItems}
+                  pendingTransfer={pendingTransfer}
+                  onRequestTransfer={requestTransfer}
+                  transferBusy={transferBusy}
+                />
               </div>
             )}
           </div>

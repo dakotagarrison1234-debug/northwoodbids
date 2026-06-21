@@ -12,6 +12,8 @@ type ItemCard = {
   title: string;
   photo: string | null;
   auctionTitle: string | null;
+  locationId?: string | null;
+  locationName?: string | null;
 };
 
 // GET /api/pickup — bidder's pickup view: upcoming appointment, unscheduled items, locations + slots
@@ -70,6 +72,7 @@ export async function GET() {
           include: {
             photos: { where: { isPrimary: true }, take: 1 },
             auction: { select: { title: true } },
+            location: { select: { name: true } },
           },
         })
       : [];
@@ -78,7 +81,28 @@ export async function GET() {
       title: it.title,
       photo: it.photos[0]?.url ?? null,
       auctionTitle: it.auction?.title ?? null,
+      locationId: it.locationId ?? null,
+      locationName: it.location?.name ?? null,
     }));
+
+    // Current pending (REQUESTED) transfer for this user, if any
+    const transferRow = await prisma.transferRequest.findFirst({
+      where: { clerkUserId: userId, organizationId: org.id, status: "REQUESTED" },
+      orderBy: { createdAt: "desc" },
+      include: {
+        toLocation: { select: { id: true, name: true } },
+        items: { select: { id: true, title: true } },
+      },
+    });
+    const pendingTransfer = transferRow
+      ? {
+          id: transferRow.id,
+          toLocationId: transferRow.toLocationId,
+          toLocationName: transferRow.toLocation.name,
+          createdAt: transferRow.createdAt.toISOString(),
+          items: transferRow.items.map((it) => ({ id: it.id, title: it.title })),
+        }
+      : null;
 
     // Active locations with their available slots
     const activeLocations = await prisma.pickupLocation.findMany({
@@ -95,7 +119,7 @@ export async function GET() {
       }))
     );
 
-    return NextResponse.json({ appointment, unscheduledItems, locations });
+    return NextResponse.json({ appointment, unscheduledItems, locations, pendingTransfer });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Internal error";
     console.error("[pickup GET]:", msg, err);
@@ -121,6 +145,29 @@ export async function POST(request: NextRequest) {
     const location = await prisma.pickupLocation.findUnique({ where: { id: locationId } });
     if (!location || location.organizationId !== org.id || !location.isActive) {
       return NextResponse.json({ error: "Invalid location" }, { status: 400 });
+    }
+
+    // Transfer guard: bidders can't book here if a transfer is pending, or if any
+    // of their items currently live at a different location than the chosen one.
+    const pendingTransfer = await prisma.transferRequest.findFirst({
+      where: { clerkUserId: userId, organizationId: org.id, status: "REQUESTED" },
+      select: { id: true },
+    });
+    const guardItemIds = await getUnscheduledPickupItemIds(userId, org.id);
+    const guardItems = guardItemIds.length
+      ? await prisma.item.findMany({
+          where: { id: { in: guardItemIds } },
+          select: { locationId: true },
+        })
+      : [];
+    const hasItemElsewhere = guardItems.some(
+      (it) => it.locationId != null && it.locationId !== locationId
+    );
+    if (pendingTransfer || hasItemElsewhere) {
+      return NextResponse.json(
+        { error: "Some items need a transfer to this location first." },
+        { status: 422 }
+      );
     }
 
     // Validate the chosen slot is actually available
