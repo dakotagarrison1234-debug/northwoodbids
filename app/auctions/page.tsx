@@ -4,15 +4,7 @@ import { prisma } from "@/lib/prisma";
 import LocalDate from "@/app/components/LocalDate";
 import OrgLogo from "@/app/components/OrgLogo";
 import PusherRefresh from "@/app/components/PusherRefresh";
-
-function IcoCalendar() {
-  return (
-    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <path d="M16 2v4M8 2v4M3 10h18" />
-    </svg>
-  );
-}
+import { PineRidge, MountainRange, GavelEmblem, WoodenCrate } from "@/app/components/Illustrations";
 
 export default async function AuctionsPage() {
   const auctions = await prisma.auction.findMany({
@@ -28,16 +20,26 @@ export default async function AuctionsPage() {
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
       <PusherRefresh channel="auctions" event="auction-updated" />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
-        {/* Page header */}
-        <div className="flex items-center gap-3 mb-8">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#a4592a] animate-pulse inline-block shrink-0" />
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Live Auctions</h1>
-          {auctions.length > 0 && (
-            <span className="text-[#8a7559] text-base ml-1">({auctions.length})</span>
-          )}
+      {/* Rustic header band */}
+      <section className="relative overflow-hidden border-b border-[#e3d6bf]/60 bg-[#efe5d3]/70">
+        <MountainRange className="absolute right-0 top-0 h-full w-[420px] opacity-40 pointer-events-none" />
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-10 sm:pt-14 pb-28 sm:pb-32">
+          <div className="flex items-center gap-3">
+            <GavelEmblem className="w-12 h-12 shrink-0" />
+            <span className="w-2.5 h-2.5 rounded-full bg-[#a4592a] animate-pulse inline-block shrink-0" />
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Live Auctions</h1>
+            {auctions.length > 0 && (
+              <span className="text-[#8a7559] text-base ml-1">({auctions.length})</span>
+            )}
+          </div>
+          <p className="text-[#6f5b46] text-sm mt-2 ml-[60px]">
+            Browse open auctions and place your bids before they close.
+          </p>
         </div>
+        <PineRidge className="absolute bottom-0 left-0 w-full h-24 sm:h-28 pointer-events-none" />
+      </section>
 
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
         {auctions.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {auctions.map((auction) => {
@@ -85,10 +87,10 @@ export default async function AuctionsPage() {
           </div>
         ) : (
           <div className="text-center py-20 bg-[#f1e7d5]/60 rounded-2xl border border-[#e3d6bf]">
-            <div className="flex justify-center mb-4 text-[#b3a085]">
-              <IcoCalendar />
+            <div className="flex justify-center mb-4">
+              <WoodenCrate className="w-28 h-24" />
             </div>
-            <p className="text-base font-semibold mb-1 text-[#6f5b46]">No live auctions right now</p>
+            <p className="font-display text-lg font-semibold mb-1 text-[#6f5b46]">No live auctions right now</p>
             <p className="text-sm text-[#8a7559] mb-6">Check back soon — new auctions are added regularly.</p>
             <Link href="/" className="text-[#a4592a] hover:text-[#c47b3e] text-sm font-medium transition-colors">
               Go to home page

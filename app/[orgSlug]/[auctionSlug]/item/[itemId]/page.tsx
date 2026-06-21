@@ -8,6 +8,7 @@ import Countdown from "@/app/components/Countdown";
 import { getNextValidBid, getProxySuggestions } from "@/lib/bidIncrements";
 import CardSetupModal from "@/app/components/CardSetupModal";
 import MaxBidExplainerModal from "@/app/components/MaxBidExplainerModal";
+import { BranchDivider } from "@/app/components/Illustrations";
 
 interface Item {
   id: string;
@@ -492,7 +493,7 @@ export default function ItemPage() {
             )}
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2">{item.title}</h1>
+          <h1 className="font-display text-2xl sm:text-3xl font-bold mb-2">{item.title}</h1>
           {item.description && <p className="text-[#6f5b46] mb-6">{item.description}</p>}
 
           {/* Countdown */}
@@ -843,6 +844,12 @@ export default function ItemPage() {
           )}
         </div>
       </div>
+
+      {/* Footer flourish */}
+      <div className="flex justify-center pb-10">
+        <BranchDivider className="w-40 h-5 opacity-80" />
+      </div>
+
       {/* Card setup modal — shown when user tries to bid without a card on file */}
       {showCardModal && (
         item.org?.stripeAccountId ? (

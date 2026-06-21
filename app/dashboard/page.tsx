@@ -6,6 +6,7 @@ import { useUser } from "@clerk/nextjs";
 import Pusher from "pusher-js";
 import UserMenu from "@/app/components/UserMenu";
 import CardSetupModal from "@/app/components/CardSetupModal";
+import { PineMark, WoodenCrate } from "@/app/components/Illustrations";
 
 type Tab = "overview" | "winning" | "losing" | "auctions" | "profile";
 
@@ -335,7 +336,10 @@ function BidderDashboardInner() {
       {/* ── Desktop sidebar ── */}
       <aside className="hidden md:flex w-64 bg-white/90 border-r border-[#e3d6bf]/60 flex-col shrink-0">
         <div className="px-5 py-5 border-b border-[#e3d6bf]/60">
-          <p className="text-base font-bold text-[#241a12]">My Bids</p>
+          <p className="font-display text-base font-bold text-[#241a12] flex items-center gap-2">
+            <PineMark className="w-5 h-5 shrink-0" />
+            My Bids
+          </p>
         </div>
         <nav className="flex-1 px-3 py-3 space-y-0.5">
           {navItems.map((item) => (
@@ -565,14 +569,10 @@ function BidderDashboardInner() {
 
               {winning.length === 0 && losing.length === 0 && unpaidWins.length === 0 && past.length === 0 && (
                 <div className="bg-white border border-[#e3d6bf] rounded-2xl p-12 text-center">
-                  <div className="text-[#b3a085] mb-4 flex justify-center">
-                    <svg className="w-10 h-10" fill="none" viewBox="0 0 40 40" stroke="currentColor" strokeWidth={1.2} strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="20" cy="20" r="16" />
-                      <path d="M13 27c0-3.87 3.13-7 7-7s7 3.13 7 7" />
-                      <circle cx="20" cy="15" r="4" />
-                    </svg>
+                  <div className="mb-4 flex justify-center">
+                    <WoodenCrate className="w-28 h-24" />
                   </div>
-                  <p className="text-[#8a7559] mb-5 text-sm">You haven&apos;t placed any bids yet.</p>
+                  <p className="font-display text-[#6f5b46] mb-5 text-base">You haven&apos;t placed any bids yet.</p>
                   <button
                     onClick={() => setTab("auctions")}
                     className="bg-[#a4592a] hover:bg-[#843f1c] text-white font-bold px-6 py-3 rounded-2xl text-sm transition-all hover:shadow-[0_0_25px_rgba(164,89,42,0.25)]"
@@ -638,7 +638,10 @@ function BidderDashboardInner() {
                   </div>
                 ) : liveAuctions.length === 0 ? (
                   <div className="bg-white border border-[#e3d6bf] rounded-2xl p-12 text-center">
-                    <p className="text-[#8a7559] mb-2 text-sm font-semibold">No live auctions right now</p>
+                    <div className="mb-4 flex justify-center">
+                      <WoodenCrate className="w-28 h-24" />
+                    </div>
+                    <p className="font-display text-[#6f5b46] mb-2 text-base font-semibold">No live auctions right now</p>
                     <p className="text-[#8a7559] text-xs">Check back soon — new auctions are added regularly.</p>
                   </div>
                 ) : (
@@ -681,7 +684,10 @@ function BidderDashboardInner() {
             <div className="max-w-3xl">
               {winning.length === 0 ? (
                 <div className="bg-white border border-[#e3d6bf] rounded-2xl p-12 text-center">
-                  <p className="text-[#8a7559] mb-4 text-sm">Not currently winning any items.</p>
+                  <div className="mb-4 flex justify-center">
+                    <WoodenCrate className="w-28 h-24" />
+                  </div>
+                  <p className="font-display text-[#6f5b46] mb-4 text-base">Not currently winning any items.</p>
                   <button onClick={() => setTab("auctions")} className="text-[#a4592a] hover:text-[#c47b3e] text-sm transition-colors">Browse live auctions</button>
                 </div>
               ) : (
@@ -711,7 +717,10 @@ function BidderDashboardInner() {
             <div className="max-w-3xl">
               {losing.length === 0 ? (
                 <div className="bg-white border border-[#e3d6bf] rounded-2xl p-12 text-center">
-                  <p className="text-[#8a7559] text-sm">You&apos;re not being outbid on anything right now.</p>
+                  <div className="mb-4 flex justify-center">
+                    <WoodenCrate className="w-28 h-24" />
+                  </div>
+                  <p className="font-display text-[#6f5b46] text-base">You&apos;re not being outbid on anything right now.</p>
                 </div>
               ) : (
                 <div className="space-y-3">

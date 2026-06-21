@@ -6,6 +6,7 @@ import LocalDate from "@/app/components/LocalDate";
 import ItemCardTimer from "@/app/components/ItemCardTimer";
 import PusherRefresh from "@/app/components/PusherRefresh";
 import NotFoundCard from "@/app/components/NotFoundCard";
+import { PineMark, BranchDivider, WoodenCrate } from "@/app/components/Illustrations";
 
 interface Props {
   params: Promise<{ orgSlug: string; auctionSlug: string }>;
@@ -116,7 +117,10 @@ export default async function AuctionPage({ params }: Props) {
                 {orgSlug.replace(/-/g, " ")}
               </Link>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-2">{auction.title}</h1>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-2 flex items-center gap-2">
+              <PineMark className="w-5 h-5 shrink-0" />
+              {auction.title}
+            </h1>
             <p className="text-[#6f5b46] text-sm">
               {isLive
                 ? `${visibleItems.length} live item${visibleItems.length !== 1 ? "s" : ""}${endedCount > 0 ? ` · ${endedCount} ended` : ""}`
@@ -136,9 +140,15 @@ export default async function AuctionPage({ params }: Props) {
 
       {/* Item grid */}
       <section className="px-4 sm:px-6 py-8 sm:py-10 max-w-6xl mx-auto">
+        <div className="flex justify-center mb-6 sm:mb-8">
+          <BranchDivider className="w-40 h-5 opacity-80" />
+        </div>
         {visibleItems.length === 0 ? (
           <div className="text-center py-20 text-[#8a7559] px-5">
-            <p className="text-lg font-medium mb-5">
+            <div className="flex justify-center mb-4">
+              <WoodenCrate className="w-28 h-24" />
+            </div>
+            <p className="font-display text-lg font-medium mb-5">
               {isLive && endedCount > 0
                 ? "All items have ended — final results are being processed."
                 : "No items in this auction yet"}
