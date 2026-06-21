@@ -33,8 +33,8 @@ export default function StripeOnboardingGate({ orgId, hasStripeAccount, chargesE
   // Full-screen interstitial — shown once, before they start onboarding
   if (!hasStripeAccount) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#faf8f4]/95 backdrop-blur-sm flex items-center justify-center p-6">
-        <div className="bg-white border border-[#e5e0d5] rounded-2xl p-8 max-w-md w-full text-center space-y-5">
+      <div className="fixed inset-0 z-50 bg-[#f1e7d5]/95 backdrop-blur-sm flex items-center justify-center p-6">
+        <div className="bg-white border border-[#e3d6bf] rounded-2xl p-8 max-w-md w-full text-center space-y-5">
           {/* Stripe icon */}
           <div className="w-14 h-14 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-center justify-center mx-auto">
             <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -46,24 +46,24 @@ export default function StripeOnboardingGate({ orgId, hasStripeAccount, chargesE
           </div>
 
           <div>
-            <h2 className="text-xl font-bold text-[#1a1916] mb-2">Connect Stripe to go live</h2>
-            <p className="text-sm text-[#6b6659]">
+            <h2 className="text-xl font-bold text-[#241a12] mb-2">Connect Stripe to go live</h2>
+            <p className="text-sm text-[#6f5b46]">
               Northwood Bids uses Stripe Connect so bidders pay your business directly. You keep the
               funds — we collect a 20% platform fee automatically.
             </p>
           </div>
 
-          <div className="text-left bg-[#f2efe8]/60 rounded-xl p-4 space-y-2 text-sm text-[#6b6659]">
+          <div className="text-left bg-[#efe3d0]/60 rounded-xl p-4 space-y-2 text-sm text-[#6f5b46]">
             <div className="flex gap-2.5">
-              <span className="text-[#09a7ad] shrink-0">✓</span>
+              <span className="text-[#a4592a] shrink-0">✓</span>
               <span>Bidders pay you directly — you&apos;re the merchant of record</span>
             </div>
             <div className="flex gap-2.5">
-              <span className="text-[#09a7ad] shrink-0">✓</span>
+              <span className="text-[#a4592a] shrink-0">✓</span>
               <span>Funds deposited daily to your bank account</span>
             </div>
             <div className="flex gap-2.5">
-              <span className="text-[#09a7ad] shrink-0">✓</span>
+              <span className="text-[#a4592a] shrink-0">✓</span>
               <span>Takes about 5 minutes to set up</span>
             </div>
           </div>
@@ -71,14 +71,14 @@ export default function StripeOnboardingGate({ orgId, hasStripeAccount, chargesE
           <button
             onClick={handleConnect}
             disabled={loading}
-            className="w-full bg-indigo-500 hover:bg-indigo-400 disabled:opacity-50 text-[#1a1916] font-semibold py-3 px-6 rounded-xl transition-colors"
+            className="w-full bg-indigo-500 hover:bg-indigo-400 disabled:opacity-50 text-[#241a12] font-semibold py-3 px-6 rounded-xl transition-colors"
           >
             {loading ? "Loading…" : "Connect Stripe — Get Started"}
           </button>
 
-          <p className="text-xs text-[#8c8778]">
+          <p className="text-xs text-[#8a7559]">
             You can also set this up later in{" "}
-            <Link href="/admin/settings/payments" className="text-[#8c8778] hover:text-[#6b6659] underline">
+            <Link href="/admin/settings/payments" className="text-[#8a7559] hover:text-[#6f5b46] underline">
               Settings → Payments
             </Link>
           </p>

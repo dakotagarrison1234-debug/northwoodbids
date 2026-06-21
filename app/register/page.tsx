@@ -87,50 +87,50 @@ function RegisterForm() {
   if (checking) {
     return (
       <main className="flex-1 flex items-center justify-center">
-        <p className="text-[#6b6659]">Loading...</p>
+        <p className="text-[#6f5b46]">Loading...</p>
       </main>
     );
   }
 
   return (
     <main className="flex-1 flex items-center justify-center">
-      <div className="bg-white border border-[#e5e0d5] rounded-2xl p-8 max-w-md w-full mx-4">
+      <div className="bg-white border border-[#e3d6bf] rounded-2xl p-8 max-w-md w-full mx-4">
         {orgSlug && (
-          <div className="flex items-center gap-2 mb-5 bg-[#09a7ad]/8 border border-[#09a7ad]/20 rounded-xl px-4 py-2.5">
-            <svg className="w-4 h-4 text-[#09a7ad] shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+          <div className="flex items-center gap-2 mb-5 bg-[#a4592a]/8 border border-[#a4592a]/20 rounded-xl px-4 py-2.5">
+            <svg className="w-4 h-4 text-[#a4592a] shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
               <path d="M3 8l3.5 3.5L13 4" />
             </svg>
-            <p className="text-sm text-[#4a4640]">
-              You&apos;ll be connected to <span className="font-semibold text-[#09a7ad]">{orgSlug.replace(/-/g, " ")}</span> after sign up
+            <p className="text-sm text-[#4a3a2b]">
+              You&apos;ll be connected to <span className="font-semibold text-[#a4592a]">{orgSlug.replace(/-/g, " ")}</span> after sign up
             </p>
           </div>
         )}
         <h1 className="text-2xl font-bold mb-2">One more step</h1>
-        <p className="text-[#6b6659] mb-6">
+        <p className="text-[#6f5b46] mb-6">
           Add your phone number to receive outbid alerts via SMS so you never miss a winning opportunity.
         </p>
         <div className="space-y-4">
           <div>
-            <label className="text-sm text-[#6b6659] mb-1 block">Phone Number</label>
+            <label className="text-sm text-[#6f5b46] mb-1 block">Phone Number</label>
             <input
               type="tel"
               value={phone}
               onChange={e => setPhone(e.target.value)}
               onKeyDown={e => e.key === "Enter" && !saving && handleSubmit()}
               placeholder="+1 (555) 000-0000"
-              className="w-full bg-[#f2efe8] border border-[#d4cfc4] rounded-xl px-4 py-3 text-[#1a1916] placeholder-[#b0a99a] focus:outline-none focus:border-[#09a7ad]"
+              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]"
             />
           </div>
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="w-full bg-[#09a7ad] hover:bg-[#0898a0] disabled:opacity-50 text-white font-semibold py-3 rounded-xl"
+            className="w-full bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white font-semibold py-3 rounded-xl"
           >
             {saving ? "Saving..." : "Save & Continue"}
           </button>
           <button
             onClick={handleSkip}
-            className="w-full text-[#8c8778] hover:text-[#4a4640] text-sm py-2"
+            className="w-full text-[#8a7559] hover:text-[#4a3a2b] text-sm py-2"
           >
             Skip for now
           </button>
@@ -142,10 +142,10 @@ function RegisterForm() {
 
 export default function RegisterPage() {
   return (
-    <div className="min-h-screen bg-[#faf8f4] text-[#1a1916] flex flex-col">
+    <div className="min-h-screen bg-[#f1e7d5] text-[#241a12] flex flex-col">
       <Suspense fallback={
         <main className="flex-1 flex items-center justify-center">
-          <p className="text-[#6b6659]">Loading...</p>
+          <p className="text-[#6f5b46]">Loading...</p>
         </main>
       }>
         <RegisterForm />

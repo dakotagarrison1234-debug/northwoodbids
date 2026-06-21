@@ -42,7 +42,7 @@ export default function Countdown({ endAt, onExpire }: Props) {
   }, [endAt, onExpire]);
 
   return (
-    <span className={urgent ? "text-red-600 font-bold animate-pulse" : "text-[#4a4640] font-semibold"}>
+    <span className={urgent ? "text-red-600 font-bold animate-pulse" : "text-[#4a3a2b] font-semibold"}>
       {timeLeft || "..."}
     </span>
   );

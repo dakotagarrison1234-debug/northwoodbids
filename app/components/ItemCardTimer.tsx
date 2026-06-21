@@ -73,7 +73,7 @@ export default function ItemCardTimer({ itemId, endAt: initialEndAt }: Props) {
   // Past zero: closing is handled by the cron within ~a minute
   if (remaining <= 0) {
     return (
-      <div className="absolute top-2.5 left-2.5 bg-[#faf8f4]/85 backdrop-blur-sm text-[#6b6659] text-xs px-2.5 py-1 rounded-full font-semibold">
+      <div className="absolute top-2.5 left-2.5 bg-[#f1e7d5]/85 backdrop-blur-sm text-[#6f5b46] text-xs px-2.5 py-1 rounded-full font-semibold">
         Ending…
       </div>
     );

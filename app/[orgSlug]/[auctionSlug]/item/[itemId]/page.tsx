@@ -346,23 +346,23 @@ export default function ItemPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#faf8f4] text-[#1a1916] flex items-center justify-center">
-        <p className="text-[#6b6659]">Loading...</p>
+      <main className="min-h-screen bg-[#f1e7d5] text-[#241a12] flex items-center justify-center">
+        <p className="text-[#6f5b46]">Loading...</p>
       </main>
     );
   }
 
   if (!item) {
     return (
-      <main className="min-h-screen bg-[#faf8f4] text-[#1a1916] flex items-center justify-center px-5">
+      <main className="min-h-screen bg-[#f1e7d5] text-[#241a12] flex items-center justify-center px-5">
         <div className="text-center max-w-sm w-full">
           <h1 className="text-2xl font-bold mb-2">Item not found</h1>
-          <p className="text-[#6b6659] text-sm mb-6">This item may have been removed or the link is incorrect.</p>
+          <p className="text-[#6f5b46] text-sm mb-6">This item may have been removed or the link is incorrect.</p>
           <div className="flex flex-col gap-2.5">
-            <Link href={`/${orgSlug}/${auctionSlug}`} className="w-full bg-[#09a7ad] hover:bg-[#0898a0] text-white font-semibold py-3 rounded-xl transition-colors">
+            <Link href={`/${orgSlug}/${auctionSlug}`} className="w-full bg-[#a4592a] hover:bg-[#843f1c] text-white font-semibold py-3 rounded-xl transition-colors">
               Back to auction
             </Link>
-            <Link href="/auctions" className="w-full border border-[#d4cfc4] hover:border-[#b0a99a] text-[#4a4640] hover:text-[#1a1916] font-medium py-3 rounded-xl transition-colors">
+            <Link href="/auctions" className="w-full border border-[#cdbda3] hover:border-[#b3a085] text-[#4a3a2b] hover:text-[#241a12] font-medium py-3 rounded-xl transition-colors">
               Browse all auctions
             </Link>
           </div>
@@ -384,15 +384,15 @@ export default function ItemPage() {
   const showWinning = isSignedIn && isLoaded && isWinning && !biddingEnded;
 
   return (
-    <main className="min-h-screen bg-[#faf8f4] text-[#1a1916]">
+    <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
       {/* Breadcrumb / back link */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4 flex items-center gap-2 text-sm min-w-0">
-        <Link href={`/${orgSlug}/${auctionSlug}`} className="text-[#8c8778] hover:text-[#1a1916] shrink-0 flex items-center gap-1 transition-colors text-sm font-medium">
+        <Link href={`/${orgSlug}/${auctionSlug}`} className="text-[#8a7559] hover:text-[#241a12] shrink-0 flex items-center gap-1 transition-colors text-sm font-medium">
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><path d="M8 2L4 6l4 4" /></svg>
           Back to auction
         </Link>
-        <span className="text-[#b0a99a] hidden sm:inline">/</span>
-        <span className="text-[#4a4640] truncate hidden sm:inline">{item.title}</span>
+        <span className="text-[#b3a085] hidden sm:inline">/</span>
+        <span className="text-[#4a3a2b] truncate hidden sm:inline">{item.title}</span>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-12">
@@ -422,7 +422,7 @@ export default function ItemPage() {
                 className="w-full h-full object-contain"
               />
             ) : (
-              <div className="text-[#8c8778] text-sm">No photo</div>
+              <div className="text-[#8a7559] text-sm">No photo</div>
             )}
             {/* Prev / Next arrows */}
             {item.photos.length > 1 && (
@@ -432,7 +432,7 @@ export default function ItemPage() {
                   className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-sm transition-colors"
                   aria-label="Previous photo"
                 >
-                  <svg className="w-4 h-4 text-[#4a4640]" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                  <svg className="w-4 h-4 text-[#4a3a2b]" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
                     <path d="M10 4L6 8l4 4" />
                   </svg>
                 </button>
@@ -441,7 +441,7 @@ export default function ItemPage() {
                   className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-sm transition-colors"
                   aria-label="Next photo"
                 >
-                  <svg className="w-4 h-4 text-[#4a4640]" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                  <svg className="w-4 h-4 text-[#4a3a2b]" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
                     <path d="M6 4l4 4-4 4" />
                   </svg>
                 </button>
@@ -451,7 +451,7 @@ export default function ItemPage() {
                     <button
                       key={i}
                       onClick={() => setSelectedPhotoIdx(i)}
-                      className={`w-1.5 h-1.5 rounded-full transition-colors ${i === selectedPhotoIdx ? "bg-[#09a7ad]" : "bg-[#b0a99a]"}`}
+                      className={`w-1.5 h-1.5 rounded-full transition-colors ${i === selectedPhotoIdx ? "bg-[#a4592a]" : "bg-[#b3a085]"}`}
                       aria-label={`Go to photo ${i + 1}`}
                     />
                   ))}
@@ -467,7 +467,7 @@ export default function ItemPage() {
                   key={i}
                   onClick={() => setSelectedPhotoIdx(i)}
                   className={`aspect-square bg-white rounded-lg overflow-hidden flex items-center justify-center border-2 transition-colors ${
-                    i === selectedPhotoIdx ? "border-[#09a7ad]" : "border-transparent hover:border-[#09a7ad]/40"
+                    i === selectedPhotoIdx ? "border-[#a4592a]" : "border-transparent hover:border-[#a4592a]/40"
                   }`}
                   aria-label={`Photo ${i + 1}`}
                 >
@@ -482,33 +482,33 @@ export default function ItemPage() {
         <div>
           <div className="flex items-center gap-2 mb-3 flex-wrap">
             {item.category && (
-              <span className="text-xs text-[#09a7ad] bg-[#09a7ad]/10 border border-[#09a7ad]/20 px-2.5 py-1 rounded-full font-medium">{item.category}</span>
+              <span className="text-xs text-[#a4592a] bg-[#a4592a]/10 border border-[#a4592a]/20 px-2.5 py-1 rounded-full font-medium">{item.category}</span>
             )}
-            <span className="text-xs text-[#6b6659] bg-[#f2efe8] border border-[#e5e0d5] px-2.5 py-1 rounded-full capitalize font-medium">
+            <span className="text-xs text-[#6f5b46] bg-[#efe3d0] border border-[#e3d6bf] px-2.5 py-1 rounded-full capitalize font-medium">
               {item.condition.replace("_", " ").toLowerCase()}
             </span>
             {item.taxDeductible && (
-              <span className="text-xs text-[#09a7ad] bg-[#09a7ad]/10 border border-[#09a7ad]/20 px-2.5 py-1 rounded-full font-medium">Tax Deductible</span>
+              <span className="text-xs text-[#a4592a] bg-[#a4592a]/10 border border-[#a4592a]/20 px-2.5 py-1 rounded-full font-medium">Tax Deductible</span>
             )}
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-bold mb-2">{item.title}</h1>
-          {item.description && <p className="text-[#6b6659] mb-6">{item.description}</p>}
+          {item.description && <p className="text-[#6f5b46] mb-6">{item.description}</p>}
 
           {/* Countdown */}
           {effectiveEndAt && !auctionClosed && !itemSold && !itemNotActive && (
             <div className={`rounded-2xl px-4 py-3 mb-6 flex items-center justify-between border transition-all ${
               biddingEnded
-                ? "bg-white border-[#e5e0d5]"
-                : "bg-[#f0fafa] border-[#09a7ad]/25"
+                ? "bg-white border-[#e3d6bf]"
+                : "bg-[#f6ecda] border-[#a4592a]/25"
             }`}>
-              <span className="text-[#8c8778] text-sm font-medium">
+              <span className="text-[#8a7559] text-sm font-medium">
                 {biddingEnded ? "Bidding ended" : "Time remaining"}
               </span>
               {!biddingEnded ? (
                 <Countdown endAt={effectiveEndAt} onExpire={handleExpire} />
               ) : (
-                <span className="text-[#8c8778] font-semibold text-sm">Refreshing results shortly…</span>
+                <span className="text-[#8a7559] font-semibold text-sm">Refreshing results shortly…</span>
               )}
             </div>
           )}
@@ -516,30 +516,30 @@ export default function ItemPage() {
           {/* Donor / retail value */}
           <div className="grid grid-cols-2 gap-3 mb-6">
             {item.retailValue && (
-              <div className="bg-[#e8f8f8] border border-[#09a7ad]/25 rounded-xl p-4">
-                <div className="text-[#09a7ad] text-xs font-semibold uppercase tracking-wide mb-1">Retail Value</div>
-                <div className="text-[#0a7f84] font-extrabold text-xl">${item.retailValue.toLocaleString()}</div>
+              <div className="bg-[#f6ecda] border border-[#a4592a]/25 rounded-xl p-4">
+                <div className="text-[#a4592a] text-xs font-semibold uppercase tracking-wide mb-1">Retail Value</div>
+                <div className="text-[#843f1c] font-extrabold text-xl">${item.retailValue.toLocaleString()}</div>
               </div>
             )}
             {item.donorName && (
-              <div className="bg-[#f0fafa] border border-[#09a7ad]/20 rounded-xl p-4">
-                <div className="text-[#09a7ad] text-xs font-semibold uppercase tracking-wide mb-1">Donated by</div>
-                <div className="text-[#1a1916] font-bold text-sm leading-snug">{item.donorName}</div>
+              <div className="bg-[#f6ecda] border border-[#a4592a]/20 rounded-xl p-4">
+                <div className="text-[#a4592a] text-xs font-semibold uppercase tracking-wide mb-1">Donated by</div>
+                <div className="text-[#241a12] font-bold text-sm leading-snug">{item.donorName}</div>
               </div>
             )}
           </div>
 
           {/* ── Unified bidding card: Max Bid (primary) + manual bid (secondary) ── */}
-          <div className="bg-white border border-[#e5e0d5] rounded-2xl p-4 sm:p-6 mb-6 shadow-[0_0_25px_rgba(9,167,173,0.04)]">
+          <div className="bg-white border border-[#e3d6bf] rounded-2xl p-4 sm:p-6 mb-6 shadow-[0_0_25px_rgba(164,89,42,0.04)]">
 
             {/* Current bid header */}
             <div className="flex items-center justify-between mb-4">
               <div>
-                <div className="text-[#8c8778] text-sm">{item.currentBid > 0 ? "Current Bid" : "Starting Bid"}</div>
-                <div className="text-[#09a7ad] font-bold text-3xl sm:text-4xl">${currentBid.toLocaleString()}</div>
+                <div className="text-[#8a7559] text-sm">{item.currentBid > 0 ? "Current Bid" : "Starting Bid"}</div>
+                <div className="text-[#a4592a] font-bold text-3xl sm:text-4xl">${currentBid.toLocaleString()}</div>
                 {showWinning && (
                   <div className="mt-1.5">
-                    <span className="inline-flex items-center gap-1.5 text-xs bg-[#09a7ad]/20 text-[#0bbcc2] border border-[#09a7ad]/30 px-2.5 py-0.5 rounded-full font-semibold">
+                    <span className="inline-flex items-center gap-1.5 text-xs bg-[#a4592a]/20 text-[#c47b3e] border border-[#a4592a]/30 px-2.5 py-0.5 rounded-full font-semibold">
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                         <path d="M3 5H1V3h2M9 5h2V3h-2M3 5h6v3a3 3 0 0 1-6 0V5zM4 11h4M6 8v3" />
                       </svg>
@@ -550,11 +550,11 @@ export default function ItemPage() {
               </div>
               <div className="text-right flex flex-col items-end gap-2">
                 <div>
-                  <div className="text-[#8c8778] text-sm">Bids</div>
-                  <div className="text-[#1a1916] font-bold text-xl">{liveBids.length}</div>
+                  <div className="text-[#8a7559] text-sm">Bids</div>
+                  <div className="text-[#241a12] font-bold text-xl">{liveBids.length}</div>
                 </div>
                 {hasActiveProxy && (
-                  <span className="text-xs bg-[#09a7ad]/15 text-[#0a8a8f] px-2 py-0.5 rounded-full font-medium">
+                  <span className="text-xs bg-[#a4592a]/15 text-[#843f1c] px-2 py-0.5 rounded-full font-medium">
                     Max Bid Active
                   </span>
                 )}
@@ -562,7 +562,7 @@ export default function ItemPage() {
             </div>
 
             {biddingLocked ? (
-              <div className="bg-[#f2efe8] rounded-xl px-4 py-3 text-center text-[#6b6659]">
+              <div className="bg-[#efe3d0] rounded-xl px-4 py-3 text-center text-[#6f5b46]">
                 {itemSold
                   ? "This item has been sold."
                   : auctionClosed
@@ -573,9 +573,9 @@ export default function ItemPage() {
               </div>
             ) : !isLoaded ? null : !isSignedIn ? (
               <div className="text-center">
-                <p className="text-[#6b6659] text-sm mb-3">You must be signed in to place a bid.</p>
+                <p className="text-[#6f5b46] text-sm mb-3">You must be signed in to place a bid.</p>
                 <SignInButton mode="modal">
-                  <button className="w-full bg-[#09a7ad] hover:bg-[#0898a0] text-white font-semibold py-3 rounded-xl">
+                  <button className="w-full bg-[#a4592a] hover:bg-[#843f1c] text-white font-semibold py-3 rounded-xl">
                     Sign In to Bid
                   </button>
                 </SignInButton>
@@ -585,30 +585,30 @@ export default function ItemPage() {
                 {/* ═══════════════════════════════════════════════════════════
                     MAX BID — PRIMARY option
                 ═══════════════════════════════════════════════════════════ */}
-                <div className="bg-[#f0fafa] border border-[#09a7ad]/25 rounded-xl p-3 mb-4">
+                <div className="bg-[#f6ecda] border border-[#a4592a]/25 rounded-xl p-3 mb-4">
                   {/* section header */}
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-1.5">
                       <div>
-                        <h3 className="font-bold text-sm text-[#1a1916]">Set a Max Bid</h3>
-                        <p className="text-[10px] text-[#8c8778] leading-tight mt-0.5">We auto-bid for you up to your limit</p>
+                        <h3 className="font-bold text-sm text-[#241a12]">Set a Max Bid</h3>
+                        <p className="text-[10px] text-[#8a7559] leading-tight mt-0.5">We auto-bid for you up to your limit</p>
                       </div>
                       <button
                         onClick={() => setShowMaxBidExplainer(true)}
                         aria-label="Learn how max bidding works"
-                        className="w-5 h-5 rounded-full bg-[#09a7ad]/20 text-[#09a7ad] text-xs font-bold flex items-center justify-center hover:bg-[#09a7ad]/35 transition-colors leading-none shrink-0"
+                        className="w-5 h-5 rounded-full bg-[#a4592a]/20 text-[#a4592a] text-xs font-bold flex items-center justify-center hover:bg-[#a4592a]/35 transition-colors leading-none shrink-0"
                       >
                         ?
                       </button>
                     </div>
-                    <span className="text-[11px] font-semibold text-[#09a7ad] bg-[#09a7ad]/10 px-2 py-0.5 rounded-full shrink-0">
+                    <span className="text-[11px] font-semibold text-[#a4592a] bg-[#a4592a]/10 px-2 py-0.5 rounded-full shrink-0">
                       Recommended
                     </span>
                   </div>
 
                   {proxyMessage && (
                     <div className={`text-sm mb-3 px-3 py-2 rounded-lg ${
-                      proxyMessage.type === "success" ? "bg-[#09a7ad]/20 text-[#09a7ad]" : "bg-red-500/20 text-red-600"
+                      proxyMessage.type === "success" ? "bg-[#a4592a]/20 text-[#a4592a]" : "bg-red-500/20 text-red-600"
                     }`}>
                       {proxyMessage.text}
                     </div>
@@ -618,16 +618,16 @@ export default function ItemPage() {
                     /* Active max bid display */
                     <div className="flex items-center justify-between bg-white rounded-xl px-4 py-3">
                       <div>
-                        <p className="text-[#4a4640] text-sm font-medium">
+                        <p className="text-[#4a3a2b] text-sm font-medium">
                           Your max bid:{" "}
-                          <span className="text-[#09a7ad] font-bold text-base">${userProxy.maxAmount.toLocaleString()}</span>
+                          <span className="text-[#a4592a] font-bold text-base">${userProxy.maxAmount.toLocaleString()}</span>
                         </p>
-                        <p className="text-[#8c8778] text-xs mt-0.5">We&apos;re auto-bidding on your behalf up to this amount.</p>
+                        <p className="text-[#8a7559] text-xs mt-0.5">We&apos;re auto-bidding on your behalf up to this amount.</p>
                       </div>
                       <div className="flex gap-2 shrink-0 ml-3">
                         <button
                           onClick={() => { setProxyAmount(String(userProxy.maxAmount)); setUserProxy(null); }}
-                          className="text-xs text-[#6b6659] hover:text-[#1a1916] border border-[#d4cfc4] hover:border-[#b0a99a] px-3 py-1.5 rounded-lg transition-colors"
+                          className="text-xs text-[#6f5b46] hover:text-[#241a12] border border-[#cdbda3] hover:border-[#b3a085] px-3 py-1.5 rounded-lg transition-colors"
                         >
                           Update
                         </button>
@@ -648,7 +648,7 @@ export default function ItemPage() {
                           Your max bid was outbid. Set a new maximum to get back in the lead.
                         </div>
                       )}
-                      <p className="text-[#8c8778] text-xs mb-2">Quick picks:</p>
+                      <p className="text-[#8a7559] text-xs mb-2">Quick picks:</p>
                       <div className="flex gap-1.5 mb-3 flex-wrap">
                         {proxySuggestions.map(s => (
                           <button
@@ -656,8 +656,8 @@ export default function ItemPage() {
                             onClick={() => setProxyAmount(String(s))}
                             className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
                               proxyAmount === String(s)
-                                ? "bg-[#09a7ad] border-[#09a7ad] text-white"
-                                : "bg-white border-[#d4cfc4] text-[#4a4640] hover:bg-[#f2efe8]"
+                                ? "bg-[#a4592a] border-[#a4592a] text-white"
+                                : "bg-white border-[#cdbda3] text-[#4a3a2b] hover:bg-[#efe3d0]"
                             }`}
                           >
                             ${s.toLocaleString()}
@@ -673,12 +673,12 @@ export default function ItemPage() {
                           onChange={e => setProxyAmount(e.target.value)}
                           onKeyDown={e => e.key === "Enter" && !proxyPlacing && handleSetProxy()}
                           placeholder={`$${minProxy.toLocaleString()} or more`}
-                          className="w-full bg-white border border-[#d4cfc4] rounded-xl px-4 py-3 text-[#1a1916] placeholder-[#b0a99a] focus:outline-none focus:border-[#09a7ad]"
+                          className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]"
                         />
                         <button
                           onClick={handleSetProxy}
                           disabled={proxyPlacing}
-                          className="w-full bg-[#09a7ad] hover:bg-[#0898a0] disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-all hover:shadow-[0_0_20px_rgba(9,167,173,0.3)]"
+                          className="w-full bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-all hover:shadow-[0_0_20px_rgba(164,89,42,0.3)]"
                         >
                           {proxyPlacing ? "Setting…" : "Set Max Bid"}
                         </button>
@@ -694,9 +694,9 @@ export default function ItemPage() {
                           Math.round(amt * feePct / 100 * 100) +
                           Math.round(amt * taxPct / 100 * 100);
                         return (
-                          <p className="text-xs text-[#8c8778] mt-2">
+                          <p className="text-xs text-[#8a7559] mt-2">
                             Worst case if your max wins:{" "}
-                            <span className="text-[#4a4640] font-semibold tabular-nums">
+                            <span className="text-[#4a3a2b] font-semibold tabular-nums">
                               ${(totalCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                             {feePct > 0 ? ` (incl. ${feePct}% premium${taxPct > 0 ? ` + ${taxPct}% tax` : ""})` : ""}.
@@ -711,19 +711,19 @@ export default function ItemPage() {
                     Divider
                 ═══════════════════════════════════════════════════════════ */}
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="flex-1 h-px bg-[#e5e0d5]" />
-                  <span className="text-xs text-[#b0a99a]">or bid a specific amount</span>
-                  <div className="flex-1 h-px bg-[#e5e0d5]" />
+                  <div className="flex-1 h-px bg-[#e3d6bf]" />
+                  <span className="text-xs text-[#b3a085]">or bid a specific amount</span>
+                  <div className="flex-1 h-px bg-[#e3d6bf]" />
                 </div>
 
                 {/* ═══════════════════════════════════════════════════════════
                     MANUAL BID — secondary option
                 ═══════════════════════════════════════════════════════════ */}
                 <div>
-                  <div className="text-[#8c8778] text-xs mb-3">{item.currentBid > 0 ? `Minimum next bid: $${minBid.toLocaleString()}` : `Be the first bidder — start at $${minBid.toLocaleString()}`}</div>
+                  <div className="text-[#8a7559] text-xs mb-3">{item.currentBid > 0 ? `Minimum next bid: $${minBid.toLocaleString()}` : `Be the first bidder — start at $${minBid.toLocaleString()}`}</div>
                   {message && (
                     <div className={`text-sm mb-3 px-3 py-2 rounded-lg ${
-                      message.type === "success" ? "bg-[#09a7ad]/20 text-[#09a7ad]" : "bg-red-500/20 text-red-600"
+                      message.type === "success" ? "bg-[#a4592a]/20 text-[#a4592a]" : "bg-red-500/20 text-red-600"
                     }`}>
                       {message.text}
                     </div>
@@ -737,12 +737,12 @@ export default function ItemPage() {
                       onChange={e => setBidAmount(e.target.value)}
                       onKeyDown={e => e.key === "Enter" && !placing && handleBid()}
                       placeholder={`Enter $${minBid.toLocaleString()} or more`}
-                      className="flex-1 bg-[#f2efe8] border border-[#d4cfc4] rounded-xl px-4 py-3 text-[#1a1916] placeholder-[#b0a99a] focus:outline-none focus:border-[#09a7ad]"
+                      className="flex-1 bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]"
                     />
                     <button
                       onClick={handleBid}
                       disabled={placing}
-                      className="bg-[#4a4640] hover:bg-[#1a1916] disabled:opacity-50 text-white font-bold px-6 py-3 rounded-xl transition-colors shrink-0"
+                      className="bg-[#4a3a2b] hover:bg-[#241a12] disabled:opacity-50 text-white font-bold px-6 py-3 rounded-xl transition-colors shrink-0"
                     >
                       {placing ? "Placing…" : "Place Bid"}
                     </button>
@@ -760,28 +760,28 @@ export default function ItemPage() {
                     const fmt = (c: number) =>
                       (c / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     return (
-                      <div className="mt-3 bg-[#f2efe8]/60 border border-[#d4cfc4]/60 rounded-xl px-4 py-3 text-xs space-y-1">
-                        <div className="flex justify-between text-[#6b6659]">
+                      <div className="mt-3 bg-[#efe3d0]/60 border border-[#cdbda3]/60 rounded-xl px-4 py-3 text-xs space-y-1">
+                        <div className="flex justify-between text-[#6f5b46]">
                           <span>{Number.isFinite(entered) && entered > 0 ? "Your bid" : "Minimum bid"}</span>
                           <span className="tabular-nums">${fmt(bidCents)}</span>
                         </div>
                         {feePct > 0 && (
-                          <div className="flex justify-between text-[#6b6659]">
+                          <div className="flex justify-between text-[#6f5b46]">
                             <span>Buyer premium ({feePct}%)</span>
                             <span className="tabular-nums">${fmt(feeCents)}</span>
                           </div>
                         )}
                         {taxPct > 0 && (
-                          <div className="flex justify-between text-[#6b6659]">
+                          <div className="flex justify-between text-[#6f5b46]">
                             <span>Tax ({taxPct}%)</span>
                             <span className="tabular-nums">${fmt(taxCents)}</span>
                           </div>
                         )}
-                        <div className="flex justify-between text-[#1a1916] font-bold border-t border-[#d4cfc4]/60 pt-1.5 mt-1.5">
+                        <div className="flex justify-between text-[#241a12] font-bold border-t border-[#cdbda3]/60 pt-1.5 mt-1.5">
                           <span>Total if you win</span>
                           <span className="tabular-nums">${fmt(totalCents)}</span>
                         </div>
-                        <p className="text-[#8c8778] pt-0.5">
+                        <p className="text-[#8a7559] pt-0.5">
                           Charged automatically to your card on file when the auction closes.
                         </p>
                       </div>
@@ -792,21 +792,21 @@ export default function ItemPage() {
                 {/* Payment method indicator (shared) */}
                 {item.org?.stripeChargesEnabled && hasCard !== null && (
                   <div className="flex items-center justify-between mt-4 px-1">
-                    <div className="flex items-center gap-1.5 text-xs text-[#8c8778]">
+                    <div className="flex items-center gap-1.5 text-xs text-[#8a7559]">
                       <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
                         <rect x="2" y="5" width="16" height="12" rx="2" />
                         <path d="M2 9h16" />
                       </svg>
                       {hasCard
                         ? cardBrand
-                          ? <span className="text-[#6b6659]">{cardBrand.charAt(0).toUpperCase() + cardBrand.slice(1)} ···· {cardLast4}</span>
-                          : <span className="text-[#6b6659]">Card on file</span>
+                          ? <span className="text-[#6f5b46]">{cardBrand.charAt(0).toUpperCase() + cardBrand.slice(1)} ···· {cardLast4}</span>
+                          : <span className="text-[#6f5b46]">Card on file</span>
                         : <span className="text-amber-600 font-medium">No card on file — add one to bid</span>
                       }
                     </div>
                     <button
                       onClick={() => setShowCardModal(true)}
-                      className="text-xs text-[#09a7ad] hover:text-[#0bbcc2] font-medium transition-colors"
+                      className="text-xs text-[#a4592a] hover:text-[#c47b3e] font-medium transition-colors"
                     >
                       {hasCard ? "Update card" : "Add card"}
                     </button>
@@ -829,13 +829,13 @@ export default function ItemPage() {
                 {liveBids.map((bid, i) => (
                   <div key={i} className="flex items-center justify-between bg-white rounded-lg px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-[#6b6659]">{bid.user}</span>
+                      <span className="text-[#6f5b46]">{bid.user}</span>
                       {bid.isProxy && (
-                        <span className="text-xs text-[#09a7ad] bg-[#09a7ad]/10 px-1.5 py-0.5 rounded">auto</span>
+                        <span className="text-xs text-[#a4592a] bg-[#a4592a]/10 px-1.5 py-0.5 rounded">auto</span>
                       )}
                     </div>
-                    <span className="text-[#09a7ad] font-semibold">${bid.amount.toLocaleString()}</span>
-                    <span className="text-[#8c8778] text-sm">{bid.time}</span>
+                    <span className="text-[#a4592a] font-semibold">${bid.amount.toLocaleString()}</span>
+                    <span className="text-[#8a7559] text-sm">{bid.time}</span>
                   </div>
                 ))}
               </div>
@@ -861,11 +861,11 @@ export default function ItemPage() {
             onClose={() => setShowCardModal(false)}
           />
         ) : (
-          <div className="fixed inset-0 z-50 bg-[#faf8f4]/90 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-            <div className="bg-white border border-[#e5e0d5] rounded-2xl p-6 w-full max-w-sm text-center">
-              <p className="text-[#4a4640] mb-2 font-semibold">Payments not yet enabled</p>
-              <p className="text-[#8c8778] text-sm mb-5">This business hasn&apos;t finished setting up payments. Try again later.</p>
-              <button onClick={() => setShowCardModal(false)} className="w-full bg-[#f2efe8] hover:bg-[#e8e4dc] text-[#1a1916] py-3 rounded-xl text-sm font-semibold">
+          <div className="fixed inset-0 z-50 bg-[#f1e7d5]/90 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
+            <div className="bg-white border border-[#e3d6bf] rounded-2xl p-6 w-full max-w-sm text-center">
+              <p className="text-[#4a3a2b] mb-2 font-semibold">Payments not yet enabled</p>
+              <p className="text-[#8a7559] text-sm mb-5">This business hasn&apos;t finished setting up payments. Try again later.</p>
+              <button onClick={() => setShowCardModal(false)} className="w-full bg-[#efe3d0] hover:bg-[#e7dcc6] text-[#241a12] py-3 rounded-xl text-sm font-semibold">
                 Close
               </button>
             </div>

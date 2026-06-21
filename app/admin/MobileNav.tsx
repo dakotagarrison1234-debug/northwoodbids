@@ -38,9 +38,9 @@ export default function MobileNav({ navItems, orgName, role }: Props) {
   return (
     <>
       {/* Mobile top bar */}
-      <div className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-[#e5e0d5]">
-        <Link href="/admin/dashboard" className="text-[#09a7ad] font-bold text-lg">Northwood Bids</Link>
-        <button onClick={() => setOpen(true)} className="text-[#6b6659] hover:text-[#1a1916] p-1" aria-label="Open menu">
+      <div className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-[#e3d6bf]">
+        <Link href="/admin/dashboard" className="text-[#a4592a] font-bold text-lg">Northwood Bids</Link>
+        <button onClick={() => setOpen(true)} className="text-[#6f5b46] hover:text-[#241a12] p-1" aria-label="Open menu">
           <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="3" y1="6" x2="21" y2="6" />
             <line x1="3" y1="12" x2="21" y2="12" />
@@ -56,13 +56,13 @@ export default function MobileNav({ navItems, orgName, role }: Props) {
           <div className="absolute inset-0 bg-black/60" onClick={() => setOpen(false)} />
           {/* Drawer */}
           <div className="relative w-72 bg-white flex flex-col h-full shadow-2xl">
-            <div className="px-6 py-5 border-b border-[#e5e0d5] flex items-center justify-between">
+            <div className="px-6 py-5 border-b border-[#e3d6bf] flex items-center justify-between">
               <div>
-                <span className="text-[#09a7ad] font-bold text-xl">Northwood Bids</span>
-                <p className="text-[#4a4640] text-sm mt-0.5 font-medium truncate">{orgName}</p>
-                <span className="text-xs text-[#8c8778] capitalize">{role}</span>
+                <span className="text-[#a4592a] font-bold text-xl">Northwood Bids</span>
+                <p className="text-[#4a3a2b] text-sm mt-0.5 font-medium truncate">{orgName}</p>
+                <span className="text-xs text-[#8a7559] capitalize">{role}</span>
               </div>
-              <button onClick={() => setOpen(false)} className="text-[#8c8778] hover:text-[#1a1916] p-1">
+              <button onClick={() => setOpen(false)} className="text-[#8a7559] hover:text-[#241a12] p-1">
                 <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="4" y1="4" x2="16" y2="16" />
                   <line x1="16" y1="4" x2="4" y2="16" />
@@ -76,18 +76,18 @@ export default function MobileNav({ navItems, orgName, role }: Props) {
                   key={item.href}
                   href={item.href}
                   onClick={() => setOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-[#6b6659] hover:text-[#1a1916] hover:bg-[#f2efe8] transition-colors text-sm"
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-[#6f5b46] hover:text-[#241a12] hover:bg-[#efe3d0] transition-colors text-sm"
                 >
                   <span className="w-5 flex items-center justify-center shrink-0"><NavIcon name={item.icon} /></span>
                   <span>{item.label}</span>
                 </Link>
               ))}
 
-              <div className="pt-2 border-t border-[#e5e0d5] mt-2 space-y-1">
+              <div className="pt-2 border-t border-[#e3d6bf] mt-2 space-y-1">
                 <Link
                   href="/dashboard"
                   onClick={() => setOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-[#6b6659] hover:text-[#1a1916] hover:bg-[#f2efe8] transition-colors text-sm"
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-[#6f5b46] hover:text-[#241a12] hover:bg-[#efe3d0] transition-colors text-sm"
                 >
                   <span className="w-5 flex items-center justify-center shrink-0"><NavIcon name="mybids" /></span>
                   <span>My Bids</span>
@@ -95,7 +95,7 @@ export default function MobileNav({ navItems, orgName, role }: Props) {
                 <Link
                   href="/auctions"
                   onClick={() => setOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-[#6b6659] hover:text-[#1a1916] hover:bg-[#f2efe8] transition-colors text-sm"
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-[#6f5b46] hover:text-[#241a12] hover:bg-[#efe3d0] transition-colors text-sm"
                 >
                   <span className="w-5 flex items-center justify-center shrink-0"><NavIcon name="home" /></span>
                   <span>Browse Auctions</span>
@@ -104,7 +104,7 @@ export default function MobileNav({ navItems, orgName, role }: Props) {
             </nav>
 
             {/* Sign out */}
-            <div className="px-4 pb-5 pt-3 border-t border-[#e5e0d5]">
+            <div className="px-4 pb-5 pt-3 border-t border-[#e3d6bf]">
               <button
                 onClick={handleSignOut}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:text-red-300 hover:bg-red-50 transition-colors text-sm"

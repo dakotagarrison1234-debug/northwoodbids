@@ -3,6 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import LocalDate from "./components/LocalDate";
+import { PineRidge, MountainRange, GavelEmblem, WoodenCrate, BranchDivider, PineMark } from "./components/Illustrations";
 
 function IconSearch() {
   return (
@@ -59,14 +60,6 @@ function IconShield() {
     </svg>
   );
 }
-function IconCalendar() {
-  return (
-    <svg className="w-9 h-9" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <path d="M16 2v4M8 2v4M3 10h18" />
-    </svg>
-  );
-}
 
 export default async function HomePage() {
   const { userId } = await auth();
@@ -94,48 +87,46 @@ export default async function HomePage() {
   ]);
 
   return (
-    <main className="min-h-screen bg-[#faf8f4] text-[#1a1916]">
+    <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
       {/* Hero */}
-      <section className="relative px-4 sm:px-6 pt-14 pb-12 sm:pt-20 sm:pb-16 overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[280px] bg-[#09a7ad]/6 rounded-full blur-[100px]" />
-        </div>
-        <div className="relative max-w-5xl mx-auto text-center">
+      <section className="relative px-4 sm:px-6 pt-14 pb-28 sm:pt-16 sm:pb-32 overflow-hidden">
+        <MountainRange className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 w-[860px] max-w-none opacity-40" />
+        <div className="relative max-w-3xl mx-auto text-center">
+          <GavelEmblem className="w-16 h-16 mx-auto mb-6 drop-shadow-sm" />
           {activeAuctions.length > 0 && (
-            <a href="#live-auctions" className="inline-flex items-center gap-2 bg-[#09a7ad]/10 border border-[#09a7ad]/25 text-[#09a7ad] text-xs font-bold px-4 py-2 rounded-full mb-6 hover:bg-[#0898a0]/15 transition-colors">
-              <span className="w-2 h-2 rounded-full bg-[#09a7ad] animate-pulse inline-block" />
+            <a href="#live-auctions" className="inline-flex items-center gap-2 bg-[#a4592a]/10 border border-[#a4592a]/30 text-[#a4592a] text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-full mb-6 hover:bg-[#a4592a]/15 transition-colors">
+              <span className="w-2 h-2 rounded-full bg-[#a4592a] animate-pulse inline-block" />
               {activeAuctions.length} live auction{activeAuctions.length !== 1 ? "s" : ""} happening now
             </a>
           )}
-          <h1 className="text-4xl sm:text-6xl font-extrabold leading-[1.08] tracking-tight mb-5 text-[#1a1916]">
-            Bid on great things.<br />
-            <span className="bg-gradient-to-r from-[#09a7ad] to-[#0bbcc2] bg-clip-text text-transparent">
-              Support great causes.
-            </span>
+          <h1 className="font-display text-5xl sm:text-7xl font-black leading-[1.03] tracking-tight mb-5 text-[#241a12]">
+            Going once.<br />
+            <span className="text-[#a4592a]">Going twice.</span>
           </h1>
-          <p className="text-[#6b6659] text-lg sm:text-xl max-w-xl mx-auto mb-9 leading-relaxed">
-            Bid live in real time, get instant outbid alerts, and check out securely when you win.
+          <p className="text-[#6f5b46] text-lg sm:text-xl max-w-xl mx-auto mb-9 leading-relaxed">
+            Real-time auctions with a handshake feel. Bid live, get outbid alerts, and check out securely the moment you win.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a href="#live-auctions" className="bg-[#09a7ad] hover:bg-[#0898a0] text-white font-bold px-9 py-4 rounded-2xl text-base transition-all hover:shadow-[0_4px_24px_rgba(9,167,173,0.35)] w-full sm:w-auto text-center">
+            <a href="#live-auctions" className="bg-[#a4592a] hover:bg-[#843f1c] text-white font-bold px-9 py-4 rounded-xl text-base transition-all hover:shadow-[0_6px_24px_rgba(164,89,42,0.35)] w-full sm:w-auto text-center">
               {activeAuctions.length > 0 ? "See Live Auctions" : "Browse Auctions"}
             </a>
             {!userId && (
-              <Link href="/sign-up" className="bg-white hover:bg-[#f2efe8] border border-[#e5e0d5] text-[#1a1916] font-semibold px-9 py-4 rounded-2xl text-base transition-colors w-full sm:w-auto text-center shadow-sm">
+              <Link href="/sign-up" className="bg-white hover:bg-[#efe3d0] border-2 border-[#241a12]/15 text-[#241a12] font-semibold px-9 py-4 rounded-xl text-base transition-colors w-full sm:w-auto text-center shadow-sm">
                 Create Free Account
               </Link>
             )}
           </div>
         </div>
+        <PineRidge className="pointer-events-none absolute bottom-0 left-0 w-full h-28" />
       </section>
 
       {/* Live Auctions */}
       <section id="live-auctions" className="px-4 sm:px-6 pt-4 pb-14 sm:pb-16 max-w-6xl mx-auto">
         <div className="flex items-center gap-3 mb-8">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#09a7ad] animate-pulse shrink-0" />
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1a1916]">Live Auctions</h2>
+          <span className="w-2.5 h-2.5 rounded-full bg-[#a4592a] animate-pulse shrink-0" />
+          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#241a12]">Live Auctions</h2>
           {activeAuctions.length > 0 && (
-            <span className="text-[#8c8778] text-sm font-medium">({activeAuctions.length})</span>
+            <span className="text-[#8a7559] text-sm font-medium">({activeAuctions.length})</span>
           )}
         </div>
         {activeAuctions.length > 0 ? (
@@ -145,18 +136,18 @@ export default async function HomePage() {
               const activeItems = auction.items.filter(i => i.status === "ACTIVE").length;
               return (
                 <Link key={auction.id} href={`/${auction.organization.slug}/${auction.slug}`}
-                  className="bg-white border border-[#e5e0d5] hover:border-[#09a7ad]/40 rounded-2xl p-6 transition-all hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] group shadow-sm">
+                  className="bg-white border border-[#e3d6bf] hover:border-[#a4592a]/40 rounded-2xl p-6 transition-all hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] group shadow-sm">
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div className="min-w-0">
-                      <h3 className="font-bold text-base group-hover:text-[#09a7ad] transition-colors leading-snug text-[#1a1916]">{auction.title}</h3>
+                      <h3 className="font-bold text-base group-hover:text-[#a4592a] transition-colors leading-snug text-[#241a12]">{auction.title}</h3>
                     </div>
-                    <span className="text-xs bg-[#09a7ad]/10 text-[#09a7ad] border border-[#09a7ad]/20 px-2.5 py-1 rounded-full shrink-0 font-bold whitespace-nowrap">Live</span>
+                    <span className="text-xs bg-[#a4592a]/10 text-[#a4592a] border border-[#a4592a]/20 px-2.5 py-1 rounded-full shrink-0 font-bold whitespace-nowrap">Live</span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[#8c8778] mb-2">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[#8a7559] mb-2">
                     <span>{activeItems} item{activeItems !== 1 ? "s" : ""}</span>
-                    {raised > 0 && <span className="text-[#09a7ad] font-semibold">${raised.toLocaleString()} raised</span>}
+                    {raised > 0 && <span className="text-[#a4592a] font-semibold">${raised.toLocaleString()} raised</span>}
                   </div>
-                  <div className="text-xs text-[#b0a99a] mt-3 border-t border-[#f2efe8] pt-3">
+                  <div className="text-xs text-[#b3a085] mt-3 border-t border-[#efe3d0] pt-3">
                     Closes <LocalDate iso={auction.endAt.toISOString()} />
                   </div>
                 </Link>
@@ -164,10 +155,10 @@ export default async function HomePage() {
             })}
           </div>
         ) : (
-          <div className="text-center py-20 bg-white rounded-2xl border border-[#e5e0d5] shadow-sm">
-            <div className="flex justify-center mb-4 text-[#b0a99a]"><IconCalendar /></div>
-            <p className="text-base font-semibold mb-1 text-[#4a4640]">No live auctions right now</p>
-            <p className="text-sm text-[#8c8778]">{upcomingAuctions.length > 0 ? "See what's coming up below." : "Check back soon."}</p>
+          <div className="text-center py-16 bg-white rounded-2xl border border-[#e3d6bf] shadow-sm">
+            <WoodenCrate className="w-32 h-28 mx-auto mb-4" />
+            <p className="text-lg font-bold mb-1 text-[#4a3a2b] font-display">No live auctions right now</p>
+            <p className="text-sm text-[#8a7559]">{upcomingAuctions.length > 0 ? "See what's coming up below." : "Check back soon — new lots are added often."}</p>
           </div>
         )}
       </section>
@@ -176,23 +167,23 @@ export default async function HomePage() {
       {upcomingAuctions.length > 0 && (
         <section className="px-4 sm:px-6 pb-14 sm:pb-16 max-w-6xl mx-auto">
           <div className="flex items-center gap-3 mb-8">
-            <span className="text-[#8c8778]"><IconClock /></span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1a1916]">Coming Soon</h2>
-            <span className="text-[#8c8778] text-sm font-medium">({upcomingAuctions.length})</span>
+            <span className="text-[#8a7559]"><IconClock /></span>
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#241a12]">Coming Soon</h2>
+            <span className="text-[#8a7559] text-sm font-medium">({upcomingAuctions.length})</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {upcomingAuctions.map((auction) => (
               <Link key={auction.id} href={`/${auction.organization.slug}`}
-                className="bg-white border border-[#e5e0d5] hover:border-[#d4cfc4] rounded-2xl p-6 transition-all group shadow-sm">
+                className="bg-white border border-[#e3d6bf] hover:border-[#cdbda3] rounded-2xl p-6 transition-all group shadow-sm">
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div className="min-w-0">
-                    <h3 className="font-bold text-base leading-snug text-[#2c2a24]">{auction.title}</h3>
+                    <h3 className="font-bold text-base leading-snug text-[#2c2317]">{auction.title}</h3>
                   </div>
-                  <span className="text-xs bg-[#f2efe8] text-[#8c8778] border border-[#e5e0d5] px-2.5 py-1 rounded-full shrink-0 font-semibold">Upcoming</span>
+                  <span className="text-xs bg-[#efe3d0] text-[#8a7559] border border-[#e3d6bf] px-2.5 py-1 rounded-full shrink-0 font-semibold">Upcoming</span>
                 </div>
-                <div className="text-sm text-[#8c8778] mb-2">{auction._count.items} item{auction._count.items !== 1 ? "s" : ""}</div>
-                <div className="text-xs text-[#09a7ad] font-medium mt-3 border-t border-[#f2efe8] pt-3 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#09a7ad]/60 inline-block" />
+                <div className="text-sm text-[#8a7559] mb-2">{auction._count.items} item{auction._count.items !== 1 ? "s" : ""}</div>
+                <div className="text-xs text-[#a4592a] font-medium mt-3 border-t border-[#efe3d0] pt-3 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#a4592a]/60 inline-block" />
                   Opens <LocalDate iso={auction.startAt!.toISOString()} />
                 </div>
               </Link>
@@ -202,9 +193,10 @@ export default async function HomePage() {
       )}
 
       {/* How it works */}
-      <section className="border-t border-[#e5e0d5]/60 bg-[#f5f1ea] px-4 sm:px-6 py-14 sm:py-16">
+      <section className="border-t border-[#e3d6bf]/60 bg-[#efe5d3] px-4 sm:px-6 py-14 sm:py-16">
         <div className="max-w-5xl mx-auto">
-          <p className="text-center text-[#8c8778] text-xs font-bold uppercase tracking-[0.18em] mb-10">How it works</p>
+          <BranchDivider className="w-44 h-5 mx-auto mb-5 opacity-80" />
+          <p className="text-center text-[#8a7559] text-xs font-bold uppercase tracking-[0.18em] mb-10">How it works</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-10">
             {[
               { icon: <IconSearch />, title: "Find an auction", desc: "Browse live auctions and watch the countdown. When the timer hits zero, the highest bid wins." },
@@ -212,35 +204,39 @@ export default async function HomePage() {
               { icon: <IconTrophy />, title: "Win & pick up", desc: "Win and your card is charged automatically. Arrange pickup with the business." },
             ].map(({ icon, title, desc }) => (
               <div key={title} className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-white border border-[#e5e0d5] rounded-2xl flex items-center justify-center text-[#09a7ad] shrink-0 shadow-sm">{icon}</div>
+                <div className="w-12 h-12 bg-white border border-[#e3d6bf] rounded-2xl flex items-center justify-center text-[#a4592a] shrink-0 shadow-sm">{icon}</div>
                 <div>
-                  <h3 className="font-bold text-[#1a1916] mb-1.5">{title}</h3>
-                  <p className="text-[#6b6659] text-sm leading-relaxed">{desc}</p>
+                  <h3 className="font-bold text-[#241a12] mb-1.5">{title}</h3>
+                  <p className="text-[#6f5b46] text-sm leading-relaxed">{desc}</p>
                 </div>
               </div>
             ))}
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-[#8c8778]">
-            <span className="flex items-center gap-2"><span className="text-[#09a7ad]"><IconBot /></span> Max bidding</span>
-            <span className="flex items-center gap-2"><span className="text-[#09a7ad]"><IconBell /></span> Outbid alerts</span>
-            <span className="flex items-center gap-2"><span className="text-[#09a7ad]"><IconClock /></span> Anti-sniping timer</span>
-            <span className="flex items-center gap-2"><span className="text-[#09a7ad]"><IconShield /></span> Secure Stripe checkout</span>
+          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-[#8a7559]">
+            <span className="flex items-center gap-2"><span className="text-[#a4592a]"><IconBot /></span> Max bidding</span>
+            <span className="flex items-center gap-2"><span className="text-[#a4592a]"><IconBell /></span> Outbid alerts</span>
+            <span className="flex items-center gap-2"><span className="text-[#a4592a]"><IconClock /></span> Anti-sniping timer</span>
+            <span className="flex items-center gap-2"><span className="text-[#a4592a]"><IconShield /></span> Secure Stripe checkout</span>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-[#e5e0d5] bg-white px-6 py-6">
-        <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-4 text-sm text-[#8c8778]">
-          <div className="flex items-center gap-1.5">
-            <span>© {new Date().getFullYear()}</span>
-            <span className="text-[#09a7ad] font-medium">Northwood Bids</span>
+      <footer className="bg-[#2f2114] text-[#e7dcc6] px-6 pt-10 pb-8">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <PineMark className="w-6 h-6" />
+              <span className="font-display font-extrabold text-lg text-white">Northwood Bids</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-[#cdbda3]">
+              <Link href="/help" className="hover:text-white transition-colors">Help &amp; Info</Link>
+              <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
+              <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <Link href="/help" className="hover:text-[#1a1916] transition-colors">Help & Info</Link>
-            <Link href="/terms" className="hover:text-[#1a1916] transition-colors">Terms of Service</Link>
-            <Link href="/privacy" className="hover:text-[#1a1916] transition-colors">Privacy Policy</Link>
-            <a href="mailto:Ryan@for-purpose.com" className="hover:text-[#1a1916] transition-colors">Ryan@for-purpose.com</a>
+          <div className="mt-6 pt-5 border-t border-white/10 text-xs text-[#b3a085]">
+            © {new Date().getFullYear()} Northwood Bids. All rights reserved.
           </div>
         </div>
       </footer>

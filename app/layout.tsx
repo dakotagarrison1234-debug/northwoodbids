@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Bitter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import HomeHeader from "@/app/components/HomeHeader";
 import "./globals.css";
@@ -14,9 +14,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Rugged slab serif for headings / display
+const bitter = Bitter({
+  variable: "--font-bitter",
+  subsets: ["latin"],
+  weight: ["500", "600", "700", "800", "900"],
+});
+
 export const metadata: Metadata = {
   title: "Northwood Bids",
-  description: "Charity auctions for churches, schools, and nonprofits",
+  description: "Northwood Bids — live auctions, bid in real time and check out securely.",
   applicationName: "Northwood Bids",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
@@ -33,7 +40,7 @@ export const metadata: Metadata = {
   },
   other: {
     "mobile-web-app-capable": "yes",
-    "msapplication-TileColor": "#09a7ad",
+    "msapplication-TileColor": "#a4592a",
     "msapplication-tap-highlight": "no",
   },
 };
@@ -47,10 +54,10 @@ export default function RootLayout({
     <ClerkProvider>
       <html
         lang="en"
-        className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${bitter.variable} h-full antialiased`}
       >
         <head>
-          <meta name="theme-color" content="#09a7ad" />
+          <meta name="theme-color" content="#a4592a" />
           <meta name="color-scheme" content="light" />
         </head>
         <body className="min-h-full flex flex-col">

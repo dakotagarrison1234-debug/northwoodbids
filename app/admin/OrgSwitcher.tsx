@@ -21,7 +21,7 @@ export default function OrgSwitcher({ orgs, currentOrgId }: { orgs: Org[]; curre
       <select
         value={currentOrgId}
         onChange={handleChange}
-        className="w-full bg-[#f2efe8] border border-orange-500/30 rounded-lg px-2 py-1.5 text-sm text-[#1a1916] focus:outline-none focus:border-orange-500"
+        className="w-full bg-[#efe3d0] border border-orange-500/30 rounded-lg px-2 py-1.5 text-sm text-[#241a12] focus:outline-none focus:border-orange-500"
       >
         {orgs.map((org) => (
           <option key={org.id} value={org.id}>{org.name}</option>

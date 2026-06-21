@@ -18,14 +18,14 @@ interface UserDetail {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  ACTIVE: "bg-[#09a7ad]/20 text-[#09a7ad]",
+  ACTIVE: "bg-[#a4592a]/20 text-[#a4592a]",
   WON: "bg-blue-500/20 text-blue-600",
   OUTBID: "bg-red-500/20 text-red-600",
-  CANCELLED: "bg-[#e8e4dc] text-[#6b6659]",
-  PAID: "bg-[#09a7ad]/20 text-[#09a7ad]",
+  CANCELLED: "bg-[#e7dcc6] text-[#6f5b46]",
+  PAID: "bg-[#a4592a]/20 text-[#a4592a]",
   FAILED: "bg-red-500/20 text-red-600",
   PENDING: "bg-yellow-500/20 text-amber-600",
-  REFUNDED: "bg-[#e8e4dc] text-[#6b6659]",
+  REFUNDED: "bg-[#e7dcc6] text-[#6f5b46]",
 };
 
 export default function UserDetailPage() {
@@ -88,7 +88,7 @@ export default function UserDetailPage() {
   if (loading || !data) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="w-6 h-6 rounded-full border-2 border-[#09a7ad]/30 border-t-[#09a7ad] animate-spin" />
+        <div className="w-6 h-6 rounded-full border-2 border-[#a4592a]/30 border-t-[#a4592a] animate-spin" />
       </div>
     );
   }
@@ -99,33 +99,33 @@ export default function UserDetailPage() {
 
   return (
     <>
-      <header className="border-b border-[#e5e0d5]/60 px-4 sm:px-8 py-4 flex items-center justify-between gap-4">
+      <header className="border-b border-[#e3d6bf]/60 px-4 sm:px-8 py-4 flex items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <Link href="/superadmin/users" className="text-[#8c8778] hover:text-[#1a1916] text-sm">← Users</Link>
-            <span className="text-[#b0a99a]">/</span>
-            <h1 className="text-lg font-semibold">{profile?.name || <span className="text-[#8c8778] italic">No name</span>}</h1>
+            <Link href="/superadmin/users" className="text-[#8a7559] hover:text-[#241a12] text-sm">← Users</Link>
+            <span className="text-[#b3a085]">/</span>
+            <h1 className="text-lg font-semibold">{profile?.name || <span className="text-[#8a7559] italic">No name</span>}</h1>
           </div>
-          <p className="text-[#8c8778] text-xs mt-0.5 font-mono">{clerkUserId}</p>
+          <p className="text-[#8a7559] text-xs mt-0.5 font-mono">{clerkUserId}</p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-[#8c8778]">
+        <div className="flex items-center gap-2 text-xs text-[#8a7559]">
           <span>{bids.length} bids</span>
           <span>·</span>
           <span>{wonBids.length} won</span>
           <span>·</span>
-          <span className="text-[#09a7ad] font-semibold">${paidTotal.toLocaleString()} paid</span>
+          <span className="text-[#a4592a] font-semibold">${paidTotal.toLocaleString()} paid</span>
         </div>
       </header>
 
       {/* Tabs */}
-      <div className="border-b border-[#e5e0d5] px-4 sm:px-8">
+      <div className="border-b border-[#e3d6bf] px-4 sm:px-8">
         <div className="flex gap-5">
           {(["profile", "bids", "payments", "orgs"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={`py-3 text-sm font-medium border-b-2 capitalize transition-colors ${
-                tab === t ? "border-[#09a7ad] text-[#1a1916]" : "border-transparent text-[#8c8778] hover:text-[#4a4640]"
+                tab === t ? "border-[#a4592a] text-[#241a12]" : "border-transparent text-[#8a7559] hover:text-[#4a3a2b]"
               }`}
             >
               {t === "bids" ? `Bids (${bids.length})` : t === "payments" ? `Payments (${payments.length})` : t === "orgs" ? `Orgs (${memberships.length})` : "Profile"}
@@ -145,24 +145,24 @@ export default function UserDetailPage() {
               { label: "Phone Number", value: editPhone, set: setEditPhone, placeholder: "+1 555 000 0000" },
             ].map((f) => (
               <div key={f.label}>
-                <label className="text-sm text-[#6b6659] mb-1.5 block">{f.label}</label>
+                <label className="text-sm text-[#6f5b46] mb-1.5 block">{f.label}</label>
                 <input
                   value={f.value}
                   onChange={(e) => f.set(e.target.value)}
                   placeholder={f.placeholder}
-                  className="w-full bg-white border border-[#d4cfc4] rounded-xl px-4 py-3 text-[#1a1916] placeholder-[#b0a99a] focus:outline-none focus:border-[#09a7ad]"
+                  className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]"
                 />
               </div>
             ))}
             {saveMsg && (
-              <p className={`text-sm px-3 py-2 rounded-lg ${saveMsg.ok ? "bg-[#09a7ad]/10 text-[#09a7ad]" : "bg-red-50 text-red-600"}`}>
+              <p className={`text-sm px-3 py-2 rounded-lg ${saveMsg.ok ? "bg-[#a4592a]/10 text-[#a4592a]" : "bg-red-50 text-red-600"}`}>
                 {saveMsg.text}
               </p>
             )}
             <button
               onClick={saveProfile}
               disabled={saving}
-              className="bg-[#09a7ad] hover:bg-[#0898a0] disabled:opacity-50 text-white font-semibold px-6 py-2.5 rounded-xl text-sm"
+              className="bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white font-semibold px-6 py-2.5 rounded-xl text-sm"
             >
               {saving ? "Saving…" : "Save Profile"}
             </button>
@@ -173,27 +173,27 @@ export default function UserDetailPage() {
         {tab === "bids" && (
           <div className="space-y-2">
             {bids.length === 0 ? (
-              <p className="text-[#8c8778] text-sm py-8 text-center">No bids placed.</p>
+              <p className="text-[#8a7559] text-sm py-8 text-center">No bids placed.</p>
             ) : (
               bids.map((bid) => (
-                <div key={bid.id} className="bg-white border border-[#e5e0d5] rounded-xl px-4 py-3 flex items-center gap-4">
+                <div key={bid.id} className="bg-white border border-[#e3d6bf] rounded-xl px-4 py-3 flex items-center gap-4">
                   {bid.item?.photos[0] ? (
                     <img src={bid.item.photos[0].url} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
                   ) : (
-                    <div className="w-10 h-10 rounded-lg bg-[#f2efe8] shrink-0" />
+                    <div className="w-10 h-10 rounded-lg bg-[#efe3d0] shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm truncate">{bid.item?.title || "Unknown item"}</div>
-                    <div className="text-[#8c8778] text-xs mt-0.5 truncate">
+                    <div className="text-[#8a7559] text-xs mt-0.5 truncate">
                       {bid.item?.auction?.organization.name} · {bid.item?.auction?.title}
                     </div>
                   </div>
                   <div className="text-right shrink-0 flex items-center gap-3">
                     <div>
-                      <div className="text-[#09a7ad] font-semibold text-sm">${bid.amount.toLocaleString()}</div>
-                      <div className="text-[#8c8778] text-xs">{new Date(bid.placedAt).toLocaleDateString()}</div>
+                      <div className="text-[#a4592a] font-semibold text-sm">${bid.amount.toLocaleString()}</div>
+                      <div className="text-[#8a7559] text-xs">{new Date(bid.placedAt).toLocaleDateString()}</div>
                     </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[bid.status] || "bg-[#e8e4dc] text-[#6b6659]"}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[bid.status] || "bg-[#e7dcc6] text-[#6f5b46]"}`}>
                       {bid.status}
                     </span>
                     {bid.isProxy && <span className="text-xs text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded">proxy</span>}
@@ -208,29 +208,29 @@ export default function UserDetailPage() {
         {tab === "payments" && (
           <div className="space-y-2">
             {payments.length === 0 ? (
-              <p className="text-[#8c8778] text-sm py-8 text-center">No payment records.</p>
+              <p className="text-[#8a7559] text-sm py-8 text-center">No payment records.</p>
             ) : (
               payments.map((p) => (
-                <div key={p.id} className="bg-white border border-[#e5e0d5] rounded-xl px-4 py-3">
+                <div key={p.id} className="bg-white border border-[#e3d6bf] rounded-xl px-4 py-3">
                   <div className="flex items-center gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-sm truncate">{p.item?.title || "Unknown item"}</div>
-                      <div className="text-[#8c8778] text-xs mt-0.5">{p.item?.auction?.organization.name} · {new Date(p.createdAt).toLocaleDateString()}</div>
+                      <div className="text-[#8a7559] text-xs mt-0.5">{p.item?.auction?.organization.name} · {new Date(p.createdAt).toLocaleDateString()}</div>
                       {p.failureReason && <div className="text-red-600 text-xs mt-1">{p.failureReason}</div>}
                     </div>
                     <div className="text-right shrink-0 flex items-center gap-3">
                       <div>
                         <div className="font-semibold text-sm">${p.amount.toLocaleString()}</div>
-                        {p.taxAmount ? <div className="text-[#8c8778] text-xs">+${p.taxAmount} tax</div> : null}
+                        {p.taxAmount ? <div className="text-[#8a7559] text-xs">+${p.taxAmount} tax</div> : null}
                       </div>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[p.status] || "bg-[#e8e4dc] text-[#6b6659]"}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[p.status] || "bg-[#e7dcc6] text-[#6f5b46]"}`}>
                         {p.status}
                       </span>
                       <select
                         value={p.status}
                         disabled={updatingPayment === p.id}
                         onChange={(e) => updatePayment(p.id, e.target.value)}
-                        className="bg-[#f2efe8] border border-[#d4cfc4] rounded-lg px-2 py-1 text-xs text-[#1a1916] focus:outline-none disabled:opacity-50"
+                        className="bg-[#efe3d0] border border-[#cdbda3] rounded-lg px-2 py-1 text-xs text-[#241a12] focus:outline-none disabled:opacity-50"
                       >
                         <option value="PENDING">PENDING</option>
                         <option value="PAID">PAID</option>
@@ -240,7 +240,7 @@ export default function UserDetailPage() {
                     </div>
                   </div>
                   {p.stripePaymentIntentId && (
-                    <div className="text-[#b0a99a] text-xs mt-2 font-mono truncate">{p.stripePaymentIntentId}</div>
+                    <div className="text-[#b3a085] text-xs mt-2 font-mono truncate">{p.stripePaymentIntentId}</div>
                   )}
                 </div>
               ))
@@ -252,17 +252,17 @@ export default function UserDetailPage() {
         {tab === "orgs" && (
           <div className="space-y-2">
             {memberships.length === 0 ? (
-              <p className="text-[#8c8778] text-sm py-8 text-center">Not a member of any organization.</p>
+              <p className="text-[#8a7559] text-sm py-8 text-center">Not a member of any organization.</p>
             ) : (
               memberships.map((m) => (
-                <div key={m.id} className="bg-white border border-[#e5e0d5] rounded-xl px-5 py-4 flex items-center justify-between">
+                <div key={m.id} className="bg-white border border-[#e3d6bf] rounded-xl px-5 py-4 flex items-center justify-between">
                   <div>
-                    <Link href={`/superadmin/orgs/${m.organization.id}`} className="font-medium hover:text-[#09a7ad] transition-colors">
+                    <Link href={`/superadmin/orgs/${m.organization.id}`} className="font-medium hover:text-[#a4592a] transition-colors">
                       {m.organization.name}
                     </Link>
-                    <div className="text-[#8c8778] text-xs mt-0.5">/{m.organization.slug}</div>
+                    <div className="text-[#8a7559] text-xs mt-0.5">/{m.organization.slug}</div>
                   </div>
-                  <span className="text-xs bg-[#f2efe8] text-[#4a4640] px-3 py-1 rounded-full font-medium">{m.role}</span>
+                  <span className="text-xs bg-[#efe3d0] text-[#4a3a2b] px-3 py-1 rounded-full font-medium">{m.role}</span>
                 </div>
               ))
             )}

@@ -71,7 +71,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   ];
 
   return (
-    <div className="min-h-screen bg-[#faf8f4] text-[#1a1916] flex flex-col">
+    <div className="min-h-screen bg-[#f1e7d5] text-[#241a12] flex flex-col">
       {/* Mobile nav (hamburger + drawer) */}
       <MobileNav
         navItems={navItems}
@@ -80,8 +80,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       />
 
       <div className="flex flex-1 min-h-0">
-        <aside className="hidden md:flex w-64 bg-white border-r border-[#e5e0d5] flex-col shrink-0">
-          <div className="px-6 py-5 border-b border-[#e5e0d5]">
+        <aside className="hidden md:flex w-64 bg-white border-r border-[#e3d6bf] flex-col shrink-0">
+          <div className="px-6 py-5 border-b border-[#e3d6bf]">
             <Link href="/admin/dashboard" className="flex items-center gap-3 mb-1">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -98,7 +98,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl text-[#4a4640] font-medium hover:text-[#1a1916] hover:bg-[#f2efe8] transition-colors"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl text-[#4a3a2b] font-medium hover:text-[#241a12] hover:bg-[#efe3d0] transition-colors"
               >
                 <span className="w-5 flex items-center justify-center shrink-0">
                   <AdminNavIcon name={item.icon} />
@@ -106,10 +106,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 <span>{item.label}</span>
               </Link>
             ))}
-            <div className="pt-2 border-t border-[#e5e0d5] mt-2">
+            <div className="pt-2 border-t border-[#e3d6bf] mt-2">
               <Link
                 href="/dashboard"
-                className="flex items-center gap-3 px-4 py-3 rounded-xl text-[#4a4640] font-medium hover:text-[#1a1916] hover:bg-[#f2efe8] transition-colors"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl text-[#4a3a2b] font-medium hover:text-[#241a12] hover:bg-[#efe3d0] transition-colors"
               >
                 <span className="w-5 flex items-center justify-center shrink-0">
                   <AdminNavIcon name="mybids" />
@@ -119,9 +119,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </div>
           </nav>
 
-          <div className="px-4 py-4 border-t border-[#e5e0d5] flex items-center gap-3">
+          <div className="px-4 py-4 border-t border-[#e3d6bf] flex items-center gap-3">
             <UserMenu />
-            <div className="text-sm text-[#8c8778] truncate">Account</div>
+            <div className="text-sm text-[#8a7559] truncate">Account</div>
           </div>
         </aside>
 

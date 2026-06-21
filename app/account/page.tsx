@@ -109,8 +109,8 @@ export default function AccountPage() {
 
   if (!isLoaded || loadingProfile) {
     return (
-      <main className="min-h-screen bg-[#faf8f4] flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-[#09a7ad]/30 border-t-[#09a7ad] animate-spin" />
+      <main className="min-h-screen bg-[#f1e7d5] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-[#a4592a]/30 border-t-[#a4592a] animate-spin" />
       </main>
     );
   }
@@ -122,37 +122,37 @@ export default function AccountPage() {
   ).toUpperCase();
 
   return (
-    <div className="min-h-screen bg-[#faf8f4] text-[#1a1916]">
+    <div className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8">
 
         {/* Back link */}
         <div className="flex items-center gap-2 text-sm">
-          <Link href="/dashboard" className="text-[#8c8778] hover:text-[#1a1916] transition-colors flex items-center gap-1.5">
+          <Link href="/dashboard" className="text-[#8a7559] hover:text-[#241a12] transition-colors flex items-center gap-1.5">
             <IcoArrowLeft />
             <span>My Bids</span>
           </Link>
-          <span className="text-[#d4cfc4]">/</span>
-          <span className="font-medium text-[#1a1916]">Account</span>
+          <span className="text-[#cdbda3]">/</span>
+          <span className="font-medium text-[#241a12]">Account</span>
         </div>
 
         {/* Page title */}
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-[#09a7ad]/10 border border-[#09a7ad]/20 flex items-center justify-center text-[#09a7ad] font-bold text-xl shrink-0">
+          <div className="w-14 h-14 rounded-full bg-[#a4592a]/10 border border-[#a4592a]/20 flex items-center justify-center text-[#a4592a] font-bold text-xl shrink-0">
             {user?.imageUrl ? (
               <img src={user.imageUrl} alt="" className="w-full h-full rounded-full object-cover" />
             ) : initials}
           </div>
           <div>
             <h1 className="text-xl font-bold">Account Settings</h1>
-            <p className="text-[#8c8778] text-sm">{user?.primaryEmailAddress?.emailAddress}</p>
+            <p className="text-[#8a7559] text-sm">{user?.primaryEmailAddress?.emailAddress}</p>
           </div>
         </div>
 
         {/* Profile section */}
-        <section className="bg-white border border-[#e5e0d5] rounded-2xl overflow-hidden">
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-[#e5e0d5]">
-            <span className="text-[#09a7ad]"><IcoUser /></span>
-            <h2 className="font-semibold text-[#1a1916]">Profile</h2>
+        <section className="bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden">
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-[#e3d6bf]">
+            <span className="text-[#a4592a]"><IcoUser /></span>
+            <h2 className="font-semibold text-[#241a12]">Profile</h2>
           </div>
           <div className="px-5 py-5 space-y-4">
             {[
@@ -161,21 +161,21 @@ export default function AccountPage() {
               { label: "Phone Number", type: "tel", value: editPhone, set: setEditPhone, placeholder: "+1 (555) 000-0000", hint: "Used for SMS notifications." },
             ].map((f) => (
               <div key={f.label}>
-                <label className="text-sm text-[#6b6659] mb-1.5 block font-medium">{f.label}</label>
+                <label className="text-sm text-[#6f5b46] mb-1.5 block font-medium">{f.label}</label>
                 <input
                   type={f.type}
                   value={f.value}
                   onChange={(e) => f.set(e.target.value)}
                   placeholder={f.placeholder}
-                  className="w-full bg-[#faf8f4] border border-[#d4cfc4] rounded-xl px-4 py-3 text-[#1a1916] placeholder-[#b0a99a] focus:outline-none focus:border-[#09a7ad]/60 transition-colors text-sm"
+                  className="w-full bg-[#f1e7d5] border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]/60 transition-colors text-sm"
                 />
-                {f.hint && <p className="text-[#8c8778] text-xs mt-1.5">{f.hint}</p>}
+                {f.hint && <p className="text-[#8a7559] text-xs mt-1.5">{f.hint}</p>}
               </div>
             ))}
             {profileMsg && (
               <p className={`text-sm px-4 py-3 rounded-xl font-medium ${
                 profileMsg.ok
-                  ? "bg-[#09a7ad]/10 text-[#09a7ad] border border-[#09a7ad]/20"
+                  ? "bg-[#a4592a]/10 text-[#a4592a] border border-[#a4592a]/20"
                   : "bg-red-50 text-red-600 border border-red-500/20"
               }`}>
                 {profileMsg.text}
@@ -184,7 +184,7 @@ export default function AccountPage() {
             <button
               onClick={saveProfile}
               disabled={savingProfile}
-              className="bg-[#09a7ad] hover:bg-[#0898a0] disabled:opacity-50 text-white font-bold px-6 py-3 rounded-xl w-full sm:w-auto transition-all text-sm"
+              className="bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white font-bold px-6 py-3 rounded-xl w-full sm:w-auto transition-all text-sm"
             >
               {savingProfile ? "Saving…" : "Save Profile"}
             </button>
@@ -192,35 +192,35 @@ export default function AccountPage() {
         </section>
 
         {/* Payment Methods section */}
-        <section className="bg-white border border-[#e5e0d5] rounded-2xl overflow-hidden">
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-[#e5e0d5]">
-            <span className="text-[#09a7ad]"><IcoCard /></span>
+        <section className="bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden">
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-[#e3d6bf]">
+            <span className="text-[#a4592a]"><IcoCard /></span>
             <div className="flex-1">
-              <h2 className="font-semibold text-[#1a1916]">Payment Methods</h2>
-              <p className="text-xs text-[#8c8778] mt-0.5">Cards on file</p>
+              <h2 className="font-semibold text-[#241a12]">Payment Methods</h2>
+              <p className="text-xs text-[#8a7559] mt-0.5">Cards on file</p>
             </div>
           </div>
 
           <div className="px-5 py-5">
             {loadingPMs ? (
-              <div className="text-[#8c8778] text-sm py-2">Loading…</div>
+              <div className="text-[#8a7559] text-sm py-2">Loading…</div>
             ) : paymentMethods.length === 0 ? (
-              <div className="bg-[#faf8f4] border border-[#e5e0d5] rounded-xl px-4 py-4 text-sm text-[#6b6659]">
+              <div className="bg-[#f1e7d5] border border-[#e3d6bf] rounded-xl px-4 py-4 text-sm text-[#6f5b46]">
                 No payment methods saved yet. A card will be requested when you place your first bid.
               </div>
             ) : (
               <div className="space-y-2.5">
                 {pmMsg && (
-                  <p className="text-sm px-4 py-3 rounded-xl font-medium bg-[#09a7ad]/10 text-[#09a7ad] border border-[#09a7ad]/20 mb-3">
+                  <p className="text-sm px-4 py-3 rounded-xl font-medium bg-[#a4592a]/10 text-[#a4592a] border border-[#a4592a]/20 mb-3">
                     {pmMsg}
                   </p>
                 )}
                 {paymentMethods.map((pm) => (
-                  <div key={pm.orgId} className="border border-[#e5e0d5] rounded-xl px-4 py-3.5 flex items-center justify-between gap-3 bg-[#faf8f4]">
+                  <div key={pm.orgId} className="border border-[#e3d6bf] rounded-xl px-4 py-3.5 flex items-center justify-between gap-3 bg-[#f1e7d5]">
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold text-[#1a1916] truncate">{pm.orgName}</div>
+                      <div className="text-sm font-semibold text-[#241a12] truncate">{pm.orgName}</div>
                       {pm.hasCard ? (
-                        <div className="text-xs text-[#6b6659] mt-0.5 flex items-center gap-1.5">
+                        <div className="text-xs text-[#6f5b46] mt-0.5 flex items-center gap-1.5">
                           <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
                             <rect x="1" y="3" width="14" height="10" rx="1.5" />
                             <path d="M1 7h14" />
@@ -237,7 +237,7 @@ export default function AccountPage() {
                     {pm.stripeAccountId && pm.stripeChargesEnabled && (
                       <button
                         onClick={() => setCardModal({ orgId: pm.orgId, stripeAccountId: pm.stripeAccountId! })}
-                        className="text-xs text-[#09a7ad] hover:text-[#0bbcc2] font-semibold shrink-0 transition-colors border border-[#09a7ad]/30 hover:border-[#09a7ad]/60 px-3 py-1.5 rounded-lg"
+                        className="text-xs text-[#a4592a] hover:text-[#c47b3e] font-semibold shrink-0 transition-colors border border-[#a4592a]/30 hover:border-[#a4592a]/60 px-3 py-1.5 rounded-lg"
                       >
                         {pm.hasCard ? "Update card" : "Add card"}
                       </button>
@@ -251,10 +251,10 @@ export default function AccountPage() {
 
         {/* Quick links */}
         <div className="flex flex-wrap gap-3 pb-8">
-          <Link href="/dashboard" className="text-sm text-[#8c8778] hover:text-[#1a1916] border border-[#d4cfc4] hover:border-[#b0a99a] px-4 py-2 rounded-xl transition-colors">
+          <Link href="/dashboard" className="text-sm text-[#8a7559] hover:text-[#241a12] border border-[#cdbda3] hover:border-[#b3a085] px-4 py-2 rounded-xl transition-colors">
             ← My Bids
           </Link>
-          <Link href="/auctions" className="text-sm text-[#8c8778] hover:text-[#1a1916] border border-[#d4cfc4] hover:border-[#b0a99a] px-4 py-2 rounded-xl transition-colors">
+          <Link href="/auctions" className="text-sm text-[#8a7559] hover:text-[#241a12] border border-[#cdbda3] hover:border-[#b3a085] px-4 py-2 rounded-xl transition-colors">
             Browse Auctions
           </Link>
         </div>

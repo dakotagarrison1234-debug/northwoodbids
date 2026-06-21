@@ -55,18 +55,18 @@ export default function ApplicationReviewCard({ application }: { application: Ap
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0 flex-1">
           <div className="font-bold text-base truncate">{application.orgName}</div>
-          <div className="text-[#6b6659] text-sm mt-0.5">{application.contactName}</div>
-          <div className="text-[#8c8778] text-sm truncate">{application.contactEmail}</div>
+          <div className="text-[#6f5b46] text-sm mt-0.5">{application.contactName}</div>
+          <div className="text-[#8a7559] text-sm truncate">{application.contactEmail}</div>
           {application.contactPhone && (
-            <div className="text-[#8c8778] text-xs mt-0.5">{application.contactPhone}</div>
+            <div className="text-[#8a7559] text-xs mt-0.5">{application.contactPhone}</div>
           )}
-          <div className="text-[#b0a99a] text-xs mt-1">
+          <div className="text-[#b3a085] text-xs mt-1">
             Submitted {new Date(application.createdAt).toLocaleDateString()}
           </div>
         </div>
         <button
           onClick={() => setExpanded(!expanded)}
-          className="text-xs text-[#8c8778] hover:text-[#1a1916] border border-[#d4cfc4] hover:border-[#b0a99a] px-2.5 py-1.5 rounded-lg transition-colors shrink-0"
+          className="text-xs text-[#8a7559] hover:text-[#241a12] border border-[#cdbda3] hover:border-[#b3a085] px-2.5 py-1.5 rounded-lg transition-colors shrink-0"
         >
           {expanded ? "Less" : "Details"}
         </button>
@@ -74,51 +74,51 @@ export default function ApplicationReviewCard({ application }: { application: Ap
 
       {/* Expanded details */}
       {expanded && (
-        <div className="mb-4 p-3 bg-[#f2efe8]/60 rounded-xl space-y-2 text-sm">
+        <div className="mb-4 p-3 bg-[#efe3d0]/60 rounded-xl space-y-2 text-sm">
           {application.description && (
             <div>
-              <span className="text-[#8c8778] text-xs font-medium uppercase tracking-wide">Description</span>
-              <p className="text-[#4a4640] mt-0.5 text-sm leading-relaxed">{application.description}</p>
+              <span className="text-[#8a7559] text-xs font-medium uppercase tracking-wide">Description</span>
+              <p className="text-[#4a3a2b] mt-0.5 text-sm leading-relaxed">{application.description}</p>
             </div>
           )}
           {application.website && (
             <div>
-              <span className="text-[#8c8778] text-xs font-medium uppercase tracking-wide">Website</span>
+              <span className="text-[#8a7559] text-xs font-medium uppercase tracking-wide">Website</span>
               <div className="mt-0.5">
-                <a href={application.website} target="_blank" rel="noopener noreferrer" className="text-[#09a7ad] hover:underline text-sm break-all">
+                <a href={application.website} target="_blank" rel="noopener noreferrer" className="text-[#a4592a] hover:underline text-sm break-all">
                   {application.website}
                 </a>
               </div>
             </div>
           )}
           <div>
-            <span className="text-[#8c8778] text-xs font-medium uppercase tracking-wide">Proposed slug</span>
-            <p className="text-[#4a4640] font-mono text-sm mt-0.5">/{application.slug}</p>
+            <span className="text-[#8a7559] text-xs font-medium uppercase tracking-wide">Proposed slug</span>
+            <p className="text-[#4a3a2b] font-mono text-sm mt-0.5">/{application.slug}</p>
           </div>
         </div>
       )}
 
       {/* Review note + actions */}
-      <div className="border-t border-[#e5e0d5]/60 pt-3 space-y-3">
+      <div className="border-t border-[#e3d6bf]/60 pt-3 space-y-3">
         <input
           type="text"
           value={reviewNote}
           onChange={(e) => setReviewNote(e.target.value)}
           placeholder="Optional note (shown on rejection)"
-          className="w-full bg-[#f2efe8] border border-[#d4cfc4]/80 rounded-xl px-3 py-2.5 text-sm text-[#1a1916] placeholder-[#b0a99a] focus:outline-none focus:border-[#09a7ad]/60 transition-colors"
+          className="w-full bg-[#efe3d0] border border-[#cdbda3]/80 rounded-xl px-3 py-2.5 text-sm text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]/60 transition-colors"
         />
 
         {/* Tax status — set at approval by Northwood Bids */}
-        <div className="bg-[#f2efe8]/60 border border-[#d4cfc4]/60 rounded-xl p-3 space-y-2">
-          <div className="text-xs font-semibold text-[#6b6659] uppercase tracking-wide">Tax Status</div>
+        <div className="bg-[#efe3d0]/60 border border-[#cdbda3]/60 rounded-xl p-3 space-y-2">
+          <div className="text-xs font-semibold text-[#6f5b46] uppercase tracking-wide">Tax Status</div>
           <label className="flex items-center gap-2.5 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={taxExempt}
               onChange={(e) => { setTaxExempt(e.target.checked); if (e.target.checked) setTaxPercent("0"); }}
-              className="w-4 h-4 accent-[#09a7ad]"
+              className="w-4 h-4 accent-[#a4592a]"
             />
-            <span className="text-sm text-[#2c2a24]">Tax exempt (most nonprofits)</span>
+            <span className="text-sm text-[#2c2317]">Tax exempt (most nonprofits)</span>
           </label>
           {!taxExempt && (
             <div className="flex items-center gap-2 pt-1">
@@ -130,11 +130,11 @@ export default function ApplicationReviewCard({ application }: { application: Ap
                   step="0.1"
                   value={taxPercent}
                   onChange={(e) => setTaxPercent(e.target.value)}
-                  className="w-full bg-[#f2efe8] border border-[#bfb9ac] rounded-lg px-3 py-1.5 text-sm text-[#1a1916] focus:outline-none focus:border-[#09a7ad]/60 pr-7"
+                  className="w-full bg-[#efe3d0] border border-[#b9a98c] rounded-lg px-3 py-1.5 text-sm text-[#241a12] focus:outline-none focus:border-[#a4592a]/60 pr-7"
                 />
-                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8c8778] text-xs">%</span>
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a7559] text-xs">%</span>
               </div>
-              <span className="text-xs text-[#8c8778]">Michigan is 6%</span>
+              <span className="text-xs text-[#8a7559]">Michigan is 6%</span>
             </div>
           )}
         </div>
@@ -143,7 +143,7 @@ export default function ApplicationReviewCard({ application }: { application: Ap
           <button
             onClick={() => handleAction("approve")}
             disabled={loading !== null}
-            className="flex-1 bg-[#09a7ad] hover:bg-[#0898a0] disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
+            className="flex-1 bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
           >
             {loading === "approve" ? "Approving…" : "Approve"}
           </button>

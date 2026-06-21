@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Charity auctions for churches, schools, and nonprofits",
     start_url: "/",
     display: "standalone",
-    background_color: "#faf8f4",
-    theme_color: "#09a7ad",
+    background_color: "#f1e7d5",
+    theme_color: "#a4592a",
     orientation: "portrait-primary",
     icons: [
       {

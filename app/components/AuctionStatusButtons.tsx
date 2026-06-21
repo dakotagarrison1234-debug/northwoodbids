@@ -85,7 +85,7 @@ export default function AuctionStatusButtons({ auctionId, status }: Props) {
   };
 
   if (loading) {
-    return <span className="text-[#6b6659] text-sm">Updating...</span>;
+    return <span className="text-[#6f5b46] text-sm">Updating...</span>;
   }
 
   return (
@@ -95,7 +95,7 @@ export default function AuctionStatusButtons({ auctionId, status }: Props) {
         <>
           <button
             onClick={() => updateStatus("OPEN")}
-            className="bg-[#09a7ad] hover:bg-[#0898a0] text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors"
+            className="bg-[#a4592a] hover:bg-[#843f1c] text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors"
           >
             Open Auction
           </button>
@@ -134,7 +134,7 @@ export default function AuctionStatusButtons({ auctionId, status }: Props) {
       {status === "CLOSED" && (
         <button
           onClick={() => updateStatus("SETTLED")}
-          className="bg-[#4a4640] hover:bg-[#1a1916] text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors"
+          className="bg-[#4a3a2b] hover:bg-[#241a12] text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors"
         >
           Mark Settled
         </button>

@@ -49,7 +49,7 @@ export default async function WinnersPage() {
 
   return (
     <>
-      <header className="border-b border-[#e5e0d5] px-4 sm:px-8 py-4">
+      <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-4">
         <h1 className="text-xl font-semibold">Winners &amp; Payments</h1>
       </header>
 
@@ -59,44 +59,44 @@ export default async function WinnersPage() {
         <div>
           <h2 className="text-lg font-semibold mb-4">Confirmed Winners</h2>
           {wonBids.length === 0 ? (
-            <p className="text-[#8c8778]">No confirmed winners yet — winners are set when an auction closes.</p>
+            <p className="text-[#8a7559]">No confirmed winners yet — winners are set when an auction closes.</p>
           ) : (
-            <div className="bg-white border border-[#e5e0d5] rounded-xl overflow-hidden">
+            <div className="bg-white border border-[#e3d6bf] rounded-xl overflow-hidden">
               <div className="overflow-x-auto">
               <table className="w-full min-w-[600px]">
                 <thead>
-                  <tr className="border-b border-[#e5e0d5]">
-                    <th className="text-left px-6 py-4 text-[#8c8778] text-sm font-medium">Item</th>
-                    <th className="text-left px-6 py-4 text-[#8c8778] text-sm font-medium">Winning Bid</th>
-                    <th className="text-left px-6 py-4 text-[#8c8778] text-sm font-medium">Winner</th>
-                    <th className="text-left px-6 py-4 text-[#8c8778] text-sm font-medium">Payment</th>
-                    <th className="text-left px-6 py-4 text-[#8c8778] text-sm font-medium">Item Status</th>
-                    <th className="text-left px-6 py-4 text-[#8c8778] text-sm font-medium">Actions</th>
+                  <tr className="border-b border-[#e3d6bf]">
+                    <th className="text-left px-6 py-4 text-[#8a7559] text-sm font-medium">Item</th>
+                    <th className="text-left px-6 py-4 text-[#8a7559] text-sm font-medium">Winning Bid</th>
+                    <th className="text-left px-6 py-4 text-[#8a7559] text-sm font-medium">Winner</th>
+                    <th className="text-left px-6 py-4 text-[#8a7559] text-sm font-medium">Payment</th>
+                    <th className="text-left px-6 py-4 text-[#8a7559] text-sm font-medium">Item Status</th>
+                    <th className="text-left px-6 py-4 text-[#8a7559] text-sm font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {wonBids.map((bid) => {
                     const payment = paymentMap.get(bid.itemId);
                     return (
-                      <tr key={bid.id} className="border-b border-[#e5e0d5] last:border-0 hover:bg-[#f2efe8]/50">
+                      <tr key={bid.id} className="border-b border-[#e3d6bf] last:border-0 hover:bg-[#efe3d0]/50">
                         <td className="px-6 py-4 font-medium">{bid.item.title}</td>
-                        <td className="px-6 py-4 text-[#09a7ad] font-bold">${Number(bid.amount).toLocaleString()}</td>
-                        <td className="px-6 py-4 text-[#4a4640] text-sm">
+                        <td className="px-6 py-4 text-[#a4592a] font-bold">${Number(bid.amount).toLocaleString()}</td>
+                        <td className="px-6 py-4 text-[#4a3a2b] text-sm">
                           {displayName(bid.clerkUserId)}
                         </td>
                         <td className="px-6 py-4">
                           {payment?.status === "PAID" ? (
-                            <span className="text-xs bg-[#09a7ad]/20 text-[#09a7ad] px-2 py-1 rounded-full">Paid</span>
+                            <span className="text-xs bg-[#a4592a]/20 text-[#a4592a] px-2 py-1 rounded-full">Paid</span>
                           ) : (
                             <span className="text-xs bg-yellow-500/20 text-amber-600 px-2 py-1 rounded-full">Unpaid</span>
                           )}
                         </td>
                         <td className="px-6 py-4">
                           <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                            bid.item.status === "SOLD" ? "bg-[#09a7ad]/15 text-[#0a8a8f]"
+                            bid.item.status === "SOLD" ? "bg-[#a4592a]/15 text-[#843f1c]"
                             : (bid.item.status as string) === "PENDING_PICKUP" ? "bg-amber-50 text-amber-700"
-                            : (bid.item.status as string) === "PICKED_UP" ? "bg-[#f2efe8] text-[#4a4640]"
-                            : "bg-[#e8e4dc] text-[#6b6659]"
+                            : (bid.item.status as string) === "PICKED_UP" ? "bg-[#efe3d0] text-[#4a3a2b]"
+                            : "bg-[#e7dcc6] text-[#6f5b46]"
                           }`}>
                             {bid.item.status.replace("_", " ").toLowerCase()}
                           </span>
@@ -121,26 +121,26 @@ export default async function WinnersPage() {
         <div>
           <h2 className="text-lg font-semibold mb-4">Current Leading Bids</h2>
           {activeBids.length === 0 ? (
-            <p className="text-[#8c8778]">No active bids yet.</p>
+            <p className="text-[#8a7559]">No active bids yet.</p>
           ) : (
-            <div className="bg-white border border-[#e5e0d5] rounded-xl overflow-hidden">
+            <div className="bg-white border border-[#e3d6bf] rounded-xl overflow-hidden">
               <div className="overflow-x-auto">
               <table className="w-full min-w-[500px]">
                 <thead>
-                  <tr className="border-b border-[#e5e0d5]">
-                    <th className="text-left px-6 py-4 text-[#8c8778] text-sm font-medium">Item</th>
-                    <th className="text-left px-6 py-4 text-[#8c8778] text-sm font-medium">Auction</th>
-                    <th className="text-left px-6 py-4 text-[#8c8778] text-sm font-medium">Leading Bid</th>
-                    <th className="text-left px-6 py-4 text-[#8c8778] text-sm font-medium">Bidder</th>
+                  <tr className="border-b border-[#e3d6bf]">
+                    <th className="text-left px-6 py-4 text-[#8a7559] text-sm font-medium">Item</th>
+                    <th className="text-left px-6 py-4 text-[#8a7559] text-sm font-medium">Auction</th>
+                    <th className="text-left px-6 py-4 text-[#8a7559] text-sm font-medium">Leading Bid</th>
+                    <th className="text-left px-6 py-4 text-[#8a7559] text-sm font-medium">Bidder</th>
                   </tr>
                 </thead>
                 <tbody>
                   {activeBids.map((bid) => (
-                    <tr key={bid.id} className="border-b border-[#e5e0d5] last:border-0 hover:bg-[#f2efe8]/50">
+                    <tr key={bid.id} className="border-b border-[#e3d6bf] last:border-0 hover:bg-[#efe3d0]/50">
                       <td className="px-6 py-4 font-medium">{bid.item.title}</td>
-                      <td className="px-6 py-4 text-[#6b6659] text-sm">{bid.item.auction?.title || "—"}</td>
-                      <td className="px-6 py-4 text-[#09a7ad] font-bold">${Number(bid.amount).toLocaleString()}</td>
-                      <td className="px-6 py-4 text-[#4a4640] text-sm">{displayName(bid.clerkUserId)}</td>
+                      <td className="px-6 py-4 text-[#6f5b46] text-sm">{bid.item.auction?.title || "—"}</td>
+                      <td className="px-6 py-4 text-[#a4592a] font-bold">${Number(bid.amount).toLocaleString()}</td>
+                      <td className="px-6 py-4 text-[#4a3a2b] text-sm">{displayName(bid.clerkUserId)}</td>
                     </tr>
                   ))}
                 </tbody>

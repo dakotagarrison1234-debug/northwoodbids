@@ -55,42 +55,42 @@ export default function NewAuctionPage() {
 
   return (
     <>
-      <header className="border-b border-[#e5e0d5] px-4 sm:px-8 py-4 flex items-center justify-between gap-3 flex-wrap">
+      <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-4 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 min-w-0">
-          <Link href="/admin/auctions" className="text-[#6b6659] hover:text-[#1a1916] text-sm shrink-0">← Auctions</Link>
-          <span className="text-[#8c8778]">/</span>
+          <Link href="/admin/auctions" className="text-[#6f5b46] hover:text-[#241a12] text-sm shrink-0">← Auctions</Link>
+          <span className="text-[#8a7559]">/</span>
           <h1 className="text-lg sm:text-xl font-semibold">New Auction</h1>
         </div>
         <button onClick={handleSave} disabled={saving}
-          className="bg-[#09a7ad] hover:bg-[#0898a0] disabled:opacity-50 text-white text-sm px-4 sm:px-6 py-2 rounded-lg font-semibold shrink-0">
+          className="bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white text-sm px-4 sm:px-6 py-2 rounded-lg font-semibold shrink-0">
           {saving ? "Creating..." : "Create Auction"}
         </button>
       </header>
 
       <div className="px-4 sm:px-8 py-6 max-w-2xl">
-        <div className="bg-white border border-[#e5e0d5] rounded-xl p-6 space-y-6">
+        <div className="bg-white border border-[#e3d6bf] rounded-xl p-6 space-y-6">
           <div>
-            <label className="text-sm text-[#6b6659] mb-1 block">Auction Title *</label>
+            <label className="text-sm text-[#6f5b46] mb-1 block">Auction Title *</label>
             <input name="title" value={formData.title} onChange={handleChange}
               placeholder="e.g. Spring Gala 2025"
-              className="w-full bg-[#f2efe8] border border-[#d4cfc4] rounded-lg px-4 py-3 text-[#1a1916] placeholder-[#b0a99a] focus:outline-none focus:border-[#09a7ad]" />
+              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-lg px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]" />
           </div>
           <div>
-            <label className="text-sm text-[#6b6659] mb-1 block">Description</label>
+            <label className="text-sm text-[#6f5b46] mb-1 block">Description</label>
             <textarea name="description" value={formData.description} onChange={handleChange} rows={3}
               placeholder="Tell bidders about this auction..."
-              className="w-full bg-[#f2efe8] border border-[#d4cfc4] rounded-lg px-4 py-3 text-[#1a1916] placeholder-[#b0a99a] focus:outline-none focus:border-[#09a7ad] resize-none" />
+              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-lg px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a] resize-none" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm text-[#6b6659] mb-1 block">Start Date & Time *</label>
+              <label className="text-sm text-[#6f5b46] mb-1 block">Start Date & Time *</label>
               <input name="startAt" value={formData.startAt} onChange={handleChange} type="datetime-local"
-                className="w-full bg-[#f2efe8] border border-[#d4cfc4] rounded-lg px-4 py-3 text-[#1a1916] focus:outline-none focus:border-[#09a7ad]" />
+                className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-lg px-4 py-3 text-[#241a12] focus:outline-none focus:border-[#a4592a]" />
             </div>
             <div>
-              <label className="text-sm text-[#6b6659] mb-1 block">End Date & Time *</label>
+              <label className="text-sm text-[#6f5b46] mb-1 block">End Date & Time *</label>
               <input name="endAt" value={formData.endAt} onChange={handleChange} type="datetime-local"
-                className="w-full bg-[#f2efe8] border border-[#d4cfc4] rounded-lg px-4 py-3 text-[#1a1916] focus:outline-none focus:border-[#09a7ad]" />
+                className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-lg px-4 py-3 text-[#241a12] focus:outline-none focus:border-[#a4592a]" />
             </div>
           </div>
         </div>

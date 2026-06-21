@@ -46,7 +46,7 @@ function JoinPageInner() {
   if (!isLoaded) {
     return (
       <main className="flex-1 flex items-center justify-center">
-        <p className="text-[#6b6659]">Loading...</p>
+        <p className="text-[#6f5b46]">Loading...</p>
       </main>
     );
   }
@@ -57,12 +57,12 @@ function JoinPageInner() {
         {!token ? (
           <>
             <h1 className="text-2xl font-bold mb-3">Invalid Invite</h1>
-            <p className="text-[#6b6659] mb-8">This invite link is missing a token. Please ask for a new invite.</p>
+            <p className="text-[#6f5b46] mb-8">This invite link is missing a token. Please ask for a new invite.</p>
             <div className="flex flex-col gap-2.5">
-              <Link href="/auctions" className="w-full bg-[#09a7ad] hover:bg-[#0898a0] text-white font-semibold py-3 rounded-xl transition-colors">
+              <Link href="/auctions" className="w-full bg-[#a4592a] hover:bg-[#843f1c] text-white font-semibold py-3 rounded-xl transition-colors">
                 Browse auctions
               </Link>
-              <Link href="/" className="w-full border border-[#d4cfc4] hover:border-[#b0a99a] text-[#4a4640] hover:text-[#1a1916] font-medium py-3 rounded-xl transition-colors">
+              <Link href="/" className="w-full border border-[#cdbda3] hover:border-[#b3a085] text-[#4a3a2b] hover:text-[#241a12] font-medium py-3 rounded-xl transition-colors">
                 Go home
               </Link>
             </div>
@@ -72,21 +72,21 @@ function JoinPageInner() {
             <div className="flex justify-center mb-5">
               <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
                 <circle cx="28" cy="28" r="26" stroke="#374151" strokeWidth="1.5"/>
-                <circle cx="28" cy="28" r="18" stroke="#09a7ad" strokeWidth="1.2" strokeOpacity="0.4"/>
-                <circle cx="28" cy="28" r="12" fill="rgba(9,167,173,0.12)" stroke="#09a7ad" strokeWidth="1.5"/>
-                <path d="M21 28l5 5 9-9" stroke="#09a7ad" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <circle cx="28" cy="28" r="18" stroke="#a4592a" strokeWidth="1.2" strokeOpacity="0.4"/>
+                <circle cx="28" cy="28" r="12" fill="rgba(164,89,42,0.12)" stroke="#a4592a" strokeWidth="1.5"/>
+                <path d="M21 28l5 5 9-9" stroke="#a4592a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
             <h1 className="text-2xl font-bold mb-2">You&apos;re in!</h1>
-            <p className="text-[#6b6659] mb-6">Redirecting to your dashboard...</p>
-            <Link href="/admin/dashboard" className="w-full inline-block bg-[#09a7ad] hover:bg-[#0898a0] text-white font-semibold py-3 rounded-xl transition-colors">
+            <p className="text-[#6f5b46] mb-6">Redirecting to your dashboard...</p>
+            <Link href="/admin/dashboard" className="w-full inline-block bg-[#a4592a] hover:bg-[#843f1c] text-white font-semibold py-3 rounded-xl transition-colors">
               Go to dashboard
             </Link>
           </>
         ) : (
           <>
             <h1 className="text-2xl font-bold mb-3">You&apos;ve Been Invited</h1>
-            <p className="text-[#6b6659] mb-8">
+            <p className="text-[#6f5b46] mb-8">
               You&apos;ve been invited to join the team at Northwood Bids. Accept below to access the dashboard.
             </p>
 
@@ -97,12 +97,12 @@ function JoinPageInner() {
             <button
               onClick={handleAccept}
               disabled={status === "joining"}
-              className="w-full bg-[#09a7ad] hover:bg-[#0898a0] disabled:opacity-50 text-white font-semibold py-3 rounded-xl"
+              className="w-full bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white font-semibold py-3 rounded-xl"
             >
               {status === "joining" ? "Joining..." : "Accept Invite"}
             </button>
             {status === "error" && (
-              <Link href="/auctions" className="block mt-3 text-sm text-[#6b6659] hover:text-[#1a1916] transition-colors">
+              <Link href="/auctions" className="block mt-3 text-sm text-[#6f5b46] hover:text-[#241a12] transition-colors">
                 Browse auctions instead
               </Link>
             )}
@@ -115,10 +115,10 @@ function JoinPageInner() {
 
 export default function JoinPage() {
   return (
-    <div className="min-h-screen bg-[#faf8f4] text-[#1a1916] flex flex-col">
+    <div className="min-h-screen bg-[#f1e7d5] text-[#241a12] flex flex-col">
       <Suspense fallback={
         <main className="flex-1 flex items-center justify-center">
-          <p className="text-[#6b6659]">Loading...</p>
+          <p className="text-[#6f5b46]">Loading...</p>
         </main>
       }>
         <JoinPageInner />

@@ -45,7 +45,7 @@ function IcoHelp() {
 // ── Section label ──────────────────────────────────────────────────────────────
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ padding: "12px 16px 4px", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#b0a99a" }}>
+    <div style={{ padding: "12px 16px 4px", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#b3a085" }}>
       {children}
     </div>
   );
@@ -67,25 +67,25 @@ function NavLink({
   onClick: () => void;
   accent?: "teal" | "orange";
 }) {
-  const accentColor = accent === "orange" ? "#f97316" : accent === "teal" ? "#09a7ad" : undefined;
+  const accentColor = accent === "orange" ? "#f97316" : accent === "teal" ? "#a4592a" : undefined;
   return (
     <Link
       href={href}
       onClick={onClick}
       style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", borderRadius: 12, transition: "background 0.15s", textDecoration: "none" }}
-      className="group hover:bg-[#f2efe8]"
+      className="group hover:bg-[#efe3d0]"
     >
-      <span style={{ width: 20, display: "flex", alignItems: "center", justifyContent: "center", color: accentColor ?? "#8c8778", flexShrink: 0 }}
-        className="group-hover:text-[#4a4640]">
+      <span style={{ width: 20, display: "flex", alignItems: "center", justifyContent: "center", color: accentColor ?? "#8a7559", flexShrink: 0 }}
+        className="group-hover:text-[#4a3a2b]">
         {iconEl}
       </span>
       <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: "block", fontSize: 14, color: accentColor ?? "#2c2a24", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-          className="group-hover:text-[#1a1916]">
+        <span style={{ display: "block", fontSize: 14, color: accentColor ?? "#2c2317", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+          className="group-hover:text-[#241a12]">
           {label}
         </span>
         {sublabel && (
-          <span style={{ display: "block", fontSize: 11, color: "#b0a99a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 1 }}>
+          <span style={{ display: "block", fontSize: 11, color: "#b3a085", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 1 }}>
             {sublabel}
           </span>
         )}
@@ -96,7 +96,7 @@ function NavLink({
 
 // ── Divider ────────────────────────────────────────────────────────────────────
 function Divider() {
-  return <div style={{ height: 1, background: "#e5e0d5", margin: "6px 0" }} />;
+  return <div style={{ height: 1, background: "#e3d6bf", margin: "6px 0" }} />;
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
@@ -128,7 +128,7 @@ export default function UserMenu() {
   }, [open]);
 
   if (!isLoaded) {
-    return <div className="w-9 h-9 rounded-full bg-[#f2efe8] animate-pulse" />;
+    return <div className="w-9 h-9 rounded-full bg-[#efe3d0] animate-pulse" />;
   }
 
   const initials = (
@@ -145,13 +145,13 @@ export default function UserMenu() {
       <div className="flex items-center gap-2">
         <Link
           href="/sign-in"
-          className="text-[#6b6659] hover:text-[#1a1916] text-sm px-3 py-1.5 rounded-lg hover:bg-[#f2efe8] transition-colors whitespace-nowrap hidden sm:block"
+          className="text-[#6f5b46] hover:text-[#241a12] text-sm px-3 py-1.5 rounded-lg hover:bg-[#efe3d0] transition-colors whitespace-nowrap hidden sm:block"
         >
           Sign In
         </Link>
         <Link
           href="/sign-up"
-          className="bg-[#09a7ad] hover:bg-[#0898a0] text-white text-sm px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors"
+          className="bg-[#a4592a] hover:bg-[#843f1c] text-white text-sm px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors"
         >
           Get Started
         </Link>
@@ -188,27 +188,27 @@ export default function UserMenu() {
           display: "flex",
           flexDirection: "column",
           background: "#ffffff",
-          borderLeft: "1px solid #e5e0d5",
+          borderLeft: "1px solid #e3d6bf",
           boxShadow: "-8px 0 32px rgba(0,0,0,0.12)",
           overflowY: "hidden",
         }}
       >
         {/* User header */}
-        <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #e5e0d5", display: "flex", alignItems: "flex-start", gap: 12, justifyContent: "space-between", flexShrink: 0 }}>
+        <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #e3d6bf", display: "flex", alignItems: "flex-start", gap: 12, justifyContent: "space-between", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-            <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: "rgba(9,167,173,0.10)", border: "1px solid rgba(9,167,173,0.20)", display: "flex", alignItems: "center", justifyContent: "center", color: "#09a7ad", fontWeight: 700, fontSize: 16, flexShrink: 0 }}>
+            <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: "rgba(164,89,42,0.10)", border: "1px solid rgba(164,89,42,0.20)", display: "flex", alignItems: "center", justifyContent: "center", color: "#a4592a", fontWeight: 700, fontSize: 16, flexShrink: 0 }}>
               {user?.imageUrl ? (
                 <img src={user.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               ) : initials}
             </div>
             <div style={{ minWidth: 0 }}>
-              <p style={{ color: "#1a1916", fontWeight: 700, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName}</p>
-              <p style={{ color: "#8c8778", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{email}</p>
+              <p style={{ color: "#241a12", fontWeight: 700, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName}</p>
+              <p style={{ color: "#8a7559", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{email}</p>
             </div>
           </div>
           <button
             onClick={close}
-            style={{ color: "#b0a99a", background: "none", border: "none", cursor: "pointer", padding: 4, flexShrink: 0, borderRadius: 8 }}
+            style={{ color: "#b3a085", background: "none", border: "none", cursor: "pointer", padding: 4, flexShrink: 0, borderRadius: 8 }}
             aria-label="Close menu"
           >
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -251,7 +251,7 @@ export default function UserMenu() {
         </nav>
 
         {/* Sign out */}
-        <div style={{ padding: "8px 8px 20px", borderTop: "1px solid #e5e0d5", flexShrink: 0 }}>
+        <div style={{ padding: "8px 8px 20px", borderTop: "1px solid #e3d6bf", flexShrink: 0 }}>
           <button
             onClick={async () => {
               close();
@@ -275,7 +275,7 @@ export default function UserMenu() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="w-9 h-9 rounded-full overflow-hidden bg-[#09a7ad]/10 border border-[#09a7ad]/20 flex items-center justify-center text-[#09a7ad] font-semibold text-sm hover:bg-[#0898a0]/20 transition-colors shrink-0"
+        className="w-9 h-9 rounded-full overflow-hidden bg-[#a4592a]/10 border border-[#a4592a]/20 flex items-center justify-center text-[#a4592a] font-semibold text-sm hover:bg-[#843f1c]/20 transition-colors shrink-0"
         aria-label="Open account menu"
       >
         {user?.imageUrl ? (

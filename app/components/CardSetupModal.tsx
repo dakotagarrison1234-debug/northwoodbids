@@ -123,22 +123,22 @@ export default function CardSetupModal({ orgId, stripeAccountId, onSuccess, onCl
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#faf8f4]/90 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-      <div className="bg-white border border-[#e5e0d5] rounded-2xl p-6 w-full max-w-sm">
+    <div className="fixed inset-0 z-50 bg-[#f1e7d5]/90 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
+      <div className="bg-white border border-[#e3d6bf] rounded-2xl p-6 w-full max-w-sm">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-[#09a7ad]/10 border border-[#09a7ad]/20 rounded-xl flex items-center justify-center shrink-0">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div className="w-9 h-9 bg-[#a4592a]/10 border border-[#a4592a]/20 rounded-xl flex items-center justify-center shrink-0">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6f8a4f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="1" y="4" width="22" height="16" rx="2"/>
                 <line x1="1" y1="10" x2="23" y2="10"/>
               </svg>
             </div>
-            <h2 className="font-bold text-base text-[#1a1916]">Add Payment Card</h2>
+            <h2 className="font-bold text-base text-[#241a12]">Add Payment Card</h2>
           </div>
           <button
             onClick={onClose}
-            className="text-[#8c8778] hover:text-[#6b6659] transition-colors p-1 rounded-lg"
+            className="text-[#8a7559] hover:text-[#6f5b46] transition-colors p-1 rounded-lg"
             aria-label="Close"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -147,15 +147,15 @@ export default function CardSetupModal({ orgId, stripeAccountId, onSuccess, onCl
           </button>
         </div>
 
-        <p className="text-sm text-[#6b6659] mb-5">
+        <p className="text-sm text-[#6f5b46] mb-5">
           A card is required to bid. You won&apos;t be charged until you win — your card is charged automatically when the auction closes.
         </p>
 
         {/* Stripe card element mount point */}
         <div
           ref={cardRef}
-          className={`bg-[#f2efe8] border rounded-xl px-4 py-3.5 mb-4 min-h-[46px] transition-colors ${
-            error ? "border-red-500/50" : "border-[#d4cfc4] focus-within:border-[#09a7ad]/50"
+          className={`bg-[#efe3d0] border rounded-xl px-4 py-3.5 mb-4 min-h-[46px] transition-colors ${
+            error ? "border-red-500/50" : "border-[#cdbda3] focus-within:border-[#a4592a]/50"
           } ${!ready ? "opacity-50" : ""}`}
         />
 
@@ -166,12 +166,12 @@ export default function CardSetupModal({ orgId, stripeAccountId, onSuccess, onCl
         <button
           onClick={handleSave}
           disabled={saving || !ready}
-          className="w-full bg-[#09a7ad] hover:bg-[#0898a0] disabled:opacity-50 text-white font-semibold py-3 rounded-xl text-sm transition-colors"
+          className="w-full bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white font-semibold py-3 rounded-xl text-sm transition-colors"
         >
           {saving ? "Saving…" : "Save Card & Continue"}
         </button>
 
-        <p className="text-xs text-[#8c8778] mt-3 text-center">
+        <p className="text-xs text-[#8a7559] mt-3 text-center">
           Secured by Stripe · Your card number is never sent to our servers.
         </p>
       </div>
