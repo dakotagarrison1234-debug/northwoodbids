@@ -389,11 +389,9 @@ function NewItemForm() {
     retailValue: searchParams.get("retailValue") || "",
     startingBid: searchParams.get("startingBid") || "",
     reservePrice: searchParams.get("reservePrice") || "",
-    donorName: searchParams.get("donorName") || "",
     taxDeductible: searchParams.get("taxDeductible") === "true",
     storageLocation: searchParams.get("storageLocation") || "",
     locationId: searchParams.get("locationId") || "",
-    notes: searchParams.get("notes") || "",
     auctionId: preselectedAuctionId,
   });
 
@@ -473,6 +471,17 @@ function NewItemForm() {
     if (failed.length) alert(`Failed to upload: ${failed.join(", ")}`);
   };
 
+  // Make the chosen photo the main one by moving it to the front (index 0 = primary).
+  const setMainPhoto = (i: number) => {
+    setPhotos((prev) => {
+      if (i <= 0 || i >= prev.length) return prev;
+      const next = [...prev];
+      const [chosen] = next.splice(i, 1);
+      next.unshift(chosen);
+      return next;
+    });
+  };
+
   // addAnother = true → after saving, reset only the per-item fields and stay on
   // the page so the owner can keep building the catalog quickly.
   const handleSave = async (addAnother = false) => {
@@ -491,7 +500,7 @@ function NewItemForm() {
       const data = await res.json();
       if (data.success) {
         if (addAnother) {
-          // Keep auction, location, condition, category, and donor for the next item.
+          // Keep auction, location, condition, and category for the next item.
           setFormData((prev) => ({
             ...prev,
             title: "",
@@ -500,8 +509,7 @@ function NewItemForm() {
             startingBid: "",
             reservePrice: "",
             taxDeductible: false,
-            notes: "",
-            // preserved: condition, category, donorName, storageLocation, locationId, auctionId
+            // preserved: condition, category, storageLocation, locationId, auctionId
           }));
           setPhotos([]);
           setBanner("Item saved. Ready for the next one.");
@@ -518,26 +526,14 @@ function NewItemForm() {
 
   return (
     <>
-      <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-4 flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2 min-w-0">
-          {preselectedAuctionId ? (
-            <Link href={`/admin/auctions/${preselectedAuctionId}`} className="text-[#6f5b46] hover:text-[#241a12] text-base font-semibold shrink-0">← Auction</Link>
-          ) : (
-            <Link href="/admin/items" className="text-[#6f5b46] hover:text-[#241a12] text-base font-semibold shrink-0">← Items</Link>
-          )}
-          <span className="text-[#8a7559]">/</span>
-          <h1 className="text-2xl sm:text-3xl font-semibold">Add New Item</h1>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button onClick={() => handleSave(true)} disabled={saving || uploading}
-            className="bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] disabled:opacity-50 text-[#241a12] text-base px-6 py-3.5 rounded-xl font-semibold transition-colors whitespace-nowrap">
-            {saving ? "Saving..." : "Save & Add Another"}
-          </button>
-          <button onClick={() => handleSave(false)} disabled={saving || uploading}
-            className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white text-base px-6 py-3.5 rounded-xl font-semibold transition-colors whitespace-nowrap">
-            {saving ? "Saving..." : uploading ? "Uploading..." : "Save Item"}
-          </button>
-        </div>
+      <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-4 flex items-center gap-2 min-w-0">
+        {preselectedAuctionId ? (
+          <Link href={`/admin/auctions/${preselectedAuctionId}`} className="text-[#6f5b46] hover:text-[#241a12] text-base font-semibold shrink-0">← Auction</Link>
+        ) : (
+          <Link href="/admin/items" className="text-[#6f5b46] hover:text-[#241a12] text-base font-semibold shrink-0">← Items</Link>
+        )}
+        <span className="text-[#8a7559]">/</span>
+        <h1 className="text-2xl sm:text-3xl font-semibold">Add New Item</h1>
       </header>
 
       <div className="flex-1 px-4 sm:px-8 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 overflow-auto">
@@ -590,12 +586,6 @@ function NewItemForm() {
                   </select>
                 </div>
               </div>
-              <div>
-                <label className="text-base text-[#6f5b46] mb-1.5 block">Donor</label>
-                <input name="donorName" value={formData.donorName} onChange={handleChange}
-                  placeholder="Who donated this item? (optional)"
-                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]" />
-              </div>
             </div>
           </div>
 
@@ -636,15 +626,26 @@ function NewItemForm() {
               <div className="text-[#8a7559] text-sm mt-1">PNG, JPG up to 10MB each</div>
             </label>
             {photos.length > 0 && (
-              <div className="grid grid-cols-4 gap-2 mt-4">
-                {photos.map((url, i) => (
-                  <div key={i} className="relative aspect-square bg-[#efe3d0] rounded-lg overflow-hidden">
-                    <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-contain" />
-                    <button onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))}
-                      className="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">×</button>
-                  </div>
-                ))}
-              </div>
+              <>
+                <p className="text-[#8a7559] text-sm mt-4 mb-2">The <strong className="text-[#6c4d39]">Main photo</strong> is what bidders see first. Tap “Set as main” on any photo to change it.</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {photos.map((url, i) => (
+                    <div key={i} className={`relative aspect-square bg-[#efe3d0] rounded-xl overflow-hidden border-2 ${i === 0 ? "border-[#6c4d39]" : "border-[#e3d6bf]"}`}>
+                      <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-contain" />
+                      {i === 0 ? (
+                        <span className="absolute top-2 left-2 bg-[#6c4d39] text-white text-[11px] font-bold px-2 py-0.5 rounded-full shadow">Main photo</span>
+                      ) : (
+                        <button type="button" onClick={() => setMainPhoto(i)}
+                          className="absolute bottom-2 left-2 bg-white/95 hover:bg-white text-[#6c4d39] text-xs font-semibold px-2.5 py-1 rounded-lg border border-[#cdbda3] shadow-sm transition-colors">
+                          Set as main
+                        </button>
+                      )}
+                      <button type="button" onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))}
+                        className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white text-base rounded-full w-7 h-7 flex items-center justify-center shadow">×</button>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -683,15 +684,20 @@ function NewItemForm() {
               </select>
             )}
           </div>
-
-          <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">Staff Notes</h2>
-            <textarea name="notes" value={formData.notes} onChange={handleChange} rows={3}
-              placeholder="Internal notes — not visible to bidders"
-              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] resize-none" />
-          </div>
         </div>
       </div>
+
+      {/* ── Bottom action bar ── */}
+      <footer className="border-t border-[#e3d6bf] bg-[#faf5ea] px-4 sm:px-8 py-4 flex flex-col sm:flex-row sm:justify-end gap-3">
+        <button onClick={() => handleSave(true)} disabled={saving || uploading}
+          className="bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] disabled:opacity-50 text-[#241a12] text-base px-6 py-3.5 rounded-xl font-semibold transition-colors">
+          {saving ? "Saving..." : "Save & Add Another"}
+        </button>
+        <button onClick={() => handleSave(false)} disabled={saving || uploading}
+          className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white text-base px-6 py-3.5 rounded-xl font-semibold transition-colors">
+          {saving ? "Saving..." : uploading ? "Uploading..." : "Save Item"}
+        </button>
+      </footer>
     </>
   );
 }
