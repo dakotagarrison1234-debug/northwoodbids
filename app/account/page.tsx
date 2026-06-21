@@ -54,6 +54,7 @@ export default function AccountPage() {
   const [loadingProfile, setLoadingProfile] = useState(true);
 
   const [avatarKey, setAvatarKey] = useState<string | null>(null);
+  const [switchingAvatar, setSwitchingAvatar] = useState(false);
 
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loadingPMs, setLoadingPMs] = useState(true);
@@ -81,8 +82,7 @@ export default function AccountPage() {
       .catch(() => {});
   }, [isLoaded, isSignedIn, router, user]);
 
-  const selectAvatar = async (key: string) => {
-    const next = avatarKey === key ? null : key; // tap again to clear
+  const persistAvatar = async (next: string | null) => {
     setAvatarKey(next);
     try {
       await fetch("/api/profile", {
@@ -92,6 +92,8 @@ export default function AccountPage() {
       });
     } catch { /* non-critical; UI already updated */ }
   };
+  const selectAvatar = (key: string) => { persistAvatar(key); setSwitchingAvatar(false); };
+  const removeAvatar = () => { persistAvatar(null); setSwitchingAvatar(false); };
 
   const loadPaymentMethods = useCallback(() => {
     setLoadingPMs(true);
@@ -176,25 +178,64 @@ export default function AccountPage() {
             <h2 className="font-semibold text-lg text-[#241a12]">Choose Your Avatar</h2>
           </div>
           <div className="px-5 py-5">
-            <p className="text-base text-[#6f5b46] mb-4">Pick a critter — it shows next to your name around the site. Tap your pick again to remove it.</p>
-            <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
-              {AVATARS.map((a) => (
-                <button
-                  key={a.key}
-                  type="button"
-                  onClick={() => selectAvatar(a.key)}
-                  title={a.label}
-                  aria-label={a.label}
-                  className={`aspect-square rounded-2xl p-1.5 border-2 transition-colors ${
-                    avatarKey === a.key
-                      ? "border-[#6c4d39] bg-[#6c4d39]/10"
-                      : "border-[#e3d6bf] hover:border-[#cdbda3] bg-white"
-                  }`}
-                >
-                  <Avatar avatarKey={a.key} className="w-full h-full" />
-                </button>
-              ))}
-            </div>
+            {avatarKey && !switchingAvatar ? (
+              /* ── Locked in: show only the chosen critter ── */
+              <div className="flex items-center gap-5">
+                <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-[#6c4d39] shrink-0">
+                  <Avatar avatarKey={avatarKey} className="w-full h-full" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-[#241a12] mb-1">
+                    {AVATARS.find((a) => a.key === avatarKey)?.label ?? "Your avatar"} selected
+                  </p>
+                  <p className="text-base text-[#6f5b46] mb-3">This shows next to your name around the site.</p>
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSwitchingAvatar(true)}
+                      className="bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold px-6 py-3 rounded-xl text-base transition-colors"
+                    >
+                      Switch
+                    </button>
+                    <button
+                      type="button"
+                      onClick={removeAvatar}
+                      className="bg-white hover:bg-[#efe3d0] border border-[#cdbda3] text-[#4a3a2b] font-semibold px-6 py-3 rounded-xl text-base transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* ── Choosing: show the full grid ── */
+              <>
+                <p className="text-base text-[#6f5b46] mb-4">Pick a critter — it shows next to your name around the site.</p>
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
+                  {AVATARS.map((a) => (
+                    <button
+                      key={a.key}
+                      type="button"
+                      onClick={() => selectAvatar(a.key)}
+                      title={a.label}
+                      aria-label={a.label}
+                      className="aspect-square rounded-2xl p-1.5 border-2 border-[#e3d6bf] hover:border-[#6c4d39] bg-white transition-colors"
+                    >
+                      <Avatar avatarKey={a.key} className="w-full h-full" />
+                    </button>
+                  ))}
+                </div>
+                {avatarKey && (
+                  <button
+                    type="button"
+                    onClick={() => setSwitchingAvatar(false)}
+                    className="mt-4 text-base text-[#6f5b46] hover:text-[#241a12] font-medium transition-colors"
+                  >
+                    ← Cancel
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </section>
 
