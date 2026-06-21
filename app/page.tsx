@@ -90,7 +90,7 @@ export default async function HomePage() {
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
       {/* Hero */}
       <section className="relative px-4 sm:px-6 pt-14 pb-28 sm:pt-16 sm:pb-32 overflow-hidden">
-        <MountainRange className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 w-[860px] max-w-none opacity-40" />
+        <MountainRange className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 w-[860px] max-w-none opacity-20" />
         <div className="relative max-w-3xl mx-auto text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -108,7 +108,7 @@ export default async function HomePage() {
             Going once.<br />
             <span className="text-[#a4592a]">Going twice.</span>
           </h1>
-          <p className="text-[#6f5b46] text-lg sm:text-xl max-w-xl mx-auto mb-9 leading-relaxed">
+          <p className="text-[#2c2317] font-medium text-lg sm:text-xl max-w-xl mx-auto mb-9 leading-relaxed">
             Real-time auctions with a handshake feel. Bid live, get outbid alerts, and check out securely the moment you win.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
