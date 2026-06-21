@@ -16,12 +16,24 @@ interface BarcodeResult {
   images: string[];
 }
 
+interface SearchResult {
+  asin: string;
+  title: string;
+  image: string | null;
+  price: number | null;
+  brand: string;
+}
+
 function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
   const [barcode, setBarcode] = useState("");
   const [scanning, setScanning] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<BarcodeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
+  const [showSearch, setShowSearch] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const readerRef = useRef<any>(null);
@@ -68,26 +80,95 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
     }
   };
 
-  const doLookup = async (code: string) => {
-    const clean = code.replace(/\D/g, "");
-    if (!clean || clean.length < 6) { setError("Enter a valid barcode (6+ digits)."); return; }
+  const doLookup = async (raw: string) => {
+    const code = raw.trim();
+    if (!code) { setError("Enter a barcode, FNSKU, or ASIN."); return; }
+    const upper = code.toUpperCase();
+    const isFnsku = /^X\d{2}/i.test(upper);                              // Amazon warehouse label
+    const isAsin = !isFnsku && /^[A-Z0-9]{10}$/.test(upper) && /[A-Z]/.test(upper); // 10-char alphanumeric
+
     setLoading(true);
     setError(null);
     setResult(null);
+    setSearchResults(null);
     try {
-      const res = await fetch(`/api/admin/barcode-lookup?upc=${clean}`);
-      const data = await res.json();
-      if (!res.ok || !data.found) {
-        setError(data.message || data.error || "No product found. Fill in manually.");
+      if (isFnsku || isAsin) {
+        // FNSKU/ASIN → Amazon (F2A convert if needed → OpenWeb Ninja details)
+        const res = await fetch(`/api/admin/asin-lookup?code=${encodeURIComponent(upper)}`);
+        const data = await res.json();
+        if (!res.ok || !data.found) {
+          setError(data.message || data.error || "No product found. Try a name search below.");
+          setShowSearch(true);
+        } else {
+          setResult(data.product);
+        }
       } else {
-        setResult(data.product);
+        // Numeric UPC/EAN → existing UPCitemdb lookup (unchanged)
+        const clean = code.replace(/\D/g, "");
+        if (!clean || clean.length < 6) { setError("Enter a valid barcode (6+ digits), FNSKU, or ASIN."); return; }
+        const res = await fetch(`/api/admin/barcode-lookup?upc=${clean}`);
+        const data = await res.json();
+        if (!res.ok || !data.found) {
+          setError(data.message || data.error || "No product found. Try a name search below.");
+          setShowSearch(true);
+        } else {
+          setResult(data.product);
+        }
       }
-    } catch { setError("Lookup failed. Fill in manually."); }
-    finally { setLoading(false); }
+    } catch {
+      setError("Lookup failed. Try a name search below or fill in manually.");
+      setShowSearch(true);
+    } finally { setLoading(false); }
+  };
+
+  // Text-search fallback: find the product by name on Amazon and show a pick list.
+  const doSearch = async (q: string) => {
+    const query = q.trim();
+    if (!query) { setError("Type what the item is, then search."); return; }
+    setSearching(true);
+    setError(null);
+    setSearchResults(null);
+    try {
+      const res = await fetch(`/api/admin/amazon-search?q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Search failed. Fill in manually.");
+      } else if (!data.results || data.results.length === 0) {
+        setError(data.message || "No matches found. Fill in manually.");
+        setSearchResults([]);
+      } else {
+        setSearchResults(data.results as SearchResult[]);
+      }
+    } catch { setError("Search failed. Fill in manually."); }
+    finally { setSearching(false); }
+  };
+
+  // Picking a search result pulls full details by ASIN, falling back to the row data.
+  const pickSearchResult = async (r: SearchResult) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/asin-lookup?code=${encodeURIComponent(r.asin)}`);
+      const data = await res.json();
+      if (res.ok && data.found) {
+        setResult(data.product);
+      } else {
+        setResult({ title: r.title, description: "", brand: r.brand || "", category: "", retailValue: r.price, images: r.image ? [r.image] : [] });
+      }
+    } catch {
+      setResult({ title: r.title, description: "", brand: r.brand || "", category: "", retailValue: r.price, images: r.image ? [r.image] : [] });
+    } finally {
+      setSearchResults(null);
+      setShowSearch(false);
+      setLoading(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") doLookup(barcode);
+  };
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") doSearch(searchQuery);
   };
 
   // cleanup on unmount
@@ -111,7 +192,7 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
         <span className="font-bold text-[#241a12] text-base">Barcode Auto-Fill</span>
         <span className="text-[10px] text-[#6c4d39] bg-[#6c4d39]/10 border border-[#6c4d39]/20 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide ml-1">New</span>
       </div>
-      <p className="text-sm text-[#6f5b46] mb-3">Scan or type a barcode to auto-fill title, description, category, and retail value.</p>
+      <p className="text-sm text-[#6f5b46] mb-3">Scan or type a barcode, Amazon <strong>FNSKU</strong>, or <strong>ASIN</strong> to auto-fill the item. No match? Search by name.</p>
 
       {/* Input row */}
       <div className="flex gap-2">
@@ -135,9 +216,12 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
           value={barcode}
           onChange={e => setBarcode(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type or scan barcode number…"
+          placeholder="Barcode, FNSKU, or ASIN…"
           className="flex-1 bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] text-base"
-          inputMode="numeric"
+          inputMode="text"
+          autoCapitalize="characters"
+          autoCorrect="off"
+          spellCheck={false}
         />
         <button
           type="button"
@@ -163,6 +247,70 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
       {/* Error */}
       {error && !loading && (
         <p className="mt-2.5 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">{error}</p>
+      )}
+
+      {/* Search-by-name toggle */}
+      {!result && (
+        <button
+          type="button"
+          onClick={() => setShowSearch(s => !s)}
+          className="mt-2.5 text-sm font-semibold text-[#6c4d39] hover:text-[#563e2c] underline underline-offset-2"
+        >
+          {showSearch ? "Hide name search" : "Can't scan it? Search by name"}
+        </button>
+      )}
+
+      {/* Text-search fallback */}
+      {showSearch && !result && (
+        <div className="mt-3 bg-white border border-[#6c4d39]/25 rounded-xl p-4">
+          <div className="text-xs text-[#8a7559] mb-1.5 font-medium">Search Amazon by name</div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              placeholder='e.g. "Ninja air fryer 5.5qt"'
+              className="flex-1 bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] text-base"
+            />
+            <button
+              type="button"
+              onClick={() => doSearch(searchQuery)}
+              disabled={searching || !searchQuery.trim()}
+              className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-40 text-white px-4 py-3 rounded-xl text-base font-semibold shrink-0 transition-colors"
+            >
+              {searching ? "…" : "Search"}
+            </button>
+          </div>
+
+          {/* Results pick list */}
+          {searchResults && searchResults.length > 0 && (
+            <div className="mt-3 space-y-2">
+              {searchResults.map((r) => (
+                <button
+                  key={r.asin}
+                  type="button"
+                  onClick={() => pickSearchResult(r)}
+                  className="w-full flex items-center gap-3 text-left bg-[#faf5ea] hover:bg-[#f1e7d5] border border-[#e3d6bf] hover:border-[#6c4d39] rounded-lg p-2.5 transition-colors"
+                >
+                  <div className="w-12 h-12 shrink-0 rounded-md overflow-hidden bg-[#efe3d0] flex items-center justify-center">
+                    {r.image
+                      ? <img src={r.image} alt="" className="w-full h-full object-contain" />
+                      : <span className="text-[#b3a085] text-xs">No image</span>}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold text-[#241a12] leading-snug line-clamp-2">{r.title}</div>
+                    <div className="text-xs text-[#8a7559] mt-0.5 flex items-center gap-2">
+                      {r.brand && <span>{r.brand}</span>}
+                      {r.price != null && <span className="text-[#6c4d39] font-semibold">${r.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
+                    </div>
+                  </div>
+                  <span className="text-[#6c4d39] text-sm font-semibold shrink-0 pr-1">Use</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Result preview */}
@@ -277,6 +425,7 @@ function NewItemForm() {
       title: result.title || prev.title,
       description: result.description || prev.description,
       category: result.category || prev.category,
+      retailValue: result.retailValue != null ? String(result.retailValue) : prev.retailValue,
     }));
     // Import all images (up to 3)
     result.images.forEach(url => importImageFromUrl(url));
