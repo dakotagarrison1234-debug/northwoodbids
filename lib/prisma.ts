@@ -10,16 +10,23 @@ if (!databaseUrl) {
   throw new Error("DATABASE_URL environment variable is not set");
 }
 
-// Append connection_limit=1 so each serverless function instance holds at most
-// one connection — prevents pool exhaustion on Supabase (pool_size: 15).
+// Tune the connection string for Supabase's transaction pooler (pgBouncer on
+// port 6543). A small per-instance pool lets parallel queries (Promise.all) on a
+// page actually run concurrently instead of serializing on a single connection.
+// pgBouncer multiplexes these to a small server-side pool, so this is safe.
 function buildUrl(base: string): string {
   try {
     const u = new URL(base);
     if (!u.searchParams.has("connection_limit")) {
-      u.searchParams.set("connection_limit", "1");
+      u.searchParams.set("connection_limit", "5");
     }
     if (!u.searchParams.has("pool_timeout")) {
       u.searchParams.set("pool_timeout", "20");
+    }
+    // When talking to the pgBouncer pooler, disable prepared statements.
+    const isPooler = u.hostname.includes("pooler") || u.port === "6543";
+    if (isPooler && !u.searchParams.has("pgbouncer")) {
+      u.searchParams.set("pgbouncer", "true");
     }
     return u.toString();
   } catch {
