@@ -74,8 +74,19 @@ export async function attachToUpcomingAppointment(
   if (!appt) return;
   const itemIds = await getUnscheduledPickupItemIds(clerkUserId, organizationId);
   if (itemIds.length === 0) return;
+  // Only fold in items that are actually AT the appointment's location (or have no
+  // assigned home location). Items sitting at another location must be transferred
+  // first — they get attached after the transfer is marked dropped off.
+  const matching = await prisma.item.findMany({
+    where: {
+      id: { in: itemIds },
+      OR: [{ locationId: appt.locationId }, { locationId: null }],
+    },
+    select: { id: true },
+  });
+  if (matching.length === 0) return;
   await prisma.item.updateMany({
-    where: { id: { in: itemIds } },
+    where: { id: { in: matching.map((i) => i.id) } },
     data: { pickupAppointmentId: appt.id },
   });
 }

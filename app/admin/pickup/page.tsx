@@ -46,7 +46,7 @@ interface TransferItem {
 }
 interface Transfer {
   id: string;
-  status: "REQUESTED" | "COMPLETED" | "CANCELLED";
+  status: "REQUESTED" | "LOADED" | "COMPLETED" | "CANCELLED";
   createdAt: string;
   completedAt: string | null;
   clerkUserId: string;
@@ -224,19 +224,21 @@ export default function AdminPickupPage() {
   };
 
   // ── Transfer actions ─────────────────────────────────────────────────────
-  const completeTransfer = async (id: string) => {
-    if (!confirm("Mark this transfer complete? The items will be set to their new location and the bidder can schedule a pickup.")) return;
+  const setTransferStatus = async (id: string, status: "LOADED" | "COMPLETED", toLocationName: string) => {
+    if (status === "COMPLETED") {
+      if (!confirm(`This moves the items to ${toLocationName} and lets the bidder schedule — continue?`)) return;
+    }
     try {
       const res = await fetch(`/api/admin/pickup/transfers/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "COMPLETED" }),
+        body: JSON.stringify({ status }),
       });
       const d = await res.json();
       if (d.success) {
-        flash("Transfer completed.", true);
+        flash(status === "LOADED" ? "Marked loaded." : "Marked dropped off.", true);
         loadTransfers();
-      } else flash(d.error || "Could not complete transfer.", false);
+      } else flash(d.error || "Could not update transfer.", false);
     } catch {
       flash("Something went wrong.", false);
     }
@@ -304,7 +306,10 @@ export default function AdminPickupPage() {
 
   const scheduled = appointments.filter((a) => a.status === "SCHEDULED");
   const collected = appointments.filter((a) => a.status === "COLLECTED");
-  const pendingTransfers = transfers.filter((t) => t.status === "REQUESTED");
+  const activeTransfers = transfers.filter(
+    (t) => t.status === "REQUESTED" || t.status === "LOADED"
+  );
+  const completedTransfers = transfers.filter((t) => t.status === "COMPLETED");
 
   return (
     <>
@@ -323,11 +328,11 @@ export default function AdminPickupPage() {
               }`}
             >
               {t === "appointments" ? "Appointments" : t === "locations" ? "Locations & Hours" : "Transfers"}
-              {t === "transfers" && pendingTransfers.length > 0 && (
+              {t === "transfers" && activeTransfers.length > 0 && (
                 <span className={`ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full text-sm font-bold ${
                   tab === t ? "bg-white text-[#6c4d39]" : "bg-[#6c4d39] text-white"
                 }`}>
-                  {pendingTransfers.length}
+                  {activeTransfers.length}
                 </span>
               )}
             </button>
@@ -493,14 +498,14 @@ export default function AdminPickupPage() {
           // ── Transfers ──
           <div className="space-y-4 max-w-3xl">
             <h2 className="text-xl font-semibold">
-              Pending transfers ({pendingTransfers.length})
+              Active transfers ({activeTransfers.length})
             </h2>
-            {pendingTransfers.length === 0 ? (
+            {activeTransfers.length === 0 ? (
               <div className="text-base text-[#8a7559] bg-white border border-[#e3d6bf] rounded-xl px-5 py-8 text-center">
                 No transfers waiting. When a bidder asks for their items to be moved to another location, it shows up here.
               </div>
             ) : (
-              pendingTransfers.map((t) => (
+              activeTransfers.map((t) => (
                 <div key={t.id} className="bg-white border border-[#cdbda3] rounded-xl px-5 py-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -512,13 +517,19 @@ export default function AdminPickupPage() {
                         {t.bidder.phone && <span>{t.bidder.phone}</span>}
                       </div>
                     </div>
-                    <span className="text-sm bg-[#6c4d39]/15 text-[#6c4d39] px-3 py-1 rounded-full font-semibold shrink-0">
-                      Requested {fmtDateTime(t.createdAt)}
+                    <span
+                      className={`text-sm px-3 py-1 rounded-full font-semibold shrink-0 ${
+                        t.status === "LOADED"
+                          ? "bg-[#5f7a45]/15 text-[#5f7a45]"
+                          : "bg-[#6c4d39]/15 text-[#6c4d39]"
+                      }`}
+                    >
+                      {t.status === "LOADED" ? "Loaded / in transit" : `Requested ${fmtDateTime(t.createdAt)}`}
                     </span>
                   </div>
 
                   <div className="mt-3 text-lg font-semibold text-[#5f7a45]">
-                    → Move to {t.toLocation.name}
+                    → {t.toLocation.name}
                   </div>
 
                   <div className="mt-3">
@@ -538,14 +549,49 @@ export default function AdminPickupPage() {
                     </ul>
                   </div>
 
-                  <button
-                    onClick={() => completeTransfer(t.id)}
-                    className="mt-4 w-full bg-[#5f7a45] hover:bg-[#4f6639] text-white font-semibold text-base py-3.5 rounded-xl transition-colors"
-                  >
-                    Transfer Complete
-                  </button>
+                  <div className="mt-4 flex flex-col sm:flex-row gap-3">
+                    {t.status === "REQUESTED" && (
+                      <button
+                        onClick={() => setTransferStatus(t.id, "LOADED", t.toLocation.name)}
+                        className="flex-1 bg-white border-2 border-[#6c4d39] text-[#6c4d39] hover:bg-[#efe3d0] font-semibold text-base py-3.5 rounded-xl transition-colors"
+                      >
+                        Mark Loaded
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setTransferStatus(t.id, "COMPLETED", t.toLocation.name)}
+                      className="flex-1 bg-[#5f7a45] hover:bg-[#4f6639] text-white font-semibold text-base py-3.5 rounded-xl transition-colors"
+                    >
+                      Mark Dropped Off
+                    </button>
+                  </div>
                 </div>
               ))
+            )}
+
+            {/* Recently completed */}
+            {completedTransfers.length > 0 && (
+              <div className="pt-4">
+                <h3 className="text-lg font-semibold mb-3">Recently completed</h3>
+                <div className="space-y-3">
+                  {completedTransfers.map((t) => (
+                    <div key={t.id} className="bg-white/60 border border-[#e3d6bf] rounded-xl px-5 py-4 opacity-75">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <div className="font-semibold text-base text-[#241a12]">{t.bidder.name || "Unknown Bidder"}</div>
+                          <div className="text-base text-[#8a7559]">
+                            → {t.toLocation.name} · {t.items.length} item{t.items.length !== 1 ? "s" : ""}
+                            {t.completedAt ? ` · ${fmtDateTime(t.completedAt)}` : ""}
+                          </div>
+                        </div>
+                        <span className="text-sm bg-[#5f7a45]/15 text-[#5f7a45] px-3 py-1 rounded-full font-semibold">
+                          Dropped off
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         ) : (

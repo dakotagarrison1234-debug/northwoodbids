@@ -198,6 +198,7 @@ model TransferRequest {
 
 enum TransferStatus {
   REQUESTED
+  LOADED
   COMPLETED
   CANCELLED
 }

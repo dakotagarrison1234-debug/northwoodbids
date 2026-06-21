@@ -9,24 +9,37 @@ export async function GET() {
     const membership = await getUserOrg();
     if (!membership) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    const transfers = await prisma.transferRequest.findMany({
-      where: {
-        organizationId: membership.organizationId,
-        status: { in: ["REQUESTED", "COMPLETED"] },
-      },
-      include: {
-        toLocation: { select: { id: true, name: true } },
-        items: {
-          select: {
-            id: true,
-            title: true,
-            storageLocation: true,
-            location: { select: { name: true } },
-          },
+    const includeShape = {
+      toLocation: { select: { id: true, name: true } },
+      items: {
+        select: {
+          id: true,
+          title: true,
+          storageLocation: true,
+          location: { select: { name: true } },
         },
       },
+    } as const;
+
+    // Active board: REQUESTED + LOADED, oldest first.
+    const activeTransfers = await prisma.transferRequest.findMany({
+      where: {
+        organizationId: membership.organizationId,
+        status: { in: ["REQUESTED", "LOADED"] },
+      },
+      include: includeShape,
       orderBy: { createdAt: "asc" },
     });
+
+    // Recently completed, for reference (newest first, capped).
+    const completedTransfers = await prisma.transferRequest.findMany({
+      where: { organizationId: membership.organizationId, status: "COMPLETED" },
+      include: includeShape,
+      orderBy: { completedAt: "desc" },
+      take: 20,
+    });
+
+    const transfers = [...activeTransfers, ...completedTransfers];
 
     // Attach bidder profile (by clerkUserId)
     const userIds = [...new Set(transfers.map((t) => t.clerkUserId))];
@@ -49,7 +62,7 @@ export async function GET() {
       items: t.items.map((it) => ({
         id: it.id,
         title: it.title,
-        fromLocationName: it.location?.name ?? null,
+        fromLocationName: it.location?.name ?? "Unassigned",
         storageLocation: it.storageLocation,
       })),
     }));

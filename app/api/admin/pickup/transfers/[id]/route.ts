@@ -2,12 +2,15 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg } from "@/lib/auth";
+import { attachToUpcomingAppointment } from "@/lib/pickup";
+import { notifyTransferArrived } from "@/lib/transferNotify";
 
 interface Props {
   params: Promise<{ id: string }>;
 }
 
-// PATCH /api/admin/pickup/transfers/[id] — mark a transfer COMPLETED or CANCELLED
+// PATCH /api/admin/pickup/transfers/[id] — advance a transfer through its stages
+// (LOADED → in transit, COMPLETED → dropped off, CANCELLED → aborted)
 export async function PATCH(request: NextRequest, { params }: Props) {
   try {
     const membership = await getUserOrg();
@@ -20,11 +23,21 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     }
 
     const { status } = await request.json();
-    if (!["COMPLETED", "CANCELLED"].includes(status)) {
+    if (!["LOADED", "COMPLETED", "CANCELLED"].includes(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
-    if (status === "COMPLETED") {
+    if (status === "LOADED") {
+      // Items have been loaded and are in transit.
+      await prisma.transferRequest.update({
+        where: { id },
+        data: { status: "LOADED" },
+      });
+    } else if (status === "COMPLETED") {
+      // Notify the bidder BEFORE detaching items — the webhook reads the transfer's
+      // items, which get cleared by the relocation mutation below.
+      await notifyTransferArrived(id);
+
       // Items have arrived: set their home location to the destination, detach transfer.
       await prisma.item.updateMany({
         where: { transferRequestId: id },
@@ -34,6 +47,10 @@ export async function PATCH(request: NextRequest, { params }: Props) {
         where: { id },
         data: { status: "COMPLETED", completedAt: new Date() },
       });
+
+      // Fold the arrived items into the bidder's upcoming appointment at this
+      // location, if they already have one.
+      await attachToUpcomingAppointment(transfer.clerkUserId, transfer.organizationId);
     } else {
       // Cancelled: detach items, leaving their home location unchanged.
       await prisma.item.updateMany({

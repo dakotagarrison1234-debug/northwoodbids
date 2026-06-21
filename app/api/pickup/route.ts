@@ -85,24 +85,33 @@ export async function GET() {
       locationName: it.location?.name ?? null,
     }));
 
-    // Current pending (REQUESTED) transfer for this user, if any
-    const transferRow = await prisma.transferRequest.findFirst({
-      where: { clerkUserId: userId, organizationId: org.id, status: "REQUESTED" },
-      orderBy: { createdAt: "desc" },
+    // Active (REQUESTED or LOADED) transfers for this user
+    const transferRows = await prisma.transferRequest.findMany({
+      where: {
+        clerkUserId: userId,
+        organizationId: org.id,
+        status: { in: ["REQUESTED", "LOADED"] },
+      },
+      orderBy: { createdAt: "asc" },
       include: {
         toLocation: { select: { id: true, name: true } },
-        items: { select: { id: true, title: true } },
+        items: {
+          select: { id: true, title: true, location: { select: { name: true } } },
+        },
       },
     });
-    const pendingTransfer = transferRow
-      ? {
-          id: transferRow.id,
-          toLocationId: transferRow.toLocationId,
-          toLocationName: transferRow.toLocation.name,
-          createdAt: transferRow.createdAt.toISOString(),
-          items: transferRow.items.map((it) => ({ id: it.id, title: it.title })),
-        }
-      : null;
+    const pendingTransfers = transferRows.map((t) => ({
+      id: t.id,
+      status: t.status,
+      toLocationId: t.toLocationId,
+      toLocationName: t.toLocation.name,
+      createdAt: t.createdAt.toISOString(),
+      items: t.items.map((it) => ({
+        id: it.id,
+        title: it.title,
+        fromLocationName: it.location?.name ?? "Unassigned",
+      })),
+    }));
 
     // Active locations with their available slots
     const activeLocations = await prisma.pickupLocation.findMany({
@@ -119,7 +128,7 @@ export async function GET() {
       }))
     );
 
-    return NextResponse.json({ appointment, unscheduledItems, locations, pendingTransfer });
+    return NextResponse.json({ appointment, unscheduledItems, locations, pendingTransfers });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Internal error";
     console.error("[pickup GET]:", msg, err);
@@ -147,25 +156,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid location" }, { status: 400 });
     }
 
-    // Transfer guard: bidders can't book here if a transfer is pending, or if any
-    // of their items currently live at a different location than the chosen one.
-    const pendingTransfer = await prisma.transferRequest.findFirst({
-      where: { clerkUserId: userId, organizationId: org.id, status: "REQUESTED" },
-      select: { id: true },
-    });
-    const guardItemIds = await getUnscheduledPickupItemIds(userId, org.id);
-    const guardItems = guardItemIds.length
+    // "Ready" items = unscheduled PENDING_PICKUP items already at the chosen
+    // location (or with no home location). Items at OTHER locations get moved via
+    // a transfer and do NOT block booking these ready items.
+    const unscheduledIds = await getUnscheduledPickupItemIds(userId, org.id);
+    const readyRows = unscheduledIds.length
       ? await prisma.item.findMany({
-          where: { id: { in: guardItemIds } },
-          select: { locationId: true },
+          where: {
+            id: { in: unscheduledIds },
+            OR: [{ locationId }, { locationId: null }],
+          },
+          select: { id: true },
         })
       : [];
-    const hasItemElsewhere = guardItems.some(
-      (it) => it.locationId != null && it.locationId !== locationId
-    );
-    if (pendingTransfer || hasItemElsewhere) {
+    const readyIds = readyRows.map((r) => r.id);
+
+    if (readyIds.length === 0) {
       return NextResponse.json(
-        { error: "Some items need a transfer to this location first." },
+        {
+          error:
+            "You don't have any items ready at this location yet. Request a transfer first, or pick the location your items are at.",
+        },
         { status: 422 }
       );
     }
@@ -188,14 +199,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Attach all the bidder's unscheduled pickup items to this appointment
-    const itemIds = await getUnscheduledPickupItemIds(userId, org.id);
-    if (itemIds.length > 0) {
-      await prisma.item.updateMany({
-        where: { id: { in: itemIds } },
-        data: { pickupAppointmentId: appointment.id },
-      });
-    }
+    // Attach only the ready items at this location to the new appointment.
+    await prisma.item.updateMany({
+      where: { id: { in: readyIds } },
+      data: { pickupAppointmentId: appointment.id },
+    });
 
     return NextResponse.json({ success: true, appointmentId: appointment.id });
   } catch (err) {
