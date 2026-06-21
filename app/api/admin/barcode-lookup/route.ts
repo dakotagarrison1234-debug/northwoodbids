@@ -16,17 +16,31 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const res = await fetch(`https://api.upcitemdb.com/prod/v1/lookup?upc=${upc}`, {
+    // Use the paid/keyed endpoint when a key is configured; otherwise fall back
+    // to upcitemdb's free keyless "trial" endpoint (rate-limited, ~100/day).
+    const key = process.env.UPCITEMDB_API_KEY;
+    const endpoint = key
+      ? `https://api.upcitemdb.com/prod/v1/lookup?upc=${upc}`
+      : `https://api.upcitemdb.com/prod/trial/lookup?upc=${upc}`;
+
+    const res = await fetch(endpoint, {
       headers: {
         "Accept": "application/json",
         "User-Agent": "Northwood Bids/1.0",
-        "user_key": process.env.UPCITEMDB_API_KEY ?? "",
+        ...(key ? { user_key: key } : {}),
       },
       next: { revalidate: 86400 }, // cache 24h — same product won't change
     });
 
     if (!res.ok) {
-      return NextResponse.json({ error: "Lookup service unavailable" }, { status: 502 });
+      // Fail soft so the admin can just fill the item in manually.
+      return NextResponse.json({
+        found: false,
+        message:
+          res.status === 429
+            ? "Barcode lookups are temporarily rate-limited — enter the item details manually."
+            : "Couldn't look up that barcode — enter the item details manually.",
+      });
     }
 
     const data = await res.json();
