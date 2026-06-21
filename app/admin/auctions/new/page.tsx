@@ -30,7 +30,7 @@ export default function NewAuctionPage() {
       alert("End date must be after start date");
       return;
     }
-    if (!orgId) { alert("Organization not loaded. Please refresh."); return; }
+    if (!orgId) { alert("Business not loaded. Please refresh."); return; }
     setSaving(true);
     try {
       // Convert datetime-local values (local time, no tz) to UTC ISO strings

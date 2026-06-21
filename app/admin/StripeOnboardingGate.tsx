@@ -48,7 +48,7 @@ export default function StripeOnboardingGate({ orgId, hasStripeAccount, chargesE
           <div>
             <h2 className="text-xl font-bold text-[#1a1916] mb-2">Connect Stripe to go live</h2>
             <p className="text-sm text-[#6b6659]">
-              Northwood Bids uses Stripe Connect so bidders pay your organization directly. You keep the
+              Northwood Bids uses Stripe Connect so bidders pay your business directly. You keep the
               funds — we collect a 20% platform fee automatically.
             </p>
           </div>

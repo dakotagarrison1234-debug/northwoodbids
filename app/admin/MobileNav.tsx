@@ -23,11 +23,9 @@ interface Props {
   navItems: NavItem[];
   orgName: string;
   role: string;
-  superAdmin: boolean;
-  showSuperAdmin?: boolean;
 }
 
-export default function MobileNav({ navItems, orgName, role, superAdmin, showSuperAdmin }: Props) {
+export default function MobileNav({ navItems, orgName, role }: Props) {
   const [open, setOpen] = useState(false);
   const { signOut } = useClerk();
 
@@ -103,19 +101,6 @@ export default function MobileNav({ navItems, orgName, role, superAdmin, showSup
                   <span>Browse Auctions</span>
                 </Link>
               </div>
-
-              {showSuperAdmin && (
-                <div className="pt-2 border-t border-[#e5e0d5] mt-2">
-                  <Link
-                    href="/superadmin"
-                    onClick={() => setOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 transition-colors text-sm"
-                  >
-                    <span className="w-5 flex items-center justify-center shrink-0"><NavIcon name="bolt" /></span>
-                    <span>Super Admin</span>
-                  </Link>
-                </div>
-              )}
             </nav>
 
             {/* Sign out */}

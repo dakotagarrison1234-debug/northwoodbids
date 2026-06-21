@@ -35,9 +35,6 @@ function IcoUser() {
 function IcoBuilding() {
   return <svg width="16" height="16" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="12" height="10" rx="1"/><path d="M5 14V9h6v5"/><path d="M5 7h2M9 7h2"/></svg>;
 }
-function IcoBolt() {
-  return <svg width="16" height="16" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 2L4 9h4l-1 5 6-7H9l1-5z"/></svg>;
-}
 function IcoSignOut() {
   return <svg width="16" height="16" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3h3a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-3M6 11l4-3-4-3M2 8h8"/></svg>;
 }
@@ -164,11 +161,9 @@ export default function UserMenu() {
 
   // Org portal label — never say "admin" for staff
   const roleLabel = me?.role?.toLowerCase();
-  const orgPortalLabel = me?.orgName ?? "Your Organization";
-  const orgPortalSublabel =
-    roleLabel === "owner" || roleLabel === "admin"
-      ? "Manage auctions & settings"
-      : "Auction staff portal";
+  const isManager = roleLabel === "owner" || roleLabel === "admin" || !!me?.isSuperAdmin;
+  const orgPortalLabel = me?.orgName ?? "Admin Dashboard";
+  const orgPortalSublabel = isManager ? "Manage auctions & settings" : "Auction staff portal";
 
   const close = () => setOpen(false);
 
@@ -236,13 +231,13 @@ export default function UserMenu() {
 
           <SectionLabel>Account</SectionLabel>
           <NavLink href="/account" iconEl={<IcoUser />} label="Profile" sublabel="Name, email, phone" onClick={close} />
-          <NavLink href="/account" iconEl={<IcoCard />} label="Payment Method" sublabel="Cards on file per organization" onClick={close} />
+          <NavLink href="/account" iconEl={<IcoCard />} label="Payment Method" sublabel="Cards on file" onClick={close} />
           <NavLink href="/help" iconEl={<IcoHelp />} label="Info & Help" sublabel="Bidding tips, increments, FAQ" onClick={close} />
 
-          {me?.orgId && (
+          {(me?.orgId || me?.isSuperAdmin) && (
             <>
               <Divider />
-              <SectionLabel>Your Organization</SectionLabel>
+              <SectionLabel>Business</SectionLabel>
               <NavLink
                 href="/admin/dashboard"
                 iconEl={<IcoBuilding />}
@@ -250,19 +245,6 @@ export default function UserMenu() {
                 sublabel={orgPortalSublabel}
                 onClick={close}
                 accent="teal"
-              />
-            </>
-          )}
-
-          {me?.isSuperAdmin && (
-            <>
-              <Divider />
-              <NavLink
-                href="/superadmin"
-                iconEl={<IcoBolt />}
-                label="Super Admin"
-                onClick={close}
-                accent="orange"
               />
             </>
           )}

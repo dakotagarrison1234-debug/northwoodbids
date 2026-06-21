@@ -88,7 +88,7 @@ function JoinPageInner() {
           <>
             <h1 className="text-2xl font-bold mb-3">You&apos;ve Been Invited</h1>
             <p className="text-[#6b6659] mb-8">
-              You&apos;ve been invited to join an organization on Northwood Bids. Accept below to access the dashboard.
+              You&apos;ve been invited to join the team at Northwood Bids. Accept below to access the dashboard.
             </p>
 
             {status === "error" && (

@@ -28,8 +28,8 @@ export default async function OrgPage({ params }: Props) {
   if (!org) {
     return (
       <NotFoundCard
-        title="Organization not found"
-        message="This organization may have moved or the link is incorrect."
+        title="Business not found"
+        message="This business may have moved or the link is incorrect."
         actions={[
           { href: "/auctions", label: "Browse auctions", primary: true },
           { href: "/", label: "Go home" },

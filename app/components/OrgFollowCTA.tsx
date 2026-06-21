@@ -51,7 +51,7 @@ export default function OrgFollowCTA({ orgSlug, orgName }: Props) {
           </span>
           <p className="text-sm text-[#4a4640]">
             {attached
-              ? <><span className="font-semibold text-[#09a7ad]">{orgName}</span> is now your primary org — their auctions appear first in your dashboard.</>
+              ? <><span className="font-semibold text-[#09a7ad]">{orgName}</span> is now your primary business — their auctions appear first in your dashboard.</>
               : <>You&apos;re signed in — <Link href="/dashboard?tab=auctions" className="font-semibold text-[#09a7ad] hover:underline">view live auctions</Link></>
             }
           </p>

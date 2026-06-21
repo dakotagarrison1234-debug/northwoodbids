@@ -307,7 +307,7 @@ function NewItemForm() {
     if (uploading) { alert("Please wait for photos to finish uploading."); return; }
     if (saving) return;
     if (!formData.title) { alert("Please enter an item title"); return; }
-    if (!orgId) { alert("Organization not loaded. Please refresh."); return; }
+    if (!orgId) { alert("Business not loaded. Please refresh."); return; }
     setSaving(true);
     try {
       const res = await fetch("/api/items", {

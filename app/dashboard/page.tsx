@@ -475,7 +475,7 @@ function BidderDashboardInner() {
                         {awaitingPickup.length} item{awaitingPickup.length !== 1 ? "s" : ""} ready for pickup
                       </span>
                     </div>
-                    <p className="text-[#6b6659] text-xs mb-4">Payment confirmed. Contact the organization to arrange collection.</p>
+                    <p className="text-[#6b6659] text-xs mb-4">Payment confirmed. Contact the business to arrange collection.</p>
                     <div className="space-y-3">
                       {awaitingPickup.map((b) => (
                         <div key={b.itemId} className="flex items-center gap-3">
@@ -688,7 +688,7 @@ function BidderDashboardInner() {
                             {preferredOrg.name}
                           </Link>
                           <span className="text-[#e5e0d5]">·</span>
-                          <span className="text-xs text-[#8c8778]">Your organization</span>
+                          <span className="text-xs text-[#8c8778]">Your business</span>
                         </div>
                         <div className="space-y-3">
                           {preferredAuctions.map(a => <AuctionCard key={a.id} a={a} highlighted />)}

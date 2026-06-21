@@ -43,7 +43,7 @@ interface Props {
 
 export default function SearchBar({
   defaultValue = "",
-  placeholder = "Search items, auctions, organizations…",
+  placeholder = "Search items, auctions, businesses…",
   size = "default",
 }: Props) {
   const [query, setQuery] = useState(defaultValue);
@@ -180,7 +180,7 @@ export default function SearchBar({
 
               {results!.orgs.length > 0 && (
                 <div>
-                  <div className="px-4 py-2 text-xs font-semibold text-[#8c8778] uppercase tracking-wider border-b border-[#e5e0d5] border-t border-t-gray-800">Organizations</div>
+                  <div className="px-4 py-2 text-xs font-semibold text-[#8c8778] uppercase tracking-wider border-b border-[#e5e0d5] border-t border-t-gray-800">Businesses</div>
                   {results!.orgs.map(org => (
                     <Link key={org.id} href={`/${org.slug}`} onClick={clearAndClose}
                       className="flex items-center gap-3 px-4 py-3 hover:bg-[#f2efe8] transition-colors">

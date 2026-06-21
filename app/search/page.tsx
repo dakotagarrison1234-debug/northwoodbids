@@ -174,11 +174,11 @@ export default async function SearchPage({ searchParams }: Props) {
           </section>
         )}
 
-        {/* Organizations */}
+        {/* Businesses */}
         {orgs.length > 0 && (
           <section className="mb-10">
             <h2 className="text-xs font-bold text-[#8c8778] uppercase tracking-[0.12em] mb-4">
-              Organizations ({orgs.length})
+              Businesses ({orgs.length})
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {orgs.map(org => (

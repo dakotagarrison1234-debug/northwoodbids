@@ -233,7 +233,7 @@ export default function HelpPage() {
                   <li className="flex gap-2"><span className="text-[#09a7ad] font-bold">→</span><span><strong className="text-[#1a1916]">Automatic charge:</strong> Your saved card is charged for your winning amount automatically when the auction closes.</span></li>
                   <li className="flex gap-2"><span className="text-[#09a7ad] font-bold">→</span><span><strong className="text-[#1a1916]">Email notification:</strong> You'll receive an email confirming your win and the items you've won.</span></li>
                   <li className="flex gap-2"><span className="text-[#09a7ad] font-bold">→</span><span><strong className="text-[#1a1916]">My Bids dashboard:</strong> Head to your dashboard to see all your wins, payment status, and pickup details.</span></li>
-                  <li className="flex gap-2"><span className="text-[#09a7ad] font-bold">→</span><span><strong className="text-[#1a1916]">Pickup coordination:</strong> The organization will contact you with pickup or delivery instructions.</span></li>
+                  <li className="flex gap-2"><span className="text-[#09a7ad] font-bold">→</span><span><strong className="text-[#1a1916]">Pickup coordination:</strong> The business will contact you with pickup or delivery instructions.</span></li>
                 </ul>
                 <Warn>If your card payment fails, you'll receive a notification and can retry payment from your dashboard. Items may be released to the next bidder if payment isn't completed promptly.</Warn>
               </div>
@@ -249,15 +249,11 @@ export default function HelpPage() {
               <div className="bg-white border border-[#e5e0d5] rounded-2xl p-6 space-y-5 text-sm text-[#4a4640] leading-relaxed">
                 <div>
                   <p className="font-semibold text-[#1a1916] mb-2">Adding a card</p>
-                  <p>Before your first bid on any organization's auction, you'll be asked to add a payment card. This is required to participate. Your card is stored securely via Stripe and is only charged if you win.</p>
-                </div>
-                <div>
-                  <p className="font-semibold text-[#1a1916] mb-2">Cards are per-organization</p>
-                  <p>Each organization processes payments separately through their own Stripe account. You may need to add a card for each organization whose auctions you participate in.</p>
+                  <p>Before your first bid, you'll be asked to add a payment card. This is required to participate. Your card is stored securely via Stripe and is only charged if you win.</p>
                 </div>
                 <div>
                   <p className="font-semibold text-[#1a1916] mb-2">Managing your cards</p>
-                  <p>Go to <Link href="/account" className="text-[#09a7ad] hover:underline font-medium">Account → Payment Methods</Link> to see your saved cards per organization. You can add a new card or update your card from there at any time.</p>
+                  <p>Go to <Link href="/account" className="text-[#09a7ad] hover:underline font-medium">Account → Payment Methods</Link> to see your saved cards. You can add a new card or update your card from there at any time.</p>
                 </div>
                 <div>
                   <p className="font-semibold text-[#1a1916] mb-2">When am I charged?</p>
@@ -280,8 +276,8 @@ export default function HelpPage() {
                   <p>Visit <Link href="/account" className="text-[#09a7ad] hover:underline font-medium">Account</Link> to update your name, email address, and phone number. Keeping your phone number current ensures you receive text notifications about your bids.</p>
                 </div>
                 <div>
-                  <p className="font-semibold text-[#1a1916] mb-2">Following an organization</p>
-                  <p>When you register through an organization's auction page, you're automatically linked to that org. This means you'll receive notifications when their auctions go live or are ending soon.</p>
+                  <p className="font-semibold text-[#1a1916] mb-2">Staying in the loop</p>
+                  <p>When you register, you're automatically linked to Northwood Bids. This means you'll receive notifications when auctions go live or are ending soon.</p>
                 </div>
                 <div>
                   <p className="font-semibold text-[#1a1916] mb-2">Bid history</p>
@@ -350,7 +346,7 @@ export default function HelpPage() {
                   A card on file ensures that when you win, payment is instant and seamless — no chasing down winners after the fact. Your card is not charged unless you win.
                 </Q>
                 <Q q="I won an item but haven't received pickup info yet — what do I do?">
-                  After payment is confirmed, the organization coordinates pickup directly. Allow 1–2 business days for them to reach out. Check your dashboard for any status updates.
+                  After payment is confirmed, the business coordinates pickup directly. Allow 1–2 business days for them to reach out. Check your dashboard for any status updates.
                 </Q>
                 <Q q="Can I bid without creating an account?">
                   No — an account is required to bid. This protects all bidders by ensuring everyone is accountable for their bids and there's a verified way to contact winners.
@@ -361,7 +357,7 @@ export default function HelpPage() {
             {/* Footer CTA */}
             <div className="bg-gradient-to-br from-[#09a7ad]/10 to-[#09a7ad]/5 border border-[#09a7ad]/20 rounded-2xl p-6 text-center">
               <p className="font-semibold text-[#1a1916] mb-1">Still have questions?</p>
-              <p className="text-sm text-[#6b6659] mb-4">Reach out to the organization running the auction you're participating in — they'll have the most specific answers about their event.</p>
+              <p className="text-sm text-[#6b6659] mb-4">Reach out to the business running the auction you're participating in — they'll have the most specific answers about their event.</p>
               <Link href="/auctions" className="inline-block bg-[#09a7ad] hover:bg-[#0898a0] text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors">
                 Browse Open Auctions
               </Link>

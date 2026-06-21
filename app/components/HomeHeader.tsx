@@ -36,7 +36,7 @@ export default function HomeHeader() {
             type="text"
             value={searchQ}
             onChange={e => setSearchQ(e.target.value)}
-            placeholder="Search items, auctions, orgs…"
+            placeholder="Search items, auctions, businesses…"
             className="flex-1 bg-[#f2efe8] border border-[#e5e0d5] rounded-xl px-4 py-2 text-[#1a1916] placeholder-[#b0a99a] focus:outline-none focus:border-[#09a7ad]/60 text-sm transition-colors"
           />
           <button type="submit" className="bg-[#09a7ad] hover:bg-[#0898a0] text-white px-4 py-2 rounded-xl text-sm font-semibold shrink-0 transition-colors">

@@ -52,7 +52,7 @@ export default async function AuctionPage({ params }: Props) {
         title="Auction not found"
         message="This auction may have ended or the link is incorrect."
         actions={[
-          { href: `/${orgSlug}`, label: "View organization", primary: true },
+          { href: `/${orgSlug}`, label: "View business", primary: true },
           { href: "/auctions", label: "Browse all auctions" },
         ]}
       />

@@ -876,7 +876,7 @@ export default function ItemPage() {
           <div className="fixed inset-0 z-50 bg-[#faf8f4]/90 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
             <div className="bg-white border border-[#e5e0d5] rounded-2xl p-6 w-full max-w-sm text-center">
               <p className="text-[#4a4640] mb-2 font-semibold">Payments not yet enabled</p>
-              <p className="text-[#8c8778] text-sm mb-5">This organization hasn&apos;t finished setting up payments. Try again later.</p>
+              <p className="text-[#8c8778] text-sm mb-5">This business hasn&apos;t finished setting up payments. Try again later.</p>
               <button onClick={() => setShowCardModal(false)} className="w-full bg-[#f2efe8] hover:bg-[#e8e4dc] text-[#1a1916] py-3 rounded-xl text-sm font-semibold">
                 Close
               </button>

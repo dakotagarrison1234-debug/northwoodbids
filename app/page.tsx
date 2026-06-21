@@ -182,7 +182,7 @@ export default async function HomePage() {
           <div className="text-center py-20 bg-white rounded-2xl border border-[#e5e0d5] shadow-sm">
             <div className="flex justify-center mb-4 text-[#b0a99a]"><IconCalendar /></div>
             <p className="text-base font-semibold mb-1 text-[#4a4640]">No live auctions right now</p>
-            <p className="text-sm text-[#8c8778]">{upcomingAuctions.length > 0 ? "See what's coming up below." : "Check back soon — or explore organizations below."}</p>
+            <p className="text-sm text-[#8c8778]">{upcomingAuctions.length > 0 ? "See what's coming up below." : "Check back soon."}</p>
           </div>
         )}
       </section>
@@ -217,11 +217,11 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Organizations */}
+      {/* Businesses */}
       {sortedOrgs.length > 0 && (
         <section className="px-4 sm:px-6 py-14 sm:py-16 max-w-6xl mx-auto border-t border-[#e5e0d5]/60">
           <div className="flex items-center gap-3 mb-8">
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1a1916]">Browse by Organization</h2>
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1a1916]">Browse Auctions</h2>
             <span className="text-[#8c8778] text-sm font-medium">({sortedOrgs.length})</span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -250,7 +250,7 @@ export default async function HomePage() {
             {[
               { icon: <IconSearch />, title: "Find an auction", desc: "Browse live auctions and watch the countdown. When the timer hits zero, the highest bid wins." },
               { icon: <IconBid />, title: "Place your bid", desc: "Bid in real time or set a max bid — we auto-bid for you. Instant alerts when you are outbid." },
-              { icon: <IconTrophy />, title: "Win & pick up", desc: "Win and your card is charged automatically. Arrange pickup with the organization." },
+              { icon: <IconTrophy />, title: "Win & pick up", desc: "Win and your card is charged automatically. Arrange pickup with the business." },
             ].map(({ icon, title, desc }) => (
               <div key={title} className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-white border border-[#e5e0d5] rounded-2xl flex items-center justify-center text-[#09a7ad] shrink-0 shadow-sm">{icon}</div>

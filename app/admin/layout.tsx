@@ -3,6 +3,11 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import UserMenu from "@/app/components/UserMenu";
 import { prisma } from "@/lib/prisma";
+import { isSuperAdmin } from "@/lib/auth";
+import MobileNav from "./MobileNav";
+
+const BUSINESS_LOGO_URL =
+  "https://assets.cdn.filesafe.space/TwuL7EwKfW8oGIV0Zo5q/media/6a373b261c5d711b35bf4e56.png";
 
 function AdminNavIcon({ name }: { name: string }) {
   const s = { width: 16, height: 16, fill: "none", viewBox: "0 0 16 16", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
@@ -13,26 +18,14 @@ function AdminNavIcon({ name }: { name: string }) {
   if (name === "users") return <svg {...s}><circle cx="6" cy="5" r="2.5"/><path d="M1 14c0-3 2-4.5 5-4.5s5 1.5 5 4.5"/><circle cx="12" cy="5" r="2"/><path d="M12 10c2 0 3 1 3 3.5"/></svg>;
   if (name === "settings") return <svg {...s}><circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"/></svg>;
   if (name === "mybids") return <svg {...s}><path d="M8 2v4l3 3"/><circle cx="8" cy="8" r="6"/></svg>;
-  if (name === "bolt") return <svg {...s}><path d="M9 2L4 9h4l-1 5 6-7H9l1-5z"/></svg>;
   return null;
 }
-import { isSuperAdmin } from "@/lib/auth";
-import { cookies } from "next/headers";
-import ActAsExitButton from "./ActAsExitButton";
-import OrgSwitcher from "./OrgSwitcher";
-import MobileNav from "./MobileNav";
-import OrgLogo from "@/app/components/OrgLogo";
-import StripeOnboardingGate from "./StripeOnboardingGate";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
   const superAdmin = await isSuperAdmin();
-
-  // Check for act-as cookie (super admin only)
-  const cookieStore = await cookies();
-  const actAsOrgId = superAdmin ? cookieStore.get("sa_org_id")?.value : undefined;
 
   type MembershipWithOrg = NonNullable<Awaited<ReturnType<typeof prisma.orgMember.findFirst<{ include: { organization: true } }>>>>;
 
@@ -41,34 +34,33 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     include: { organization: true },
   }) as MembershipWithOrg | null;
 
-  let actingAsOrg = null;
-
-  if (superAdmin && actAsOrgId) {
-    actingAsOrg = await prisma.organization.findUnique({ where: { id: actAsOrgId } });
-    if (actingAsOrg) {
-      membership = {
-        id: membership?.id ?? "superadmin_synthetic",
-        clerkUserId: userId,
-        organizationId: actingAsOrg.id,
-        role: "OWNER",
-        createdAt: membership?.createdAt ?? new Date(),
-        organization: actingAsOrg,
-      } as MembershipWithOrg;
-    }
-  }
-
+  // Single-business model: the owner is auto-provisioned the one business the
+  // first time they open the admin. Anyone else without a membership is a
+  // bidder (not staff) and is sent back to the public site.
   if (!membership) {
-    if (superAdmin) redirect("/superadmin");
-    redirect("/apply");
+    if (!superAdmin) redirect("/");
+    const existingOrg = await prisma.organization.findFirst({ orderBy: { createdAt: "asc" } });
+    const businessOrg =
+      existingOrg ??
+      (await prisma.organization.create({
+        data: {
+          name: "Northwood Bids",
+          slug: "northwood-bids",
+          status: "LIVE",
+          platformFeePercent: 0,
+          stripeChargesEnabled: true,
+          stripePayoutsEnabled: true,
+          stripeDetailsSubmitted: true,
+        },
+      }));
+    membership = (await prisma.orgMember.create({
+      data: { clerkUserId: userId, organizationId: businessOrg.id, role: "OWNER" },
+      include: { organization: true },
+    })) as MembershipWithOrg;
   }
 
   const org = membership.organization;
   const isOwnerOrAdmin = membership.role === "OWNER" || membership.role === "ADMIN";
-
-  // Load all orgs for switcher (super admin only)
-  const allOrgs = superAdmin
-    ? await prisma.organization.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } })
-    : [];
 
   const navItems = [
     { label: "Overview", href: "/admin/dashboard", icon: "grid" },
@@ -80,43 +72,26 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen bg-[#faf8f4] text-[#1a1916] flex flex-col">
-      {/* Act-as banner */}
-      {actingAsOrg && (
-        <div className="bg-amber-100 border-b border-amber-200 px-4 sm:px-6 py-2.5 flex items-center justify-between text-xs sm:text-sm gap-2">
-          <span className="text-amber-900 truncate">
-            Acting as <span className="font-bold text-amber-950">{actingAsOrg.name}</span>
-          </span>
-          <ActAsExitButton />
-        </div>
-      )}
-
       {/* Mobile nav (hamburger + drawer) */}
       <MobileNav
         navItems={navItems}
         orgName={org.name}
         role={membership.role.toLowerCase()}
-        superAdmin={superAdmin}
-        showSuperAdmin={superAdmin}
       />
 
       <div className="flex flex-1 min-h-0">
         <aside className="hidden md:flex w-64 bg-white border-r border-[#e5e0d5] flex-col shrink-0">
           <div className="px-6 py-5 border-b border-[#e5e0d5]">
             <Link href="/admin/dashboard" className="flex items-center gap-3 mb-1">
-              <OrgLogo name={org.name} logoUrl={org.logoUrl} size="sm" />
-              <div className="min-w-0">
-                <p className="text-[#1a1916] font-semibold text-sm truncate">{org.name}</p>
-                <span className="text-xs text-[#8c8778] capitalize">{membership.role.toLowerCase()}</span>
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={BUSINESS_LOGO_URL}
+                alt={org.name}
+                className="h-10 w-auto max-w-[150px] object-contain"
+              />
+              <span className="sr-only">{membership.role.toLowerCase()}</span>
             </Link>
           </div>
-
-          {/* Org switcher for super admin */}
-          {superAdmin && allOrgs.length > 1 && (
-            <div className="px-4 pt-4">
-              <OrgSwitcher orgs={allOrgs} currentOrgId={org.id} />
-            </div>
-          )}
 
           <nav className="flex-1 px-4 py-4 space-y-1">
             {navItems.map((item) => (
@@ -144,20 +119,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </div>
           </nav>
 
-          {superAdmin && (
-            <div className="px-4 pb-2">
-              <Link
-                href="/superadmin"
-                className="flex items-center gap-3 px-4 py-3 rounded-xl text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 transition-colors text-sm"
-              >
-                <span className="w-5 flex items-center justify-center shrink-0">
-                  <AdminNavIcon name="bolt" />
-                </span>
-                <span>Super Admin</span>
-              </Link>
-            </div>
-          )}
-
           <div className="px-4 py-4 border-t border-[#e5e0d5] flex items-center gap-3">
             <UserMenu />
             <div className="text-sm text-[#8c8778] truncate">Account</div>
@@ -165,14 +126,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </aside>
 
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Stripe onboarding gate — shown to org owners/admins who haven't connected Stripe */}
-          {!superAdmin && isOwnerOrAdmin && (
-            <StripeOnboardingGate
-              orgId={org.id}
-              hasStripeAccount={!!org.stripeAccountId}
-              chargesEnabled={org.stripeChargesEnabled}
-            />
-          )}
           {children}
         </div>
       </div>

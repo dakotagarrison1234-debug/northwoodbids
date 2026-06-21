@@ -206,7 +206,7 @@ export default function AccountPage() {
             <span className="text-[#09a7ad]"><IcoCard /></span>
             <div className="flex-1">
               <h2 className="font-semibold text-[#1a1916]">Payment Methods</h2>
-              <p className="text-xs text-[#8c8778] mt-0.5">Cards saved per auction organization</p>
+              <p className="text-xs text-[#8c8778] mt-0.5">Cards on file</p>
             </div>
           </div>
 
@@ -215,7 +215,7 @@ export default function AccountPage() {
               <div className="text-[#8c8778] text-sm py-2">Loading…</div>
             ) : paymentMethods.length === 0 ? (
               <div className="bg-[#faf8f4] border border-[#e5e0d5] rounded-xl px-4 py-4 text-sm text-[#6b6659]">
-                No payment methods saved yet. A card will be requested when you place your first bid with an organization.
+                No payment methods saved yet. A card will be requested when you place your first bid.
               </div>
             ) : (
               <div className="space-y-2.5">
