@@ -39,8 +39,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
   }
 
-  if (parsedUrl.protocol !== "https:") {
-    return NextResponse.json({ error: "Only HTTPS URLs allowed" }, { status: 400 });
+  if (parsedUrl.protocol !== "https:" && parsedUrl.protocol !== "http:") {
+    return NextResponse.json({ error: "Only http(s) URLs allowed" }, { status: 400 });
   }
 
   // Block private/local IP ranges
@@ -64,13 +64,21 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Image not available" }, { status: 502 });
   }
 
-  const contentType = imgRes.headers.get("content-type")?.split(";")[0].trim() ?? "image/jpeg";
-  if (!ALLOWED_CONTENT_TYPES.includes(contentType)) {
-    return NextResponse.json({ error: "Unsupported image type" }, { status: 400 });
+  const rawType = imgRes.headers.get("content-type")?.split(";")[0].trim().toLowerCase() ?? "";
+  // Reject obvious non-images (e.g. an HTML error page), but tolerate missing/odd
+  // content-types from product-image hosts by inferring the type below.
+  if (rawType.startsWith("text/") || rawType.includes("html") || rawType.includes("json")) {
+    return NextResponse.json({ error: "URL did not return an image" }, { status: 400 });
+  }
+  let contentType = rawType.startsWith("image/") && ALLOWED_CONTENT_TYPES.includes(rawType) ? rawType : "";
+  if (!contentType) {
+    // Infer from the URL extension; default to JPEG (most product images).
+    const pathExt = parsedUrl.pathname.split(".").pop()?.toLowerCase() ?? "";
+    const extMap: Record<string, string> = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif", avif: "image/avif" };
+    contentType = extMap[pathExt] ?? "image/jpeg";
   }
 
-  const ext = contentType === "image/jpeg" ? "jpg"
-    : contentType === "image/png" ? "png"
+  const ext = contentType === "image/png" ? "png"
     : contentType === "image/webp" ? "webp"
     : contentType === "image/gif" ? "gif"
     : contentType === "image/avif" ? "avif"
