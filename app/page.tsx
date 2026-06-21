@@ -90,7 +90,7 @@ export default async function HomePage() {
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
       {/* Hero */}
       <section className="relative px-4 sm:px-6 pt-14 pb-28 sm:pt-16 sm:pb-32 overflow-hidden">
-        <MountainRange className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 w-[860px] max-w-none opacity-20" />
+        <MountainRange className="pointer-events-none absolute bottom-0 left-0 w-full h-[55%] opacity-25" />
         <div className="relative max-w-3xl mx-auto text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img

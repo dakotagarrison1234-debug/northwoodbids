@@ -49,7 +49,7 @@ export function PineRidge({ className = "" }: { className?: string }) {
 /* Layered mountains + sun — calm rustic backdrop */
 export function MountainRange({ className = "" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 600 320" className={className} fill="none" aria-hidden="true">
+    <svg viewBox="0 0 600 320" className={className} fill="none" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
       <circle cx="300" cy="120" r="58" fill={LEATHER_LT} opacity="0.25" />
       <circle cx="300" cy="120" r="40" fill={LEATHER} opacity="0.30" />
       <path d="M0 320 L150 130 L250 230 L360 90 L470 220 L600 120 V320Z" fill={SAND} opacity="0.65" />
