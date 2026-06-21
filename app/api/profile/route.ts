@@ -37,6 +37,28 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// Update just the chosen avatar (used by the avatar picker).
+export async function PATCH(request: NextRequest) {
+  try {
+    const { userId } = await auth();
+    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { avatarKey } = await request.json();
+    const value = typeof avatarKey === "string" && avatarKey.length > 0 ? avatarKey : null;
+
+    const profile = await prisma.bidderProfile.upsert({
+      where: { clerkUserId: userId },
+      update: { avatarKey: value },
+      create: { clerkUserId: userId, avatarKey: value },
+    });
+
+    return NextResponse.json({ success: true, profile });
+  } catch (error) {
+    console.error("Avatar update error:", error);
+    return NextResponse.json({ error: "Failed to save avatar" }, { status: 500 });
+  }
+}
+
 export async function GET() {
   try {
     const { userId } = await auth();

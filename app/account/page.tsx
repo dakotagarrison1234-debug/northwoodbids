@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import CardSetupModal from "@/app/components/CardSetupModal";
+import { AVATARS, Avatar } from "@/app/components/Avatars";
 
 interface Profile { name: string | null; email: string | null; phone: string | null; }
 interface PaymentMethod {
@@ -52,6 +53,8 @@ export default function AccountPage() {
   const [profileMsg, setProfileMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
 
+  const [avatarKey, setAvatarKey] = useState<string | null>(null);
+
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loadingPMs, setLoadingPMs] = useState(true);
   const [cardModal, setCardModal] = useState<{ orgId: string; stripeAccountId: string } | null>(null);
@@ -71,7 +74,24 @@ export default function AccountPage() {
       })
       .catch(() => {})
       .finally(() => setLoadingProfile(false));
+
+    fetch("/api/profile")
+      .then(r => r.json())
+      .then(d => setAvatarKey(d.profile?.avatarKey ?? null))
+      .catch(() => {});
   }, [isLoaded, isSignedIn, router, user]);
+
+  const selectAvatar = async (key: string) => {
+    const next = avatarKey === key ? null : key; // tap again to clear
+    setAvatarKey(next);
+    try {
+      await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatarKey: next }),
+      });
+    } catch { /* non-critical; UI already updated */ }
+  };
 
   const loadPaymentMethods = useCallback(() => {
     setLoadingPMs(true);
@@ -137,16 +157,46 @@ export default function AccountPage() {
 
         {/* Page title */}
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-[#a4592a]/10 border border-[#a4592a]/20 flex items-center justify-center text-[#a4592a] font-bold text-xl shrink-0">
-            {user?.imageUrl ? (
+          <div className="w-14 h-14 rounded-full overflow-hidden bg-[#a4592a]/10 border border-[#a4592a]/20 flex items-center justify-center text-[#a4592a] font-bold text-xl shrink-0">
+            {avatarKey ? (
+              <Avatar avatarKey={avatarKey} className="w-full h-full" />
+            ) : user?.imageUrl ? (
               <img src={user.imageUrl} alt="" className="w-full h-full rounded-full object-cover" />
             ) : initials}
           </div>
           <div>
-            <h1 className="text-xl font-bold">Account Settings</h1>
+            <h1 className="text-2xl font-bold">Account Settings</h1>
             <p className="text-[#8a7559] text-sm">{user?.primaryEmailAddress?.emailAddress}</p>
           </div>
         </div>
+
+        {/* Avatar picker */}
+        <section className="bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden">
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-[#e3d6bf]">
+            <h2 className="font-semibold text-lg text-[#241a12]">Choose Your Avatar</h2>
+          </div>
+          <div className="px-5 py-5">
+            <p className="text-base text-[#6f5b46] mb-4">Pick a critter — it shows next to your name around the site. Tap your pick again to remove it.</p>
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
+              {AVATARS.map((a) => (
+                <button
+                  key={a.key}
+                  type="button"
+                  onClick={() => selectAvatar(a.key)}
+                  title={a.label}
+                  aria-label={a.label}
+                  className={`aspect-square rounded-2xl p-1.5 border-2 transition-colors ${
+                    avatarKey === a.key
+                      ? "border-[#a4592a] bg-[#a4592a]/10"
+                      : "border-[#e3d6bf] hover:border-[#cdbda3] bg-white"
+                  }`}
+                >
+                  <Avatar avatarKey={a.key} className="w-full h-full" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
 
         {/* Profile section */}
         <section className="bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden">

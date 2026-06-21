@@ -216,6 +216,7 @@ model BidderProfile {
   phone          String?
   email          String?
   name           String?
+  avatarKey      String?
   preferredOrgId String?
   preferredOrg   Organization? @relation(fields: [preferredOrgId], references: [id])
   createdAt      DateTime      @default(now())

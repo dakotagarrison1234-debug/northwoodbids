@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useUser, useClerk } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import { Avatar, hasAvatar } from "./Avatars";
 
 interface MeData {
   orgId?: string | null;
@@ -11,6 +12,7 @@ interface MeData {
   orgSlug?: string | null;
   role?: string | null;
   isSuperAdmin?: boolean;
+  avatarKey?: string | null;
 }
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
@@ -197,7 +199,9 @@ export default function UserMenu() {
         <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #e3d6bf", display: "flex", alignItems: "flex-start", gap: 12, justifyContent: "space-between", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
             <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: "rgba(164,89,42,0.10)", border: "1px solid rgba(164,89,42,0.20)", display: "flex", alignItems: "center", justifyContent: "center", color: "#a4592a", fontWeight: 700, fontSize: 16, flexShrink: 0 }}>
-              {user?.imageUrl ? (
+              {hasAvatar(me?.avatarKey) ? (
+                <Avatar avatarKey={me?.avatarKey} className="w-full h-full" />
+              ) : user?.imageUrl ? (
                 <img src={user.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               ) : initials}
             </div>
@@ -278,7 +282,9 @@ export default function UserMenu() {
         className="w-9 h-9 rounded-full overflow-hidden bg-[#a4592a]/10 border border-[#a4592a]/20 flex items-center justify-center text-[#a4592a] font-semibold text-sm hover:bg-[#843f1c]/20 transition-colors shrink-0"
         aria-label="Open account menu"
       >
-        {user?.imageUrl ? (
+        {hasAvatar(me?.avatarKey) ? (
+          <Avatar avatarKey={me?.avatarKey} className="w-full h-full" />
+        ) : user?.imageUrl ? (
           <img src={user.imageUrl} alt="" className="w-full h-full object-cover" />
         ) : initials}
       </button>
