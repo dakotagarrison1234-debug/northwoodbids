@@ -34,6 +34,14 @@ export async function POST(request: NextRequest) {
       data: {
         name: name.trim(),
         slug: finalSlug,
+        // Direct-payment model: payments run on the single platform Stripe account,
+        // which is always active — so every org can accept payments immediately,
+        // with no platform fee taken from sales.
+        status: "LIVE",
+        platformFeePercent: 0,
+        stripeChargesEnabled: true,
+        stripePayoutsEnabled: true,
+        stripeDetailsSubmitted: true,
         members: {
           create: { clerkUserId: targetUserId, role: "OWNER" },
         },

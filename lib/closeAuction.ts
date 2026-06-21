@@ -97,7 +97,7 @@ async function chargeWinners(
   org: OrgForCharging,
   auctionId: string
 ): Promise<void> {
-  if (!org.stripeAccountId || winnerMap.size === 0) return;
+  if (winnerMap.size === 0) return;
 
   const platformFeePercent = Number(org.platformFeePercent);
   // If the org is tax-exempt, force tax to zero regardless of taxPercent.
@@ -150,11 +150,11 @@ async function chargeWinners(
     // Fee AND tax ADDED ON TOP of the bid — buyer pays bid + fee + tax.
     // ForPurpose holds fee + tax via application_fee_amount; org nets exactly the bid.
     const chargeAmountCents = Math.round(totalBidAmount * 100) + feeAmountCents + taxAmountCents;
-    const appFeeAmountCents = feeAmountCents + taxAmountCents;
 
     const now = new Date();
 
     try {
+      // Direct charge on the platform Stripe account (no Connect, no application fee).
       const paymentIntent = await stripe.paymentIntents.create(
         {
           amount: chargeAmountCents,
@@ -163,7 +163,6 @@ async function chargeWinners(
           payment_method: bidderCustomer.defaultPaymentMethodId,
           off_session: true,
           confirm: true,
-          application_fee_amount: appFeeAmountCents,
           metadata: {
             clerkUserId,
             orgId: org.id,
@@ -172,7 +171,6 @@ async function chargeWinners(
           },
         },
         {
-          stripeAccount: org.stripeAccountId,
           // Stable per winner per auction — a winner is only ever charged once.
           idempotencyKey: `autocharge-${auctionId}-${clerkUserId}`,
         }

@@ -32,22 +32,14 @@ export async function GET(_request: NextRequest, { params }: Props) {
 
     // Fetch card details from Stripe for display (best-effort — don't fail if Stripe errors)
     try {
-      const org = await prisma.organization.findUnique({
-        where: { id: orgId },
-        select: { stripeAccountId: true },
+      const pm = await stripe.paymentMethods.retrieve(
+        bidderCustomer.defaultPaymentMethodId
+      );
+      return NextResponse.json({
+        hasCard: true,
+        last4: pm.card?.last4 ?? null,
+        brand: pm.card?.brand ?? null,
       });
-      if (org?.stripeAccountId) {
-        const pm = await stripe.paymentMethods.retrieve(
-          bidderCustomer.defaultPaymentMethodId,
-          undefined,
-          { stripeAccount: org.stripeAccountId }
-        );
-        return NextResponse.json({
-          hasCard: true,
-          last4: pm.card?.last4 ?? null,
-          brand: pm.card?.brand ?? null,
-        });
-      }
     } catch {
       // Fall through — just say hasCard: true without details
     }
@@ -77,25 +69,18 @@ export async function POST(request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "paymentMethodId required" }, { status: 400 });
     }
 
-    const [bidderCustomer, org] = await Promise.all([
-      prisma.bidderStripeCustomer.findUnique({
-        where: { clerkUserId_organizationId: { clerkUserId: userId, organizationId: orgId } },
-      }),
-      prisma.organization.findUnique({
-        where: { id: orgId },
-        select: { stripeAccountId: true },
-      }),
-    ]);
+    const bidderCustomer = await prisma.bidderStripeCustomer.findUnique({
+      where: { clerkUserId_organizationId: { clerkUserId: userId, organizationId: orgId } },
+    });
 
-    if (!bidderCustomer || !org?.stripeAccountId) {
+    if (!bidderCustomer) {
       return NextResponse.json({ error: "Customer not found — start setup again" }, { status: 404 });
     }
 
-    // Set as default on the connected-account customer
+    // Set as default on the platform-account customer
     await stripe.customers.update(
       bidderCustomer.stripeCustomerId,
-      { invoice_settings: { default_payment_method: paymentMethodId } },
-      { stripeAccount: org.stripeAccountId }
+      { invoice_settings: { default_payment_method: paymentMethodId } }
     );
 
     // Persist the payment method ID

@@ -65,6 +65,14 @@ export async function PATCH(request: NextRequest, { params }: Props) {
             isActive: true,
             taxExempt: isExempt,
             taxPercent: resolvedTaxPercent,
+            // Direct-payment model: payments run on the single platform Stripe
+            // account (always active), so the org can accept payments immediately
+            // with no platform fee taken from sales.
+            status: "LIVE",
+            platformFeePercent: 0,
+            stripeChargesEnabled: true,
+            stripePayoutsEnabled: true,
+            stripeDetailsSubmitted: true,
             members: {
               create: { clerkUserId: application.clerkUserId, role: "OWNER" },
             },

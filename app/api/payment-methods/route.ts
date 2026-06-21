@@ -38,13 +38,9 @@ export async function GET() {
         brand: null as string | null,
       };
 
-      if (r.defaultPaymentMethodId && r.organization.stripeAccountId) {
+      if (r.defaultPaymentMethodId) {
         try {
-          const pm = await stripe.paymentMethods.retrieve(
-            r.defaultPaymentMethodId,
-            undefined,
-            { stripeAccount: r.organization.stripeAccountId }
-          );
+          const pm = await stripe.paymentMethods.retrieve(r.defaultPaymentMethodId);
           base.last4 = pm.card?.last4 ?? null;
           base.brand = pm.card?.brand ?? null;
         } catch {

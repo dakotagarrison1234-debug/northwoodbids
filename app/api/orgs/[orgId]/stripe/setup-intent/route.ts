@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-import { canAccessOrg } from "@/lib/auth";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -27,18 +26,12 @@ export async function POST(_request: NextRequest, { params }: Props) {
 
     const { orgId } = await params;
 
-    // Org must exist and have Stripe connected
+    // Org must exist. Payments run directly on the platform Stripe account.
     const org = await prisma.organization.findUnique({
       where: { id: orgId },
-      select: { id: true, stripeAccountId: true, stripeChargesEnabled: true },
+      select: { id: true },
     });
     if (!org) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if (!org.stripeAccountId || !org.stripeChargesEnabled) {
-      return NextResponse.json(
-        { error: "This organization is not yet accepting payments" },
-        { status: 422 }
-      );
-    }
 
     // Look up existing BidderStripeCustomer for this user + org
     const existing = await prisma.bidderStripeCustomer.findUnique({
@@ -50,20 +43,17 @@ export async function POST(_request: NextRequest, { params }: Props) {
     if (existing) {
       customerId = existing.stripeCustomerId;
     } else {
-      // Create a new Customer on the CONNECTED account (not the platform)
+      // Create a new Customer on the platform account
       const profile = await prisma.bidderProfile.findUnique({
         where: { clerkUserId: userId },
         select: { email: true, name: true },
       });
 
-      const customer = await stripe.customers.create(
-        {
-          metadata: { clerkUserId: userId, orgId },
-          ...(profile?.email ? { email: profile.email } : {}),
-          ...(profile?.name ? { name: profile.name } : {}),
-        },
-        { stripeAccount: org.stripeAccountId }
-      );
+      const customer = await stripe.customers.create({
+        metadata: { clerkUserId: userId, orgId },
+        ...(profile?.email ? { email: profile.email } : {}),
+        ...(profile?.name ? { name: profile.name } : {}),
+      });
       customerId = customer.id;
 
       // Persist the record now (without a PM — that comes after setup confirmation)
@@ -76,16 +66,13 @@ export async function POST(_request: NextRequest, { params }: Props) {
       });
     }
 
-    // Create a SetupIntent on the connected account
-    const setupIntent = await stripe.setupIntents.create(
-      {
-        customer: customerId,
-        payment_method_types: ["card"],
-        usage: "off_session", // allows future off-session charging
-        metadata: { clerkUserId: userId, orgId },
-      },
-      { stripeAccount: org.stripeAccountId }
-    );
+    // Create a SetupIntent on the platform account
+    const setupIntent = await stripe.setupIntents.create({
+      customer: customerId,
+      payment_method_types: ["card"],
+      usage: "off_session", // allows future off-session charging
+      metadata: { clerkUserId: userId, orgId },
+    });
 
     return NextResponse.json({
       clientSecret: setupIntent.client_secret,

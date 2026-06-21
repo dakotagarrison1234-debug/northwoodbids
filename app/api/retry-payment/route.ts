@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
         },
       },
     });
-    if (!item || !item.organization.stripeAccountId) {
+    if (!item) {
       return NextResponse.json({ error: "Item or org not found" }, { status: 404 });
     }
 
@@ -75,9 +75,8 @@ export async function POST(request: NextRequest) {
     const feeAmount = Math.round(bidAmount * Number(org.platformFeePercent) / 100 * 100); // cents
     // Fee + tax ADDED ON TOP; ForPurpose holds both; org nets exactly the bid.
     const chargeAmount = Math.round(bidAmount * 100) + feeAmount + taxAmount; // total cents
-    const appFeeAmount = feeAmount + taxAmount; // cents
 
-    // Create fresh PaymentIntent on the connected account
+    // Create fresh PaymentIntent directly on the platform account
     const paymentIntent = await stripe.paymentIntents.create(
       {
         amount: chargeAmount,
@@ -86,11 +85,9 @@ export async function POST(request: NextRequest) {
         payment_method: bidderCustomer.defaultPaymentMethodId,
         off_session: true,
         confirm: true,
-        application_fee_amount: appFeeAmount,
         metadata: { clerkUserId: userId, orgId: org.id, itemId, isRetry: "true" },
       },
       {
-        stripeAccount: org.stripeAccountId ?? undefined,
         // PM id is part of the key on purpose: a double-click with the SAME card
         // is idempotent (no double charge), but a genuine retry with an UPDATED
         // card produces a new key so the new card is actually attempted.

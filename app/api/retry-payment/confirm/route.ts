@@ -49,16 +49,13 @@ export async function POST(request: NextRequest) {
         },
       },
     });
-    if (!item || !item.organization.stripeAccountId) {
+    if (!item) {
       return NextResponse.json({ error: "Item or org not found" }, { status: 404 });
     }
     const org = item.organization;
-    const stripeAccountId = item.organization.stripeAccountId;
 
-    // Retrieve the PI from Stripe — the source of truth
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, undefined, {
-      stripeAccount: stripeAccountId,
-    });
+    // Retrieve the PI from Stripe (platform account) — the source of truth
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
     // The PI must belong to this user + item (set in retry-payment metadata)
     if (
