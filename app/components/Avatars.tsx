@@ -53,11 +53,16 @@ function Cow({ className }: IconProps) {
 function Horse({ className }: IconProps) {
   return (
     <S bg="#3f7d72" className={className}>
-      <path d="M23 16 l-3 -9 l7 6 Z M41 16 l3 -9 l-7 6 Z" fill="#5c3d24" />
-      <ellipse cx="32" cy="35" rx="13" ry="18" fill="#9a6b43" />
-      <path d="M20 22 q3 -12 13 -13 q-7 7 -9 16 q-3 0 -4 -3 Z" fill="#5c3d24" />
-      <ellipse cx="32" cy="47" rx="8" ry="7" fill="#b98a5e" />
-      <ellipse cx="29" cy="48" rx="1.4" ry="2" fill="#5c3d24" /><ellipse cx="35" cy="48" rx="1.4" ry="2" fill="#5c3d24" />
+      {/* ears */}
+      <path d="M22 17 l-3 -10 l8 7 Z M42 17 l3 -10 l-8 7 Z" fill="#9a6b43" />
+      <path d="M22.5 15 l-1.3 -5 l3.5 3.5 Z M41.5 15 l1.3 -5 l-3.5 3.5 Z" fill="#5c3d24" />
+      {/* long face */}
+      <path d="M24 19 q8 -3 16 0 q3 11 1 21 q-2 11 -9 13 q-7 -2 -9 -13 q-2 -10 1 -21 Z" fill="#9a6b43" />
+      {/* forelock tuft between ears */}
+      <path d="M28 14 q4 -5 8 0 q-1 6 -4 9 q-3 -3 -4 -9 Z" fill="#5c3d24" />
+      {/* muzzle */}
+      <ellipse cx="32" cy="47" rx="8.5" ry="7" fill="#c79a6a" />
+      <ellipse cx="29" cy="48" rx="1.5" ry="2.2" fill="#5c3d24" /><ellipse cx="35" cy="48" rx="1.5" ry="2.2" fill="#5c3d24" />
       <circle cx="26" cy="33" r="2.3" fill={INK} /><circle cx="38" cy="33" r="2.3" fill={INK} />
     </S>
   );
@@ -88,12 +93,17 @@ function Fox({ className }: IconProps) {
 function Deer({ className }: IconProps) {
   return (
     <S bg="#7089a8" className={className}>
-      <path d="M22 14 q-3 -8 -8 -9 M22 14 q-8 -4 -11 -1 M42 14 q3 -8 8 -9 M42 14 q8 -4 11 -1" stroke="#7a5230" strokeWidth="2.6" fill="none" strokeLinecap="round" />
-      <path d="M17 21 q-7 -1 -8 6 q6 3 10 -2 Z M47 21 q7 -1 8 6 q-6 3 -10 -2 Z" fill="#a07a4f" />
-      <ellipse cx="32" cy="36" rx="13" ry="16" fill="#c79a6a" />
+      {/* antlers */}
+      <path d="M25 19 Q18 12 13 5 M19 11 L11 9 M16 8 L13 13 M39 19 Q46 12 51 5 M45 11 L53 9 M48 8 L51 13"
+        stroke="#6e4a2a" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      {/* ears */}
+      <ellipse cx="17" cy="27" rx="5" ry="8" fill="#a07a4f" transform="rotate(-28 17 27)" />
+      <ellipse cx="47" cy="27" rx="5" ry="8" fill="#a07a4f" transform="rotate(28 47 27)" />
+      {/* face */}
+      <ellipse cx="32" cy="37" rx="13" ry="15" fill="#c79a6a" />
       <ellipse cx="32" cy="44" rx="7" ry="5.5" fill="#efdcc6" />
       <circle cx="32" cy="43" r="2" fill={INK} />
-      <circle cx="26" cy="34" r="2.3" fill={INK} /><circle cx="38" cy="34" r="2.3" fill={INK} />
+      <circle cx="26" cy="35" r="2.3" fill={INK} /><circle cx="38" cy="35" r="2.3" fill={INK} />
     </S>
   );
 }
@@ -136,12 +146,15 @@ function Bunny({ className }: IconProps) {
 function Frog({ className }: IconProps) {
   return (
     <S bg="#4f6f9b" className={className}>
-      <circle cx="22" cy="19" r="8.5" fill="#6cae54" /><circle cx="42" cy="19" r="8.5" fill="#6cae54" />
-      <circle cx="22" cy="18" r="4.2" fill={W} /><circle cx="42" cy="18" r="4.2" fill={W} />
-      <circle cx="22" cy="19" r="2" fill={INK} /><circle cx="42" cy="19" r="2" fill={INK} />
-      <path d="M12 30 q20 20 40 0 q-3 17 -20 17 q-17 0 -20 -17 Z" fill="#6cae54" />
-      <path d="M24 40 q8 6 16 0" stroke="#2f5e2a" strokeWidth="2.4" fill="none" strokeLinecap="round" />
-      <circle cx="26" cy="38" r="1.4" fill="#2f5e2a" /><circle cx="38" cy="38" r="1.4" fill="#2f5e2a" />
+      {/* one rounded head */}
+      <path d="M11 35 Q11 19 32 19 Q53 19 53 35 Q53 49 32 49 Q11 49 11 35 Z" fill="#6cae54" />
+      {/* eye bumps sitting on top of the head */}
+      <circle cx="22" cy="20" r="8" fill="#6cae54" /><circle cx="42" cy="20" r="8" fill="#6cae54" />
+      <circle cx="22" cy="19" r="4.6" fill={W} /><circle cx="42" cy="19" r="4.6" fill={W} />
+      <circle cx="22" cy="20" r="2.2" fill={INK} /><circle cx="42" cy="20" r="2.2" fill={INK} />
+      {/* nostrils + wide smile */}
+      <circle cx="29" cy="33" r="1.2" fill="#2f5e2a" /><circle cx="35" cy="33" r="1.2" fill="#2f5e2a" />
+      <path d="M22 38 q10 9 20 0" stroke="#2f5e2a" strokeWidth="2.6" fill="none" strokeLinecap="round" />
     </S>
   );
 }
