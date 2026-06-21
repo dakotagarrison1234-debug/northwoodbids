@@ -3,7 +3,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const tabs = [
-  { label: "General", href: "/admin/settings" },
   { label: "Payments", href: "/admin/settings/payments" },
 ];
 

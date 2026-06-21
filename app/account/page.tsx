@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import UserMenu from "@/app/components/UserMenu";
 import CardSetupModal from "@/app/components/CardSetupModal";
 
 interface Profile { name: string | null; email: string | null; phone: string | null; }
@@ -124,25 +123,17 @@ export default function AccountPage() {
 
   return (
     <div className="min-h-screen bg-[#faf8f4] text-[#1a1916]">
-      {/* Top nav */}
-      <header className="bg-white border-b border-[#e5e0d5] px-4 sm:px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link href="/dashboard" className="text-[#8c8778] hover:text-[#1a1916] transition-colors flex items-center gap-1.5 text-sm">
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8">
+
+        {/* Back link */}
+        <div className="flex items-center gap-2 text-sm">
+          <Link href="/dashboard" className="text-[#8c8778] hover:text-[#1a1916] transition-colors flex items-center gap-1.5">
             <IcoArrowLeft />
             <span>My Bids</span>
           </Link>
           <span className="text-[#d4cfc4]">/</span>
-          <span className="text-sm font-medium text-[#1a1916]">Account</span>
+          <span className="font-medium text-[#1a1916]">Account</span>
         </div>
-        <div className="flex items-center gap-3">
-          <Link href="/" className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-[#09a7ad] to-[#0bbcc2] bg-clip-text text-transparent">
-            Northwood Bids
-          </Link>
-          <UserMenu />
-        </div>
-      </header>
-
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8">
 
         {/* Page title */}
         <div className="flex items-center gap-4">

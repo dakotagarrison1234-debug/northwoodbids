@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useUser, SignInButton } from "@clerk/nextjs";
-import UserMenu from "@/app/components/UserMenu";
 import Pusher from "pusher-js";
 import Countdown from "@/app/components/Countdown";
 import { getNextValidBid, getProxySuggestions } from "@/lib/bidIncrements";
@@ -386,26 +385,15 @@ export default function ItemPage() {
 
   return (
     <main className="min-h-screen bg-[#faf8f4] text-[#1a1916]">
-      <header className="border-b border-[#e5e0d5]/60 px-4 sm:px-6 py-3.5 flex items-center justify-between gap-3 bg-[#faf8f4]/95 backdrop-blur-md sticky top-0 z-40">
-        <div className="flex items-center gap-2 text-sm min-w-0">
-          <Link href="/" className="text-lg font-extrabold tracking-tight bg-gradient-to-r from-[#09a7ad] to-[#0bbcc2] bg-clip-text text-transparent shrink-0">Northwood Bids</Link>
-          <span className="text-[#b0a99a] hidden sm:inline">/</span>
-          <Link href={`/${orgSlug}`} className="text-[#8c8778] hover:text-[#1a1916] capitalize hidden sm:inline truncate max-w-[100px] transition-colors">
-            {orgSlug.replace(/-/g, " ")}
-          </Link>
-          <span className="text-[#b0a99a] hidden sm:inline">/</span>
-          <Link href={`/${orgSlug}/${auctionSlug}`} className="text-[#8c8778] hover:text-[#1a1916] capitalize hidden sm:inline truncate max-w-[100px] transition-colors">
-            {auctionSlug.replace(/-/g, " ")}
-          </Link>
-          <Link href={`/${orgSlug}/${auctionSlug}`} className="text-[#8c8778] hover:text-[#1a1916] sm:hidden shrink-0 flex items-center gap-1 transition-colors text-xs font-medium">
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><path d="M8 2L4 6l4 4" /></svg>
-            Auction
-          </Link>
-          <span className="text-[#b0a99a] hidden sm:inline">/</span>
-          <span className="text-[#4a4640] truncate hidden sm:inline">{item.title}</span>
-        </div>
-        <UserMenu />
-      </header>
+      {/* Breadcrumb / back link */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4 flex items-center gap-2 text-sm min-w-0">
+        <Link href={`/${orgSlug}/${auctionSlug}`} className="text-[#8c8778] hover:text-[#1a1916] shrink-0 flex items-center gap-1 transition-colors text-sm font-medium">
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><path d="M8 2L4 6l4 4" /></svg>
+          Back to auction
+        </Link>
+        <span className="text-[#b0a99a] hidden sm:inline">/</span>
+        <span className="text-[#4a4640] truncate hidden sm:inline">{item.title}</span>
+      </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-12">
         {/* Left: photos */}

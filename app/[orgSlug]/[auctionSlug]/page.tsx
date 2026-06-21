@@ -3,7 +3,6 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import LocalDate from "@/app/components/LocalDate";
-import UserMenu from "@/app/components/UserMenu";
 import ItemCardTimer from "@/app/components/ItemCardTimer";
 import PusherRefresh from "@/app/components/PusherRefresh";
 import NotFoundCard from "@/app/components/NotFoundCard";
@@ -90,21 +89,6 @@ export default async function AuctionPage({ params }: Props) {
     <main className="min-h-screen bg-[#faf8f4] text-[#1a1916]">
       {/* Live refresh: re-renders this page when bids land or items/auctions close */}
       <PusherRefresh channel="auctions" event="auction-updated" />
-      {/* Header */}
-      <header className="border-b border-[#e5e0d5]/60 px-4 sm:px-6 py-3.5 flex items-center justify-between gap-3 bg-[#faf8f4]/95 backdrop-blur-md sticky top-0 z-40">
-        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 overflow-hidden text-sm">
-          <Link href="/" className="text-lg font-extrabold tracking-tight bg-gradient-to-r from-[#09a7ad] to-[#0bbcc2] bg-clip-text text-transparent shrink-0">
-            Northwood Bids
-          </Link>
-          <span className="text-[#b0a99a] hidden sm:inline">/</span>
-          <Link href={`/${orgSlug}`} className="text-[#8c8778] hover:text-[#1a1916] capitalize hidden sm:inline truncate max-w-[120px] transition-colors">
-            {orgSlug.replace(/-/g, " ")}
-          </Link>
-          <span className="text-[#b0a99a] hidden sm:inline">/</span>
-          <span className="text-[#4a4640] capitalize truncate text-sm">{auctionSlug.replace(/-/g, " ")}</span>
-        </div>
-        <UserMenu />
-      </header>
 
       {/* Status banners */}
       {isClosed && (

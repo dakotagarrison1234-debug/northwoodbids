@@ -1,7 +1,6 @@
 export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import HomeHeader from "@/app/components/HomeHeader";
 import LocalDate from "@/app/components/LocalDate";
 import OrgLogo from "@/app/components/OrgLogo";
 import PusherRefresh from "@/app/components/PusherRefresh";
@@ -28,7 +27,6 @@ export default async function AuctionsPage() {
   return (
     <main className="min-h-screen bg-[#faf8f4] text-[#1a1916]">
       <PusherRefresh channel="auctions" event="auction-updated" />
-      <HomeHeader />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
         {/* Page header */}

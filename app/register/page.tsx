@@ -2,7 +2,6 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import HomeHeader from "@/app/components/HomeHeader";
 
 function RegisterForm() {
   const { user, isLoaded } = useUser();
@@ -144,7 +143,6 @@ function RegisterForm() {
 export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-[#faf8f4] text-[#1a1916] flex flex-col">
-      <HomeHeader />
       <Suspense fallback={
         <main className="flex-1 flex items-center justify-center">
           <p className="text-[#6b6659]">Loading...</p>

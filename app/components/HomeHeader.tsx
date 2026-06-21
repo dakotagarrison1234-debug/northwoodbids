@@ -1,13 +1,22 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import UserMenu from "./UserMenu";
 
 export default function HomeHeader() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQ, setSearchQ] = useState("");
   const router = useRouter();
+  const pathname = usePathname();
+
+  if (
+    pathname?.startsWith("/admin") ||
+    pathname?.startsWith("/sign-in") ||
+    pathname?.startsWith("/sign-up")
+  ) {
+    return null;
+  }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +34,7 @@ export default function HomeHeader() {
         <img
           src="https://assets.cdn.filesafe.space/TwuL7EwKfW8oGIV0Zo5q/media/6a373b261c5d711b35bf4e56.png"
           alt="Northwood Bids"
-          className="h-9 w-auto max-w-[200px] object-contain"
+          className="h-12 w-auto max-w-[220px] object-contain"
         />
       </Link>
 

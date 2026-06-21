@@ -1,4 +1,3 @@
-import HomeHeader from "@/app/components/HomeHeader";
 import Link from "next/link";
 
 // ── Section wrapper ────────────────────────────────────────────────────────────
@@ -55,8 +54,6 @@ function TocLink({ href, children }: { href: string; children: React.ReactNode }
 export default function HelpPage() {
   return (
     <div className="min-h-screen bg-[#faf9f6]">
-      <HomeHeader />
-
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
 
         {/* Hero */}

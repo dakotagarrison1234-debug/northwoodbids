@@ -2,9 +2,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
-import HomeHeader from "./components/HomeHeader";
 import LocalDate from "./components/LocalDate";
-import OrgLogo from "./components/OrgLogo";
 
 function IconSearch() {
   return (
@@ -74,7 +72,7 @@ export default async function HomePage() {
   const { userId } = await auth();
   const now = new Date();
 
-  const [activeAuctions, upcomingAuctions, allOrgs] = await Promise.all([
+  const [activeAuctions, upcomingAuctions] = await Promise.all([
     prisma.auction.findMany({
       where: { status: "OPEN" },
       include: {
@@ -93,22 +91,10 @@ export default async function HomePage() {
       orderBy: { startAt: "asc" },
       take: 6,
     }),
-    prisma.organization.findMany({
-      where: { isActive: true },
-      include: {
-        auctions: { where: { status: "OPEN" }, select: { id: true } },
-        _count: { select: { auctions: true } },
-      },
-      orderBy: { name: "asc" },
-    }),
   ]);
-
-  const sortedOrgs = [...allOrgs].sort((a, b) => b.auctions.length - a.auctions.length);
 
   return (
     <main className="min-h-screen bg-[#faf8f4] text-[#1a1916]">
-      <HomeHeader />
-
       {/* Hero */}
       <section className="relative px-4 sm:px-6 pt-14 pb-12 sm:pt-20 sm:pb-16 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
@@ -128,7 +114,7 @@ export default async function HomePage() {
             </span>
           </h1>
           <p className="text-[#6b6659] text-lg sm:text-xl max-w-xl mx-auto mb-9 leading-relaxed">
-            Real-time auctions from local nonprofits and schools. Bid live, get outbid alerts, and check out securely when you win.
+            Bid live in real time, get instant outbid alerts, and check out securely when you win.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <a href="#live-auctions" className="bg-[#09a7ad] hover:bg-[#0898a0] text-white font-bold px-9 py-4 rounded-2xl text-base transition-all hover:shadow-[0_4px_24px_rgba(9,167,173,0.35)] w-full sm:w-auto text-center">
@@ -162,7 +148,6 @@ export default async function HomePage() {
                   className="bg-white border border-[#e5e0d5] hover:border-[#09a7ad]/40 rounded-2xl p-6 transition-all hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] group shadow-sm">
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div className="min-w-0">
-                      <div className="text-xs text-[#09a7ad] font-semibold mb-1.5 truncate">{auction.organization.name}</div>
                       <h3 className="font-bold text-base group-hover:text-[#09a7ad] transition-colors leading-snug text-[#1a1916]">{auction.title}</h3>
                     </div>
                     <span className="text-xs bg-[#09a7ad]/10 text-[#09a7ad] border border-[#09a7ad]/20 px-2.5 py-1 rounded-full shrink-0 font-bold whitespace-nowrap">Live</span>
@@ -201,7 +186,6 @@ export default async function HomePage() {
                 className="bg-white border border-[#e5e0d5] hover:border-[#d4cfc4] rounded-2xl p-6 transition-all group shadow-sm">
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div className="min-w-0">
-                    <div className="text-xs text-[#8c8778] font-semibold mb-1.5 truncate">{auction.organization.name}</div>
                     <h3 className="font-bold text-base leading-snug text-[#2c2a24]">{auction.title}</h3>
                   </div>
                   <span className="text-xs bg-[#f2efe8] text-[#8c8778] border border-[#e5e0d5] px-2.5 py-1 rounded-full shrink-0 font-semibold">Upcoming</span>
@@ -210,31 +194,6 @@ export default async function HomePage() {
                 <div className="text-xs text-[#09a7ad] font-medium mt-3 border-t border-[#f2efe8] pt-3 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#09a7ad]/60 inline-block" />
                   Opens <LocalDate iso={auction.startAt!.toISOString()} />
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Businesses */}
-      {sortedOrgs.length > 0 && (
-        <section className="px-4 sm:px-6 py-14 sm:py-16 max-w-6xl mx-auto border-t border-[#e5e0d5]/60">
-          <div className="flex items-center gap-3 mb-8">
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1a1916]">Browse Auctions</h2>
-            <span className="text-[#8c8778] text-sm font-medium">({sortedOrgs.length})</span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {sortedOrgs.map((org) => (
-              <Link key={org.id} href={`/${org.slug}`}
-                className="bg-white border border-[#e5e0d5] hover:border-[#d4cfc4] rounded-2xl p-5 transition-all hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] group shadow-sm">
-                <div className="mb-3"><OrgLogo name={org.name} logoUrl={org.logoUrl} size="sm" /></div>
-                <div className="font-semibold text-sm group-hover:text-[#09a7ad] transition-colors truncate leading-tight text-[#1a1916]">{org.name}</div>
-                <div className="text-xs mt-1.5">
-                  {org.auctions.length > 0
-                    ? <span className="text-[#09a7ad] font-semibold">{org.auctions.length} live now</span>
-                    : <span className="text-[#b0a99a]">{org._count.auctions} auction{org._count.auctions !== 1 ? "s" : ""}</span>
-                  }
                 </div>
               </Link>
             ))}

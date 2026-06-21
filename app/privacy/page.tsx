@@ -8,12 +8,6 @@ export const metadata = {
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-[#faf8f4] text-[#1a1916]">
-      {/* Header */}
-      <header className="border-b border-[#e5e0d5] bg-white px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="font-bold text-[#09a7ad] text-lg tracking-tight">Northwood Bids</Link>
-        <Link href="/" className="text-sm text-[#6b6659] hover:text-[#1a1916] transition-colors">← Back to home</Link>
-      </header>
-
       <main className="max-w-3xl mx-auto px-6 py-12">
         <h1 className="text-3xl font-extrabold text-[#1a1916] mb-2">Privacy Policy</h1>
         <p className="text-[#8c8778] text-sm mb-10">Last updated: June 15, 2026</p>

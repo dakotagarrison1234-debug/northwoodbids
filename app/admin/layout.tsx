@@ -87,7 +87,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               <img
                 src={BUSINESS_LOGO_URL}
                 alt={org.name}
-                className="h-10 w-auto max-w-[150px] object-contain"
+                className="h-12 w-auto max-w-[200px] object-contain"
               />
               <span className="sr-only">{membership.role.toLowerCase()}</span>
             </Link>

@@ -336,10 +336,7 @@ function BidderDashboardInner() {
       {/* ── Desktop sidebar ── */}
       <aside className="hidden md:flex w-64 bg-white/90 border-r border-[#e5e0d5]/60 flex-col shrink-0">
         <div className="px-5 py-5 border-b border-[#e5e0d5]/60">
-          <Link href="/" className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-[#09a7ad] to-[#0bbcc2] bg-clip-text text-transparent">
-            Northwood Bids
-          </Link>
-          <p className="text-[#8c8778] text-xs mt-0.5">My Bids</p>
+          <p className="text-base font-bold text-[#1a1916]">My Bids</p>
         </div>
         <nav className="flex-1 px-3 py-3 space-y-0.5">
           {navItems.map((item) => (
@@ -405,9 +402,7 @@ function BidderDashboardInner() {
 
         {/* Mobile top bar */}
         <header className="md:hidden flex items-center justify-between px-4 py-3 border-b border-[#e5e0d5]/60 bg-white/90">
-          <Link href="/" className="text-lg font-extrabold tracking-tight bg-gradient-to-r from-[#09a7ad] to-[#0bbcc2] bg-clip-text text-transparent">
-            Northwood Bids
-          </Link>
+          <span className="text-base font-bold text-[#1a1916]">My Bids</span>
           <div className="flex items-center gap-2">
             {unpaidWins.length > 0 && (
               <span className="bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">

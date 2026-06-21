@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import HomeHeader from "@/app/components/HomeHeader";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -52,7 +53,10 @@ export default function RootLayout({
           <meta name="theme-color" content="#09a7ad" />
           <meta name="color-scheme" content="light" />
         </head>
-        <body className="min-h-full flex flex-col">{children}</body>
+        <body className="min-h-full flex flex-col">
+          <HomeHeader />
+          {children}
+        </body>
       </html>
     </ClerkProvider>
   );
