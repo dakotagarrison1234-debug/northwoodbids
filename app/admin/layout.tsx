@@ -10,7 +10,7 @@ const BUSINESS_LOGO_URL =
   "https://assets.cdn.filesafe.space/TwuL7EwKfW8oGIV0Zo5q/media/6a373b261c5d711b35bf4e56.png";
 
 function AdminNavIcon({ name }: { name: string }) {
-  const s = { width: 16, height: 16, fill: "none", viewBox: "0 0 16 16", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  const s = { width: 24, height: 24, fill: "none", viewBox: "0 0 16 16", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
   if (name === "grid") return <svg {...s}><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>;
   if (name === "gavel") return <svg {...s}><path d="M10 2L6 6l4 4 4-4-4-4zM2 14l5-5"/><path d="M6 10l-4 4"/></svg>;
   if (name === "trophy") return <svg {...s}><path d="M4 3H2V6a4 4 0 0 0 3.5 3.97M12 3h2V6a4 4 0 0 1-3.5 3.97M4 3h8v5a4 4 0 0 1-8 0V3zM6 14h4M8 12v2"/></svg>;
@@ -87,20 +87,20 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               <img
                 src={BUSINESS_LOGO_URL}
                 alt={org.name}
-                className="h-12 w-auto max-w-[200px] object-contain"
+                className="h-14 w-auto max-w-[200px] object-contain"
               />
               <span className="sr-only">{membership.role.toLowerCase()}</span>
             </Link>
           </div>
 
-          <nav className="flex-1 px-4 py-4 space-y-1">
+          <nav className="flex-1 px-4 py-4 space-y-2">
             {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl text-[#4a3a2b] font-medium hover:text-[#241a12] hover:bg-[#efe3d0] transition-colors"
+                className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-base text-[#4a3a2b] font-semibold hover:text-[#241a12] hover:bg-[#efe3d0] transition-colors"
               >
-                <span className="w-5 flex items-center justify-center shrink-0">
+                <span className="w-6 h-6 flex items-center justify-center shrink-0">
                   <AdminNavIcon name={item.icon} />
                 </span>
                 <span>{item.label}</span>
@@ -109,9 +109,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <div className="pt-2 border-t border-[#e3d6bf] mt-2">
               <Link
                 href="/dashboard"
-                className="flex items-center gap-3 px-4 py-3 rounded-xl text-[#4a3a2b] font-medium hover:text-[#241a12] hover:bg-[#efe3d0] transition-colors"
+                className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-base text-[#4a3a2b] font-semibold hover:text-[#241a12] hover:bg-[#efe3d0] transition-colors"
               >
-                <span className="w-5 flex items-center justify-center shrink-0">
+                <span className="w-6 h-6 flex items-center justify-center shrink-0">
                   <AdminNavIcon name="mybids" />
                 </span>
                 <span>My Bids</span>
@@ -121,7 +121,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
           <div className="px-4 py-4 border-t border-[#e3d6bf] flex items-center gap-3">
             <UserMenu />
-            <div className="text-sm text-[#8a7559] truncate">Account</div>
+            <div className="text-base text-[#8a7559] truncate">Account</div>
           </div>
         </aside>
 

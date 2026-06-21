@@ -41,14 +41,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // If the parent auction is already OPEN, activate immediately so bidders can bid right away
+    // Validate the chosen auction and decide the new item's status.
     let itemStatus: "DRAFT" | "ACTIVE" = "DRAFT";
     if (auctionId) {
       const parentAuction = await prisma.auction.findUnique({
         where: { id: auctionId },
-        select: { status: true },
+        select: { status: true, organizationId: true },
       });
-      if (parentAuction?.status === "OPEN") itemStatus = "ACTIVE";
+      if (!parentAuction || parentAuction.organizationId !== organizationId) {
+        return NextResponse.json({ error: "Auction not found" }, { status: 404 });
+      }
+      // Guard: can't add items to an auction that has already ended.
+      if (parentAuction.status === "CLOSED" || parentAuction.status === "SETTLED") {
+        return NextResponse.json(
+          { error: "This auction has already ended — you can't add items to it." },
+          { status: 422 }
+        );
+      }
+      // If the auction is already live, activate the item so bidders see it right away.
+      if (parentAuction.status === "OPEN") itemStatus = "ACTIVE";
     }
 
     const item = await prisma.item.create({

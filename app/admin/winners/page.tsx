@@ -49,8 +49,8 @@ export default async function WinnersPage() {
 
   return (
     <>
-      <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-4">
-        <h1 className="text-xl font-semibold">Winners &amp; Payments</h1>
+      <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-5">
+        <h1 className="text-2xl sm:text-3xl font-semibold">Winners &amp; Payments</h1>
       </header>
 
       <div className="px-4 sm:px-8 py-6 space-y-8">
@@ -59,7 +59,7 @@ export default async function WinnersPage() {
         <div>
           <h2 className="text-lg font-semibold mb-4">Confirmed Winners</h2>
           {wonBids.length === 0 ? (
-            <p className="text-[#8a7559]">No confirmed winners yet — winners are set when an auction closes.</p>
+            <p className="text-base text-[#8a7559]">No confirmed winners yet — winners are set when an auction closes.</p>
           ) : (
             <div className="bg-white border border-[#e3d6bf] rounded-xl overflow-hidden">
               <div className="overflow-x-auto">
@@ -79,9 +79,9 @@ export default async function WinnersPage() {
                     const payment = paymentMap.get(bid.itemId);
                     return (
                       <tr key={bid.id} className="border-b border-[#e3d6bf] last:border-0 hover:bg-[#efe3d0]/50">
-                        <td className="px-6 py-4 font-medium">{bid.item.title}</td>
-                        <td className="px-6 py-4 text-[#a4592a] font-bold">${Number(bid.amount).toLocaleString()}</td>
-                        <td className="px-6 py-4 text-[#4a3a2b] text-sm">
+                        <td className="px-6 py-4 font-medium text-base">{bid.item.title}</td>
+                        <td className="px-6 py-4 text-[#a4592a] font-bold text-base">${Number(bid.amount).toLocaleString()}</td>
+                        <td className="px-6 py-4 text-[#4a3a2b] text-base">
                           {displayName(bid.clerkUserId)}
                         </td>
                         <td className="px-6 py-4">
@@ -121,7 +121,7 @@ export default async function WinnersPage() {
         <div>
           <h2 className="text-lg font-semibold mb-4">Current Leading Bids</h2>
           {activeBids.length === 0 ? (
-            <p className="text-[#8a7559]">No active bids yet.</p>
+            <p className="text-base text-[#8a7559]">No active bids yet.</p>
           ) : (
             <div className="bg-white border border-[#e3d6bf] rounded-xl overflow-hidden">
               <div className="overflow-x-auto">
@@ -137,10 +137,10 @@ export default async function WinnersPage() {
                 <tbody>
                   {activeBids.map((bid) => (
                     <tr key={bid.id} className="border-b border-[#e3d6bf] last:border-0 hover:bg-[#efe3d0]/50">
-                      <td className="px-6 py-4 font-medium">{bid.item.title}</td>
-                      <td className="px-6 py-4 text-[#6f5b46] text-sm">{bid.item.auction?.title || "—"}</td>
-                      <td className="px-6 py-4 text-[#a4592a] font-bold">${Number(bid.amount).toLocaleString()}</td>
-                      <td className="px-6 py-4 text-[#4a3a2b] text-sm">{displayName(bid.clerkUserId)}</td>
+                      <td className="px-6 py-4 font-medium text-base">{bid.item.title}</td>
+                      <td className="px-6 py-4 text-[#6f5b46] text-base">{bid.item.auction?.title || "—"}</td>
+                      <td className="px-6 py-4 text-[#a4592a] font-bold text-base">${Number(bid.amount).toLocaleString()}</td>
+                      <td className="px-6 py-4 text-[#4a3a2b] text-base">{displayName(bid.clerkUserId)}</td>
                     </tr>
                   ))}
                 </tbody>

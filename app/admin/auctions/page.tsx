@@ -19,9 +19,9 @@ export default async function AuctionsPage() {
 
   return (
     <>
-      <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Auctions ({auctions.length})</h1>
-        <Link href="/admin/auctions/new" className="bg-[#a4592a] hover:bg-[#843f1c] text-white text-sm px-4 py-2 rounded-lg">
+      <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-5 flex items-center justify-between gap-3">
+        <h1 className="text-2xl sm:text-3xl font-semibold">Auctions ({auctions.length})</h1>
+        <Link href="/admin/auctions/new" className="bg-[#a4592a] hover:bg-[#843f1c] text-white text-base font-semibold px-6 py-3.5 rounded-xl transition-colors">
           + New Auction
         </Link>
       </header>
@@ -30,12 +30,12 @@ export default async function AuctionsPage() {
         {auctions.length === 0 ? (
           <div className="text-center py-20 text-[#8a7559]">
             <p className="text-lg mb-4">No auctions yet</p>
-            <Link href="/admin/auctions/new" className="bg-[#a4592a] hover:bg-[#843f1c] text-white px-6 py-3 rounded-lg">
+            <Link href="/admin/auctions/new" className="inline-block bg-[#a4592a] hover:bg-[#843f1c] text-white text-base font-semibold px-6 py-3.5 rounded-xl transition-colors">
               Create your first auction
             </Link>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {auctions.map((auction) => {
               const raised = auction.items
                 .filter(i => SOLD_STATUSES.includes(i.status))
@@ -47,13 +47,13 @@ export default async function AuctionsPage() {
                 <Link
                   key={auction.id}
                   href={`/admin/auctions/${auction.id}`}
-                  className="block bg-white border border-[#e3d6bf] hover:border-[#b9a98c] rounded-xl p-5 transition-colors"
+                  className="block bg-white border border-[#e3d6bf] hover:border-[#b9a98c] rounded-xl p-6 transition-colors"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-semibold text-lg truncate">{auction.title}</h3>
-                        <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
+                        <h3 className="font-semibold text-xl truncate">{auction.title}</h3>
+                        <span className={`text-sm px-2.5 py-0.5 rounded-full shrink-0 ${
                           auction.status === "OPEN" ? "bg-[#a4592a]/20 text-[#a4592a]"
                           : auction.status === "CLOSING" ? "bg-yellow-500/20 text-amber-600"
                           : isScheduled ? "bg-blue-500/20 text-blue-600"
@@ -63,7 +63,7 @@ export default async function AuctionsPage() {
                           {isScheduled ? "scheduled" : auction.status.toLowerCase()}
                         </span>
                       </div>
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-sm text-[#8a7559]">
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-base text-[#8a7559]">
                         <span>{auction.items.length} items</span>
                         <span className="text-[#a4592a] font-medium">${raised.toLocaleString()} raised</span>
                         {totalBids > 0 && <span>{totalBids} bids</span>}
@@ -72,7 +72,7 @@ export default async function AuctionsPage() {
                         </span>
                       </div>
                     </div>
-                    <span className="text-[#8a7559] hover:text-[#241a12] text-sm whitespace-nowrap shrink-0 self-end sm:self-auto">
+                    <span className="text-[#8a7559] hover:text-[#241a12] text-base font-semibold whitespace-nowrap shrink-0 self-end sm:self-auto">
                       Manage →
                     </span>
                   </div>

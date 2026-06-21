@@ -71,15 +71,15 @@ export default async function PickupPage() {
       <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-4">
         <div className="flex items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold">Pickup</h1>
-            <p className="text-[#8a7559] text-sm mt-0.5">
+            <h1 className="text-2xl sm:text-3xl font-semibold">Pickup</h1>
+            <p className="text-[#8a7559] text-base mt-0.5">
               {pickedUpItems} of {totalItems} items picked up
             </p>
           </div>
           {totalItems > 0 && (
             <div className="text-right shrink-0">
-              <span className="text-2xl font-bold text-[#241a12]">{pct}%</span>
-              <p className="text-xs text-[#8a7559]">complete</p>
+              <span className="text-3xl font-bold text-[#241a12]">{pct}%</span>
+              <p className="text-sm text-[#8a7559]">complete</p>
             </div>
           )}
         </div>
@@ -95,7 +95,7 @@ export default async function PickupPage() {
 
       <div className="px-4 sm:px-8 py-6 space-y-4">
         {sortedEntries.length === 0 ? (
-          <div className="text-center py-20 text-[#8a7559]">
+          <div className="text-center py-20 text-base text-[#8a7559]">
             No winners yet — winners appear when an auction closes.
           </div>
         ) : (
@@ -138,11 +138,11 @@ export default async function PickupPage() {
                         </span>
                       )}
                     </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-sm text-[#6f5b46]">
+                    <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-base text-[#6f5b46]">
                       {profile?.email && <span>{profile.email}</span>}
                       {profile?.phone && <span>{profile.phone}</span>}
                     </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-xs text-[#8a7559]">
+                    <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-sm text-[#8a7559]">
                       <span>
                         {paidCount === bids.length ? (
                           <span className="text-[#a4592a] inline-flex items-center gap-0.5"><IcoPickedUp />Fully paid</span>
@@ -187,24 +187,24 @@ export default async function PickupPage() {
                         {/* Item info */}
                         <div className="flex-1 min-w-0">
                           <div
-                            className={`font-medium text-sm ${
+                            className={`font-medium text-base ${
                               isPickedUp ? "text-[#8a7559] line-through" : "text-[#241a12]"
                             }`}
                           >
                             {bid.item.title}
                           </div>
                           {bid.item.storageLocation ? (
-                            <div className="text-xs font-mono text-[#a4592a] mt-0.5 flex items-center gap-0.5">
+                            <div className="text-sm font-mono text-[#a4592a] mt-0.5 flex items-center gap-0.5">
                               <IcoPin />{bid.item.storageLocation}
                             </div>
                           ) : (
-                            <div className="text-xs text-[#8a7559] mt-0.5">No location set</div>
+                            <div className="text-sm text-[#8a7559] mt-0.5">No location set</div>
                           )}
                         </div>
 
                         {/* Right side: amount + payment + action */}
                         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                          <span className="text-sm font-bold text-[#241a12] hidden sm:block">
+                          <span className="text-base font-bold text-[#241a12] hidden sm:block">
                             ${Number(bid.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                           {payment?.status === "PAID" ? (

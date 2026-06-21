@@ -119,15 +119,15 @@ export default function EditItemPage() {
         <div className="flex items-center gap-2 min-w-0">
           <Link
             href={formData.auctionId ? `/admin/auctions/${formData.auctionId}` : "/admin/auctions"}
-            className="text-[#6f5b46] hover:text-[#241a12] text-sm shrink-0"
+            className="text-[#6f5b46] hover:text-[#241a12] text-base font-semibold shrink-0"
           >
             ← {loading ? "Back" : formData.auctionId ? "Auction" : "Auctions"}
           </Link>
           <span className="text-[#8a7559]">/</span>
-          <h1 className="text-lg sm:text-xl font-semibold">Edit Item</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold">Edit Item</h1>
         </div>
         <button onClick={handleSave} disabled={saving || uploading}
-          className="bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white text-sm px-4 sm:px-6 py-2 rounded-lg font-semibold shrink-0">
+          className="bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white text-base px-6 py-3.5 rounded-xl font-semibold shrink-0 transition-colors">
           {saving ? "Saving..." : uploading ? "Uploading..." : "Save Changes"}
         </button>
       </header>
@@ -135,23 +135,23 @@ export default function EditItemPage() {
       <div className="flex-1 px-4 sm:px-8 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 overflow-auto">
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="font-semibold mb-4">Item Details</h2>
+            <h2 className="text-lg font-semibold mb-4">Item Details</h2>
             <div className="space-y-4">
               <div>
-                <label className="text-sm text-[#6f5b46] mb-1 block">Item Title *</label>
+                <label className="text-base text-[#6f5b46] mb-1.5 block">Item Title *</label>
                 <input name="title" value={formData.title} onChange={handleChange}
-                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-lg px-4 py-3 text-[#241a12] focus:outline-none focus:border-[#a4592a]" />
+                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a]" />
               </div>
               <div>
-                <label className="text-sm text-[#6f5b46] mb-1 block">Description</label>
+                <label className="text-base text-[#6f5b46] mb-1.5 block">Description</label>
                 <textarea name="description" value={formData.description} onChange={handleChange} rows={3}
-                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-lg px-4 py-3 text-[#241a12] focus:outline-none focus:border-[#a4592a] resize-none" />
+                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a] resize-none" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-[#6f5b46] mb-1 block">Condition</label>
+                  <label className="text-base text-[#6f5b46] mb-1.5 block">Condition</label>
                   <select name="condition" value={formData.condition} onChange={handleChange}
-                    className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-lg px-4 py-3 text-[#241a12] focus:outline-none focus:border-[#a4592a]">
+                    className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a]">
                     <option value="NEW">New</option>
                     <option value="LIKE_NEW">Like New</option>
                     <option value="GOOD">Good</option>
@@ -160,9 +160,9 @@ export default function EditItemPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm text-[#6f5b46] mb-1 block">Category</label>
+                  <label className="text-base text-[#6f5b46] mb-1.5 block">Category</label>
                   <select name="category" value={formData.category} onChange={handleChange}
-                    className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-lg px-4 py-3 text-[#241a12] focus:outline-none focus:border-[#a4592a]">
+                    className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a]">
                     <option value="">Select category</option>
                     {["Electronics","Sports","Experiences","Food & Drink","Outdoors","Home & Garden","Art & Collectibles","Gift Cards","Other"].map(c => (
                       <option key={c} value={c}>{c}</option>
@@ -174,7 +174,7 @@ export default function EditItemPage() {
           </div>
 
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="font-semibold mb-4">Pricing</h2>
+            <h2 className="text-lg font-semibold mb-4">Pricing</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
                 { label: "Retail Value", name: "retailValue" },
@@ -182,12 +182,12 @@ export default function EditItemPage() {
                 { label: "Reserve Price", name: "reservePrice" },
               ].map((field) => (
                 <div key={field.name}>
-                  <label className="text-sm text-[#6f5b46] mb-1 block">{field.label}</label>
+                  <label className="text-base text-[#6f5b46] mb-1.5 block">{field.label}</label>
                   <div className="relative">
                     <span className="absolute left-3 top-3 text-[#8a7559]">$</span>
                     <input name={field.name} value={formData[field.name as keyof typeof formData] as string}
                       onChange={handleChange} type="number"
-                      className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-lg pl-7 pr-4 py-3 text-[#241a12] focus:outline-none focus:border-[#a4592a]" />
+                      className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl pl-7 pr-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a]" />
                   </div>
                 </div>
               ))}
@@ -195,7 +195,7 @@ export default function EditItemPage() {
           </div>
 
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="font-semibold mb-4">Photos <span className="text-[#8a7559] text-sm font-normal">(up to 10)</span></h2>
+            <h2 className="text-lg font-semibold mb-4">Photos <span className="text-[#8a7559] text-base font-normal">(up to 10)</span></h2>
             {photos.length > 0 && (
               <div className="grid grid-cols-4 gap-2 mb-4">
                 {photos.map((url, i) => (
@@ -211,47 +211,47 @@ export default function EditItemPage() {
             <label htmlFor="photo-upload"
               className="border-2 border-dashed border-[#cdbda3] rounded-xl p-6 text-center hover:border-[#a4592a] transition-colors cursor-pointer block">
               <div className="text-[#8a7559] mb-1 flex justify-center"><svg width="22" height="22" fill="none" viewBox="0 0 22 22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="18" height="14" rx="2"/><circle cx="11" cy="12" r="3.5"/><path d="M8 5l1.5-2.5h3L14 5"/></svg></div>
-              <div className="text-[#6f5b46] text-sm">{uploading ? "Uploading..." : "Click to add photos"}</div>
+              <div className="text-[#6f5b46] text-base">{uploading ? "Uploading..." : "Click to add photos"}</div>
             </label>
           </div>
         </div>
 
         <div className="space-y-6">
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="font-semibold mb-4">Donor Info</h2>
+            <h2 className="text-lg font-semibold mb-4">Donor Info</h2>
             <div className="space-y-4">
               <div>
-                <label className="text-sm text-[#6f5b46] mb-1 block">Donor Name</label>
+                <label className="text-base text-[#6f5b46] mb-1.5 block">Donor Name</label>
                 <input name="donorName" value={formData.donorName} onChange={handleChange}
-                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-lg px-4 py-3 text-[#241a12] focus:outline-none focus:border-[#a4592a]" />
+                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a]" />
               </div>
               <div className="flex items-center gap-3">
                 <input type="checkbox" name="taxDeductible" checked={formData.taxDeductible}
-                  onChange={handleChange} id="taxDeductible" className="w-4 h-4 accent-[#a4592a]" />
-                <label htmlFor="taxDeductible" className="text-sm text-[#4a3a2b]">Tax deductible</label>
+                  onChange={handleChange} id="taxDeductible" className="w-5 h-5 accent-[#a4592a]" />
+                <label htmlFor="taxDeductible" className="text-base text-[#4a3a2b]">Tax deductible</label>
               </div>
             </div>
           </div>
 
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="font-semibold mb-4">Storage Location</h2>
+            <h2 className="text-lg font-semibold mb-4">Storage Location</h2>
             <input name="storageLocation" value={formData.storageLocation} onChange={handleChange}
-              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-lg px-4 py-3 text-[#241a12] focus:outline-none focus:border-[#a4592a]" />
+              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a]" />
           </div>
 
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="font-semibold mb-4">Assign to Auction</h2>
+            <h2 className="text-lg font-semibold mb-4">Assign to Auction</h2>
             <select name="auctionId" value={formData.auctionId} onChange={handleChange}
-              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-lg px-4 py-3 text-[#241a12] focus:outline-none focus:border-[#a4592a]">
+              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a]">
               <option value="">Save as draft</option>
               {auctions.map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}
             </select>
           </div>
 
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="font-semibold mb-4">Staff Notes</h2>
+            <h2 className="text-lg font-semibold mb-4">Staff Notes</h2>
             <textarea name="notes" value={formData.notes} onChange={handleChange} rows={3}
-              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-lg px-4 py-3 text-[#241a12] focus:outline-none focus:border-[#a4592a] resize-none" />
+              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a] resize-none" />
           </div>
         </div>
       </div>

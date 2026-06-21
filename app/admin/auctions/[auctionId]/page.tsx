@@ -3,6 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import AuctionStatusButtons from "@/app/components/AuctionStatusButtons";
 import LocalDate from "@/app/components/LocalDate";
+import DeleteAuctionButton from "./DeleteAuctionButton";
 
 function IcoWarning() {
   return <svg width="14" height="14" fill="none" viewBox="0 0 14 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 2L1.5 12h11L7 2z"/><path d="M7 6v3M7 10.5v.5"/></svg>;
@@ -36,8 +37,8 @@ export default async function ManageAuctionPage({ params }: Props) {
     return (
       <div className="flex items-center justify-center flex-1">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Auction not found</h1>
-          <Link href="/admin/auctions" className="text-[#a4592a]">Back to auctions</Link>
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2">Auction not found</h1>
+          <Link href="/admin/auctions" className="text-[#a4592a] text-base font-semibold">Back to auctions</Link>
         </div>
       </div>
     );
@@ -52,15 +53,16 @@ export default async function ManageAuctionPage({ params }: Props) {
   const now = new Date();
   const isScheduled = auction.status === "DRAFT" && auction.startAt > now;
   const isPastStart = auction.status === "DRAFT" && auction.startAt <= now;
+  const isEnded = auction.status === "CLOSED" || auction.status === "SETTLED";
 
   return (
     <>
       <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <Link href="/admin/auctions" className="text-[#6f5b46] hover:text-[#241a12] text-sm shrink-0">← Auctions</Link>
+          <Link href="/admin/auctions" className="text-[#6f5b46] hover:text-[#241a12] text-base font-semibold shrink-0">← Auctions</Link>
           <span className="text-[#8a7559]">/</span>
-          <h1 className="text-lg sm:text-xl font-semibold truncate">{auction.title}</h1>
-          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${
+          <h1 className="text-2xl sm:text-3xl font-semibold truncate">{auction.title}</h1>
+          <span className={`text-sm font-semibold px-2.5 py-1 rounded-full shrink-0 ${
             auction.status === "OPEN" ? "bg-[#a4592a]/20 text-[#843f1c]"
             : auction.status === "CLOSING" ? "bg-amber-100 text-amber-700"
             : auction.status === "CLOSED" || auction.status === "SETTLED" ? "bg-red-50 text-red-600"
@@ -79,7 +81,7 @@ export default async function ManageAuctionPage({ params }: Props) {
           <Link
             href={`/${auction.organization.slug}/${auction.slug}`}
             target="_blank"
-            className="text-[#4a3a2b] hover:text-[#241a12] font-medium text-xs sm:text-sm bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] px-3 py-2 rounded-lg whitespace-nowrap transition-colors"
+            className="text-[#4a3a2b] hover:text-[#241a12] font-semibold text-base bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] px-6 py-3.5 rounded-xl whitespace-nowrap transition-colors"
           >
             View ↗
           </Link>
@@ -99,15 +101,15 @@ export default async function ManageAuctionPage({ params }: Props) {
             { label: "Total Bids", value: totalBids },
             { label: "Active Items", value: auction.items.filter(i => i.status === "ACTIVE").length },
           ].map((stat) => (
-            <div key={stat.label} className="bg-white border border-[#e3d6bf] rounded-xl p-4 sm:p-5">
-              <div className="text-[#6f5b46] text-xs sm:text-sm font-medium mb-1.5">{stat.label}</div>
+            <div key={stat.label} className="bg-white border border-[#e3d6bf] rounded-xl p-5 sm:p-6">
+              <div className="text-[#6f5b46] text-sm sm:text-base font-medium mb-1.5">{stat.label}</div>
               <div className="text-2xl sm:text-3xl font-bold text-[#241a12]">{stat.value}</div>
             </div>
           ))}
         </div>
 
         {/* Auction timeline */}
-        <div className="bg-white border border-[#e3d6bf] rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-4 text-sm">
+        <div className="bg-white border border-[#e3d6bf] rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-4 text-base">
           <div className="flex items-center gap-3 flex-1">
             <span className="text-[#8a7559] shrink-0">Opens</span>
             <span className={`font-medium ${auction.status === "OPEN" || auction.status === "CLOSED" || auction.status === "SETTLED" ? "text-[#a4592a]" : "text-[#241a12]"}`}>
@@ -128,7 +130,7 @@ export default async function ManageAuctionPage({ params }: Props) {
             )}
           </div>
           {auction.status === "DRAFT" && (
-            <div className="text-[#8a7559] text-xs sm:text-right">
+            <div className="text-[#8a7559] text-sm sm:text-right">
               {isScheduled
                 ? "Will auto-open at start time (cron runs every minute)"
                 : "Start time passed — will open on next cron run"}
@@ -138,27 +140,37 @@ export default async function ManageAuctionPage({ params }: Props) {
 
         {/* Items */}
         <div className="bg-white border border-[#e3d6bf] rounded-xl overflow-hidden">
-          <div className="px-5 sm:px-6 py-4 border-b border-[#e3d6bf] flex items-center justify-between">
-            <h2 className="font-semibold">Items ({auction.items.length})</h2>
-            <Link
-              href={`/admin/items/new?auctionId=${auction.id}`}
-              className="bg-[#a4592a] hover:bg-[#843f1c] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-            >
-              + Add Item
-            </Link>
+          <div className="px-5 sm:px-6 py-4 border-b border-[#e3d6bf] flex items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold">Items ({auction.items.length})</h2>
+            {isEnded ? (
+              <span className="text-sm text-[#8a7559] text-right">This auction has ended — items can no longer be added.</span>
+            ) : (
+              <Link
+                href={`/admin/items/new?auctionId=${auction.id}`}
+                className="bg-[#a4592a] hover:bg-[#843f1c] text-white text-base font-semibold px-6 py-3.5 rounded-xl transition-colors whitespace-nowrap"
+              >
+                + Add Item
+              </Link>
+            )}
           </div>
 
           {auction.items.length === 0 ? (
             <div className="px-6 py-16 text-center">
               <div className="flex justify-center mb-4 text-[#8a7559]"><IcoBox /></div>
-              <p className="text-[#6f5b46] font-medium mb-1">No items yet</p>
-              <p className="text-[#8a7559] text-sm mb-6">Add items to this auction so bidders can start bidding.</p>
-              <Link
-                href={`/admin/items/new?auctionId=${auction.id}`}
-                className="bg-[#a4592a] hover:bg-[#843f1c] text-white text-sm font-medium px-6 py-3 rounded-lg inline-block transition-colors"
-              >
-                + Add First Item
-              </Link>
+              <p className="text-[#6f5b46] text-base font-medium mb-1">No items yet</p>
+              {isEnded ? (
+                <p className="text-[#8a7559] text-base mb-2">This auction has ended — items can no longer be added.</p>
+              ) : (
+                <>
+                  <p className="text-[#8a7559] text-base mb-6">Add items to this auction so bidders can start bidding.</p>
+                  <Link
+                    href={`/admin/items/new?auctionId=${auction.id}`}
+                    className="bg-[#a4592a] hover:bg-[#843f1c] text-white text-base font-semibold px-6 py-3.5 rounded-xl inline-block transition-colors"
+                  >
+                    + Add First Item
+                  </Link>
+                </>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -193,17 +205,17 @@ export default async function ManageAuctionPage({ params }: Props) {
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          <div className="font-medium text-sm">{item.title}</div>
-                          {item.category && <div className="text-xs text-[#8a7559]">{item.category}</div>}
+                          <div className="font-medium text-base">{item.title}</div>
+                          {item.category && <div className="text-sm text-[#8a7559]">{item.category}</div>}
                           {item.storageLocation && (
-                            <div className="text-xs font-mono text-[#a4592a] mt-0.5 flex items-center gap-0.5"><IcoPin />{item.storageLocation}</div>
+                            <div className="text-sm font-mono text-[#a4592a] mt-0.5 flex items-center gap-0.5"><IcoPin />{item.storageLocation}</div>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-[#6f5b46] text-sm">${Number(item.startingBid)}</td>
-                        <td className="px-4 py-3 text-[#a4592a] font-semibold text-sm">${Number(item.currentBid)}</td>
-                        <td className="px-4 py-3 text-[#6f5b46] text-sm">{item.bids.length}</td>
+                        <td className="px-4 py-3 text-[#6f5b46] text-base">${Number(item.startingBid)}</td>
+                        <td className="px-4 py-3 text-[#a4592a] font-semibold text-base">${Number(item.currentBid)}</td>
+                        <td className="px-4 py-3 text-[#6f5b46] text-base">{item.bids.length}</td>
                         <td className="px-4 py-3">
-                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                          <span className={`text-sm font-semibold px-2.5 py-1 rounded-full ${
                             item.status === "ACTIVE" ? "bg-[#a4592a]/20 text-[#843f1c]"
                             : item.status === "SOLD" ? "bg-[#efe0c9] text-[#843f1c]"
                             : (item.status as string) === "PENDING_PICKUP" ? "bg-amber-50 text-amber-700"
@@ -216,7 +228,7 @@ export default async function ManageAuctionPage({ params }: Props) {
                         <td className="px-4 py-3">
                           <Link
                             href={`/admin/items/${item.id}`}
-                            className="text-xs bg-[#efe3d0] hover:bg-[#e7dcc6] text-[#241a12] px-3 py-1.5 rounded-lg whitespace-nowrap"
+                            className="text-base font-semibold bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] text-[#241a12] px-5 py-3 rounded-xl whitespace-nowrap transition-colors"
                           >
                             Edit
                           </Link>
@@ -229,6 +241,17 @@ export default async function ManageAuctionPage({ params }: Props) {
             </div>
           )}
         </div>
+
+        {/* Danger zone — delete is only allowed for DRAFT auctions */}
+        {auction.status === "DRAFT" && (
+          <div className="bg-white border border-red-200 rounded-xl p-6 sm:p-7">
+            <h2 className="text-lg font-semibold text-red-600 mb-1">Danger Zone</h2>
+            <p className="text-base text-[#6f5b46] mb-4">
+              Deleting this draft auction cannot be undone. Items in it will be unlinked and saved as drafts.
+            </p>
+            <DeleteAuctionButton auctionId={auction.id} />
+          </div>
+        )}
       </div>
     </>
   );

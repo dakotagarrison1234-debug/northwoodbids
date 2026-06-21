@@ -108,17 +108,17 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
           <path d="M3 9V5a2 2 0 0 1 2-2h4M3 15v4a2 2 0 0 0 2 2h4M21 9V5a2 2 0 0 0-2-2h-4M21 15v4a2 2 0 0 1-2 2h-4"/>
           <line x1="7" y1="12" x2="7" y2="12.01"/><line x1="10" y1="9" x2="10" y2="15"/><line x1="13" y1="12" x2="13" y2="12.01"/><line x1="16" y1="9" x2="16" y2="15"/>
         </svg>
-        <span className="font-bold text-[#241a12] text-sm">Barcode Auto-Fill</span>
+        <span className="font-bold text-[#241a12] text-base">Barcode Auto-Fill</span>
         <span className="text-[10px] text-[#a4592a] bg-[#a4592a]/10 border border-[#a4592a]/20 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide ml-1">New</span>
       </div>
-      <p className="text-xs text-[#6f5b46] mb-3">Scan or type a barcode to auto-fill title, description, category, and retail value.</p>
+      <p className="text-sm text-[#6f5b46] mb-3">Scan or type a barcode to auto-fill title, description, category, and retail value.</p>
 
       {/* Input row */}
       <div className="flex gap-2">
         <button
           type="button"
           onClick={scanning ? stopCamera : startCamera}
-          className={`flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-sm font-semibold border shrink-0 transition-colors ${
+          className={`flex items-center gap-1.5 px-4 py-3 rounded-xl text-base font-semibold border shrink-0 transition-colors ${
             scanning
               ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
               : "bg-[#a4592a]/10 text-[#a4592a] border-[#a4592a]/25 hover:bg-[#a4592a]/20"
@@ -136,14 +136,14 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
           onChange={e => setBarcode(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Type or scan barcode number…"
-          className="flex-1 bg-white border border-[#cdbda3] rounded-lg px-4 py-2.5 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a] text-sm"
+          className="flex-1 bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a] text-base"
           inputMode="numeric"
         />
         <button
           type="button"
           onClick={() => doLookup(barcode)}
           disabled={loading || !barcode.trim()}
-          className="bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-40 text-white px-4 py-2.5 rounded-lg text-sm font-semibold shrink-0 transition-colors"
+          className="bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-40 text-white px-4 py-3 rounded-xl text-base font-semibold shrink-0 transition-colors"
         >
           {loading ? "…" : "Look Up"}
         </button>
@@ -202,14 +202,14 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
             <button
               type="button"
               onClick={() => applyResult()}
-              className="flex-1 bg-[#a4592a] hover:bg-[#843f1c] text-white text-sm font-bold py-2 rounded-lg transition-colors"
+              className="flex-1 bg-[#a4592a] hover:bg-[#843f1c] text-white text-base font-bold py-3 rounded-xl transition-colors"
             >
               Auto-fill form
             </button>
             <button
               type="button"
               onClick={() => { setResult(null); setBarcode(""); }}
-              className="text-[#8a7559] hover:text-[#4a3a2b] text-sm px-3 py-2 border border-[#cdbda3] rounded-lg transition-colors"
+              className="text-[#8a7559] hover:text-[#4a3a2b] text-base px-4 py-3 border border-[#cdbda3] rounded-xl transition-colors"
             >
               Dismiss
             </button>
@@ -330,15 +330,15 @@ function NewItemForm() {
       <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-4 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 min-w-0">
           {preselectedAuctionId ? (
-            <Link href={`/admin/auctions/${preselectedAuctionId}`} className="text-[#6f5b46] hover:text-[#241a12] text-sm shrink-0">← Auction</Link>
+            <Link href={`/admin/auctions/${preselectedAuctionId}`} className="text-[#6f5b46] hover:text-[#241a12] text-base font-semibold shrink-0">← Auction</Link>
           ) : (
-            <Link href="/admin/items" className="text-[#6f5b46] hover:text-[#241a12] text-sm shrink-0">← Items</Link>
+            <Link href="/admin/items" className="text-[#6f5b46] hover:text-[#241a12] text-base font-semibold shrink-0">← Items</Link>
           )}
           <span className="text-[#8a7559]">/</span>
-          <h1 className="text-lg sm:text-xl font-semibold">Add New Item</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold">Add New Item</h1>
         </div>
         <button onClick={handleSave} disabled={saving || uploading}
-          className="bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white text-sm px-4 sm:px-6 py-2 rounded-lg font-semibold shrink-0">
+          className="bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white text-base px-6 py-3.5 rounded-xl font-semibold shrink-0 transition-colors">
           {saving ? "Saving..." : uploading ? "Uploading..." : "Save Item"}
         </button>
       </header>
@@ -351,24 +351,24 @@ function NewItemForm() {
 
           {/* ── Item details ── */}
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="font-semibold mb-4">Item Details</h2>
+            <h2 className="text-lg font-semibold mb-4">Item Details</h2>
             <div className="space-y-4">
               <div>
-                <label className="text-sm text-[#6f5b46] mb-1 block">Item Title *</label>
+                <label className="text-base text-[#6f5b46] mb-1.5 block">Item Title *</label>
                 <input name="title" value={formData.title} onChange={handleChange} placeholder='e.g. Apple iPad Pro 12.9"'
-                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-lg px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]" />
+                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]" />
               </div>
               <div>
-                <label className="text-sm text-[#6f5b46] mb-1 block">Description</label>
+                <label className="text-base text-[#6f5b46] mb-1.5 block">Description</label>
                 <textarea name="description" value={formData.description} onChange={handleChange} rows={3}
                   placeholder="Describe the item..."
-                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-lg px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a] resize-none" />
+                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a] resize-none" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-[#6f5b46] mb-1 block">Condition *</label>
+                  <label className="text-base text-[#6f5b46] mb-1.5 block">Condition *</label>
                   <select name="condition" value={formData.condition} onChange={handleChange}
-                    className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-lg px-4 py-3 text-[#241a12] focus:outline-none focus:border-[#a4592a]">
+                    className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a]">
                     <option value="NEW">New</option>
                     <option value="LIKE_NEW">Like New</option>
                     <option value="GOOD">Good</option>
@@ -377,9 +377,9 @@ function NewItemForm() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm text-[#6f5b46] mb-1 block">Category</label>
+                  <label className="text-base text-[#6f5b46] mb-1.5 block">Category</label>
                   <select name="category" value={formData.category} onChange={handleChange}
-                    className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-lg px-4 py-3 text-[#241a12] focus:outline-none focus:border-[#a4592a]">
+                    className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a]">
                     <option value="">Select category</option>
                     {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
@@ -390,7 +390,7 @@ function NewItemForm() {
 
           {/* ── Pricing ── */}
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="font-semibold mb-4">Pricing</h2>
+            <h2 className="text-lg font-semibold mb-4">Pricing</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
                 { label: "Retail / Est. Value", name: "retailValue", placeholder: "0.00" },
@@ -398,12 +398,12 @@ function NewItemForm() {
                 { label: "Reserve Price", name: "reservePrice", placeholder: "Optional" },
               ].map((field) => (
                 <div key={field.name}>
-                  <label className="text-sm text-[#6f5b46] mb-1 block">{field.label}</label>
+                  <label className="text-base text-[#6f5b46] mb-1.5 block">{field.label}</label>
                   <div className="relative">
                     <span className="absolute left-3 top-3 text-[#8a7559]">$</span>
                     <input name={field.name} value={formData[field.name as keyof typeof formData] as string}
                       onChange={handleChange} type="number" placeholder={field.placeholder}
-                      className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-lg pl-7 pr-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]" />
+                      className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl pl-7 pr-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]" />
                   </div>
                 </div>
               ))}
@@ -412,7 +412,7 @@ function NewItemForm() {
 
           {/* ── Photos ── */}
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="font-semibold mb-4">Photos <span className="text-[#8a7559] text-sm font-normal">(up to 10)</span></h2>
+            <h2 className="text-lg font-semibold mb-4">Photos <span className="text-[#8a7559] text-base font-normal">(up to 10)</span></h2>
             <input type="file" accept="image/*" multiple id="photo-upload" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
             <label htmlFor="photo-upload"
               className="border-2 border-dashed border-[#cdbda3] rounded-xl p-8 text-center hover:border-[#a4592a] transition-colors cursor-pointer block">
@@ -421,8 +421,8 @@ function NewItemForm() {
                   <rect x="2" y="6" width="20" height="15" rx="2"/><circle cx="12" cy="13.5" r="4"/><path d="M9 6l1.5-3h3L15 6"/>
                 </svg>
               </div>
-              <div className="text-[#6f5b46] text-sm">{uploading ? "Uploading..." : "Click to upload photos"}</div>
-              <div className="text-[#8a7559] text-xs mt-1">PNG, JPG up to 10MB each</div>
+              <div className="text-[#6f5b46] text-base">{uploading ? "Uploading..." : "Click to upload photos"}</div>
+              <div className="text-[#8a7559] text-sm mt-1">PNG, JPG up to 10MB each</div>
             </label>
             {photos.length > 0 && (
               <div className="grid grid-cols-4 gap-2 mt-4">
@@ -441,40 +441,40 @@ function NewItemForm() {
         {/* ── Sidebar ── */}
         <div className="space-y-6">
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="font-semibold mb-4">Donor Info</h2>
+            <h2 className="text-lg font-semibold mb-4">Donor Info</h2>
             <div className="space-y-4">
               <div>
-                <label className="text-sm text-[#6f5b46] mb-1 block">Donor Name</label>
+                <label className="text-base text-[#6f5b46] mb-1.5 block">Donor Name</label>
                 <input name="donorName" value={formData.donorName} onChange={handleChange}
                   placeholder="Who donated this?"
-                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-lg px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]" />
+                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]" />
               </div>
               <div className="flex items-center gap-3">
                 <input type="checkbox" name="taxDeductible" checked={formData.taxDeductible}
-                  onChange={handleChange} id="taxDeductible" className="w-4 h-4 accent-[#a4592a]" />
-                <label htmlFor="taxDeductible" className="text-sm text-[#4a3a2b]">Tax deductible donation</label>
+                  onChange={handleChange} id="taxDeductible" className="w-5 h-5 accent-[#a4592a]" />
+                <label htmlFor="taxDeductible" className="text-base text-[#4a3a2b]">Tax deductible donation</label>
               </div>
             </div>
           </div>
 
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="font-semibold mb-4">Storage Location</h2>
+            <h2 className="text-lg font-semibold mb-4">Storage Location</h2>
             <input name="storageLocation" value={formData.storageLocation} onChange={handleChange}
               placeholder="e.g. Room B / Shelf 2 / Bin 4"
-              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-lg px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]" />
-            <p className="text-[#8a7559] text-xs mt-2">Used by staff to locate item during pickup</p>
+              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]" />
+            <p className="text-[#8a7559] text-sm mt-2">Used by staff to locate item during pickup</p>
           </div>
 
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="font-semibold mb-4">Assign to Auction</h2>
+            <h2 className="text-lg font-semibold mb-4">Assign to Auction</h2>
             {preselectedAuctionId ? (
-              <div className="w-full bg-[#efe3d0]/50 border border-[#cdbda3] rounded-lg px-4 py-3 text-[#241a12] flex items-center justify-between">
+              <div className="w-full bg-[#efe3d0]/50 border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] flex items-center justify-between">
                 <span>{auctions.find(a => a.id === preselectedAuctionId)?.title ?? "Loading..."}</span>
                 <span className="text-xs text-[#a4592a] bg-[#a4592a]/10 px-2 py-1 rounded-full">Pre-assigned</span>
               </div>
             ) : (
               <select name="auctionId" value={formData.auctionId} onChange={handleChange}
-                className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-lg px-4 py-3 text-[#241a12] focus:outline-none focus:border-[#a4592a]">
+                className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a]">
                 <option value="">Save as draft</option>
                 {auctions.map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}
               </select>
@@ -482,10 +482,10 @@ function NewItemForm() {
           </div>
 
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="font-semibold mb-4">Staff Notes</h2>
+            <h2 className="text-lg font-semibold mb-4">Staff Notes</h2>
             <textarea name="notes" value={formData.notes} onChange={handleChange} rows={3}
               placeholder="Internal notes — not visible to bidders"
-              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-lg px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a] resize-none" />
+              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a] resize-none" />
           </div>
         </div>
       </div>

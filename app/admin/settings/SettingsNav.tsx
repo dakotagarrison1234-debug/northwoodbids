@@ -16,7 +16,7 @@ export default function SettingsNav() {
           <Link
             key={tab.href}
             href={tab.href}
-            className={`flex-1 text-center text-sm px-4 py-2 rounded-lg transition-colors ${
+            className={`flex-1 text-center text-base font-semibold px-6 py-3.5 rounded-xl transition-colors ${
               active
                 ? "bg-[#efe3d0] text-[#241a12] font-semibold"
                 : "text-[#6f5b46] hover:text-[#241a12] hover:bg-[#efe3d0]"
