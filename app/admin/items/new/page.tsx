@@ -288,14 +288,18 @@ function NewItemForm() {
       }
       try {
         const res = await fetch("/api/upload", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fileName: file.name, fileType }) });
-        if (!res.ok) throw new Error(`Server error ${res.status}`);
+        if (!res.ok) {
+          let detail = `HTTP ${res.status}`;
+          try { const e = await res.json(); if (e?.error) detail = e.error; } catch {}
+          throw new Error(`upload-link failed: ${detail}`);
+        }
         const { signedUrl, publicUrl } = await res.json();
         const putRes = await fetch(signedUrl, { method: "PUT", body: file, headers: { "Content-Type": fileType } });
-        if (!putRes.ok) throw new Error(`Storage error ${putRes.status}`);
+        if (!putRes.ok) throw new Error(`R2 rejected upload: HTTP ${putRes.status}`);
         setPhotos(prev => [...prev, publicUrl]);
       } catch (err) {
         console.error(`Upload failed for ${file.name}:`, err);
-        failed.push(file.name);
+        failed.push(`${file.name} — ${err instanceof Error ? err.message : "unknown error"}`);
       }
     }
     e.target.value = "";
