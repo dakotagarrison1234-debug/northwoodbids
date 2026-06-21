@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import Stripe from "stripe";
 import { triggerAuctionUpdated } from "@/lib/pusherServer";
+import { attachToUpcomingAppointment } from "@/lib/pickup";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -214,6 +215,10 @@ async function chargeWinners(
           data: { status: "PENDING_PICKUP" },
         });
       }
+
+      // If this winner already has an upcoming pickup appointment, fold these
+      // newly-won items into it automatically.
+      await attachToUpcomingAppointment(clerkUserId, org.id);
 
       console.log(
         `Auto-charge: $${(chargeAmountCents / 100).toFixed(2)} charged to ${clerkUserId} ` +

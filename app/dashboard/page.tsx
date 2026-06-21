@@ -12,6 +12,7 @@ type Tab = "overview" | "winning" | "losing" | "auctions" | "profile";
 
 interface BidBase {
   itemId: string;
+  auctionId: string | null;
   itemTitle: string;
   itemStatus: string;
   photo: string | null;
@@ -442,7 +443,13 @@ function BidderDashboardInner() {
                         {awaitingPickup.length} item{awaitingPickup.length !== 1 ? "s" : ""} ready for pickup
                       </span>
                     </div>
-                    <p className="text-[#6f5b46] text-xs mb-4">Payment confirmed. Contact the business to arrange collection.</p>
+                    <p className="text-[#6f5b46] text-xs mb-4">Payment confirmed. Schedule a time to collect your items.</p>
+                    <Link
+                      href="/pickup"
+                      className="inline-flex items-center gap-2 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors mb-4"
+                    >
+                      Schedule pickup <IcoArrow />
+                    </Link>
                     <div className="space-y-3">
                       {awaitingPickup.map((b) => (
                         <div key={b.itemId} className="flex items-center gap-3">
@@ -454,8 +461,18 @@ function BidderDashboardInner() {
                               <div className="text-xs text-[#8a7559] mt-0.5">Pickup: {b.storageLocation}</div>
                             )}
                           </div>
-                          <div className="shrink-0 text-[#6c4d39] font-bold text-sm ml-auto">
-                            ${b.finalBid.toLocaleString()}
+                          <div className="shrink-0 text-right ml-auto">
+                            <div className="text-[#6c4d39] font-bold text-sm">
+                              ${b.finalBid.toLocaleString()}
+                            </div>
+                            {b.auctionId && (
+                              <Link
+                                href={`/invoice/${b.auctionId}`}
+                                className="text-xs text-[#6c4d39] hover:text-[#c47b3e] underline mt-0.5 inline-block"
+                              >
+                                View receipt
+                              </Link>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -560,6 +577,14 @@ function BidderDashboardInner() {
                               ? b.pickedUp ? "Picked up" : "Won"
                               : b.outcome === "unsold" ? "Unsold" : "Lost"}
                           </div>
+                          {b.outcome === "won" && b.paid && b.auctionId && (
+                            <Link
+                              href={`/invoice/${b.auctionId}`}
+                              className="text-xs text-[#6c4d39] hover:text-[#c47b3e] underline mt-0.5 inline-block"
+                            >
+                              View receipt
+                            </Link>
+                          )}
                         </div>
                       </div>
                     ))}

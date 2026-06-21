@@ -1,0 +1,219 @@
+"use client";
+import { useEffect, useState, Suspense } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+
+const LOGO_URL =
+  "https://assets.cdn.filesafe.space/TwuL7EwKfW8oGIV0Zo5q/media/6a373b261c5d711b35bf4e56.png";
+
+interface Line {
+  title: string;
+  photo: string | null;
+  bid: number;
+  premium: number;
+  tax: number;
+  total: number;
+}
+interface Totals {
+  subtotal: number;
+  premium: number;
+  tax: number;
+  grandTotal: number;
+}
+interface Invoice {
+  business: { name: string };
+  auction: { title: string };
+  buyer: { name: string | null; email: string | null };
+  date: string;
+  lines: Line[];
+  totals: Totals;
+  empty?: boolean;
+  error?: string;
+}
+
+const money = (n: number) =>
+  n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+
+function InvoiceInner() {
+  const params = useParams<{ auctionId: string }>();
+  const searchParams = useSearchParams();
+  const auctionId = params.auctionId;
+  const user = searchParams.get("user");
+
+  const [data, setData] = useState<Invoice | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!auctionId) return;
+    const qs = user ? `?user=${encodeURIComponent(user)}` : "";
+    fetch(`/api/invoice/${auctionId}${qs}`)
+      .then((r) => r.json())
+      .then((d: Invoice) => {
+        if (d.error) setError(d.error);
+        else setData(d);
+      })
+      .catch(() => setError("Could not load receipt."))
+      .finally(() => setLoading(false));
+  }, [auctionId, user]);
+
+  return (
+    <div className="invoice-root min-h-screen bg-[#f1e7d5] text-[#241a12] py-8 px-4 print:bg-white print:p-0">
+      <style>{`
+        @media print {
+          header { display: none !important; }
+          body { background: white !important; }
+          .no-print { display: none !important; }
+          .invoice-root { background: white !important; padding: 0 !important; }
+          .invoice-thumb { display: none !important; }
+        }
+        @page { size: letter; margin: 0.5in; }
+      `}</style>
+
+      <div className="mx-auto" style={{ maxWidth: "7.5in" }}>
+        {/* Print / actions bar */}
+        <div className="no-print flex justify-end mb-4">
+          <button
+            onClick={() => window.print()}
+            className="bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors"
+          >
+            Print / Save PDF
+          </button>
+        </div>
+
+        <div className="bg-white border border-[#e3d6bf] rounded-2xl shadow-sm print:border-0 print:shadow-none print:rounded-none p-6 sm:p-10 text-black">
+          {loading ? (
+            <p className="text-[#8a7559] text-sm py-12 text-center">Loading receipt…</p>
+          ) : error ? (
+            <p className="text-red-600 text-sm py-12 text-center">{error}</p>
+          ) : data?.empty ? (
+            <p className="text-[#6f5b46] text-base py-12 text-center">
+              No paid items for this auction yet.
+            </p>
+          ) : data ? (
+            <>
+              {/* Header */}
+              <div className="flex items-start justify-between gap-4 border-b border-[#e3d6bf] pb-5 mb-5">
+                <div className="flex items-center gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={LOGO_URL} alt={data.business.name} className="w-12 h-12 object-contain" />
+                  <div>
+                    <div className="font-display text-xl font-bold">{data.business.name}</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-display text-2xl font-bold">Receipt</div>
+                  <div className="text-sm text-[#6f5b46] mt-0.5">
+                    {new Date(data.date).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Meta */}
+              <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
+                <div>
+                  <div className="text-[#8a7559] uppercase tracking-wide text-xs font-semibold mb-1">
+                    Auction
+                  </div>
+                  <div className="font-semibold">{data.auction.title}</div>
+                </div>
+                <div className="text-right sm:text-left">
+                  <div className="text-[#8a7559] uppercase tracking-wide text-xs font-semibold mb-1">
+                    Buyer
+                  </div>
+                  <div className="font-semibold">{data.buyer.name || "Bidder"}</div>
+                  {data.buyer.email && (
+                    <div className="text-[#6f5b46]">{data.buyer.email}</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Line items */}
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="border-b-2 border-[#e3d6bf] text-[#8a7559]">
+                    <th className="text-left py-2 font-semibold">Item</th>
+                    <th className="text-right py-2 font-semibold whitespace-nowrap">Bid</th>
+                    <th className="text-right py-2 font-semibold whitespace-nowrap">Premium (15%)</th>
+                    <th className="text-right py-2 font-semibold whitespace-nowrap">Tax</th>
+                    <th className="text-right py-2 font-semibold whitespace-nowrap">Line total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.lines.map((l, i) => (
+                    <tr key={i} className="border-b border-[#e3d6bf]">
+                      <td className="py-2.5 pr-3">
+                        <div className="flex items-center gap-2.5">
+                          {l.photo ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={l.photo}
+                              alt=""
+                              className="invoice-thumb w-9 h-9 rounded object-cover shrink-0"
+                            />
+                          ) : (
+                            <div className="invoice-thumb w-9 h-9 rounded bg-[#efe3d0] shrink-0" />
+                          )}
+                          <span className="font-medium">{l.title}</span>
+                        </div>
+                      </td>
+                      <td className="text-right py-2.5 whitespace-nowrap">{money(l.bid)}</td>
+                      <td className="text-right py-2.5 whitespace-nowrap">{money(l.premium)}</td>
+                      <td className="text-right py-2.5 whitespace-nowrap">{money(l.tax)}</td>
+                      <td className="text-right py-2.5 whitespace-nowrap font-semibold">
+                        {money(l.total)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Totals */}
+              <div className="flex justify-end mt-6">
+                <div className="w-full sm:w-72 text-sm">
+                  <div className="flex justify-between py-1.5">
+                    <span className="text-[#6f5b46]">Subtotal (winning bids)</span>
+                    <span>{money(data.totals.subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5">
+                    <span className="text-[#6f5b46]">Buyer&apos;s premium (15%)</span>
+                    <span>{money(data.totals.premium)}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-[#e3d6bf]">
+                    <span className="text-[#6f5b46]">Sales tax (6%)</span>
+                    <span>{money(data.totals.tax)}</span>
+                  </div>
+                  <div className="flex justify-between py-2.5 font-bold text-base">
+                    <span>Grand total</span>
+                    <span>{money(data.totals.grandTotal)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-[#8a7559] mt-8 pt-4 border-t border-[#e3d6bf]">
+                Thank you for your purchase. This receipt reflects items paid in full for this auction.
+              </p>
+            </>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function InvoicePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#f1e7d5] flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full border-2 border-[#6c4d39]/30 border-t-[#6c4d39] animate-spin" />
+        </div>
+      }
+    >
+      <InvoiceInner />
+    </Suspense>
+  );
+}

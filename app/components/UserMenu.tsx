@@ -43,6 +43,9 @@ function IcoSignOut() {
 function IcoHelp() {
   return <svg width="16" height="16" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="6"/><path d="M6 6a2 2 0 0 1 3.46 1C9.46 8.5 8 9 8 10"/><circle cx="8" cy="12" r=".5" fill="currentColor"/></svg>;
 }
+function IcoPickup() {
+  return <svg width="16" height="16" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2L2 5v6l6 3 6-3V5L8 2z"/><path d="M2 5l6 3 6-3M8 8v7"/></svg>;
+}
 
 // ── Section label ──────────────────────────────────────────────────────────────
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -232,6 +235,7 @@ export default function UserMenu() {
           <SectionLabel>My Bids</SectionLabel>
           <NavLink href="/dashboard" iconEl={<IcoGavel />} label="Active Bids" sublabel="What you're currently bidding" onClick={close} />
           <NavLink href="/dashboard?tab=past" iconEl={<IcoHistory />} label="Bid History" sublabel="Past bids & wins" onClick={close} />
+          <NavLink href="/pickup" iconEl={<IcoPickup />} label="Pickup" sublabel="Schedule item collection" onClick={close} />
 
           <SectionLabel>Account</SectionLabel>
           <NavLink href="/account" iconEl={<IcoUser />} label="Profile" sublabel="Name, email, phone" onClick={close} />

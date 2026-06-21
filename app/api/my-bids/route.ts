@@ -72,6 +72,7 @@ export async function GET() {
     const photo = item.photos[0]?.url ?? null;
     const base = {
       itemId: item.id,
+      auctionId: item.auctionId,
       itemTitle: item.title,
       itemStatus: item.status,
       storageLocation: item.storageLocation ?? null,

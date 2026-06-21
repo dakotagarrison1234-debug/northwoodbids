@@ -37,6 +37,8 @@ model Organization {
   invites                OrgInvite[]
   bidderCustomers        BidderStripeCustomer[]
   bidderFollowers        BidderProfile[]
+  pickupLocations        PickupLocation[]
+  pickupAppointments     PickupAppointment[]
 }
 
 model OrgMember {
@@ -107,9 +109,66 @@ enum AuctionStatus {
   bids            Bid[]
   payments        Payment[]
   proxyBids       ProxyBid[]
+  pickedUpAt          DateTime?
+  pickupAppointmentId String?
+  pickupAppointment   PickupAppointment? @relation(fields: [pickupAppointmentId], references: [id], onDelete: SetNull)
 
   @@index([status, itemEndAt])
   @@index([auctionId, status])
+  @@index([pickupAppointmentId])
+}
+
+model PickupLocation {
+  id             String          @id @default(cuid())
+  organizationId String
+  name           String
+  address        String?
+  instructions   String?
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  windows        PickupWindow[]
+  appointments   PickupAppointment[]
+
+  @@index([organizationId])
+}
+
+model PickupWindow {
+  id              String         @id @default(cuid())
+  locationId      String
+  weekday         Int            // 0 = Sunday … 6 = Saturday
+  startMinutes    Int            // minutes from midnight (e.g. 540 = 9:00am)
+  endMinutes      Int            // minutes from midnight (e.g. 1020 = 5:00pm)
+  slotMinutes     Int            @default(30)
+  capacityPerSlot Int            @default(2)
+  isActive        Boolean        @default(true)
+  location        PickupLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([locationId])
+}
+
+model PickupAppointment {
+  id             String            @id @default(cuid())
+  organizationId String
+  clerkUserId    String
+  locationId     String
+  startsAt       DateTime
+  status         PickupApptStatus  @default(SCHEDULED)
+  notes          String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location       PickupLocation    @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  items          Item[]
+
+  @@index([organizationId, startsAt])
+  @@index([clerkUserId, status])
+}
+
+enum PickupApptStatus {
+  SCHEDULED
+  COLLECTED
+  CANCELLED
 }
 
 enum Condition {

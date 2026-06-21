@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import { requireUserOrg } from "@/lib/auth";
+import Link from "next/link";
 import ItemStatusButton from "@/app/components/ItemStatusButton";
 
 export default async function WinnersPage() {
@@ -102,10 +103,20 @@ export default async function WinnersPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <ItemStatusButton
-                            itemId={bid.item.id}
-                            currentStatus={bid.item.status}
-                          />
+                          <div className="flex flex-col gap-2">
+                            <ItemStatusButton
+                              itemId={bid.item.id}
+                              currentStatus={bid.item.status}
+                            />
+                            {payment?.status === "PAID" && bid.item.auctionId && (
+                              <Link
+                                href={`/invoice/${bid.item.auctionId}?user=${encodeURIComponent(bid.clerkUserId)}`}
+                                className="text-xs text-[#6c4d39] hover:text-[#c47b3e] font-medium underline whitespace-nowrap"
+                              >
+                                Receipt
+                              </Link>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );

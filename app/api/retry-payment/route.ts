@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import { attachToUpcomingAppointment } from "@/lib/pickup";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -126,6 +127,7 @@ export async function POST(request: NextRequest) {
         where: { id: itemId },
         data: { status: "PENDING_PICKUP" },
       });
+      await attachToUpcomingAppointment(userId, org.id);
 
       return NextResponse.json({ success: true });
     } else if (
