@@ -325,7 +325,6 @@ function BidderDashboardInner() {
 
   const navItems: { id: Tab; label: string; shortLabel: string; count?: number; icon: React.ReactNode }[] = [
     { id: "overview",  label: "Overview",      shortLabel: "Home",     icon: <IcoGrid /> },
-    { id: "auctions",  label: "Live Auctions", shortLabel: "Auctions", icon: <IcoGavel /> },
     { id: "winning",   label: "Active Bids",   shortLabel: "Active",   count: winning.length, icon: <IcoUp /> },
     { id: "losing",    label: "Outbid",        shortLabel: "Outbid",   count: losing.length,  icon: <IcoDown /> },
   ];
@@ -365,36 +364,6 @@ function BidderDashboardInner() {
             </button>
           ))}
         </nav>
-        <div className="px-3 pb-4 border-t border-[#e5e0d5]/60 pt-3 space-y-0.5">
-          <Link
-            href="/account"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[#8c8778] hover:text-[#1a1916] hover:bg-[#f2efe8]/50 text-sm transition-colors"
-          >
-            <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><rect x="3" y="3" width="14" height="14" rx="7"/><circle cx="10" cy="8" r="3"/><path d="M4.5 17c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/></svg>
-            <span>Account</span>
-          </Link>
-          <Link
-            href="/auctions"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[#8c8778] hover:text-[#1a1916] hover:bg-[#f2efe8]/50 text-sm transition-colors"
-          >
-            <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l2.5 2.5"/></svg>
-            <span>Browse Auctions</span>
-          </Link>
-          <Link
-            href="/search"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[#8c8778] hover:text-[#1a1916] hover:bg-[#f2efe8]/50 text-sm transition-colors"
-          >
-            <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><circle cx="9" cy="9" r="6"/><path d="m17 17-3.5-3.5"/></svg>
-            <span>Search Items</span>
-          </Link>
-        </div>
-        <div className="px-3 py-4 border-t border-[#e5e0d5]/60 flex items-center gap-3">
-          <UserMenu />
-          <div className="min-w-0">
-            <div className="text-sm text-[#1a1916] font-semibold truncate">{user?.firstName || "Account"}</div>
-            <div className="text-xs text-[#8c8778] truncate">{user?.primaryEmailAddress?.emailAddress}</div>
-          </div>
-        </div>
       </aside>
 
       {/* ── Main content ── */}
@@ -409,7 +378,6 @@ function BidderDashboardInner() {
                 {unpaidWins.length}
               </span>
             )}
-            <UserMenu />
           </div>
         </header>
 
