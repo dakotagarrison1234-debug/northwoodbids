@@ -64,8 +64,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, orgSlug: invite.organization.slug });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Internal error";
-    console.error("[orgs/join POST]:", msg, err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[orgs/join POST]:", err);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }

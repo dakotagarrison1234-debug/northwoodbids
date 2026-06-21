@@ -15,9 +15,11 @@ export async function GET() {
 
     return NextResponse.json({ application });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Internal error";
-    console.error("[apply GET]:", msg, err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[apply GET]:", err);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }
 
@@ -67,8 +69,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, application });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Internal error";
-    console.error("[apply POST]:", msg, err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[apply POST]:", err);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }

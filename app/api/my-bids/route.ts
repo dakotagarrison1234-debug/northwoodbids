@@ -8,30 +8,48 @@ export async function GET() {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [profile, allBids] = await Promise.all([
+  // Cap counts DISTINCT ITEMS, not raw bids — a heavy bidder on a single item must
+  // never push their other items (including unpaid/won ones) past the limit and hide them.
+  const ITEM_CAP = 500;
+
+  const [profile, biddedItems] = await Promise.all([
     prisma.bidderProfile.findUnique({
       where: { clerkUserId: userId },
       include: { preferredOrg: { select: { id: true, name: true, slug: true, logoUrl: true } } },
     }),
-    prisma.bid.findMany({
+    // Distinct items this user has bid on, ordered by their most recent activity.
+    prisma.bid.groupBy({
+      by: ["itemId"],
       where: { clerkUserId: userId },
-      include: {
-        item: {
-          include: {
-            photos: { where: { isPrimary: true }, take: 1 },
-            auction: { include: { organization: { select: { name: true, slug: true, id: true, stripeAccountId: true, platformFeePercent: true, taxPercent: true, taxExempt: true } } } },
-          },
-        },
-      },
-      orderBy: { placedAt: "desc" },
-      take: 200,
+      _max: { placedAt: true },
+      orderBy: { _max: { placedAt: "desc" } },
+      take: ITEM_CAP,
     }),
   ]);
 
+  const itemIds = biddedItems.map((b) => b.itemId);
+
+  // Fetch this user's bids only for that bounded set of items, then keep the latest
+  // bid per item (desc order guarantees the first seen is the most recent).
+  const userBids = itemIds.length
+    ? await prisma.bid.findMany({
+        where: { clerkUserId: userId, itemId: { in: itemIds } },
+        include: {
+          item: {
+            include: {
+              photos: { where: { isPrimary: true }, take: 1 },
+              auction: { include: { organization: { select: { name: true, slug: true, id: true, stripeAccountId: true, platformFeePercent: true, taxPercent: true, taxExempt: true } } } },
+            },
+          },
+        },
+        orderBy: { placedAt: "desc" },
+      })
+    : [];
+
   // One entry per item — most recent bid (desc order guarantees this)
   const seen = new Set<string>();
-  const latestBids: typeof allBids = [];
-  for (const bid of allBids) {
+  const latestBids: typeof userBids = [];
+  for (const bid of userBids) {
     if (!seen.has(bid.itemId)) {
       seen.add(bid.itemId);
       latestBids.push(bid);
@@ -228,8 +246,10 @@ export async function GET() {
 
   return NextResponse.json({ profile, winning, losing, past, unpaidWins });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Internal error";
-    console.error("[my-bids GET]:", msg, err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[my-bids GET]:", err);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }

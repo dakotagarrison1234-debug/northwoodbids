@@ -75,6 +75,7 @@ enum OrgRole {
   @@unique([organizationId, slug])
   @@index([status])
   @@index([organizationId, status])
+  @@index([status, endAt])
 }
 
 enum AuctionStatus {
@@ -122,6 +123,7 @@ enum AuctionStatus {
   @@index([auctionId, status])
   @@index([pickupAppointmentId])
   @@index([locationId])
+  @@index([organizationId, status])
 }
 
 model PickupLocation {
@@ -236,10 +238,11 @@ model Bid {
   status      BidStatus @default(ACTIVE)
   isProxy     Boolean   @default(false)
   placedAt    DateTime  @default(now())
-  item        Item      @relation(fields: [itemId], references: [id])
+  item        Item      @relation(fields: [itemId], references: [id], onDelete: Restrict)
 
   @@index([itemId, status, amount])
   @@index([clerkUserId])
+  @@index([clerkUserId, placedAt])
 }
 
 model ProxyBid {
@@ -275,10 +278,12 @@ model Payment {
   autoChargeAttemptedAt DateTime?
   failureReason         String?
   createdAt             DateTime      @default(now())
-  item                  Item          @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  item                  Item          @relation(fields: [itemId], references: [id], onDelete: Restrict)
 
   @@unique([itemId, clerkUserId])
   @@index([stripePaymentIntentId])
+  @@index([clerkUserId])
+  @@index([status])
 }
 
 model BidderStripeCustomer {

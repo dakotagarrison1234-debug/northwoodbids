@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
+import type { OrgRole } from "@prisma/client";
 
 // ─── Org Helpers ─────────────────────────────────────────────────────────────
 
@@ -57,6 +58,20 @@ export async function canAccessOrg(orgId: string): Promise<boolean> {
     where: { clerkUserId: userId, organizationId: orgId },
   });
   return !!membership;
+}
+
+// Returns true if caller is super admin OR an OrgMember of orgId whose role is
+// in the allowed list. Use this to gate financial/destructive actions where
+// plain membership (canAccessOrg) isn't enough.
+export async function requireRole(orgId: string, roles: OrgRole[]): Promise<boolean> {
+  const { userId } = await auth();
+  if (!userId) return false;
+  if (await isSuperAdmin()) return true;
+  const membership = await prisma.orgMember.findFirst({
+    where: { clerkUserId: userId, organizationId: orgId },
+    select: { role: true },
+  });
+  return !!membership && roles.includes(membership.role);
 }
 
 // ─── Super Admin ─────────────────────────────────────────────────────────────

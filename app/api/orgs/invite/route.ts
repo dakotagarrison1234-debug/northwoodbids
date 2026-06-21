@@ -38,9 +38,11 @@ export async function GET() {
 
     return NextResponse.json({ members: enrichedMembers, invites: org.invites });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Internal error";
-    console.error("[orgs/invite GET]:", msg, err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[orgs/invite GET]:", err);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }
 
@@ -93,8 +95,10 @@ export async function POST(request: NextRequest) {
     const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/join?token=${invite.token}`;
     return NextResponse.json({ success: true, invite, inviteUrl });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Internal error";
-    console.error("[orgs/invite POST]:", msg, err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[orgs/invite POST]:", err);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }

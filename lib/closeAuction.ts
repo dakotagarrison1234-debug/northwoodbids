@@ -31,6 +31,22 @@ type OrgForCharging = {
 };
 
 /**
+ * Runs `worker` over `items` with bounded concurrency (default 5) using a simple
+ * dependency-free Promise pool — process in chunks so a large auction doesn't
+ * fan out unbounded fetches/charges, but still parallelizes within each chunk.
+ */
+async function runPooled<T>(
+  items: T[],
+  worker: (item: T) => Promise<void>,
+  concurrency = 5
+): Promise<void> {
+  for (let i = 0; i < items.length; i += concurrency) {
+    const chunk = items.slice(i, i + concurrency);
+    await Promise.all(chunk.map(worker));
+  }
+}
+
+/**
  * Closes a single item: marks winning bid WON + item SOLD (or UNSOLD), deactivates proxies.
  * Does NOT fire GHL notifications — callers collect winners and send one email per bidder.
  * Returns the winning bid info if there was one, null if unsold.
@@ -54,6 +70,11 @@ async function closeItem(
   ) {
     await prisma.$transaction([
       prisma.bid.update({ where: { id: winningBid.id }, data: { status: "CANCELLED" } }),
+      // Terminalize every other standing bid so no one is left showing "active/winning".
+      prisma.bid.updateMany({
+        where: { itemId: item.id, status: "ACTIVE", id: { not: winningBid.id } },
+        data: { status: "OUTBID" },
+      }),
       prisma.item.update({ where: { id: item.id }, data: { status: "UNSOLD" } }),
       prisma.proxyBid.updateMany({ where: { itemId: item.id, isActive: true }, data: { isActive: false } }),
     ]);
@@ -66,6 +87,11 @@ async function closeItem(
   if (winningBid) {
     await prisma.$transaction([
       prisma.bid.update({ where: { id: winningBid.id }, data: { status: "WON" } }),
+      // Terminalize every losing standing bid so dashboards don't show stale "winning".
+      prisma.bid.updateMany({
+        where: { itemId: item.id, status: "ACTIVE", id: { not: winningBid.id } },
+        data: { status: "OUTBID" },
+      }),
       prisma.item.update({ where: { id: item.id }, data: { status: "SOLD" } }),
       prisma.proxyBid.updateMany({ where: { itemId: item.id, isActive: true }, data: { isActive: false } }),
     ]);
@@ -100,162 +126,336 @@ async function chargeWinners(
 ): Promise<void> {
   if (winnerMap.size === 0) return;
 
+  // Bound concurrency: charge winners in chunks of 5 instead of fully serial so
+  // a large auction can't time out the cron, but Stripe isn't hit unbounded.
+  await runPooled(
+    [...winnerMap.values()],
+    (winner) => chargeOneWinner(winner, org, auctionId),
+    5
+  );
+}
+
+/**
+ * Charges a single winner for all their won items in one PaymentIntent.
+ *
+ * Branches on the resulting PaymentIntent status:
+ *   - "succeeded":   Payment rows PAID + items -> PENDING_PICKUP (in one tx).
+ *   - "processing":  Payment rows PENDING; items stay SOLD (webhook reconciles).
+ *   - anything else (requires_action / requires_payment_method /
+ *                    requires_confirmation / ...): Payment rows FAILED with
+ *                    failureReason = the status; items stay SOLD.
+ * A thrown Stripe error is also recorded as FAILED.
+ *
+ * Idempotent: skips winners whose items already have a PAID/PENDING row, ignores
+ * P2002 on inserts, and uses a stable per-winner idempotency key.
+ */
+async function chargeOneWinner(
+  winner: WinnerEntry,
+  org: OrgForCharging,
+  auctionId: string
+): Promise<void> {
   const platformFeePercent = Number(org.platformFeePercent);
   // If the org is tax-exempt, force tax to zero regardless of taxPercent.
   const taxPercent = org.taxExempt ? 0 : Number(org.taxPercent);
 
-  for (const [clerkUserId, winner] of winnerMap) {
-    const itemIds = winner.items.map((i) => i.id);
+  const clerkUserId = winner.clerkUserId;
+  const itemIds = winner.items.map((i) => i.id);
 
-    // Look up the bidder's saved card on this connected account
-    const bidderCustomer = await prisma.bidderStripeCustomer.findUnique({
-      where: {
-        clerkUserId_organizationId: {
+  // Look up the bidder's saved card on the platform account
+  const bidderCustomer = await prisma.bidderStripeCustomer.findUnique({
+    where: {
+      clerkUserId_organizationId: {
+        clerkUserId,
+        organizationId: org.id,
+      },
+    },
+  });
+
+  // H7: Idempotency guard — skip if every item already has a non-FAILED payment
+  // (PAID or PENDING). FAILED rows should be re-attempted, so they don't count.
+  const settledCount = await prisma.payment.count({
+    where: { itemId: { in: itemIds }, clerkUserId, status: { in: ["PAID", "PENDING"] } },
+  });
+  if (settledCount >= itemIds.length) {
+    console.log(`Auto-charge: payment already settled for items ${itemIds.join(",")} — skipping`);
+    return;
+  }
+
+  const now = new Date();
+
+  if (!bidderCustomer?.defaultPaymentMethodId) {
+    // No card on file — mark all items as FAILED so bidder sees them on dashboard
+    console.warn(`Auto-charge: no card on file for ${clerkUserId} in org ${org.id}`);
+    await recordWinnerStatus(winner, "FAILED", now, { failureReason: "No payment card on file" });
+    return;
+  }
+
+  // Calculate totals (all in cents for Stripe)
+  const totalBidAmount = winner.items.reduce((s, i) => s + i.amount, 0);
+  // Buyer's premium added on top of the bid.
+  const feeAmountCents = Math.round(totalBidAmount * platformFeePercent / 100 * 100);
+  // Tax applies to the full purchase (bid + buyer's premium). Zero if exempt.
+  const taxAmountCents = Math.round((totalBidAmount * 100 + feeAmountCents) * taxPercent / 100);
+  // Fee AND tax ADDED ON TOP of the bid — buyer pays bid + fee + tax.
+  const chargeAmountCents = Math.round(totalBidAmount * 100) + feeAmountCents + taxAmountCents;
+
+  let paymentIntent: Stripe.PaymentIntent;
+  try {
+    // Direct charge on the platform Stripe account (no Connect, no application fee).
+    paymentIntent = await stripe.paymentIntents.create(
+      {
+        amount: chargeAmountCents,
+        currency: "usd",
+        customer: bidderCustomer.stripeCustomerId,
+        payment_method: bidderCustomer.defaultPaymentMethodId,
+        off_session: true,
+        confirm: true,
+        metadata: {
           clerkUserId,
-          organizationId: org.id,
+          orgId: org.id,
+          auctionId,
+          itemIds: itemIds.slice(0, 5).join(","), // Stripe metadata 500-char limit
         },
       },
+      {
+        // Stable per winner per auction — a winner is only ever charged once.
+        idempotencyKey: `autocharge-${auctionId}-${clerkUserId}`,
+      }
+    );
+  } catch (err: unknown) {
+    // Charge threw — mark all items FAILED so bidder sees them on dashboard
+    let failureReason = "Charge failed";
+    if (
+      typeof err === "object" &&
+      err !== null &&
+      "message" in err &&
+      typeof (err as { message: unknown }).message === "string"
+    ) {
+      failureReason = (err as { message: string }).message;
+    }
+    console.error(`Auto-charge FAILED for ${clerkUserId}:`, failureReason);
+    await recordWinnerStatus(winner, "FAILED", now, { failureReason });
+    return;
+  }
+
+  // BRANCH ON PI STATUS — a non-throw does NOT mean the charge succeeded.
+  const status = paymentIntent.status;
+
+  if (status === "succeeded") {
+    await recordWinnerStatus(winner, "PAID", now, {
+      feeAmountCents,
+      taxAmountCents,
+      stripePaymentIntentId: paymentIntent.id,
+      moveItemsToPendingPickup: true,
     });
+    // Fold newly-won items into any upcoming pickup appointment.
+    await attachToUpcomingAppointment(clerkUserId, org.id);
+    console.log(
+      `Auto-charge: $${(chargeAmountCents / 100).toFixed(2)} charged to ${clerkUserId} (PI: ${paymentIntent.id})`
+    );
+    return;
+  }
 
-    // H7: Idempotency guard — skip if all items already have a payment for this user
-    const paymentCount = await prisma.payment.count({ where: { itemId: { in: itemIds }, clerkUserId } });
-    if (paymentCount >= itemIds.length) {
-      console.log(`Auto-charge: payment already exists for items ${itemIds.join(",")} — skipping`);
-      continue;
-    }
+  if (status === "processing") {
+    // Async settlement in progress — record PENDING, leave items SOLD, let the
+    // webhook (payment_intent.succeeded / .payment_failed) reconcile.
+    await recordWinnerStatus(winner, "PENDING", now, {
+      feeAmountCents,
+      taxAmountCents,
+      stripePaymentIntentId: paymentIntent.id,
+    });
+    console.log(`Auto-charge: PI ${paymentIntent.id} processing for ${clerkUserId} — pending webhook`);
+    return;
+  }
 
-    if (!bidderCustomer?.defaultPaymentMethodId) {
-      // No card on file — mark all items as FAILED so bidder sees them on dashboard
-      console.warn(`Auto-charge: no card on file for ${clerkUserId} in org ${org.id}`);
-      const now = new Date();
-      for (const item of winner.items) {
-        await prisma.payment.create({
-          data: {
-            clerkUserId,
-            itemId: item.id,
-            amount: item.amount,
-            status: "FAILED",
-            autoChargeAttemptedAt: now,
-            failureReason: "No payment card on file",
-          },
-        });
-      }
-      continue;
-    }
+  // requires_action / requires_payment_method / requires_confirmation / canceled / ...
+  // Not a success — record FAILED with the status as the reason; items stay SOLD.
+  console.warn(`Auto-charge: PI ${paymentIntent.id} status "${status}" for ${clerkUserId} — not charged`);
+  await recordWinnerStatus(winner, "FAILED", now, {
+    failureReason: status,
+    stripePaymentIntentId: paymentIntent.id,
+  });
+}
 
-    // Calculate totals (all in cents for Stripe)
-    const totalBidAmount = winner.items.reduce((s, i) => s + i.amount, 0);
-    // Buyer's premium added on top of the bid.
-    const feeAmountCents = Math.round(totalBidAmount * platformFeePercent / 100 * 100);
-    // Tax applies to the full purchase (bid + buyer's premium). Zero if exempt.
-    const taxAmountCents = Math.round((totalBidAmount * 100 + feeAmountCents) * taxPercent / 100);
-    // Fee AND tax ADDED ON TOP of the bid — buyer pays bid + fee + tax.
-    // Northwood Bids holds fee + tax via application_fee_amount; org nets exactly the bid.
-    const chargeAmountCents = Math.round(totalBidAmount * 100) + feeAmountCents + taxAmountCents;
+/**
+ * Writes per-item Payment rows for a winner at the given status, optionally
+ * moving items to PENDING_PICKUP — all in a single transaction per winner so a
+ * crash can't leave items charged-but-unrecorded.
+ *
+ * Fee/tax are distributed across items in whole cents; the leftover cent goes to
+ * item[0] so per-item rows sum back to the charged total. Idempotent: pre-checks
+ * existing rows and ignores P2002.
+ */
+async function recordWinnerStatus(
+  winner: WinnerEntry,
+  status: "PAID" | "PENDING" | "FAILED",
+  attemptedAt: Date,
+  opts: {
+    feeAmountCents?: number;
+    taxAmountCents?: number;
+    stripePaymentIntentId?: string;
+    failureReason?: string;
+    moveItemsToPendingPickup?: boolean;
+  } = {}
+): Promise<void> {
+  const { clerkUserId } = winner;
+  const itemIds = winner.items.map((i) => i.id);
+  const feeAmountCents = opts.feeAmountCents ?? 0;
+  const taxAmountCents = opts.taxAmountCents ?? 0;
 
-    const now = new Date();
+  const n = winner.items.length;
+  const baseFeeCents = Math.floor(feeAmountCents / n);
+  const feeRemainderCents = feeAmountCents - baseFeeCents * n;
+  const baseTaxCents = Math.floor(taxAmountCents / n);
+  const taxRemainderCents = taxAmountCents - baseTaxCents * n;
 
-    try {
-      // Direct charge on the platform Stripe account (no Connect, no application fee).
-      const paymentIntent = await stripe.paymentIntents.create(
-        {
-          amount: chargeAmountCents,
-          currency: "usd",
-          customer: bidderCustomer.stripeCustomerId,
-          payment_method: bidderCustomer.defaultPaymentMethodId,
-          off_session: true,
-          confirm: true,
-          metadata: {
-            clerkUserId,
-            orgId: org.id,
-            auctionId,
-            itemIds: itemIds.slice(0, 5).join(","), // Stripe metadata 500-char limit
-          },
+  // Pre-check existing rows so we don't try to re-insert (keeps the tx clean and
+  // preserves idempotency alongside the P2002 catch).
+  const existing = await prisma.payment.findMany({
+    where: { itemId: { in: itemIds }, clerkUserId },
+    select: { itemId: true },
+  });
+  const existingItemIds = new Set(existing.map((p) => p.itemId));
+
+  const ops: Prisma.PrismaPromise<unknown>[] = [];
+  for (let idx = 0; idx < winner.items.length; idx++) {
+    const item = winner.items[idx];
+    if (existingItemIds.has(item.id)) continue; // already recorded — skip (idempotent)
+
+    const itemFeeCents = baseFeeCents + (idx === 0 ? feeRemainderCents : 0);
+    const itemTaxCents = baseTaxCents + (idx === 0 ? taxRemainderCents : 0);
+
+    ops.push(
+      prisma.payment.create({
+        data: {
+          clerkUserId,
+          itemId: item.id,
+          amount: item.amount,
+          applicationFeeAmount: itemFeeCents / 100,
+          taxAmount: itemTaxCents / 100,
+          stripePaymentIntentId: opts.stripePaymentIntentId,
+          status,
+          autoChargeAttemptedAt: attemptedAt,
+          failureReason: opts.failureReason,
         },
-        {
-          // Stable per winner per auction — a winner is only ever charged once.
-          idempotencyKey: `autocharge-${auctionId}-${clerkUserId}`,
-        }
+      })
+    );
+
+    if (opts.moveItemsToPendingPickup) {
+      ops.push(
+        prisma.item.update({ where: { id: item.id }, data: { status: "PENDING_PICKUP" } })
       );
-
-      // Charge succeeded — create PAID Payment records + move items to PENDING_PICKUP.
-      // Distribute fee/tax across items in whole cents; any leftover cent goes to item 0
-      // so the per-item rows sum back to the actual charged total.
-      const n = winner.items.length;
-      // Distribute fee only (not fee+tax) across per-item Payment rows.
-      // applicationFeeAmount = fee portion; taxAmount = tax portion (recorded separately).
-      const baseFeeCents = Math.floor(feeAmountCents / n);
-      const feeRemainderCents = feeAmountCents - baseFeeCents * n;
-      const baseTaxCents = Math.floor(taxAmountCents / n);
-      const taxRemainderCents = taxAmountCents - baseTaxCents * n;
-
-      for (let idx = 0; idx < winner.items.length; idx++) {
-        const item = winner.items[idx];
-        const itemFeeCents = baseFeeCents + (idx === 0 ? feeRemainderCents : 0);
-        const itemTaxCents = baseTaxCents + (idx === 0 ? taxRemainderCents : 0);
-        try {
-          await prisma.payment.create({
-            data: {
-              clerkUserId,
-              itemId: item.id,
-              amount: item.amount,
-              applicationFeeAmount: itemFeeCents / 100,
-              taxAmount: itemTaxCents / 100,
-              stripePaymentIntentId: paymentIntent.id,
-              status: "PAID",
-              autoChargeAttemptedAt: now,
-            },
-          });
-        } catch (e) {
-          if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002")) throw e;
-          // P2002 = a payment row for this item+user already exists; safe to ignore.
-        }
-        await prisma.item.update({
-          where: { id: item.id },
-          data: { status: "PENDING_PICKUP" },
-        });
-      }
-
-      // If this winner already has an upcoming pickup appointment, fold these
-      // newly-won items into it automatically.
-      await attachToUpcomingAppointment(clerkUserId, org.id);
-
-      console.log(
-        `Auto-charge: $${(chargeAmountCents / 100).toFixed(2)} charged to ${clerkUserId} ` +
-          `(PI: ${paymentIntent.id})`
-      );
-    } catch (err: unknown) {
-      // Charge failed — mark all items FAILED so bidder sees them on dashboard
-      let failureReason = "Charge failed";
-      if (
-        typeof err === "object" &&
-        err !== null &&
-        "message" in err &&
-        typeof (err as { message: unknown }).message === "string"
-      ) {
-        failureReason = (err as { message: string }).message;
-      }
-      console.error(`Auto-charge FAILED for ${clerkUserId}:`, failureReason);
-
-      for (const item of winner.items) {
-        try {
-          await prisma.payment.create({
-            data: {
-              clerkUserId,
-              itemId: item.id,
-              amount: item.amount,
-              status: "FAILED",
-              autoChargeAttemptedAt: now,
-              failureReason,
-            },
-          });
-        } catch (p2002err) {
-          if (!(p2002err instanceof Prisma.PrismaClientKnownRequestError && p2002err.code === "P2002")) throw p2002err;
-          // P2002 = payment row already exists; safe to ignore.
-        }
-      }
     }
   }
+
+  if (ops.length === 0) return;
+
+  try {
+    // Single transaction per winner — Payment rows + item moves succeed together.
+    await prisma.$transaction(ops);
+  } catch (e) {
+    // P2002 = a payment row for an item+user already exists; safe to ignore.
+    if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002")) throw e;
+  }
+}
+
+/**
+ * Resumable charging, decoupled from auction status.
+ *
+ * Finds WON bids whose items are still SOLD and have NO PAID/PENDING Payment row
+ * for the winner (across any auction closed recently), and charges them. Run
+ * AFTER the normal close pass so a follow-up cron tick finishes anyone the first
+ * run missed (e.g. cron timed out mid-charge). The per-winner idempotency key +
+ * pre-checks ensure reruns never double-charge.
+ */
+export async function chargeUnchargedWinners(): Promise<{ chargedWinners: number }> {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000); // last 24h of closed auctions
+
+  // WON bids on SOLD items belonging to recently-closed auctions
+  const wonBids = await prisma.bid.findMany({
+    where: {
+      status: "WON",
+      item: {
+        status: "SOLD",
+        auction: { status: { in: ["CLOSED", "SETTLED"] }, updatedAt: { gte: since } },
+      },
+    },
+    include: {
+      item: {
+        select: { id: true, title: true, auctionId: true, organizationId: true },
+      },
+    },
+  });
+  if (wonBids.length === 0) return { chargedWinners: 0 };
+
+  // Drop any whose item already has a PAID/PENDING payment (only re-charge truly uncharged)
+  const candidateItemIds = wonBids.map((b) => b.item.id);
+  const settled = await prisma.payment.findMany({
+    where: { itemId: { in: candidateItemIds }, status: { in: ["PAID", "PENDING"] } },
+    select: { itemId: true, clerkUserId: true },
+  });
+  const settledKey = new Set(settled.map((p) => `${p.itemId}:${p.clerkUserId}`));
+
+  // Group by (auctionId, clerkUserId) — one PI per winner per auction, matching the
+  // idempotency key used at close time.
+  type Group = { auctionId: string; orgId: string; winner: WinnerEntry };
+  const groups = new Map<string, Group>();
+  for (const bid of wonBids) {
+    if (settledKey.has(`${bid.item.id}:${bid.clerkUserId}`)) continue;
+    const auctionId = bid.item.auctionId;
+    if (!auctionId) continue;
+    const key = `${auctionId}:${bid.clerkUserId}`;
+    if (!groups.has(key)) {
+      groups.set(key, {
+        auctionId,
+        orgId: bid.item.organizationId,
+        winner: {
+          clerkUserId: bid.clerkUserId,
+          auctionName: "",
+          orgName: "",
+          items: [],
+        },
+      });
+    }
+    groups.get(key)!.winner.items.push({
+      id: bid.item.id,
+      title: bid.item.title,
+      amount: Number(bid.amount),
+    });
+  }
+  if (groups.size === 0) return { chargedWinners: 0 };
+
+  // Load org charging config once per org
+  const orgIds = [...new Set([...groups.values()].map((g) => g.orgId))];
+  const orgs = await prisma.organization.findMany({
+    where: { id: { in: orgIds } },
+    select: {
+      id: true,
+      stripeAccountId: true,
+      platformFeePercent: true,
+      taxPercent: true,
+      taxExempt: true,
+    },
+  });
+  const orgMap = new Map(orgs.map((o) => [o.id, o]));
+
+  const groupList = [...groups.values()];
+  let chargedWinners = 0;
+  await runPooled(
+    groupList,
+    async (g) => {
+      const org = orgMap.get(g.orgId);
+      if (!org) return;
+      await chargeOneWinner(g.winner, org, g.auctionId);
+      chargedWinners++;
+    },
+    5
+  );
+
+  if (chargedWinners > 0) {
+    console.log(`[resumable] Attempted charge for ${chargedWinners} uncharged winner(s)`);
+  }
+  return { chargedWinners };
 }
 
 /**
@@ -272,38 +472,43 @@ async function notifyWinners(winnerMap: Map<string, WinnerEntry>): Promise<void>
   });
   const profileMap = new Map(profiles.map((p) => [p.clerkUserId, p]));
 
-  for (const [clerkUserId, winner] of winnerMap) {
-    const profile = profileMap.get(clerkUserId);
-    const email = profile?.email ?? "";
-    const phone = profile?.phone ?? "";
-    const name = profile?.name ?? "Winner";
-    const totalAmount = winner.items.reduce((s, i) => s + i.amount, 0);
-    const itemCount = winner.items.length;
-    const paymentUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`;
+  // Bound the notify fan-out so a large auction doesn't open hundreds of sockets at once.
+  await runPooled(
+    [...winnerMap.values()],
+    async (winner) => {
+      const profile = profileMap.get(winner.clerkUserId);
+      const email = profile?.email ?? "";
+      const phone = profile?.phone ?? "";
+      const name = profile?.name ?? "Winner";
+      const totalAmount = winner.items.reduce((s, i) => s + i.amount, 0);
+      const itemCount = winner.items.length;
+      const paymentUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`;
 
-    fetch(process.env.GHL_AUCTION_WON_WEBHOOK!, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        // GHL contact lookup fields
-        email,
-        phone,
-        name,
-        firstName: name.split(" ")[0] || name,
-        lastName: name.split(" ").slice(1).join(" ") || "",
-        // Notification payload
-        event: "auction_won",
-        bidderEmail: email,
-        bidderPhone: phone,
-        bidderName: name,
-        itemCount,
-        totalAmount,
-        auctionName: winner.auctionName,
-        orgName: winner.orgName,
-        paymentUrl,
-      }),
-    }).catch((err) => console.error("GHL won webhook failed:", err));
-  }
+      await fetch(process.env.GHL_AUCTION_WON_WEBHOOK!, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          // GHL contact lookup fields
+          email,
+          phone,
+          name,
+          firstName: name.split(" ")[0] || name,
+          lastName: name.split(" ").slice(1).join(" ") || "",
+          // Notification payload
+          event: "auction_won",
+          bidderEmail: email,
+          bidderPhone: phone,
+          bidderName: name,
+          itemCount,
+          totalAmount,
+          auctionName: winner.auctionName,
+          orgName: winner.orgName,
+          paymentUrl,
+        }),
+      }).catch((err) => console.error("GHL won webhook failed:", err));
+    },
+    5
+  );
 }
 
 /**

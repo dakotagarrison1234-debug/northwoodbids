@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getUserOrg } from "@/lib/auth";
+import { canAccessOrg } from "@/lib/auth";
 
 export async function GET(
   req: Request,
@@ -19,8 +19,28 @@ export async function GET(
     const requestedUser = url.searchParams.get("user");
     let targetUserId = userId;
     if (requestedUser && requestedUser !== userId) {
-      const membership = await getUserOrg();
-      if (membership) targetUserId = requestedUser;
+      // An org admin may view another user's receipt, but only if they can
+      // access the auction's org AND the requested user actually transacted in
+      // this auction. Otherwise fall back to the caller's own invoice.
+      const auction = await prisma.auction.findUnique({
+        where: { id: auctionId },
+        select: { organizationId: true },
+      });
+      if (auction && (await canAccessOrg(auction.organizationId))) {
+        const [requestedPayment, requestedBid] = await Promise.all([
+          prisma.payment.findFirst({
+            where: { clerkUserId: requestedUser, item: { auctionId } },
+            select: { id: true },
+          }),
+          prisma.bid.findFirst({
+            where: { clerkUserId: requestedUser, item: { auctionId } },
+            select: { id: true },
+          }),
+        ]);
+        if (requestedPayment || requestedBid) {
+          targetUserId = requestedUser;
+        }
+      }
     }
 
     const payments = await prisma.payment.findMany({
@@ -37,7 +57,9 @@ export async function GET(
             auction: {
               select: {
                 title: true,
-                organization: { select: { name: true } },
+                organization: {
+                  select: { name: true, platformFeePercent: true, taxPercent: true },
+                },
               },
             },
           },
@@ -61,6 +83,8 @@ export async function GET(
     }
 
     const auctionTitle = payments[0].item.auction?.title ?? "Auction";
+    const feePercent = num(payments[0].item.auction?.organization?.platformFeePercent);
+    const taxPercent = num(payments[0].item.auction?.organization?.taxPercent);
 
     // Buyer name/email from BidderProfile
     const profile = await prisma.bidderProfile.findUnique({
@@ -93,6 +117,8 @@ export async function GET(
     return NextResponse.json({
       business: { name: businessName },
       auction: { title: auctionTitle },
+      feePercent,
+      taxPercent,
       buyer: { name: profile?.name ?? null, email: profile?.email ?? null },
       date: new Date().toISOString(),
       lines,
@@ -104,8 +130,10 @@ export async function GET(
       },
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Internal error";
-    console.error("[invoice GET]:", msg, err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[invoice GET]:", err);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }

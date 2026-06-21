@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 export const maxDuration = 300; // allow serial Stripe charges to finish (Vercel Pro)
 import { NextRequest, NextResponse } from "next/server";
-import { openScheduledAuctions, closeExpiredItems, notifyAuctionEndingSoon } from "@/lib/closeAuction";
+import { openScheduledAuctions, closeExpiredItems, notifyAuctionEndingSoon, chargeUnchargedWinners } from "@/lib/closeAuction";
 
 export async function GET(request: NextRequest) {
   if (!process.env.CRON_SECRET) {
@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
   let closedItems = 0;
   let closedAuctions = 0;
   let notifiedAuctions = 0;
+  let chargedWinners = 0;
 
   try {
     // Open auctions whose startAt has passed and activate their items
@@ -41,6 +42,16 @@ export async function GET(request: NextRequest) {
     console.error("[cron] closeExpiredItems failed:", msg, err);
   }
 
-  console.log(`[cron] Opened ${openedAuctions} auction(s), notified ${notifiedAuctions} ending soon, closed ${closedItems} item(s), ${closedAuctions} auction(s)`);
-  return NextResponse.json({ openedAuctions, notifiedAuctions, closedItems, closedAuctions });
+  try {
+    // Resumable charging: pick up any winners a prior tick left uncharged
+    // (e.g. the close pass timed out mid-charge). Decoupled from auction status
+    // and idempotent, so it can safely run every tick after the close pass.
+    ({ chargedWinners } = await chargeUnchargedWinners());
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Internal error";
+    console.error("[cron] chargeUnchargedWinners failed:", msg, err);
+  }
+
+  console.log(`[cron] Opened ${openedAuctions} auction(s), notified ${notifiedAuctions} ending soon, closed ${closedItems} item(s), ${closedAuctions} auction(s), charged ${chargedWinners} uncharged winner(s)`);
+  return NextResponse.json({ openedAuctions, notifiedAuctions, closedItems, closedAuctions, chargedWinners });
 }

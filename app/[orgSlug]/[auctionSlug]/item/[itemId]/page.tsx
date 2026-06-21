@@ -170,16 +170,20 @@ export default function ItemPage() {
 
     channel.bind("new-bid", (data: {
       amount: number;
-      userId: string;
       isProxy?: boolean;
       hasActiveProxy?: boolean;
       newEndAt?: string;
     }) => {
       setItem(prev => prev ? { ...prev, currentBid: data.amount } : prev);
+      // Privacy: the broadcast no longer carries any user id. We derive an opaque
+      // "Bidder N" label client-side by incrementing our own per-page counter on
+      // each live bid event — no real/truncated Clerk id is ever on the wire.
+      bidderCounterRef.current += 1;
+      const liveLabel = `Bidder ${bidderCounterRef.current}`;
       // Fix #1: cap live bids at 5
       setLiveBids(prev => [
         {
-          user: assignBidder(data.userId),
+          user: liveLabel,
           amount: data.amount,
           time: "just now",
           isProxy: data.isProxy ?? false,
@@ -531,7 +535,7 @@ export default function ItemPage() {
           </div>
 
           {/* ── Unified bidding card: Max Bid (primary) + manual bid (secondary) ── */}
-          <div className="bg-white border border-[#e3d6bf] rounded-2xl p-4 sm:p-6 mb-6 shadow-[0_0_25px_rgba(108, 77, 57,0.04)]">
+          <div className="bg-white border border-[#e3d6bf] rounded-2xl p-4 sm:p-6 mb-6 shadow-[0_0_25px_rgba(108,77,57,0.04)]">
 
             {/* Current bid header */}
             <div className="flex items-center justify-between mb-4">
@@ -679,7 +683,7 @@ export default function ItemPage() {
                         <button
                           onClick={handleSetProxy}
                           disabled={proxyPlacing}
-                          className="w-full bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-all hover:shadow-[0_0_20px_rgba(108, 77, 57,0.3)]"
+                          className="w-full bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-all hover:shadow-[0_0_20px_rgba(108,77,57,0.3)]"
                         >
                           {proxyPlacing ? "Setting…" : "Set Max Bid"}
                         </button>

@@ -2,6 +2,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import StatusPill from "@/app/components/StatusPill";
+import { money } from "@/lib/format";
 
 interface Profile { clerkUserId: string; name: string | null; email: string | null; phone: string | null; }
 interface BidItem { id: string; title: string; currentBid: number; status: string; photos: { url: string }[]; auction: { title: string; slug: string; organization: { name: string; slug: string } } | null; }
@@ -16,17 +18,6 @@ interface UserDetail {
   payments: Payment[];
   memberships: Membership[];
 }
-
-const STATUS_COLORS: Record<string, string> = {
-  ACTIVE: "bg-[#6c4d39]/20 text-[#6c4d39]",
-  WON: "bg-blue-500/20 text-blue-600",
-  OUTBID: "bg-red-500/20 text-red-600",
-  CANCELLED: "bg-[#e7dcc6] text-[#6f5b46]",
-  PAID: "bg-[#6c4d39]/20 text-[#6c4d39]",
-  FAILED: "bg-red-500/20 text-red-600",
-  PENDING: "bg-yellow-500/20 text-amber-600",
-  REFUNDED: "bg-[#e7dcc6] text-[#6f5b46]",
-};
 
 export default function UserDetailPage() {
   const { clerkUserId } = useParams() as { clerkUserId: string };
@@ -113,7 +104,7 @@ export default function UserDetailPage() {
           <span>·</span>
           <span>{wonBids.length} won</span>
           <span>·</span>
-          <span className="text-[#6c4d39] font-semibold">${paidTotal.toLocaleString()} paid</span>
+          <span className="text-[#6c4d39] font-semibold">{money(paidTotal)} paid</span>
         </div>
       </header>
 
@@ -190,13 +181,11 @@ export default function UserDetailPage() {
                   </div>
                   <div className="text-right shrink-0 flex items-center gap-3">
                     <div>
-                      <div className="text-[#6c4d39] font-semibold text-sm">${bid.amount.toLocaleString()}</div>
+                      <div className="text-[#6c4d39] font-semibold text-sm">{money(bid.amount)}</div>
                       <div className="text-[#8a7559] text-xs">{new Date(bid.placedAt).toLocaleDateString()}</div>
                     </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[bid.status] || "bg-[#e7dcc6] text-[#6f5b46]"}`}>
-                      {bid.status}
-                    </span>
-                    {bid.isProxy && <span className="text-xs text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded">proxy</span>}
+                    <StatusPill status={bid.status} label={bid.status} />
+                    {bid.isProxy && <span className="text-xs text-[#6f5b46] bg-[#e7dcc6] px-1.5 py-0.5 rounded">proxy</span>}
                   </div>
                 </div>
               ))
@@ -220,12 +209,10 @@ export default function UserDetailPage() {
                     </div>
                     <div className="text-right shrink-0 flex items-center gap-3">
                       <div>
-                        <div className="font-semibold text-sm">${p.amount.toLocaleString()}</div>
-                        {p.taxAmount ? <div className="text-[#8a7559] text-xs">+${p.taxAmount} tax</div> : null}
+                        <div className="font-semibold text-sm">{money(p.amount)}</div>
+                        {p.taxAmount ? <div className="text-[#8a7559] text-xs">+{money(p.taxAmount)} tax</div> : null}
                       </div>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[p.status] || "bg-[#e7dcc6] text-[#6f5b46]"}`}>
-                        {p.status}
-                      </span>
+                      <StatusPill status={p.status} label={p.status} />
                       <select
                         value={p.status}
                         disabled={updatingPayment === p.id}

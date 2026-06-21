@@ -130,9 +130,11 @@ export async function GET() {
 
     return NextResponse.json({ appointment, unscheduledItems, locations, pendingTransfers });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Internal error";
-    console.error("[pickup GET]:", msg, err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[pickup GET]:", err);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }
 
@@ -207,8 +209,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, appointmentId: appointment.id });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Internal error";
-    console.error("[pickup POST]:", msg, err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[pickup POST]:", err);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }

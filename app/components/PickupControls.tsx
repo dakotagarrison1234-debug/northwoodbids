@@ -60,8 +60,8 @@ export default function PickupControls({ itemIds, mode, currentStatus }: Props) 
         mode === "all"
           ? "bg-[#6c4d39] hover:bg-[#563e2c] text-white"
           : currentStatus === "SOLD"
-          ? "bg-yellow-500 hover:bg-amber-400 text-black"
-          : "bg-purple-500 hover:bg-purple-400 text-white"
+          ? "bg-[#8a5a2b] hover:bg-[#74491f] text-white"
+          : "bg-[#5f7a45] hover:bg-[#4d6438] text-white"
       }`}
     >
       {loading ? "..." : label}

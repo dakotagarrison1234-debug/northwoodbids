@@ -232,10 +232,20 @@ function NewItemForm() {
   const [auctions, setAuctions] = useState<{ id: string; title: string }[]>([]);
   const [pickupLocations, setPickupLocations] = useState<{ id: string; name: string }[]>([]);
   const [orgId, setOrgId] = useState<string>("");
+  const [banner, setBanner] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    title: "", description: "", condition: "GOOD", category: "",
-    retailValue: "", startingBid: "", reservePrice: "", donorName: "",
-    taxDeductible: false, storageLocation: "", locationId: "", notes: "",
+    title: searchParams.get("title") || "",
+    description: searchParams.get("description") || "",
+    condition: searchParams.get("condition") || "GOOD",
+    category: searchParams.get("category") || "",
+    retailValue: searchParams.get("retailValue") || "",
+    startingBid: searchParams.get("startingBid") || "",
+    reservePrice: searchParams.get("reservePrice") || "",
+    donorName: searchParams.get("donorName") || "",
+    taxDeductible: searchParams.get("taxDeductible") === "true",
+    storageLocation: searchParams.get("storageLocation") || "",
+    locationId: searchParams.get("locationId") || "",
+    notes: searchParams.get("notes") || "",
     auctionId: preselectedAuctionId,
   });
 
@@ -314,12 +324,15 @@ function NewItemForm() {
     if (failed.length) alert(`Failed to upload: ${failed.join(", ")}`);
   };
 
-  const handleSave = async () => {
+  // addAnother = true → after saving, reset only the per-item fields and stay on
+  // the page so the owner can keep building the catalog quickly.
+  const handleSave = async (addAnother = false) => {
     if (uploading) { alert("Please wait for photos to finish uploading."); return; }
     if (saving) return;
     if (!formData.title) { alert("Please enter an item title"); return; }
     if (!orgId) { alert("Business not loaded. Please refresh."); return; }
     setSaving(true);
+    setBanner(null);
     try {
       const res = await fetch("/api/items", {
         method: "POST",
@@ -328,7 +341,25 @@ function NewItemForm() {
       });
       const data = await res.json();
       if (data.success) {
-        router.push(preselectedAuctionId ? `/admin/auctions/${preselectedAuctionId}` : "/admin/auctions");
+        if (addAnother) {
+          // Keep auction, location, condition, category, and donor for the next item.
+          setFormData((prev) => ({
+            ...prev,
+            title: "",
+            description: "",
+            retailValue: "",
+            startingBid: "",
+            reservePrice: "",
+            taxDeductible: false,
+            notes: "",
+            // preserved: condition, category, donorName, storageLocation, locationId, auctionId
+          }));
+          setPhotos([]);
+          setBanner("Item saved. Ready for the next one.");
+          if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+        } else {
+          router.push(preselectedAuctionId ? `/admin/auctions/${preselectedAuctionId}` : "/admin/auctions");
+        }
       } else {
         alert("Error saving item: " + data.error);
       }
@@ -348,14 +379,28 @@ function NewItemForm() {
           <span className="text-[#8a7559]">/</span>
           <h1 className="text-2xl sm:text-3xl font-semibold">Add New Item</h1>
         </div>
-        <button onClick={handleSave} disabled={saving || uploading}
-          className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white text-base px-6 py-3.5 rounded-xl font-semibold shrink-0 transition-colors">
-          {saving ? "Saving..." : uploading ? "Uploading..." : "Save Item"}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button onClick={() => handleSave(true)} disabled={saving || uploading}
+            className="bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] disabled:opacity-50 text-[#241a12] text-base px-6 py-3.5 rounded-xl font-semibold transition-colors whitespace-nowrap">
+            {saving ? "Saving..." : "Save & Add Another"}
+          </button>
+          <button onClick={() => handleSave(false)} disabled={saving || uploading}
+            className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white text-base px-6 py-3.5 rounded-xl font-semibold transition-colors whitespace-nowrap">
+            {saving ? "Saving..." : uploading ? "Uploading..." : "Save Item"}
+          </button>
+        </div>
       </header>
 
       <div className="flex-1 px-4 sm:px-8 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 overflow-auto">
         <div className="lg:col-span-2 space-y-6">
+
+          {/* Success banner (Save & Add Another) */}
+          {banner && (
+            <div className="bg-[#5f7a45]/10 border border-[#5f7a45]/30 text-[#3f5430] rounded-xl px-4 py-3.5 text-base font-medium flex items-center gap-2">
+              <svg width="20" height="20" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 10l4 4 8-8"/></svg>
+              {banner}
+            </div>
+          )}
 
           {/* ── Barcode scanner ── */}
           <BarcodeScanner onFill={handleBarcodeFill} />
@@ -395,6 +440,12 @@ function NewItemForm() {
                     {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
+              </div>
+              <div>
+                <label className="text-base text-[#6f5b46] mb-1.5 block">Donor</label>
+                <input name="donorName" value={formData.donorName} onChange={handleChange}
+                  placeholder="Who donated this item? (optional)"
+                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]" />
               </div>
             </div>
           </div>

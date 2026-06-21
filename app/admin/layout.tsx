@@ -70,6 +70,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const navItems = [
     { label: "Overview", href: "/admin/dashboard", icon: "grid" },
     { label: "Auctions", href: "/admin/auctions", icon: "gavel" },
+    ...(isOwnerOrAdmin ? [{ label: "Winners & Payments", href: "/admin/winners", icon: "trophy" }] : []),
     { label: "Pickup", href: "/admin/pickup", icon: "package" },
     ...(isOwnerOrAdmin ? [{ label: "Reports", href: "/admin/reports", icon: "chart" }] : []),
     ...(isOwnerOrAdmin ? [{ label: "Team", href: "/admin/staff", icon: "users" }] : []),

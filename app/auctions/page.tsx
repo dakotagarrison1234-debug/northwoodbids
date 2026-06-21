@@ -6,15 +6,73 @@ import OrgLogo from "@/app/components/OrgLogo";
 import PusherRefresh from "@/app/components/PusherRefresh";
 import { PineRidge, MountainRange, GavelEmblem, WoodenCrate } from "@/app/components/Illustrations";
 
+/**
+ * Rustic "closing soon / ends in Xh" urgency pill computed from endAt.
+ * Returns null when the auction is more than 48h out or already closed.
+ */
+function endsSoon(endAt: Date, now: Date): { label: string; tone: "urgent" | "soon" } | null {
+  const ms = endAt.getTime() - now.getTime();
+  if (ms <= 0) return null;
+  const mins = Math.round(ms / 60000);
+  const hours = Math.floor(mins / 60);
+  if (mins <= 60) return { label: mins <= 1 ? "Closing now" : `Ends in ${mins}m`, tone: "urgent" };
+  if (hours < 12) return { label: `Ends in ${hours}h`, tone: "urgent" };
+  if (hours < 48) return { label: `Ends in ${hours}h`, tone: "soon" };
+  return null;
+}
+
+function UrgencyPill({ endAt, now }: { endAt: Date; now: Date }) {
+  const u = endsSoon(endAt, now);
+  if (!u) return null;
+  return (
+    <span
+      className={`text-xs px-2 py-0.5 rounded-full shrink-0 font-semibold whitespace-nowrap inline-flex items-center gap-1 ${
+        u.tone === "urgent"
+          ? "bg-[#efe0c9] text-[#8a5a2b] border border-[#d8b483]"
+          : "bg-[#6c4d39]/10 text-[#6c4d39] border border-[#6c4d39]/20"
+      }`}
+    >
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" />
+      </svg>
+      {u.label}
+    </span>
+  );
+}
+
 export default async function AuctionsPage() {
+  const now = new Date();
   const auctions = await prisma.auction.findMany({
     where: { status: "OPEN" },
     include: {
       organization: { select: { id: true, name: true, slug: true, logoUrl: true } },
-      items: { select: { currentBid: true, status: true } },
     },
     orderBy: { endAt: "asc" },
   });
+
+  // Per-auction "raised" (sum of every item's current bid) and "active items" count,
+  // computed in the DB via groupBy instead of loading every item row into JS.
+  const auctionIds = auctions.map((a) => a.id);
+  const [raisedByAuction, activeItemsByAuction] = auctionIds.length
+    ? await Promise.all([
+        prisma.item.groupBy({
+          by: ["auctionId"],
+          where: { auctionId: { in: auctionIds } },
+          _sum: { currentBid: true },
+        }),
+        prisma.item.groupBy({
+          by: ["auctionId"],
+          where: { auctionId: { in: auctionIds }, status: "ACTIVE" },
+          _count: { _all: true },
+        }),
+      ])
+    : [[], []];
+  const raisedMap = new Map(
+    raisedByAuction.map((r) => [r.auctionId, Number(r._sum.currentBid ?? 0)])
+  );
+  const activeItemsMap = new Map(
+    activeItemsByAuction.map((r) => [r.auctionId, r._count._all])
+  );
 
   return (
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
@@ -43,8 +101,8 @@ export default async function AuctionsPage() {
         {auctions.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {auctions.map((auction) => {
-              const raised = auction.items.reduce((sum, i) => sum + Number(i.currentBid), 0);
-              const activeItems = auction.items.filter((i) => i.status === "ACTIVE").length;
+              const raised = raisedMap.get(auction.id) ?? 0;
+              const activeItems = activeItemsMap.get(auction.id) ?? 0;
               return (
                 <Link
                   key={auction.id}
@@ -59,9 +117,12 @@ export default async function AuctionsPage() {
                         {auction.organization.name}
                       </span>
                     </div>
-                    <span className="text-xs bg-[#6c4d39]/15 text-[#6c4d39] border border-[#6c4d39]/20 px-2 py-0.5 rounded-full shrink-0 font-semibold">
-                      Live
-                    </span>
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      <span className="text-xs bg-[#6c4d39]/15 text-[#6c4d39] border border-[#6c4d39]/20 px-2 py-0.5 rounded-full font-semibold">
+                        Live
+                      </span>
+                      <UrgencyPill endAt={auction.endAt} now={now} />
+                    </div>
                   </div>
 
                   {/* Auction title */}

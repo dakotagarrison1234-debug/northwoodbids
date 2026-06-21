@@ -1,6 +1,8 @@
 "use client";
-import { useEffect, useState, Suspense } from "react";
+import { useCallback, useEffect, useState, Suspense } from "react";
+import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
+import { money as fmtMoney } from "@/lib/format";
 
 const LOGO_URL =
   "https://assets.cdn.filesafe.space/TwuL7EwKfW8oGIV0Zo5q/media/6a373b261c5d711b35bf4e56.png";
@@ -22,6 +24,8 @@ interface Totals {
 interface Invoice {
   business: { name: string };
   auction: { title: string };
+  feePercent?: number;
+  taxPercent?: number;
   buyer: { name: string | null; email: string | null };
   date: string;
   lines: Line[];
@@ -30,8 +34,7 @@ interface Invoice {
   error?: string;
 }
 
-const money = (n: number) =>
-  n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+const money = (n: number) => fmtMoney(n, { decimals: 2 });
 
 function InvoiceInner() {
   const params = useParams<{ auctionId: string }>();
@@ -43,7 +46,7 @@ function InvoiceInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     if (!auctionId) return;
     const qs = user ? `?user=${encodeURIComponent(user)}` : "";
     fetch(`/api/invoice/${auctionId}${qs}`)
@@ -55,6 +58,18 @@ function InvoiceInner() {
       .catch(() => setError("Could not load receipt."))
       .finally(() => setLoading(false));
   }, [auctionId, user]);
+
+  // User-triggered retry: reset state, then re-run the fetch.
+  const retryLoad = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    setData(null);
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   return (
     <div className="invoice-root min-h-screen bg-[#f1e7d5] text-[#241a12] py-8 px-4 print:bg-white print:p-0">
@@ -71,20 +86,53 @@ function InvoiceInner() {
 
       <div className="mx-auto" style={{ maxWidth: "7.5in" }}>
         {/* Print / actions bar */}
-        <div className="no-print flex justify-end mb-4">
-          <button
-            onClick={() => window.print()}
-            className="bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors"
+        <div className="no-print flex items-center justify-between mb-4">
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-1.5 text-sm text-[#6c4d39] hover:text-[#563e2c] font-semibold transition-colors"
           >
-            Print / Save PDF
-          </button>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10 3 5 8l5 5" />
+            </svg>
+            Back to My Bids
+          </Link>
+          {data && !error && (
+            <button
+              onClick={() => window.print()}
+              className="bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors"
+            >
+              Print / Save PDF
+            </button>
+          )}
         </div>
 
         <div className="bg-white border border-[#e3d6bf] rounded-2xl shadow-sm print:border-0 print:shadow-none print:rounded-none p-6 sm:p-10 text-black">
           {loading ? (
             <p className="text-[#8a7559] text-sm py-12 text-center">Loading receipt…</p>
           ) : error ? (
-            <p className="text-red-600 text-sm py-12 text-center">{error}</p>
+            <div className="py-12 text-center">
+              <div className="w-12 h-12 rounded-full bg-red-50 border border-red-500/20 flex items-center justify-center mx-auto mb-4 text-red-600">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" />
+                </svg>
+              </div>
+              <p className="text-base font-semibold text-[#241a12]">We couldn&apos;t load this receipt</p>
+              <p className="text-sm text-[#8a7559] mt-1.5">{error}</p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-6">
+                <button
+                  onClick={retryLoad}
+                  className="bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors"
+                >
+                  Try again
+                </button>
+                <Link
+                  href="/dashboard"
+                  className="text-sm text-[#6c4d39] hover:text-[#563e2c] font-semibold transition-colors"
+                >
+                  Back to My Bids
+                </Link>
+              </div>
+            </div>
           ) : data?.empty ? (
             <p className="text-[#6f5b46] text-base py-12 text-center">
               No paid items for this auction yet.
@@ -137,7 +185,7 @@ function InvoiceInner() {
                   <tr className="border-b-2 border-[#e3d6bf] text-[#8a7559]">
                     <th className="text-left py-2 font-semibold">Item</th>
                     <th className="text-right py-2 font-semibold whitespace-nowrap">Bid</th>
-                    <th className="text-right py-2 font-semibold whitespace-nowrap">Premium (15%)</th>
+                    <th className="text-right py-2 font-semibold whitespace-nowrap">Premium ({data.feePercent ?? 15}%)</th>
                     <th className="text-right py-2 font-semibold whitespace-nowrap">Tax</th>
                     <th className="text-right py-2 font-semibold whitespace-nowrap">Line total</th>
                   </tr>
@@ -179,11 +227,11 @@ function InvoiceInner() {
                     <span>{money(data.totals.subtotal)}</span>
                   </div>
                   <div className="flex justify-between py-1.5">
-                    <span className="text-[#6f5b46]">Buyer&apos;s premium (15%)</span>
+                    <span className="text-[#6f5b46]">Buyer&apos;s premium ({data.feePercent ?? 15}%)</span>
                     <span>{money(data.totals.premium)}</span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-[#e3d6bf]">
-                    <span className="text-[#6f5b46]">Sales tax (6%)</span>
+                    <span className="text-[#6f5b46]">Sales tax ({data.taxPercent ?? 6}%)</span>
                     <span>{money(data.totals.tax)}</span>
                   </div>
                   <div className="flex justify-between py-2.5 font-bold text-base">

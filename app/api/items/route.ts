@@ -3,6 +3,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { canAccessOrg } from "@/lib/auth";
 
+// Accept only http(s) URLs for photos — blocks javascript:/data:/file: etc.
+function isHttpUrl(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  try {
+    const u = new URL(value);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await auth();
@@ -42,6 +53,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // Validate numeric fields: must be finite and >= 0 when provided.
+    const numericFields: Record<string, unknown> = { retailValue, startingBid, reservePrice };
+    for (const [field, raw] of Object.entries(numericFields)) {
+      if (raw === undefined || raw === null || raw === "") continue;
+      const n = Number(raw);
+      if (!Number.isFinite(n) || n < 0) {
+        return NextResponse.json(
+          { error: `Invalid value for ${field}` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate photo URLs are http(s) (reject javascript:/data: etc.).
+    if (photos && photos.length > 0) {
+      for (const url of photos) {
+        if (!isHttpUrl(url)) {
+          return NextResponse.json({ error: "Invalid photo URL" }, { status: 400 });
+        }
+      }
+    }
+
     // Validate the chosen auction and decide the new item's status.
     let itemStatus: "DRAFT" | "ACTIVE" = "DRAFT";
     if (auctionId) {
@@ -63,32 +96,31 @@ export async function POST(request: NextRequest) {
       if (parentAuction.status === "OPEN") itemStatus = "ACTIVE";
     }
 
-    const item = await prisma.item.create({
-      data: {
-        title,
-        description: description || null,
-        condition: condition || "GOOD",
-        category: category || null,
-        retailValue: retailValue ? parseFloat(retailValue) : null,
-        startingBid: startingBid ? parseFloat(startingBid) : 0,
-        reservePrice: reservePrice ? parseFloat(reservePrice) : null,
-        donorName: donorName || null,
-        taxDeductible: taxDeductible || false,
-        storageLocation: storageLocation || null,
-        locationId: locationId || null,
-        notes: notes || null,
-        auctionId: auctionId || null,
-        organizationId,
-        status: itemStatus,
-        photos: photos && photos.length > 0 ? {
-          create: photos.map((url: string, index: number) => ({
-            url,
-            isPrimary: index === 0,
-          })),
-        } : undefined,
-      },
-    });
+    const baseData = {
+      title,
+      description: description || null,
+      condition: condition || "GOOD",
+      category: category || null,
+      retailValue: retailValue ? parseFloat(retailValue) : null,
+      startingBid: startingBid ? parseFloat(startingBid) : 0,
+      reservePrice: reservePrice ? parseFloat(reservePrice) : null,
+      donorName: donorName || null,
+      taxDeductible: taxDeductible || false,
+      storageLocation: storageLocation || null,
+      locationId: locationId || null,
+      notes: notes || null,
+      auctionId: auctionId || null,
+      organizationId,
+      status: itemStatus,
+      photos: photos && photos.length > 0 ? {
+        create: photos.map((url: string, index: number) => ({
+          url,
+          isPrimary: index === 0,
+        })),
+      } : undefined,
+    };
 
+    const item = await prisma.item.create({ data: baseData });
     return NextResponse.json({ success: true, item }, { status: 201 });
   } catch (error) {
     console.error("Error creating item:", error);
@@ -99,7 +131,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -109,13 +141,26 @@ export async function GET() {
     const membership = await getUserOrg();
     if (!membership) return NextResponse.json({ items: [] });
 
+    // Bounded fetching: never load the whole items table unbounded. Defaults to the
+    // most recent 50; callers can page with ?take= and ?cursor= (the cursor is an item id).
+    const { searchParams } = new URL(request.url);
+    const takeParam = Number(searchParams.get("take"));
+    const take = Number.isFinite(takeParam) && takeParam > 0 ? Math.min(takeParam, 200) : 50;
+    const cursor = searchParams.get("cursor") || undefined;
+
     const items = await prisma.item.findMany({
       where: { organizationId: membership.organizationId },
       include: { photos: true, bids: true },
       orderBy: { createdAt: "desc" },
+      take: take + 1, // fetch one extra to detect whether another page exists
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     });
 
-    return NextResponse.json({ items });
+    const hasMore = items.length > take;
+    const page = hasMore ? items.slice(0, take) : items;
+    const nextCursor = hasMore ? page[page.length - 1]?.id ?? null : null;
+
+    return NextResponse.json({ items: page, nextCursor, hasMore });
   } catch (error) {
     console.error("Error fetching items:", error);
     return NextResponse.json({ error: "Failed to fetch items" }, { status: 500 });

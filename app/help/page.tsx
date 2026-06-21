@@ -230,7 +230,7 @@ export default function HelpPage() {
                   <li className="flex gap-2"><span className="text-[#6c4d39] font-bold">→</span><span><strong className="text-[#241a12]">Automatic charge:</strong> Your saved card is charged for your winning amount automatically when the auction closes.</span></li>
                   <li className="flex gap-2"><span className="text-[#6c4d39] font-bold">→</span><span><strong className="text-[#241a12]">Email notification:</strong> You'll receive an email confirming your win and the items you've won.</span></li>
                   <li className="flex gap-2"><span className="text-[#6c4d39] font-bold">→</span><span><strong className="text-[#241a12]">My Bids dashboard:</strong> Head to your dashboard to see all your wins, payment status, and pickup details.</span></li>
-                  <li className="flex gap-2"><span className="text-[#6c4d39] font-bold">→</span><span><strong className="text-[#241a12]">Pickup coordination:</strong> The business will contact you with pickup or delivery instructions.</span></li>
+                  <li className="flex gap-2"><span className="text-[#6c4d39] font-bold">→</span><span><strong className="text-[#241a12]">Schedule your own pickup:</strong> Once payment is confirmed, head to <Link href="/pickup" className="text-[#6c4d39] hover:underline font-medium">Pickup</Link> to choose a location and a time that works for you — no waiting for a call. If your items are at a different location, you can request a transfer there first (transfers usually take about 5–6 days).</span></li>
                 </ul>
                 <Warn>If your card payment fails, you'll receive a notification and can retry payment from your dashboard. Items may be released to the next bidder if payment isn't completed promptly.</Warn>
               </div>
@@ -342,8 +342,8 @@ export default function HelpPage() {
                 <Q q="Why do I need to add a card before bidding?">
                   A card on file ensures that when you win, payment is instant and seamless — no chasing down winners after the fact. Your card is not charged unless you win.
                 </Q>
-                <Q q="I won an item but haven't received pickup info yet — what do I do?">
-                  After payment is confirmed, the business coordinates pickup directly. Allow 1–2 business days for them to reach out. Check your dashboard for any status updates.
+                <Q q="How do I pick up an item I won?">
+                  You schedule it yourself. After payment is confirmed, go to the <Link href="/pickup" className="text-[#6c4d39] hover:underline font-medium">Pickup</Link> page, pick a location, and choose a date and time that works for you. Any items you win before that date are added to the same appointment automatically. If an item is stored at a different location, request a transfer to your pickup location first — transfers usually take about 5–6 days.
                 </Q>
                 <Q q="Can I bid without creating an account?">
                   No — an account is required to bid. This protects all bidders by ensuring everyone is accountable for their bids and there's a verified way to contact winners.

@@ -86,6 +86,59 @@ function dayKey(iso: string) {
   });
 }
 
+// Format a Date as an ICS UTC timestamp: YYYYMMDDTHHMMSSZ
+function icsStamp(d: Date) {
+  return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+}
+function icsEscape(s: string) {
+  return s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+}
+
+// Build + download an .ics file for a confirmed pickup appointment.
+// Times are stored as ISO instants; America/Detroit context is reflected in the
+// human-readable summary/description, while DTSTART/DTEND use UTC stamps.
+function downloadAppointmentIcs(appt: Appointment) {
+  const start = new Date(appt.startsAt);
+  const end = new Date(start.getTime() + 30 * 60 * 1000); // 30-min window
+  const locParts = [appt.location.name, appt.location.address].filter(Boolean);
+  const location = locParts.join(", ");
+  const itemList = appt.items.map((i) => i.title).join(", ");
+  const descParts = [
+    `Pickup at ${appt.location.name}`,
+    `Local time (Michigan): ${fmtDateTime(appt.startsAt)}`,
+    appt.location.instructions ? `Instructions: ${appt.location.instructions}` : "",
+    appt.items.length ? `Items: ${itemList}` : "",
+  ].filter(Boolean);
+
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Northwood Bids//Pickup//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:pickup-${appt.id}@northwoodbids`,
+    `DTSTAMP:${icsStamp(new Date())}`,
+    `DTSTART:${icsStamp(start)}`,
+    `DTEND:${icsStamp(end)}`,
+    "SUMMARY:Northwood Bids — Item Pickup",
+    `LOCATION:${icsEscape(location)}`,
+    `DESCRIPTION:${icsEscape(descParts.join("\n"))}`,
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ];
+
+  const blob = new Blob([lines.join("\r\n")], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "northwood-pickup.ics";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function ItemPhoto({ url, title }: { url: string | null; title: string }) {
   return url ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -145,20 +198,33 @@ function SlotPicker({
               <div key={d.key}>
                 <div className="text-base font-semibold text-[#6f5b46] mb-2">{d.label}</div>
                 <div className="flex flex-wrap gap-2">
-                  {d.slots.map((s) => (
-                    <button
-                      key={s.startsAt}
-                      type="button"
-                      onClick={() => setSelected(s.startsAt)}
-                      className={`rounded-xl border-2 px-4 py-3 text-base font-semibold transition-colors ${
-                        selected === s.startsAt
-                          ? "border-[#6c4d39] bg-[#6c4d39] text-white"
-                          : "border-[#e3d6bf] bg-white text-[#241a12] hover:bg-[#efe3d0]"
-                      }`}
-                    >
-                      {fmtTime(s.startsAt)}
-                    </button>
-                  ))}
+                  {d.slots.map((s) => {
+                    const isSelected = selected === s.startsAt;
+                    const low = s.remaining > 0 && s.remaining <= 2;
+                    return (
+                      <button
+                        key={s.startsAt}
+                        type="button"
+                        onClick={() => setSelected(s.startsAt)}
+                        className={`flex flex-col items-center rounded-xl border-2 px-4 py-3 text-base font-semibold transition-colors ${
+                          isSelected
+                            ? "border-[#6c4d39] bg-[#6c4d39] text-white"
+                            : "border-[#e3d6bf] bg-white text-[#241a12] hover:bg-[#efe3d0]"
+                        }`}
+                      >
+                        <span>{fmtTime(s.startsAt)}</span>
+                        {low && (
+                          <span
+                            className={`mt-0.5 text-xs font-semibold ${
+                              isSelected ? "text-[#f1e7d5]" : "text-[#8a5a2b]"
+                            }`}
+                          >
+                            {s.remaining} left
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -184,6 +250,7 @@ export default function PickupPage() {
   const router = useRouter();
   const [data, setData] = useState<PickupData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [busy, setBusy] = useState(false);
   const [transferBusy, setTransferBusy] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
@@ -193,11 +260,22 @@ export default function PickupPage() {
 
   const load = useCallback(() => {
     fetch("/api/pickup")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to load pickup");
+        return r.json();
+      })
       .then((d: PickupData) => setData(d))
-      .catch(() => {})
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
   }, []);
+
+  // User-triggered retry: reset state, then re-run the fetch.
+  const retryLoad = useCallback(() => {
+    setLoading(true);
+    setLoadError(false);
+    setData(null);
+    load();
+  }, [load]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -316,7 +394,35 @@ export default function PickupPage() {
       </main>
     );
   }
-  if (!data) return null;
+  if (loadError || !data) {
+    return (
+      <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-3xl font-semibold">Pickup</h1>
+            <Link href="/dashboard" className="text-base text-[#6c4d39] hover:text-[#563e2c] font-semibold">
+              ← My Bids
+            </Link>
+          </div>
+          <div className="bg-white border border-[#e3d6bf] rounded-2xl px-6 py-12 text-center">
+            <div className="w-12 h-12 rounded-full bg-red-50 border border-red-500/20 flex items-center justify-center mx-auto mb-4 text-red-600">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" />
+              </svg>
+            </div>
+            <p className="text-lg font-semibold text-[#241a12]">We couldn&apos;t load your pickup details</p>
+            <p className="text-base text-[#8a7559] mt-2">Please check your connection and try again.</p>
+            <button
+              onClick={retryLoad}
+              className="inline-block mt-6 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold text-base px-6 py-3.5 rounded-xl transition-colors"
+            >
+              Try again
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   const { appointment, unscheduledItems, locations, pendingTransfers } = data;
 
@@ -376,6 +482,16 @@ export default function PickupPage() {
                     {appointment.location.instructions}
                   </div>
                 )}
+                <button
+                  type="button"
+                  onClick={() => downloadAppointmentIcs(appointment)}
+                  className="mt-4 inline-flex items-center gap-2 bg-[#efe3d0] hover:bg-[#e3d6bf] border border-[#cdbda3] text-[#6c4d39] font-semibold text-base px-4 py-2.5 rounded-xl transition-colors"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
+                  </svg>
+                  Add to calendar
+                </button>
               </div>
             </div>
 

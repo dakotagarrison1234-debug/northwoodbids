@@ -3,6 +3,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import AuctionStatusButtons from "@/app/components/AuctionStatusButtons";
 import LocalDate from "@/app/components/LocalDate";
+import StatusPill from "@/app/components/StatusPill";
+import { money } from "@/lib/format";
 import DeleteAuctionButton from "./DeleteAuctionButton";
 
 function IcoWarning() {
@@ -28,7 +30,15 @@ export default async function ManageAuctionPage({ params }: Props) {
   const auction = await prisma.auction.findUnique({
     where: { id: auctionId },
     include: {
-      items: { include: { photos: true, bids: true } },
+      items: {
+        include: {
+          photos: true,
+          // Single top ACTIVE bid (uses [itemId, status, amount] index) instead of full history.
+          bids: { where: { status: "ACTIVE" }, orderBy: { amount: "desc" }, take: 1 },
+          // Total bid count is shown in the table — get it from the DB, not by loading rows.
+          _count: { select: { bids: true } },
+        },
+      },
       organization: true,
     },
   });
@@ -49,7 +59,7 @@ export default async function ManageAuctionPage({ params }: Props) {
   const totalRaised = (auction.status === "OPEN" || auction.status === "CLOSING")
     ? auction.items.filter(i => i.status === "ACTIVE").reduce((sum, item) => sum + Number(item.currentBid), 0)
     : auction.items.filter(i => SOLD_STATUSES.includes(i.status)).reduce((sum, item) => sum + Number(item.currentBid), 0);
-  const totalBids = auction.items.reduce((sum, item) => sum + item.bids.length, 0);
+  const totalBids = auction.items.reduce((sum, item) => sum + item._count.bids, 0);
   const now = new Date();
   const isScheduled = auction.status === "DRAFT" && auction.startAt > now;
   const isPastStart = auction.status === "DRAFT" && auction.startAt <= now;
@@ -73,7 +83,7 @@ export default async function ManageAuctionPage({ params }: Props) {
           </span>
           {isPastStart && (
             <span className="text-xs text-amber-600 bg-yellow-500/10 px-2 py-1 rounded-full shrink-0">
-              <span className="inline-flex items-center gap-1"><IcoWarning /> opens on next cron run</span>
+              <span className="inline-flex items-center gap-1"><IcoWarning /> starting shortly</span>
             </span>
           )}
         </div>
@@ -95,7 +105,7 @@ export default async function ManageAuctionPage({ params }: Props) {
           {[
             {
               label: (auction.status === "OPEN" || auction.status === "CLOSING") ? "Current Bid Total" : "Total Raised",
-              value: `$${totalRaised.toLocaleString()}`,
+              value: money(totalRaised),
             },
             { label: "Items", value: auction.items.length },
             { label: "Total Bids", value: totalBids },
@@ -132,8 +142,8 @@ export default async function ManageAuctionPage({ params }: Props) {
           {auction.status === "DRAFT" && (
             <div className="text-[#8a7559] text-sm sm:text-right">
               {isScheduled
-                ? "Will auto-open at start time (cron runs every minute)"
-                : "Start time passed — will open on next cron run"}
+                ? "This auction will go live automatically at its start time."
+                : "The start time has passed — this auction will go live in a moment."}
             </div>
           )}
         </div>
@@ -211,27 +221,21 @@ export default async function ManageAuctionPage({ params }: Props) {
                             <div className="text-sm font-mono text-[#6c4d39] mt-0.5 flex items-center gap-0.5"><IcoPin />{item.storageLocation}</div>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-[#6f5b46] text-base">${Number(item.startingBid)}</td>
-                        <td className="px-4 py-3 text-[#6c4d39] font-semibold text-base">${Number(item.currentBid)}</td>
-                        <td className="px-4 py-3 text-[#6f5b46] text-base">{item.bids.length}</td>
+                        <td className="px-4 py-3 text-[#6f5b46] text-base">{money(Number(item.startingBid))}</td>
+                        <td className="px-4 py-3 text-[#6c4d39] font-semibold text-base">{money(Number(item.currentBid))}</td>
+                        <td className="px-4 py-3 text-[#6f5b46] text-base">{item._count.bids}</td>
                         <td className="px-4 py-3">
-                          <span className={`text-sm font-semibold px-2.5 py-1 rounded-full ${
-                            item.status === "ACTIVE" ? "bg-[#6c4d39]/20 text-[#563e2c]"
-                            : item.status === "SOLD" ? "bg-[#efe0c9] text-[#563e2c]"
-                            : (item.status as string) === "PENDING_PICKUP" ? "bg-amber-50 text-amber-700"
-                            : (item.status as string) === "PICKED_UP" ? "bg-[#efe3d0] text-[#4a3a2b]"
-                            : "bg-[#e7dcc6] text-[#4a3a2b]"
-                          }`}>
-                            {item.status.replace(/_/g, " ").toLowerCase()}
-                          </span>
+                          <StatusPill status={item.status} />
                         </td>
                         <td className="px-4 py-3">
-                          <Link
-                            href={`/admin/items/${item.id}`}
-                            className="text-base font-semibold bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] text-[#241a12] px-5 py-3 rounded-xl whitespace-nowrap transition-colors"
-                          >
-                            Edit
-                          </Link>
+                          <div className="flex items-center gap-2 justify-end">
+                            <Link
+                              href={`/admin/items/${item.id}`}
+                              className="text-base font-semibold bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] text-[#241a12] px-5 py-3 rounded-xl whitespace-nowrap transition-colors"
+                            >
+                              Edit
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     );

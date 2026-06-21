@@ -45,9 +45,9 @@ export default function ItemStatusButton({ itemId, currentStatus }: Props) {
     <button
       onClick={handleClick}
       disabled={loading}
-      className={`text-xs px-3 py-1.5 rounded-lg font-medium disabled:opacity-50 whitespace-nowrap transition-colors ${transition.color}`}
+      className={`text-base px-5 py-3 rounded-xl font-semibold disabled:opacity-50 whitespace-nowrap transition-colors ${transition.color}`}
     >
-      {loading ? "..." : transition.label}
+      {loading ? "Working…" : transition.label}
     </button>
   );
 }

@@ -4,7 +4,7 @@
  * Edge cases handled:
  *  1. Race conditions — all bid state is re-read inside a transaction
  *  2. Increment consistency — all auto-bids use getNextValidBid / getIncrement
- *  3. Popcorn extension — auto-bids trigger the same 2:30 extension logic
+ *  3. Popcorn extension — auto-bids trigger the same 2:00 extension logic
  *  4. Two competing proxies — resolved to final state in one pass (not incrementally)
  *  5. Tie at same max — earliest createdAt wins
  *  6. Proxy already holds the lead (no competition) — no unnecessary re-bid
@@ -58,7 +58,7 @@ async function placeProxyBid(
   amount: number,
   displacedBidderId: string | null
 ): Promise<{ newAmount: number; newEndAt: string | null }> {
-  // Popcorn: extend end time if bid lands inside last 2:30
+  // Popcorn: extend end time if bid lands inside last 2:00
   const effectiveEndAt = item.itemEndAt ?? item.auction?.endAt;
   let newItemEndAt: Date | null = null;
   if (effectiveEndAt) {
@@ -79,7 +79,12 @@ async function placeProxyBid(
   // Atomic: optimistic-lock guard + mark existing ACTIVE bid OUTBID + create proxy auto-bid
   const newBid = await prisma.$transaction(async (tx) => {
     const guard = await tx.item.updateMany({
-      where: { id: item.id, currentBid: { lt: amount } },
+      where: {
+        id: item.id,
+        status: "ACTIVE",
+        currentBid: { lt: amount },
+        OR: [{ itemEndAt: null }, { itemEndAt: { gt: new Date() } }],
+      },
       data: {
         currentBid: amount,
         ...(newItemEndAt ? { itemEndAt: newItemEndAt } : {}),
@@ -101,11 +106,12 @@ async function placeProxyBid(
     });
   });
 
-  // Pusher: broadcast the auto-bid
+  // Pusher: broadcast the auto-bid.
+  // Privacy: never put a raw/truncated Clerk id on the wire. The client
+  // increments its own "Bidder N" counter per event, so no user id is needed.
   await getPusherServer().trigger(`item-${item.id}`, "new-bid", {
     amount,
     bidId: newBid.id,
-    userId: proxy.clerkUserId.substring(0, 8),
     placedAt: newBid.placedAt,
     isProxy: true,
     hasActiveProxy: true,
@@ -278,40 +284,55 @@ export async function resolveNewProxy(
   const loser = proxies[1] ?? null;
   const currentBid = Number(item.currentBid);
   const currentBidder = item.bids[0]?.clerkUserId ?? null;
+  const winnerMax = Number(winner.maxAmount);
+  const loserMax = loser ? Number(loser.maxAmount) : null;
 
-  // If the winner already holds the current bid and no one is competing, nothing to do.
-  // (e.g. user updates their own proxy max upward while already the high bidder)
-  if (!loser && winner.clerkUserId === currentBidder) {
+  // Don't auto-raise the current leader against a LOWER (or equal) competing proxy:
+  // if the winner already holds the lead and their max is at least the loser's max,
+  // they already lead — just deactivate the loser proxy so users don't bid against
+  // themselves and overpay.
+  if (
+    winner.clerkUserId === currentBidder &&
+    (!loser || winnerMax >= (loserMax as number))
+  ) {
+    if (loser) {
+      await prisma.proxyBid.update({
+        where: { id: loser.id },
+        data: { isActive: false },
+      });
+    }
     return { proxyFired: false };
   }
 
-  let winningAmount: number;
-  let displacedBidderId: string | null;
+  // Floor = the minimum amount that takes the lead above the current price.
+  const floor =
+    currentBid > 0
+      ? getNextValidBid(currentBid)
+      : (Number(item.startingBid) > 0 ? Number(item.startingBid) : 1);
 
+  // Settle price: a higher max always leads to at least the next valid bid above the
+  // current price. Against a competing proxy, pay 1 increment above the loser's max
+  // (but never below the floor); with no competing proxy, pay the floor. Capped at the
+  // winner's max so they never exceed their own limit.
+  const target =
+    loserMax !== null
+      ? Math.max(loserMax + getIncrement(loserMax), floor)
+      : floor;
+  const winningAmount = Math.min(winnerMax, target);
+
+  // Displaced bidder is the ACTUAL current high bidder when they differ from the new
+  // winner; fall back to the loser proxy owner otherwise.
+  const displacedBidderId: string | null =
+    currentBidder && currentBidder !== winner.clerkUserId
+      ? currentBidder
+      : (loser ? loser.clerkUserId : null);
+
+  // Deactivate the loser's proxy (it has been fully resolved and lost)
   if (loser) {
-    // Two proxies compete — winner pays 1 increment above the loser's max
-    winningAmount = Math.min(
-      Number(winner.maxAmount),
-      Number(loser.maxAmount) + getIncrement(Number(loser.maxAmount))
-    );
-    displacedBidderId = loser.clerkUserId;
-
-    // Deactivate the loser's proxy (it has been fully resolved and lost)
     await prisma.proxyBid.update({
       where: { id: loser.id },
       data: { isActive: false },
     });
-  } else {
-    // Only one proxy — bid the minimum needed to take the lead
-    if (currentBid > 0) {
-      winningAmount = Math.min(Number(winner.maxAmount), getNextValidBid(currentBid));
-      // Displaced bidder is whoever currently holds the top bid (could be null)
-      displacedBidderId = winner.clerkUserId !== currentBidder ? currentBidder : null;
-    } else {
-      // No bids yet — bid the starting price (or 1 if startingBid is 0)
-      winningAmount = Number(item.startingBid) > 0 ? Number(item.startingBid) : 1;
-      displacedBidderId = null;
-    }
   }
 
   // Guard: should never happen with proper API validation, but be safe

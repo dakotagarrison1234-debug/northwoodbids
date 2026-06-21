@@ -43,8 +43,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Only http(s) URLs allowed" }, { status: 400 });
   }
 
-  // Block private/local IP ranges
-  const blocked = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(parsedUrl.hostname);
+  // Block private/local IP ranges, cloud metadata, and IPv6 loopback/link-local.
+  // Strip brackets from IPv6 hostnames (e.g. [::1]) before matching.
+  const host = parsedUrl.hostname.replace(/^\[|\]$/g, "").toLowerCase();
+  const blocked =
+    /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|0\.0\.0\.0)/.test(host) ||
+    host === "::1" ||
+    host.startsWith("::ffff:127.") ||
+    host.startsWith("fe80:");
   if (blocked) {
     return NextResponse.json({ error: "Private URLs not allowed" }, { status: 400 });
   }

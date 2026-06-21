@@ -1,8 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 
 interface Ower { name: string; email: string; phone: string; amountDue: number; items: string[]; }
 interface ReportData {
+  feePercent?: number;
+  taxPercent?: number;
   totals: {
     grossSales: number; premiumCollected: number; taxCollected: number; totalCharged: number;
     stripeFees: number; netDeposited: number; netProfit: number;
@@ -64,7 +67,7 @@ export default function ReportsPage() {
             <StatCard label="Total Sales" value={money(totals.grossSales)} sub={`${totals.itemsSold} item${totals.itemsSold !== 1 ? "s" : ""} sold`} accent="ink" />
             <StatCard label="Take-Home (after fees & tax)" value={money(totals.netProfit)} sub="What's truly yours to keep" accent="moss" />
             <StatCard label="Deposited by Stripe" value={money(totals.netDeposited)} sub="After Stripe fees, before tax" accent="leather" />
-            <StatCard label="Sales Tax to Remit" value={money(totals.taxCollected)} sub="6% — owed to Michigan" accent="leather" />
+            <StatCard label="Sales Tax to Remit" value={money(totals.taxCollected)} sub={`${data.taxPercent ?? 6}% — owed to Michigan`} accent="leather" />
           </div>
         </section>
 
@@ -98,7 +101,7 @@ export default function ReportsPage() {
             <table className="w-full text-base">
               <tbody className="divide-y divide-[#e3d6bf]">
                 <tr><td className="py-3 text-[#4a3a2b]">Item sales (winning bids)</td><td className="py-3 text-right font-semibold">{money(totals.grossSales)}</td></tr>
-                <tr><td className="py-3 text-[#4a3a2b]">+ Buyer&apos;s premium (15%)</td><td className="py-3 text-right font-semibold">{money(totals.premiumCollected)}</td></tr>
+                <tr><td className="py-3 text-[#4a3a2b]">+ Buyer&apos;s premium ({data.feePercent ?? 15}%)</td><td className="py-3 text-right font-semibold">{money(totals.premiumCollected)}</td></tr>
                 <tr><td className="py-3 text-[#4a3a2b]">+ Sales tax charged to buyers</td><td className="py-3 text-right font-semibold">{money(totals.taxCollected)}</td></tr>
                 <tr><td className="py-3 text-[#4a3a2b]">= Total charged to buyers</td><td className="py-3 text-right font-semibold">{money(totals.totalCharged)}</td></tr>
                 <tr><td className="py-3 text-[#4a3a2b]">− Stripe fees ({totals.txnCount} charge{totals.txnCount !== 1 ? "s" : ""} × 2.9% + 30¢)</td><td className="py-3 text-right font-semibold text-red-600">−{money(totals.stripeFees)}</td></tr>
@@ -110,7 +113,7 @@ export default function ReportsPage() {
           </div>
         </section>
 
-        {/* Who owes */}
+        {/* Who owes — summary only; the full list with one-tap email/call lives on Winners & Payments */}
         <section>
           <h2 className="text-lg font-bold mb-4">
             Payments due {outstanding.count > 0 && <span className="text-[#6c4d39]">({money(outstanding.total)})</span>}
@@ -120,17 +123,21 @@ export default function ReportsPage() {
               Everyone&apos;s paid up — no outstanding balances. 🎉
             </div>
           ) : (
-            <div className="bg-white border border-[#e3d6bf] rounded-2xl divide-y divide-[#e3d6bf]">
-              {outstanding.owers.map((o, i) => (
-                <div key={i} className="px-5 sm:px-6 py-4 flex items-center justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="text-base font-semibold text-[#241a12]">{o.name}</div>
-                    <div className="text-sm text-[#8a7559] truncate">{o.email}{o.phone ? ` · ${o.phone}` : ""}</div>
-                    {o.items.length > 0 && <div className="text-sm text-[#8a7559] truncate mt-0.5">{o.items.join(", ")}</div>}
-                  </div>
-                  <div className="text-lg font-bold text-[#6c4d39] shrink-0">{money(o.amountDue)}</div>
+            <div className="bg-white border border-[#e3d6bf] rounded-2xl p-6 sm:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="text-base text-[#241a12] font-semibold">
+                  {outstanding.count} {outstanding.count === 1 ? "person owes" : "people owe"} {money(outstanding.total)}
                 </div>
-              ))}
+                <div className="text-sm text-[#8a7559] mt-1">
+                  See the full list and contact each person on the Winners &amp; Payments page.
+                </div>
+              </div>
+              <Link
+                href="/admin/winners"
+                className="bg-[#6c4d39] hover:bg-[#563e2c] text-white text-base font-semibold px-6 py-3.5 rounded-xl transition-colors whitespace-nowrap text-center"
+              >
+                View Winners &amp; Payments
+              </Link>
             </div>
           )}
         </section>

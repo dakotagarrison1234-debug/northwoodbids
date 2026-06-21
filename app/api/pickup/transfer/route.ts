@@ -88,8 +88,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ needed: true, success: true, transferId });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Internal error";
-    console.error("[pickup/transfer POST]:", msg, err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[pickup/transfer POST]:", err);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }

@@ -27,8 +27,10 @@ export async function GET() {
       avatarKey,
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Internal error";
-    console.error("[me GET]:", msg, err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[me GET]:", err);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }

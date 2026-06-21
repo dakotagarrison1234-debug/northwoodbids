@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { money } from "@/lib/format";
 
 interface User {
   clerkUserId: string;
@@ -98,11 +99,11 @@ export default function SuperAdminUsersPage() {
                     <td className="px-4 py-3 text-[#6f5b46] hidden sm:table-cell">{u.phone || "—"}</td>
                     <td className="px-4 py-3 text-right text-[#4a3a2b]">{u.bidCount}</td>
                     <td className="px-4 py-3 text-right text-[#6c4d39] font-medium hidden sm:table-cell">
-                      {u.paidTotal > 0 ? `$${u.paidTotal.toLocaleString()}` : "—"}
+                      {u.paidTotal > 0 ? money(u.paidTotal) : "—"}
                     </td>
                     <td className="px-4 py-3 text-right hidden sm:table-cell">
                       {u.unpaidTotal > 0 ? (
-                        <span className="text-orange-400 font-semibold">${u.unpaidTotal.toLocaleString()}</span>
+                        <span className="text-red-600 font-semibold">{money(u.unpaidTotal)}</span>
                       ) : (
                         <span className="text-[#8a7559]">—</span>
                       )}

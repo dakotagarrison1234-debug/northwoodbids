@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { canAccessOrg, getUserOrg } from "@/lib/auth";
+import { requireRole, getUserOrg } from "@/lib/auth";
 
 // GET /api/admin/settings — return current org details (respects act-as cookie)
 export async function GET() {
@@ -18,9 +18,11 @@ export async function GET() {
       },
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Internal error";
-    console.error("[admin/settings GET]:", msg, err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[admin/settings GET]:", err);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }
 
@@ -31,15 +33,32 @@ export async function PATCH(request: NextRequest) {
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await request.json();
-    const { name, description, logoUrl, orgId } = body;
+    const { name, description, logoUrl, orgId, taxPercent, platformFeePercent, taxExempt } = body;
 
     if (!orgId) return NextResponse.json({ error: "orgId required" }, { status: 400 });
 
-    if (!(await canAccessOrg(orgId))) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!(await requireRole(orgId, ["OWNER", "ADMIN"]))) {
+      return NextResponse.json(
+        { error: "You don't have permission for this action" },
+        { status: 403 }
+      );
     }
 
-    // taxPercent and taxExempt are set by Northwood Bids — orgs cannot edit them.
+    // Validate percent fields when provided: must be a finite number in 0–100.
+    const percentFields: Record<string, unknown> = { taxPercent, platformFeePercent };
+    for (const [field, raw] of Object.entries(percentFields)) {
+      if (raw === undefined) continue;
+      const n = Number(raw);
+      if (!Number.isFinite(n) || n < 0 || n > 100) {
+        return NextResponse.json(
+          { error: `Please enter ${field === "taxPercent" ? "a sales tax" : "a buyer's premium"} between 0 and 100.` },
+          { status: 400 }
+        );
+      }
+    }
+    if (taxExempt !== undefined && typeof taxExempt !== "boolean") {
+      return NextResponse.json({ error: "Invalid tax-exempt value" }, { status: 400 });
+    }
 
     const updated = await prisma.organization.update({
       where: { id: orgId },
@@ -47,13 +66,25 @@ export async function PATCH(request: NextRequest) {
         ...(name !== undefined && { name: name.trim() }),
         ...(description !== undefined && { description: description.trim() || null }),
         ...(logoUrl !== undefined && { logoUrl }),
+        ...(taxPercent !== undefined && { taxPercent: Number(taxPercent) }),
+        ...(platformFeePercent !== undefined && { platformFeePercent: Number(platformFeePercent) }),
+        ...(taxExempt !== undefined && { taxExempt }),
       },
     });
 
-    return NextResponse.json({ success: true, org: updated });
+    return NextResponse.json({
+      success: true,
+      org: {
+        ...updated,
+        platformFeePercent: Number(updated.platformFeePercent),
+        taxPercent: Number(updated.taxPercent),
+      },
+    });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Internal error";
-    console.error("[admin/settings PATCH]:", msg, err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[admin/settings PATCH]:", err);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }

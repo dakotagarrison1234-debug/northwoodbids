@@ -27,9 +27,11 @@ export async function GET(_req: NextRequest, { params }: Props) {
     if (!org) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ org });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Internal error";
-    console.error("[superadmin/orgs GET]:", msg, err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[superadmin/orgs GET]:", err);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }
 
@@ -53,9 +55,11 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 
     return NextResponse.json({ success: true, org });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Internal error";
-    console.error("[superadmin/orgs PATCH]:", msg, err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[superadmin/orgs PATCH]:", err);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }
 
@@ -86,8 +90,10 @@ export async function DELETE(_req: NextRequest, { params }: Props) {
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Internal error";
-    console.error("[superadmin/orgs DELETE]:", msg, err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[superadmin/orgs DELETE]:", err);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }

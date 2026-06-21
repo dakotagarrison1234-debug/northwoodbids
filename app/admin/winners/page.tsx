@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireUserOrg } from "@/lib/auth";
 import Link from "next/link";
 import ItemStatusButton from "@/app/components/ItemStatusButton";
+import StatusPill from "@/app/components/StatusPill";
+import { money } from "@/lib/format";
 
 export default async function WinnersPage() {
   const membership = await requireUserOrg();
@@ -45,8 +47,14 @@ export default async function WinnersPage() {
 
   const displayName = (clerkUserId: string) => {
     const p = profileMap.get(clerkUserId);
-    return p?.name || p?.email || `${clerkUserId.substring(0, 8)}…`;
+    return p?.name || p?.email || "Bidder";
   };
+  const emailOf = (clerkUserId: string) => profileMap.get(clerkUserId)?.email || null;
+  const phoneOf = (clerkUserId: string) => profileMap.get(clerkUserId)?.phone || null;
+
+  // "Who owes money" — winners whose payment isn't marked PAID.
+  const owers = wonBids.filter((b) => paymentMap.get(b.itemId)?.status !== "PAID");
+  const totalOwed = owers.reduce((sum, b) => sum + Number(b.amount), 0);
 
   return (
     <>
@@ -55,6 +63,57 @@ export default async function WinnersPage() {
       </header>
 
       <div className="px-4 sm:px-8 py-6 space-y-8">
+
+        {/* Who owes money */}
+        <div>
+          <h2 className="text-lg font-semibold mb-4">
+            Who owes money{" "}
+            {owers.length > 0 && <span className="text-[#6c4d39]">({money(totalOwed)})</span>}
+          </h2>
+          {owers.length === 0 ? (
+            <div className="bg-white border border-[#e3d6bf] rounded-xl p-6 text-base text-[#6f5b46]">
+              Everyone&apos;s paid up — no one currently owes money.
+            </div>
+          ) : (
+            <div className="bg-white border border-[#e3d6bf] rounded-xl divide-y divide-[#e3d6bf]">
+              {owers.map((bid) => {
+                const email = emailOf(bid.clerkUserId);
+                const phone = phoneOf(bid.clerkUserId);
+                return (
+                  <div key={bid.id} className="px-5 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-base font-semibold text-[#241a12]">{displayName(bid.clerkUserId)}</div>
+                      <div className="text-sm text-[#8a7559] truncate">
+                        {bid.item.title}
+                        {email ? ` · ${email}` : ""}
+                        {phone ? ` · ${phone}` : ""}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-lg font-bold text-[#6c4d39] mr-1">{money(Number(bid.amount))}</span>
+                      {email && (
+                        <a
+                          href={`mailto:${email}?subject=${encodeURIComponent(`Payment for "${bid.item.title}"`)}`}
+                          className="text-base font-semibold bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] text-[#241a12] px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap"
+                        >
+                          Email
+                        </a>
+                      )}
+                      {phone && (
+                        <a
+                          href={`tel:${phone}`}
+                          className="text-base font-semibold bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] text-[#241a12] px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap"
+                        >
+                          Call
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         {/* Confirmed Winners */}
         <div>
@@ -81,26 +140,19 @@ export default async function WinnersPage() {
                     return (
                       <tr key={bid.id} className="border-b border-[#e3d6bf] last:border-0 hover:bg-[#efe3d0]/50">
                         <td className="px-6 py-4 font-medium text-base">{bid.item.title}</td>
-                        <td className="px-6 py-4 text-[#6c4d39] font-bold text-base">${Number(bid.amount).toLocaleString()}</td>
+                        <td className="px-6 py-4 text-[#6c4d39] font-bold text-base">{money(Number(bid.amount))}</td>
                         <td className="px-6 py-4 text-[#4a3a2b] text-base">
                           {displayName(bid.clerkUserId)}
                         </td>
                         <td className="px-6 py-4">
                           {payment?.status === "PAID" ? (
-                            <span className="text-xs bg-[#6c4d39]/20 text-[#6c4d39] px-2 py-1 rounded-full">Paid</span>
+                            <StatusPill status="PAID" label="Paid" />
                           ) : (
-                            <span className="text-xs bg-yellow-500/20 text-amber-600 px-2 py-1 rounded-full">Unpaid</span>
+                            <StatusPill status="PENDING" label="Unpaid" />
                           )}
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                            bid.item.status === "SOLD" ? "bg-[#6c4d39]/15 text-[#563e2c]"
-                            : (bid.item.status as string) === "PENDING_PICKUP" ? "bg-amber-50 text-amber-700"
-                            : (bid.item.status as string) === "PICKED_UP" ? "bg-[#efe3d0] text-[#4a3a2b]"
-                            : "bg-[#e7dcc6] text-[#6f5b46]"
-                          }`}>
-                            {bid.item.status.replace("_", " ").toLowerCase()}
-                          </span>
+                          <StatusPill status={bid.item.status} />
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-col gap-2">
@@ -150,7 +202,7 @@ export default async function WinnersPage() {
                     <tr key={bid.id} className="border-b border-[#e3d6bf] last:border-0 hover:bg-[#efe3d0]/50">
                       <td className="px-6 py-4 font-medium text-base">{bid.item.title}</td>
                       <td className="px-6 py-4 text-[#6f5b46] text-base">{bid.item.auction?.title || "—"}</td>
-                      <td className="px-6 py-4 text-[#6c4d39] font-bold text-base">${Number(bid.amount).toLocaleString()}</td>
+                      <td className="px-6 py-4 text-[#6c4d39] font-bold text-base">{money(Number(bid.amount))}</td>
                       <td className="px-6 py-4 text-[#4a3a2b] text-base">{displayName(bid.clerkUserId)}</td>
                     </tr>
                   ))}

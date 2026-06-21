@@ -3,6 +3,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { canAccessOrg } from "@/lib/auth";
 
+// Accept only http(s) URLs for photos — blocks javascript:/data:/file: etc.
+function isHttpUrl(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  try {
+    const u = new URL(value);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
@@ -13,7 +24,9 @@ export async function GET(
       where: { id: itemId },
       include: {
         photos: true,
-        bids: { orderBy: { placedAt: "desc" } },
+        // The client only renders recent bids — cap the fetch instead of returning the
+        // entire history (newest first, matching what the UI shows).
+        bids: { orderBy: { placedAt: "desc" }, take: 50 },
         auction: { select: { title: true, endAt: true, status: true } },
         organization: {
           select: {
@@ -98,7 +111,12 @@ export async function PATCH(
 
     const item = await prisma.item.findUnique({
       where: { id: itemId },
-      select: { organizationId: true, status: true, auctionId: true },
+      select: {
+        organizationId: true,
+        status: true,
+        auctionId: true,
+        _count: { select: { bids: true } },
+      },
     });
     if (!item) return NextResponse.json({ error: "Item not found" }, { status: 404 });
 
@@ -107,6 +125,36 @@ export async function PATCH(
     }
 
     const body = await request.json();
+
+    // Pricing/auction fields are locked once an item is live or has bids —
+    // changing them mid-auction would let staff move the goalposts.
+    const pricingLocked = item.status === "ACTIVE" || item._count.bids > 0;
+
+    // Validate numeric fields: must be finite and >= 0 when provided.
+    const numericFields: Record<string, unknown> = {
+      retailValue: body.retailValue,
+      startingBid: body.startingBid,
+      reservePrice: body.reservePrice,
+    };
+    for (const [field, raw] of Object.entries(numericFields)) {
+      if (raw === undefined || raw === null || raw === "") continue;
+      const n = Number(raw);
+      if (!Number.isFinite(n) || n < 0) {
+        return NextResponse.json(
+          { error: `Invalid value for ${field}` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate photo URLs are http(s) (reject javascript:/data: etc.).
+    if (body.photos && body.photos.length > 0) {
+      for (const url of body.photos) {
+        if (!isHttpUrl(url)) {
+          return NextResponse.json({ error: "Invalid photo URL" }, { status: 400 });
+        }
+      }
+    }
 
     // If this item is still DRAFT but belongs to an OPEN auction, promote it to ACTIVE on save
     const targetAuctionId = body.auctionId || item.auctionId;
@@ -119,24 +167,40 @@ export async function PATCH(
       if (parentAuction?.status === "OPEN") autoActivate = true;
     }
 
+    // Descriptive fields are always editable. Merge against the existing row by
+    // only setting keys the request actually provided.
+    const data: Record<string, unknown> = {
+      ...(body.title !== undefined && { title: body.title }),
+      ...(body.description !== undefined && { description: body.description || null }),
+      ...(body.condition !== undefined && { condition: body.condition || "GOOD" }),
+      ...(body.category !== undefined && { category: body.category || null }),
+      ...(body.retailValue !== undefined && {
+        retailValue: body.retailValue ? parseFloat(body.retailValue) : null,
+      }),
+      ...(body.donorName !== undefined && { donorName: body.donorName || null }),
+      ...(body.taxDeductible !== undefined && { taxDeductible: body.taxDeductible || false }),
+      ...(body.storageLocation !== undefined && { storageLocation: body.storageLocation || null }),
+      ...(body.locationId !== undefined && { locationId: body.locationId || null }),
+      ...(body.notes !== undefined && { notes: body.notes || null }),
+      ...(autoActivate ? { status: "ACTIVE" } : {}),
+    };
+
+    // Pricing/auction fields only when the item isn't live and has no bids.
+    if (!pricingLocked) {
+      if (body.startingBid !== undefined) {
+        data.startingBid = body.startingBid ? parseFloat(body.startingBid) : 0;
+      }
+      if (body.reservePrice !== undefined) {
+        data.reservePrice = body.reservePrice ? parseFloat(body.reservePrice) : null;
+      }
+      if (body.auctionId !== undefined) {
+        data.auctionId = body.auctionId || null;
+      }
+    }
+
     await prisma.item.update({
       where: { id: itemId },
-      data: {
-        title: body.title,
-        description: body.description || null,
-        condition: body.condition || "GOOD",
-        category: body.category || null,
-        retailValue: body.retailValue ? parseFloat(body.retailValue) : null,
-        startingBid: body.startingBid ? parseFloat(body.startingBid) : 0,
-        reservePrice: body.reservePrice ? parseFloat(body.reservePrice) : null,
-        donorName: body.donorName || null,
-        taxDeductible: body.taxDeductible || false,
-        storageLocation: body.storageLocation || null,
-        ...(body.locationId !== undefined && { locationId: body.locationId || null }),
-        notes: body.notes || null,
-        auctionId: body.auctionId || null,
-        ...(autoActivate ? { status: "ACTIVE" } : {}),
-      },
+      data,
     });
 
     if (body.photos) {

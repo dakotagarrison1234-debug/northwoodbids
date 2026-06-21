@@ -100,7 +100,7 @@ export default async function SearchPage({ searchParams }: Props) {
                 <Link
                   key={item.id}
                   href={`/${item.organization.slug}/${item.auction?.slug}/item/${item.id}`}
-                  className="bg-white border border-[#e3d6bf] hover:border-[#6c4d39]/40 rounded-2xl p-4 flex items-center gap-4 transition-all hover:shadow-[0_0_20px_rgba(108, 77, 57,0.05)] group"
+                  className="bg-white border border-[#e3d6bf] hover:border-[#6c4d39]/40 rounded-2xl p-4 flex items-center gap-4 transition-all hover:shadow-[0_0_20px_rgba(108,77,57,0.05)] group"
                 >
                   {item.photos[0] ? (
                     <img
@@ -150,7 +150,7 @@ export default async function SearchPage({ searchParams }: Props) {
                   <Link
                     key={auction.id}
                     href={`/${auction.organization.slug}/${auction.slug}`}
-                    className="bg-white border border-[#e3d6bf] hover:border-[#6c4d39]/40 rounded-2xl p-4 flex items-center justify-between gap-4 transition-all hover:shadow-[0_0_20px_rgba(108, 77, 57,0.05)] group"
+                    className="bg-white border border-[#e3d6bf] hover:border-[#6c4d39]/40 rounded-2xl p-4 flex items-center justify-between gap-4 transition-all hover:shadow-[0_0_20px_rgba(108,77,57,0.05)] group"
                   >
                     <div className="min-w-0">
                       <div className="font-semibold truncate group-hover:text-[#6c4d39] transition-colors">

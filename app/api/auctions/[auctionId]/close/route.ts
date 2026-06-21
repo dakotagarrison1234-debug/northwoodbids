@@ -3,7 +3,7 @@ export const maxDuration = 300;
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { canAccessOrg } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { closeAuction } from "@/lib/closeAuction";
 
 interface Props {
@@ -24,8 +24,11 @@ export async function POST(_request: NextRequest, { params }: Props) {
 
     if (!auction) return NextResponse.json({ error: "Auction not found" }, { status: 404 });
 
-    if (!(await canAccessOrg(auction.organizationId))) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!(await requireRole(auction.organizationId, ["OWNER", "ADMIN"]))) {
+      return NextResponse.json(
+        { error: "You don't have permission for this action" },
+        { status: 403 }
+      );
     }
 
     const { winnersCount } = await closeAuction(auctionId);

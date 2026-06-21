@@ -159,7 +159,7 @@ export default function SearchBar({
 
               {results!.auctions.length > 0 && (
                 <div>
-                  <div className="px-4 py-2 text-xs font-semibold text-[#8a7559] uppercase tracking-wider border-b border-[#e3d6bf] border-t border-t-gray-800">Live Auctions</div>
+                  <div className="px-4 py-2 text-xs font-semibold text-[#8a7559] uppercase tracking-wider border-b border-[#e3d6bf] border-t border-t-[#e3d6bf]">Live Auctions</div>
                   {results!.auctions.map(auction => (
                     <Link key={auction.id} href={`/${auction.organization.slug}/${auction.slug}`} onClick={clearAndClose}
                       className="flex items-center gap-3 px-4 py-3 hover:bg-[#efe3d0] transition-colors">
@@ -180,7 +180,7 @@ export default function SearchBar({
 
               {results!.orgs.length > 0 && (
                 <div>
-                  <div className="px-4 py-2 text-xs font-semibold text-[#8a7559] uppercase tracking-wider border-b border-[#e3d6bf] border-t border-t-gray-800">Businesses</div>
+                  <div className="px-4 py-2 text-xs font-semibold text-[#8a7559] uppercase tracking-wider border-b border-[#e3d6bf] border-t border-t-[#e3d6bf]">Businesses</div>
                   {results!.orgs.map(org => (
                     <Link key={org.id} href={`/${org.slug}`} onClick={clearAndClose}
                       className="flex items-center gap-3 px-4 py-3 hover:bg-[#efe3d0] transition-colors">

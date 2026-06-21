@@ -70,9 +70,9 @@ function NavLink({
   label: string;
   sublabel?: string;
   onClick: () => void;
-  accent?: "teal" | "orange";
+  accent?: "brown";
 }) {
-  const accentColor = accent === "orange" ? "#f97316" : accent === "teal" ? "#6c4d39" : undefined;
+  const accentColor = accent === "brown" ? "#6c4d39" : undefined;
   return (
     <Link
       href={href}
@@ -252,7 +252,7 @@ export default function UserMenu() {
                 label={orgPortalLabel}
                 sublabel={orgPortalSublabel}
                 onClick={close}
-                accent="teal"
+                accent="brown"
               />
             </>
           )}

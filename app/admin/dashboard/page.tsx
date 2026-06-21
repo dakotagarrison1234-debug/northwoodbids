@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import type { ItemStatus } from "@prisma/client";
 import { requireUserOrg } from "@/lib/auth";
 import LocalDate from "@/app/components/LocalDate";
 
@@ -16,32 +17,59 @@ export default async function AdminDashboard() {
   const membership = await requireUserOrg();
   const orgId = membership.organization.id;
 
-  const [items, auctions, allBids] = await Promise.all([
-    prisma.item.findMany({ where: { organizationId: orgId }, include: { bids: true } }),
-    prisma.auction.findMany({
-      where: { organizationId: orgId },
-      orderBy: { endAt: "asc" },
-      include: { items: true },
+  const soldStatuses: ItemStatus[] = ["SOLD", "PENDING_PICKUP", "PICKED_UP"];
+  const bidsWhere = { item: { organizationId: orgId } };
+
+  // All header stats computed in the DB — no loading whole tables to count/sum in JS.
+  const [
+    totalRaisedAgg,
+    itemCount,
+    bidCount,
+    uniqueBidderRows,
+    recentBids,
+  ] = await Promise.all([
+    prisma.item.aggregate({
+      where: { organizationId: orgId, status: { in: soldStatuses } },
+      _sum: { currentBid: true },
+    }),
+    prisma.item.count({ where: { organizationId: orgId } }),
+    prisma.bid.count({ where: bidsWhere }),
+    prisma.bid.findMany({
+      where: bidsWhere,
+      distinct: ["clerkUserId"],
+      select: { clerkUserId: true },
     }),
     prisma.bid.findMany({
-      where: { item: { organizationId: orgId } },
-      include: { item: true },
+      where: bidsWhere,
+      include: { item: { select: { title: true } } },
       orderBy: { placedAt: "desc" },
+      take: 6,
     }),
   ]);
 
-  const soldStatuses = ["SOLD", "PENDING_PICKUP", "PICKED_UP"];
-  const totalRaised = items
-    .filter((i) => soldStatuses.includes(i.status))
-    .reduce((sum, i) => sum + Number(i.currentBid), 0);
-  // Prefer OPEN, then CLOSING, then DRAFT (scheduled), otherwise none
+  const totalRaised = Number(totalRaisedAgg._sum.currentBid ?? 0);
+  const uniqueBidders = uniqueBidderRows.length;
+
+  // Prefer OPEN, then CLOSING, then DRAFT (scheduled), otherwise none.
+  // status enum string order isn't our priority order, so resolve in priority order;
+  // each is a single indexed lookup (organizationId, status) — not a full table scan.
   const activeAuction =
-    auctions.find((a) => a.status === "OPEN") ||
-    auctions.find((a) => a.status === "CLOSING") ||
-    auctions.find((a) => a.status === "DRAFT") ||
+    (await prisma.auction.findFirst({ where: { organizationId: orgId, status: "OPEN" }, orderBy: { endAt: "asc" }, include: { _count: { select: { items: true } } } })) ||
+    (await prisma.auction.findFirst({ where: { organizationId: orgId, status: "CLOSING" }, orderBy: { endAt: "asc" }, include: { _count: { select: { items: true } } } })) ||
+    (await prisma.auction.findFirst({ where: { organizationId: orgId, status: "DRAFT" }, orderBy: { endAt: "asc" }, include: { _count: { select: { items: true } } } })) ||
     null;
-  const uniqueBidders = new Set(allBids.map((b) => b.clerkUserId)).size;
-  const recentBids = allBids.slice(0, 6);
+
+  // "Raised" for the active auction (sum of sold items' current bid), computed in the DB.
+  const activeAuctionRaised = activeAuction
+    ? Number(
+        (
+          await prisma.item.aggregate({
+            where: { auctionId: activeAuction.id, status: { in: soldStatuses } },
+            _sum: { currentBid: true },
+          })
+        )._sum.currentBid ?? 0
+      )
+    : 0;
 
   // Resolve bidder display names for recent bids
   const recentIds = [...new Set(recentBids.map((b) => b.clerkUserId))];
@@ -66,9 +94,9 @@ export default async function AdminDashboard() {
       <div className="px-4 sm:px-8 py-6 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {[
           { label: "Total Raised", value: `$${totalRaised.toLocaleString()}` },
-          { label: "Items Listed", value: items.length },
+          { label: "Items Listed", value: itemCount },
           { label: "Active Bidders", value: uniqueBidders },
-          { label: "Bids Placed", value: allBids.length },
+          { label: "Bids Placed", value: bidCount },
         ].map((stat) => (
           <div key={stat.label} className="bg-white border border-[#e3d6bf] rounded-xl p-5 sm:p-6">
             <div className="text-[#8a7559] text-sm sm:text-base mb-1">{stat.label}</div>
@@ -136,15 +164,12 @@ export default async function AdminDashboard() {
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-base">
                   <span className="text-[#8a7559]">Items</span>
-                  <span>{activeAuction.items.length}</span>
+                  <span>{activeAuction._count.items}</span>
                 </div>
                 <div className="flex justify-between text-base">
                   <span className="text-[#8a7559]">Raised</span>
                   <span className="text-[#6c4d39] font-semibold">
-                    ${activeAuction.items
-                      .filter((i) => soldStatuses.includes(i.status))
-                      .reduce((s, i) => s + Number(i.currentBid), 0)
-                      .toLocaleString()}
+                    ${activeAuctionRaised.toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between text-base">

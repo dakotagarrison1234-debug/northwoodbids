@@ -45,8 +45,10 @@ export async function DELETE(_request: NextRequest, { params }: Props) {
     await prisma.orgMember.delete({ where: { id: memberId } });
     return NextResponse.json({ success: true });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Internal error";
-    console.error("[orgs/members DELETE]:", msg, err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[orgs/members DELETE]:", err);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }

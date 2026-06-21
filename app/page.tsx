@@ -61,6 +61,41 @@ function IconShield() {
   );
 }
 
+/**
+ * Compute a rustic "closing soon / ends in Xh" urgency pill from endAt.
+ * Returns null when the auction isn't within the urgency window (>48h out)
+ * or has already closed.
+ */
+function endsSoon(endAt: Date, now: Date): { label: string; tone: "urgent" | "soon" } | null {
+  const ms = endAt.getTime() - now.getTime();
+  if (ms <= 0) return null;
+  const mins = Math.round(ms / 60000);
+  const hours = Math.floor(mins / 60);
+  if (mins <= 60) return { label: mins <= 1 ? "Closing now" : `Ends in ${mins}m`, tone: "urgent" };
+  if (hours < 12) return { label: `Ends in ${hours}h`, tone: "urgent" };
+  if (hours < 48) return { label: `Ends in ${hours}h`, tone: "soon" };
+  return null;
+}
+
+function UrgencyPill({ endAt, now }: { endAt: Date; now: Date }) {
+  const u = endsSoon(endAt, now);
+  if (!u) return null;
+  return (
+    <span
+      className={`text-xs px-2.5 py-1 rounded-full shrink-0 font-bold whitespace-nowrap inline-flex items-center gap-1 ${
+        u.tone === "urgent"
+          ? "bg-[#efe0c9] text-[#8a5a2b] border border-[#d8b483]"
+          : "bg-[#6c4d39]/10 text-[#6c4d39] border border-[#6c4d39]/20"
+      }`}
+    >
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" />
+      </svg>
+      {u.label}
+    </span>
+  );
+}
+
 export default async function HomePage() {
   const { userId } = await auth();
   const now = new Date();
@@ -70,7 +105,6 @@ export default async function HomePage() {
       where: { status: "OPEN" },
       include: {
         organization: true,
-        items: { select: { currentBid: true, status: true } },
       },
       orderBy: { endAt: "asc" },
       take: 9,
@@ -85,6 +119,30 @@ export default async function HomePage() {
       take: 6,
     }),
   ]);
+
+  // Per-auction "raised" (sum of every item's current bid) and "active items" count,
+  // computed in the DB via groupBy instead of pulling every item row into JS.
+  const activeAuctionIds = activeAuctions.map((a) => a.id);
+  const [raisedByAuction, activeItemsByAuction] = activeAuctionIds.length
+    ? await Promise.all([
+        prisma.item.groupBy({
+          by: ["auctionId"],
+          where: { auctionId: { in: activeAuctionIds } },
+          _sum: { currentBid: true },
+        }),
+        prisma.item.groupBy({
+          by: ["auctionId"],
+          where: { auctionId: { in: activeAuctionIds }, status: "ACTIVE" },
+          _count: { _all: true },
+        }),
+      ])
+    : [[], []];
+  const raisedMap = new Map(
+    raisedByAuction.map((r) => [r.auctionId, Number(r._sum.currentBid ?? 0)])
+  );
+  const activeItemsMap = new Map(
+    activeItemsByAuction.map((r) => [r.auctionId, r._count._all])
+  );
 
   return (
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
@@ -112,7 +170,7 @@ export default async function HomePage() {
             Real-time auctions with a handshake feel. Bid live, get outbid alerts, and check out securely the moment you win.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a href="#live-auctions" className="bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold px-9 py-4 rounded-xl text-base transition-all hover:shadow-[0_6px_24px_rgba(108, 77, 57,0.35)] w-full sm:w-auto text-center">
+            <a href="#live-auctions" className="bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold px-9 py-4 rounded-xl text-base transition-all hover:shadow-[0_6px_24px_rgba(108,77,57,0.35)] w-full sm:w-auto text-center">
               {activeAuctions.length > 0 ? "See Live Auctions" : "Browse Auctions"}
             </a>
             {!userId && (
@@ -137,8 +195,8 @@ export default async function HomePage() {
         {activeAuctions.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {activeAuctions.map((auction) => {
-              const raised = auction.items.reduce((sum, i) => sum + Number(i.currentBid), 0);
-              const activeItems = auction.items.filter(i => i.status === "ACTIVE").length;
+              const raised = raisedMap.get(auction.id) ?? 0;
+              const activeItems = activeItemsMap.get(auction.id) ?? 0;
               return (
                 <Link key={auction.id} href={`/${auction.organization.slug}/${auction.slug}`}
                   className="bg-white border border-[#e3d6bf] hover:border-[#6c4d39]/40 rounded-2xl p-6 transition-all hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] group shadow-sm">
@@ -146,7 +204,10 @@ export default async function HomePage() {
                     <div className="min-w-0">
                       <h3 className="font-bold text-base group-hover:text-[#6c4d39] transition-colors leading-snug text-[#241a12]">{auction.title}</h3>
                     </div>
-                    <span className="text-xs bg-[#6c4d39]/10 text-[#6c4d39] border border-[#6c4d39]/20 px-2.5 py-1 rounded-full shrink-0 font-bold whitespace-nowrap">Live</span>
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      <span className="text-xs bg-[#6c4d39]/10 text-[#6c4d39] border border-[#6c4d39]/20 px-2.5 py-1 rounded-full font-bold whitespace-nowrap">Live</span>
+                      <UrgencyPill endAt={auction.endAt} now={now} />
+                    </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[#8a7559] mb-2">
                     <span>{activeItems} item{activeItems !== 1 ? "s" : ""}</span>
@@ -206,7 +267,7 @@ export default async function HomePage() {
             {[
               { icon: <IconSearch />, title: "Find an auction", desc: "Browse live auctions and watch the countdown. When the timer hits zero, the highest bid wins." },
               { icon: <IconBid />, title: "Place your bid", desc: "Bid in real time or set a max bid — we auto-bid for you. Instant alerts when you are outbid." },
-              { icon: <IconTrophy />, title: "Win & pick up", desc: "Win and your card is charged automatically. Arrange pickup with the business." },
+              { icon: <IconTrophy />, title: "Win & pick up", desc: "Win and your card is charged automatically. Schedule your own pickup time online." },
             ].map(({ icon, title, desc }) => (
               <div key={title} className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-white border border-[#e3d6bf] rounded-2xl flex items-center justify-center text-[#6c4d39] shrink-0 shadow-sm">{icon}</div>

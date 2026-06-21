@@ -24,9 +24,11 @@ export async function POST(request: NextRequest) {
     response.cookies.set(COOKIE_NAME, orgId, COOKIE_OPTS);
     return response;
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Internal error";
-    console.error("[superadmin/act-as POST]:", msg, err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[superadmin/act-as POST]:", err);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }
 
@@ -38,8 +40,10 @@ export async function DELETE() {
     response.cookies.set(COOKIE_NAME, "", { ...COOKIE_OPTS, maxAge: 0 });
     return response;
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Internal error";
-    console.error("[superadmin/act-as DELETE]:", msg, err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[superadmin/act-as DELETE]:", err);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }

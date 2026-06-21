@@ -89,17 +89,24 @@ export async function POST(request: NextRequest) {
       ? await prisma.bidderProfile.findUnique({ where: { clerkUserId: previousActiveBid.clerkUserId } })
       : null;
 
-    // Popcorn bidding: extend item end time if bid placed in last 2:30
+    // Popcorn bidding: extend item end time if bid placed in last 2:00
     let newItemEndAt: Date | null = null;
     const timeLeft = effectiveEndAt.getTime() - Date.now();
     if (timeLeft < POPCORN_WINDOW_MS) {
       newItemEndAt = new Date(Date.now() + POPCORN_EXTENSION_MS);
     }
 
-    // Record the manual bid atomically with optimistic-lock guard
+    // Record the manual bid atomically with optimistic-lock guard.
+    // Guard on status ACTIVE so a bid can't land on an item the cron is concurrently
+    // closing, and guard on itemEndAt so an expired item rejects the bid.
     const bid = await prisma.$transaction(async (tx) => {
       const guard = await tx.item.updateMany({
-        where: { id: itemId, currentBid: { lt: amount } },
+        where: {
+          id: itemId,
+          status: "ACTIVE",
+          currentBid: { lt: amount },
+          OR: [{ itemEndAt: null }, { itemEndAt: { gt: new Date() } }],
+        },
         data: {
           currentBid: amount,
           ...(newItemEndAt ? { itemEndAt: newItemEndAt } : {}),
@@ -118,10 +125,11 @@ export async function POST(request: NextRequest) {
     // If a proxy fired, the Pusher event is already sent by resolveProxiesAfterBid.
     // Only broadcast the manual bid event if no proxy fired (otherwise the proxy event supersedes it).
     if (!proxyResult.proxyFired) {
+      // Privacy: never put a raw/truncated Clerk id on the wire. The client
+      // increments its own "Bidder N" counter per event, so no user id is needed.
       await getPusherServer().trigger(`item-${itemId}`, "new-bid", {
         amount,
         bidId: bid.id,
-        userId: userId.substring(0, 8),
         placedAt: bid.placedAt,
         isProxy: false,
         hasActiveProxy: proxyResult.hasActiveProxy,

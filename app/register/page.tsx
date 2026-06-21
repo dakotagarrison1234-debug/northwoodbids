@@ -10,6 +10,7 @@ function RegisterForm() {
   const redirectUrl = searchParams.get("redirect_url") || "/dashboard";
 
   const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(true);
   const [orgSlug, setOrgSlug] = useState<string | null>(null);
@@ -47,17 +48,19 @@ function RegisterForm() {
   }, [isLoaded, router, redirectUrl, orgSlug]);
 
   const handleSubmit = async () => {
-    if (!phone || phone.length < 10) {
-      alert("Please enter a valid phone number");
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length !== 10) {
+      setPhoneError("Please enter a valid 10-digit US phone number.");
       return;
     }
+    setPhoneError(null);
     setSaving(true);
     try {
       const res = await fetch("/api/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          phone,
+          phone: digits,
           email: user?.primaryEmailAddress?.emailAddress,
           name: user?.fullName,
           ...(orgSlug ? { orgSlug } : {}),
@@ -70,10 +73,10 @@ function RegisterForm() {
         // Send them to their org's page, or the default redirect
         router.push(orgSlug ? `/${orgSlug}` : redirectUrl);
       } else {
-        alert("Error saving profile");
+        setPhoneError(data.error || "Couldn't save your number. Please try again.");
       }
     } catch {
-      alert("Something went wrong");
+      setPhoneError("Something went wrong. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -107,19 +110,31 @@ function RegisterForm() {
         )}
         <h1 className="text-2xl font-bold mb-2">One more step</h1>
         <p className="text-[#6f5b46] mb-6">
-          Add your phone number to receive outbid alerts via SMS so you never miss a winning opportunity.
+          Add your phone number to get <strong className="text-[#241a12]">outbid and win alerts by text</strong> so you never miss a winning opportunity.
         </p>
         <div className="space-y-4">
           <div>
-            <label className="text-sm text-[#6f5b46] mb-1 block">Phone Number</label>
+            <label htmlFor="phone" className="text-sm text-[#6f5b46] mb-1 block">Phone Number</label>
             <input
+              id="phone"
               type="tel"
+              inputMode="tel"
               value={phone}
-              onChange={e => setPhone(e.target.value)}
+              onChange={e => {
+                setPhone(e.target.value);
+                if (phoneError) setPhoneError(null);
+              }}
               onKeyDown={e => e.key === "Enter" && !saving && handleSubmit()}
               placeholder="+1 (555) 000-0000"
-              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]"
+              aria-invalid={phoneError ? true : undefined}
+              aria-describedby={phoneError ? "phone-error" : undefined}
+              className={`w-full bg-[#efe3d0] border rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none transition-colors ${
+                phoneError ? "border-red-500 focus:border-red-500" : "border-[#cdbda3] focus:border-[#6c4d39]"
+              }`}
             />
+            {phoneError && (
+              <p id="phone-error" className="text-red-600 text-sm mt-1.5">{phoneError}</p>
+            )}
           </div>
           <button
             onClick={handleSubmit}
@@ -132,7 +147,7 @@ function RegisterForm() {
             onClick={handleSkip}
             className="w-full text-[#8a7559] hover:text-[#4a3a2b] text-sm py-2"
           >
-            Skip for now
+            Skip for now — you won&apos;t get outbid or win text alerts
           </button>
         </div>
       </div>

@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -45,11 +45,25 @@ export async function GET() {
     const membership = await getUserOrg();
     if (!membership) return NextResponse.json({ auctions: [] });
 
+    // Bounded fetching: never load the whole auctions table unbounded. Defaults to the
+    // most recent 50; callers can page with ?take= and ?cursor= (the cursor is an auction id).
+    const { searchParams } = new URL(request.url);
+    const takeParam = Number(searchParams.get("take"));
+    const take = Number.isFinite(takeParam) && takeParam > 0 ? Math.min(takeParam, 200) : 50;
+    const cursor = searchParams.get("cursor") || undefined;
+
     const auctions = await prisma.auction.findMany({
       where: { organizationId: membership.organizationId },
       orderBy: { createdAt: "desc" },
+      take: take + 1, // fetch one extra to detect whether another page exists
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     });
-    return NextResponse.json({ auctions });
+
+    const hasMore = auctions.length > take;
+    const page = hasMore ? auctions.slice(0, take) : auctions;
+    const nextCursor = hasMore ? page[page.length - 1]?.id ?? null : null;
+
+    return NextResponse.json({ auctions: page, nextCursor, hasMore });
   } catch (error) {
     console.error("Error fetching auctions:", error);
     return NextResponse.json({ error: "Failed to fetch auctions" }, { status: 500 });

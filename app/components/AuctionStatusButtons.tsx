@@ -7,6 +7,8 @@ interface Props {
   status: string;
 }
 
+const BTN_BASE =
+  "text-base font-semibold px-6 py-3.5 rounded-xl transition-colors whitespace-nowrap disabled:opacity-50";
 
 export default function AuctionStatusButtons({ auctionId, status }: Props) {
   const router = useRouter();
@@ -14,14 +16,15 @@ export default function AuctionStatusButtons({ auctionId, status }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const confirmMessages: Record<string, string> = {
-    OPEN: "Open this auction? All draft items will go live and bidders can start bidding.",
-    CLOSING: "Mark this auction as closing soon? Bidders will see a warning banner.",
-    SETTLED: "Mark this auction as settled? This indicates all winners have been processed.",
+    OPEN: "Open this auction now? All draft items will go live and bidders can start bidding.",
+    CLOSING: "Let bidders know this auction is closing soon? They'll see a 'closing soon' banner.",
+    SETTLED: "Mark this auction as settled? This means all winners have been taken care of.",
   };
 
   const updateStatus = async (newStatus: string) => {
     const msg = confirmMessages[newStatus] || `Change auction status to ${newStatus.toLowerCase()}?`;
-    if (!confirm(msg)) return;
+    // Status changes here are non-destructive; only ask before opening/closing.
+    if (newStatus === "OPEN" && !confirm(msg)) return;
     setLoading(true);
     setError(null);
     try {
@@ -34,113 +37,85 @@ export default function AuctionStatusButtons({ auctionId, status }: Props) {
       if (data.success) {
         router.refresh();
       } else {
-        setError(data.error || "Failed to update status.");
+        setError(data.error || "Could not update the auction. Please try again.");
       }
     } catch {
-      setError("Something went wrong.");
+      setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const closeAuction = async () => {
-    if (!confirm("Close this auction? This will mark all winning bids and notify winners via GHL.")) return;
+    if (!confirm("Close this auction now? Winners will be set and notified. This can't be undone.")) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/auctions/${auctionId}/close`, {
-        method: "POST",
-      });
+      const res = await fetch(`/api/auctions/${auctionId}/close`, { method: "POST" });
       const data = await res.json();
       if (data.success) {
         setError(null);
         router.refresh();
       } else {
-        setError(data.error || "Failed to close auction.");
+        setError(data.error || "Could not close the auction. Please try again.");
       }
     } catch {
-      setError("Something went wrong.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const deleteAuction = async () => {
-    if (!confirm("Delete this draft auction? All items will be unlinked (not deleted) and can be re-assigned. This cannot be undone.")) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/auctions/${auctionId}`, { method: "DELETE" });
-      const data = await res.json();
-      if (data.success) {
-        router.push("/admin/auctions");
-      } else {
-        setError(data.error || "Failed to delete auction.");
-      }
-    } catch {
-      setError("Something went wrong.");
+      setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   if (loading) {
-    return <span className="text-[#6f5b46] text-sm">Updating...</span>;
+    return <span className="text-[#6f5b46] text-base font-semibold">Working…</span>;
   }
 
   return (
     <div>
-    <div className="flex items-center gap-2">
-      {status === "DRAFT" && (
-        <>
+      <div className="flex items-center gap-2 sm:gap-3">
+        {status === "DRAFT" && (
+          // Delete lives in the Danger Zone below — only one delete path.
           <button
             onClick={() => updateStatus("OPEN")}
-            className="bg-[#6c4d39] hover:bg-[#563e2c] text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors"
+            className={`${BTN_BASE} bg-[#6c4d39] hover:bg-[#563e2c] text-white`}
           >
             Open Auction
           </button>
-          <button
-            onClick={deleteAuction}
-            className="bg-transparent hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 text-sm px-3 py-2 rounded-lg font-medium transition-colors"
-          >
-            Delete
-          </button>
-        </>
-      )}
-      {status === "OPEN" && (
-        <>
-          <button
-            onClick={() => updateStatus("CLOSING")}
-            className="bg-amber-500 hover:bg-amber-400 text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors"
-          >
-            Mark Closing Soon
-          </button>
+        )}
+        {status === "OPEN" && (
+          <>
+            <button
+              onClick={() => updateStatus("CLOSING")}
+              className={`${BTN_BASE} bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] text-[#241a12]`}
+            >
+              Mark Closing Soon
+            </button>
+            <button
+              onClick={closeAuction}
+              className={`${BTN_BASE} bg-[#4a3a2b] hover:bg-[#241a12] text-white`}
+            >
+              Close Auction
+            </button>
+          </>
+        )}
+        {status === "CLOSING" && (
           <button
             onClick={closeAuction}
-            className="bg-red-500 hover:bg-red-400 text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors"
+            className={`${BTN_BASE} bg-[#4a3a2b] hover:bg-[#241a12] text-white`}
           >
             Close Auction
           </button>
-        </>
-      )}
-      {status === "CLOSING" && (
-        <button
-          onClick={closeAuction}
-          className="bg-red-500 hover:bg-red-400 text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors"
-        >
-          Close Auction
-        </button>
-      )}
-      {status === "CLOSED" && (
-        <button
-          onClick={() => updateStatus("SETTLED")}
-          className="bg-[#4a3a2b] hover:bg-[#241a12] text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors"
-        >
-          Mark Settled
-        </button>
-      )}
-    </div>
-    {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
+        )}
+        {status === "CLOSED" && (
+          <button
+            onClick={() => updateStatus("SETTLED")}
+            className={`${BTN_BASE} bg-[#6c4d39] hover:bg-[#563e2c] text-white`}
+          >
+            Mark Settled
+          </button>
+        )}
+      </div>
+      {error && <p className="text-red-600 text-base mt-2">{error}</p>}
     </div>
   );
 }

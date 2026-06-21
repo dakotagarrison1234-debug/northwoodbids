@@ -41,7 +41,12 @@ export default async function AuctionPage({ params }: Props) {
     where: { organizationId: org.id, slug: auctionSlug },
     include: {
       items: {
-        include: { photos: true, bids: true },
+        include: {
+          photos: true,
+          // Only the single top ACTIVE bid per item (uses [itemId, status, amount] index)
+          // — enough to decide current price + "is this user winning" without pulling history.
+          bids: { where: { status: "ACTIVE" }, orderBy: { amount: "desc" }, take: 1 },
+        },
       },
     },
   }) : null;
@@ -64,10 +69,11 @@ export default async function AuctionPage({ params }: Props) {
   const isLive = !isClosed;
 
   // Helper: is the current user the top bidder on this item?
+  // `bids` now holds at most the single highest ACTIVE bid (fetched with take: 1),
+  // so the top bidder is simply that row's owner — no client-side sort needed.
   const isUserWinning = (bids: { clerkUserId: string | null; amount: unknown }[]) => {
     if (!userId || bids.length === 0) return false;
-    const topBid = [...bids].sort((a, b) => Number(b.amount) - Number(a.amount))[0];
-    return topBid.clerkUserId === userId;
+    return bids[0].clerkUserId === userId;
   };
 
   const SOLD_STATUSES = ["SOLD", "PENDING_PICKUP", "PICKED_UP"];
@@ -187,10 +193,10 @@ export default async function AuctionPage({ params }: Props) {
                   href={`/${orgSlug}/${auctionSlug}/item/${item.id}`}
                   className={`bg-white border rounded-2xl overflow-hidden transition-all group ${
                     winning
-                      ? "border-[#6c4d39]/50 shadow-[0_0_0_1px_rgba(108, 77, 57,0.15),0_0_20px_rgba(108, 77, 57,0.08)]"
+                      ? "border-[#6c4d39]/50 shadow-[0_0_0_1px_rgba(108,77,57,0.15),0_0_20px_rgba(108,77,57,0.08)]"
                       : isClosed || isItemClosed
                       ? "border-[#e3d6bf]/60 opacity-80 hover:border-[#cdbda3]"
-                      : "border-[#e3d6bf] hover:border-[#6c4d39]/40 hover:shadow-[0_0_25px_rgba(108, 77, 57,0.06)]"
+                      : "border-[#e3d6bf] hover:border-[#6c4d39]/40 hover:shadow-[0_0_25px_rgba(108,77,57,0.06)]"
                   }`}
                 >
                   {/* Photo */}

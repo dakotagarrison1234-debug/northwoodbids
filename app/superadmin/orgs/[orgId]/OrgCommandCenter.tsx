@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { money } from "@/lib/format";
 
 type OrgRole = "OWNER" | "ADMIN" | "STAFF";
 
@@ -188,13 +189,6 @@ export default function OrgCommandCenter({ org: initial }: { org: Org }) {
     { id: "maxbids", label: "Max Bids 🔒" },
   ] as const;
 
-  const statusColor = (s: string) => {
-    if (s === "OPEN" || s === "ACTIVE") return "text-[#6c4d39] bg-[#6c4d39]/20";
-    if (s === "CLOSED" || s === "SOLD") return "text-[#6f5b46] bg-[#e7dcc6]";
-    if (s === "DRAFT") return "text-amber-600 bg-yellow-500/20";
-    return "text-[#6f5b46] bg-[#e7dcc6]";
-  };
-
   return (
     <div className="flex-1 flex flex-col min-w-0">
       {/* Header */}
@@ -333,7 +327,7 @@ export default function OrgCommandCenter({ org: initial }: { org: Org }) {
                         {active > 0 && <span className="text-[#6c4d39]">{active} active</span>}
                         {sold > 0 && <span className="text-[#6f5b46]">{sold} sold</span>}
                         {draft > 0 && <span className="text-yellow-600">{draft} draft</span>}
-                        <span className="text-[#6c4d39] ml-auto">${totalBid.toLocaleString()} raised</span>
+                        <span className="text-[#6c4d39] ml-auto">{money(totalBid)} raised</span>
                       </>;
                     })()}
                   </div>
@@ -361,7 +355,7 @@ export default function OrgCommandCenter({ org: initial }: { org: Org }) {
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">{item.title}</div>
                   <div className="text-[#8a7559] text-xs mt-0.5">
-                    ${Number(item.currentBid)} current bid · ${Number(item.startingBid)} start
+                    {money(Number(item.currentBid))} current bid · {money(Number(item.startingBid))} start
                     {item.auction && <span> · {item.auction.title}</span>}
                   </div>
                 </div>
@@ -457,11 +451,11 @@ export default function OrgCommandCenter({ org: initial }: { org: Org }) {
                           )}
                         </td>
                         <td className="px-5 py-3.5 text-right font-mono text-[#4a3a2b]">
-                          ${pb.item.currentBid.toLocaleString()}
+                          {money(pb.item.currentBid)}
                         </td>
                         <td className="px-5 py-3.5 text-right">
                           <span className="font-bold font-mono text-orange-600 bg-orange-50 border border-orange-200 px-2.5 py-1 rounded-lg">
-                            ${pb.maxAmount.toLocaleString()}
+                            {money(pb.maxAmount)}
                           </span>
                         </td>
                       </tr>

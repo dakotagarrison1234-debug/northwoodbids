@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { canAccessOrg } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { triggerAuctionUpdated } from "@/lib/pusherServer";
 import { notifyAuctionStartedToFollowers } from "@/lib/closeAuction";
 
@@ -33,8 +33,11 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Auction not found" }, { status: 404 });
     }
 
-    if (!(await canAccessOrg(auction.organizationId))) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!(await requireRole(auction.organizationId, ["OWNER", "ADMIN"]))) {
+      return NextResponse.json(
+        { error: "You don't have permission for this action" },
+        { status: 403 }
+      );
     }
 
     // State machine guard — prevent illegal auction status transitions
@@ -103,8 +106,11 @@ export async function DELETE(_request: NextRequest, { params }: Props) {
     });
     if (!auction) return NextResponse.json({ error: "Auction not found" }, { status: 404 });
 
-    if (!(await canAccessOrg(auction.organizationId))) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!(await requireRole(auction.organizationId, ["OWNER", "ADMIN"]))) {
+      return NextResponse.json(
+        { error: "You don't have permission for this action" },
+        { status: 403 }
+      );
     }
 
     // Only DRAFT auctions can be deleted — protect live/completed auctions

@@ -73,8 +73,10 @@ export async function GET(request: NextRequest) {
     orgs,
   });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Internal error";
-    console.error("[search GET]:", msg, err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[search GET]:", err);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }
