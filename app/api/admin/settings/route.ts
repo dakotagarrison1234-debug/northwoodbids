@@ -39,7 +39,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // taxPercent and taxExempt are set at approval by ForPurpose — orgs cannot edit them.
+    // taxPercent and taxExempt are set by Northwood Bids — orgs cannot edit them.
 
     const updated = await prisma.organization.update({
       where: { id: orgId },

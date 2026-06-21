@@ -239,7 +239,7 @@ export default function UserMenu() {
           <NavLink href="/account" iconEl={<IcoCard />} label="Payment Method" sublabel="Cards on file per organization" onClick={close} />
           <NavLink href="/help" iconEl={<IcoHelp />} label="Info & Help" sublabel="Bidding tips, increments, FAQ" onClick={close} />
 
-          {me?.orgId ? (
+          {me?.orgId && (
             <>
               <Divider />
               <SectionLabel>Your Organization</SectionLabel>
@@ -250,17 +250,6 @@ export default function UserMenu() {
                 sublabel={orgPortalSublabel}
                 onClick={close}
                 accent="teal"
-              />
-            </>
-          ) : (
-            <>
-              <Divider />
-              <NavLink
-                href="/apply"
-                iconEl={<IcoBuilding />}
-                label="Host an Auction"
-                sublabel="Apply to create your organization"
-                onClick={close}
               />
             </>
           )}

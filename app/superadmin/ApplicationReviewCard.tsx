@@ -108,7 +108,7 @@ export default function ApplicationReviewCard({ application }: { application: Ap
           className="w-full bg-[#f2efe8] border border-[#d4cfc4]/80 rounded-xl px-3 py-2.5 text-sm text-[#1a1916] placeholder-[#b0a99a] focus:outline-none focus:border-[#09a7ad]/60 transition-colors"
         />
 
-        {/* Tax status — set at approval by ForPurpose */}
+        {/* Tax status — set at approval by Northwood Bids */}
         <div className="bg-[#f2efe8]/60 border border-[#d4cfc4]/60 rounded-xl p-3 space-y-2">
           <div className="text-xs font-semibold text-[#6b6659] uppercase tracking-wide">Tax Status</div>
           <label className="flex items-center gap-2.5 cursor-pointer select-none">

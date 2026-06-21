@@ -171,7 +171,7 @@ function PaymentsContent() {
               </div>
             </div>
             <p className="text-xs text-[#8c8778]">
-              Platform fee: {org.platformFeePercent}% per transaction
+              Payments are processed directly — no platform fee.
             </p>
             <button
               onClick={handleDashboard}
@@ -193,7 +193,7 @@ function PaymentsContent() {
               payments.
             </p>
             <p className="text-xs text-[#8c8778]">
-              Platform fee: {org.platformFeePercent}% per transaction
+              Payments are processed directly — no platform fee.
             </p>
             <button
               onClick={handleConnect}
@@ -211,11 +211,11 @@ function PaymentsContent() {
               <span className="text-[#4a4640] font-semibold">Not connected</span>
             </div>
             <p className="text-sm text-[#6b6659]">
-              Connect a Stripe account to accept payments from bidders. GiveBid uses Stripe Connect
-              — your organization is the merchant of record and receives funds directly.
+              Payments are processed directly through Northwood Bids&apos; Stripe account. Bidders are
+              charged automatically when an auction closes.
             </p>
             <p className="text-xs text-[#8c8778]">
-              Platform fee: {org.platformFeePercent}% per transaction
+              No platform fee — bidders pay the winning bid plus any applicable tax.
             </p>
             <button
               onClick={handleConnect}
@@ -240,13 +240,13 @@ function PaymentsContent() {
         </p>
       )}
 
-      {/* Tax status — read-only, set at approval by ForPurpose */}
+      {/* Tax status — read-only, set by Northwood Bids */}
       <div className="bg-white border border-[#e5e0d5] rounded-2xl p-6 mb-5">
         <h2 className="text-sm font-semibold text-[#6b6659] uppercase tracking-wider mb-1">
           Sales Tax
         </h2>
         <p className="text-xs text-[#8c8778] mb-3">
-          Tax status is set by ForPurpose when your organization is approved.
+          Tax status is configured by Northwood Bids.
         </p>
         <div className="flex items-center gap-2">
           <span className={`inline-block w-2 h-2 rounded-full ${org.taxExempt ? "bg-[#09a7ad]" : "bg-amber-400"}`} />
@@ -264,16 +264,11 @@ function PaymentsContent() {
           How it works
         </h2>
         <ul className="text-sm text-[#6b6659] space-y-2">
-          <li>Bidders pay your organization directly through Stripe.</li>
-          <li>
-            GiveBid collects a {org.platformFeePercent}% platform fee automatically on each
-            transaction.
-          </li>
+          <li>Payments are processed directly through Northwood Bids&apos; Stripe account.</li>
+          <li>There is no platform fee — bidders pay the winning bid plus any applicable tax.</li>
           <li>Winners are charged automatically when the auction closes — no manual steps.</li>
-          <li>Funds are deposited into your bank account on a rolling daily schedule.</li>
-          <li>
-            You&apos;re the merchant of record — your organization name appears on bidder receipts.
-          </li>
+          <li>Funds are deposited into the business&apos;s bank account on a rolling daily schedule.</li>
+          <li>Northwood Bids is the merchant of record and appears on bidder receipts.</li>
         </ul>
       </div>
     </div>

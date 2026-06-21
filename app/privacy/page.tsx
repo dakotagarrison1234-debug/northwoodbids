@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export const metadata = {
   title: "Privacy Policy | Northwood Bids",
-  description: "Privacy Policy for Northwood Bids, operated by For Purpose Life.",
+  description: "Privacy Policy for Northwood Bids.",
 };
 
 export default function PrivacyPage() {
@@ -22,7 +22,7 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="text-lg font-bold text-[#1a1916] mb-3">1. Introduction</h2>
-            <p>For Purpose Life ("we," "us," or "our") operates Northwood Bids at northwoodbids.com. This Privacy Policy explains how we collect, use, share, and protect your personal information when you use our Platform. By using Northwood Bids, you agree to the practices described in this policy.</p>
+            <p>Northwood Bids ("we," "us," or "our") operates this auction site at northwoodbids.com. This Privacy Policy explains how we collect, use, share, and protect your personal information when you use our Platform. By using Northwood Bids, you agree to the practices described in this policy.</p>
           </section>
 
           <section>
@@ -33,8 +33,7 @@ export default function PrivacyPage() {
             <ul className="list-disc pl-5 space-y-1.5 mb-4">
               <li>Name, email address, and phone number when you create an account.</li>
               <li>Payment method details (processed and stored securely by Stripe — we never store raw card numbers).</li>
-              <li>Organization information if you register as an auction host (organization name, logo).</li>
-              <li>Item details, photos, and descriptions uploaded by Organizations.</li>
+              <li>Item details, photos, and descriptions related to the auctions we host.</li>
             </ul>
 
             <h3 className="font-semibold text-[#1a1916] mb-2">Information collected automatically</h3>
@@ -62,14 +61,14 @@ export default function PrivacyPage() {
             <h2 className="text-lg font-bold text-[#1a1916] mb-3">4. How We Share Your Information</h2>
             <p className="mb-3">We do not sell your personal information. We share information only in the following circumstances:</p>
 
-            <h3 className="font-semibold text-[#1a1916] mb-2">With Organizations</h3>
-            <p className="mb-4">When you win an auction, the hosting Organization receives your name and contact information necessary to arrange item pickup or delivery.</p>
+            <h3 className="font-semibold text-[#1a1916] mb-2">When you win an auction</h3>
+            <p className="mb-4">When you win an auction, we use your name and contact information to arrange item pickup or delivery.</p>
 
             <h3 className="font-semibold text-[#1a1916] mb-2">With service providers</h3>
             <p className="mb-3">We use the following third-party services to operate the Platform:</p>
             <ul className="list-disc pl-5 space-y-1.5 mb-4">
               <li><strong>Clerk</strong> — authentication and account management.</li>
-              <li><strong>Stripe</strong> — payment processing and Stripe Connect for Organization payouts.</li>
+              <li><strong>Stripe</strong> — payment processing.</li>
               <li><strong>Supabase</strong> — secure database hosting.</li>
               <li><strong>Cloudflare R2</strong> — image and file storage.</li>
               <li><strong>Pusher</strong> — real-time bid updates.</li>
@@ -79,7 +78,7 @@ export default function PrivacyPage() {
             <p>Each provider has its own privacy policy governing how they handle data. We only share the minimum information necessary for each service to function.</p>
 
             <h3 className="font-semibold text-[#1a1916] mt-4 mb-2">For legal reasons</h3>
-            <p>We may disclose information if required by law, court order, or to protect the rights, property, or safety of For Purpose Life, our users, or others.</p>
+            <p>We may disclose information if required by law, court order, or to protect the rights, property, or safety of Northwood Bids, our users, or others.</p>
           </section>
 
           <section>
@@ -123,7 +122,7 @@ export default function PrivacyPage() {
             <h2 className="text-lg font-bold text-[#1a1916] mb-3">11. Contact Us</h2>
             <p>If you have any questions, concerns, or requests regarding this Privacy Policy, please contact us at:</p>
             <div className="mt-3 bg-[#f0fafa] border border-[#09a7ad]/20 rounded-xl p-4">
-              <p className="font-semibold text-[#1a1916]">For Purpose Life</p>
+              <p className="font-semibold text-[#1a1916]">Northwood Bids</p>
               <p>Email: <a href="mailto:Ryan@for-purpose.com" className="text-[#09a7ad] hover:underline">Ryan@for-purpose.com</a></p>
               <p>Website: <a href="https://northwoodbids.com" className="text-[#09a7ad] hover:underline">northwoodbids.com</a></p>
             </div>
@@ -134,7 +133,7 @@ export default function PrivacyPage() {
         <div className="mt-12 pt-8 border-t border-[#e5e0d5] flex flex-wrap gap-4 text-sm text-[#8c8778]">
           <Link href="/terms" className="hover:text-[#09a7ad] transition-colors">Terms of Service</Link>
           <Link href="/" className="hover:text-[#09a7ad] transition-colors">Home</Link>
-          <span>© {new Date().getFullYear()} For Purpose Life. All rights reserved.</span>
+          <span>© {new Date().getFullYear()} Northwood Bids. All rights reserved.</span>
         </div>
       </main>
     </div>

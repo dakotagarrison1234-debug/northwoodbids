@@ -275,7 +275,7 @@ export default async function HomePage() {
         <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-4 text-sm text-[#8c8778]">
           <div className="flex items-center gap-1.5">
             <span>© {new Date().getFullYear()}</span>
-            <a href="https://for-purpose.life" target="_blank" rel="noopener noreferrer" className="text-[#09a7ad] hover:underline font-medium">For Purpose Life</a>
+            <span className="text-[#09a7ad] font-medium">Northwood Bids</span>
           </div>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <Link href="/help" className="hover:text-[#1a1916] transition-colors">Help & Info</Link>

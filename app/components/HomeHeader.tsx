@@ -21,9 +21,12 @@ export default function HomeHeader() {
   return (
     <header className="border-b border-[#e5e0d5] px-4 sm:px-6 py-4 flex items-center justify-between gap-3 bg-white/95 backdrop-blur-md sticky top-0 z-40 shadow-sm">
       <Link href="/" className="flex items-center shrink-0">
-        <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-[#09a7ad] to-[#0bbcc2] bg-clip-text text-transparent">
-          Northwood Bids
-        </span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="https://assets.cdn.filesafe.space/TwuL7EwKfW8oGIV0Zo5q/media/6a373b261c5d711b35bf4e56.png"
+          alt="Northwood Bids"
+          className="h-9 w-auto max-w-[200px] object-contain"
+        />
       </Link>
 
       {searchOpen ? (

@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export const metadata = {
   title: "Terms of Service | Northwood Bids",
-  description: "Terms of Service for Northwood Bids, operated by For Purpose Life.",
+  description: "Terms of Service for Northwood Bids.",
 };
 
 export default function TermsPage() {
@@ -22,12 +22,12 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-lg font-bold text-[#1a1916] mb-3">1. Agreement to Terms</h2>
-            <p>These Terms of Service ("Terms") govern your access to and use of Northwood Bids ("Platform"), a service operated by For Purpose Life ("Company," "we," "us," or "our"). By accessing or using Northwood Bids at northwoodbids.com, you agree to be bound by these Terms. If you do not agree, do not use the Platform.</p>
+            <p>These Terms of Service ("Terms") govern your access to and use of Northwood Bids ("Platform," "Company," "we," "us," or "our"). By accessing or using Northwood Bids at northwoodbids.com, you agree to be bound by these Terms. If you do not agree, do not use the Platform.</p>
           </section>
 
           <section>
             <h2 className="text-lg font-bold text-[#1a1916] mb-3">2. Who We Are</h2>
-            <p>Northwood Bids is an online auction platform that enables nonprofit organizations and charitable causes ("Organizations") to host fundraising auctions. Registered users ("Bidders") may participate in those auctions by placing bids on listed items.</p>
+            <p>Northwood Bids is an online auction site operated by us to host fundraising auctions. Registered users ("Bidders") may participate in those auctions by placing bids on listed items.</p>
           </section>
 
           <section>
@@ -45,7 +45,7 @@ export default function TermsPage() {
             <p className="mb-3">When you place a bid on Northwood Bids, you are entering into a binding commitment to purchase the item at that price if you are the winning bidder. By placing a bid, you:</p>
             <ul className="list-disc pl-5 space-y-1.5">
               <li>Confirm you have the intent and ability to pay the bid amount.</li>
-              <li>Agree that all bids are final and non-retractable unless permitted by the hosting Organization.</li>
+              <li>Agree that all bids are final and non-retractable unless permitted by us.</li>
               <li>Acknowledge that Max Bids (proxy bids) are placed on your behalf automatically up to your stated maximum.</li>
               <li>Understand that the minimum bid increment is determined by the current bid amount and may vary.</li>
             </ul>
@@ -53,25 +53,24 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-lg font-bold text-[#1a1916] mb-3">6. Payments</h2>
-            <p className="mb-3">All payments are processed securely through Stripe. By saving a payment method, you authorize Northwood Bids to charge your card in the event you win an auction. Charges occur automatically when an auction closes.</p>
+            <p className="mb-3">All payments are processed securely through Stripe by Northwood Bids. By saving a payment method, you authorize Northwood Bids to charge your card in the event you win an auction. Charges occur automatically when an auction closes.</p>
             <ul className="list-disc pl-5 space-y-1.5">
-              <li>Winning bidders are charged the final winning bid amount plus any applicable taxes and platform fees.</li>
-              <li>All sales are final. Refunds are at the sole discretion of the hosting Organization.</li>
+              <li>Winning bidders are charged the final winning bid amount plus any applicable taxes.</li>
+              <li>All sales are final. Refunds are at our sole discretion.</li>
               <li>If a charge fails, you will be notified and given the opportunity to update your payment method.</li>
-              <li>Northwood Bids is not responsible for items not delivered or disputes between Bidders and Organizations.</li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-[#1a1916] mb-3">7. Organizations</h2>
-            <p className="mb-3">Organizations that host auctions on Northwood Bids agree to:</p>
+            <h2 className="text-lg font-bold text-[#1a1916] mb-3">7. Auction Items</h2>
+            <p className="mb-3">For the auctions we host on Northwood Bids, we aim to:</p>
             <ul className="list-disc pl-5 space-y-1.5">
               <li>Provide accurate descriptions and fair retail values for all listed items.</li>
               <li>Fulfill winning bids in a timely and professional manner.</li>
-              <li>Comply with all applicable laws and regulations governing charitable fundraising in their jurisdiction.</li>
-              <li>Connect a valid Stripe account to receive funds. Northwood Bids processes payments on behalf of Organizations via Stripe Connect.</li>
+              <li>Comply with all applicable laws and regulations governing charitable fundraising in our jurisdiction.</li>
+              <li>Process payments securely through our own Stripe account.</li>
             </ul>
-            <p className="mt-3">For Purpose Life is not responsible for the conduct of Organizations or the fulfillment of auction items. Any disputes regarding item quality, delivery, or misrepresentation are between the Bidder and the Organization.</p>
+            <p className="mt-3">While we make reasonable efforts to describe and fulfill auction items accurately, items are provided "as is." Please contact us with any questions about item quality or delivery.</p>
           </section>
 
           <section>
@@ -89,22 +88,22 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-lg font-bold text-[#1a1916] mb-3">9. Intellectual Property</h2>
-            <p>All content on Northwood Bids — including logos, designs, code, and copy — is owned by For Purpose Life or licensed to us. You may not reproduce, distribute, or create derivative works without our express written permission. Item photos and descriptions uploaded by Organizations remain the property of those Organizations.</p>
+            <p>All content on Northwood Bids — including logos, designs, code, copy, item photos, and descriptions — is owned by Northwood Bids or licensed to us. You may not reproduce, distribute, or create derivative works without our express written permission.</p>
           </section>
 
           <section>
             <h2 className="text-lg font-bold text-[#1a1916] mb-3">10. Disclaimers</h2>
-            <p>The Platform is provided "as is" and "as available" without warranties of any kind, express or implied. We do not guarantee uninterrupted or error-free service. Item descriptions, retail values, and photos are provided by Organizations and we make no representation as to their accuracy.</p>
+            <p>The Platform is provided "as is" and "as available" without warranties of any kind, express or implied. We do not guarantee uninterrupted or error-free service, and we make no representation as to the accuracy of item descriptions, retail values, and photos.</p>
           </section>
 
           <section>
             <h2 className="text-lg font-bold text-[#1a1916] mb-3">11. Limitation of Liability</h2>
-            <p>To the fullest extent permitted by law, For Purpose Life shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the Platform, including but not limited to lost profits, loss of data, or failure to fulfill auction items. Our total liability to you for any claim shall not exceed the amount you paid to us in the twelve months preceding the claim.</p>
+            <p>To the fullest extent permitted by law, Northwood Bids shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the Platform, including but not limited to lost profits, loss of data, or failure to fulfill auction items. Our total liability to you for any claim shall not exceed the amount you paid to us in the twelve months preceding the claim.</p>
           </section>
 
           <section>
             <h2 className="text-lg font-bold text-[#1a1916] mb-3">12. Indemnification</h2>
-            <p>You agree to indemnify and hold harmless For Purpose Life, its officers, directors, employees, and agents from any claims, losses, or damages (including attorneys' fees) arising from your use of the Platform, your violation of these Terms, or your violation of any third-party rights.</p>
+            <p>You agree to indemnify and hold harmless Northwood Bids, its officers, directors, employees, and agents from any claims, losses, or damages (including attorneys' fees) arising from your use of the Platform, your violation of these Terms, or your violation of any third-party rights.</p>
           </section>
 
           <section>
@@ -132,7 +131,7 @@ export default function TermsPage() {
         <div className="mt-12 pt-8 border-t border-[#e5e0d5] flex flex-wrap gap-4 text-sm text-[#8c8778]">
           <Link href="/privacy" className="hover:text-[#09a7ad] transition-colors">Privacy Policy</Link>
           <Link href="/" className="hover:text-[#09a7ad] transition-colors">Home</Link>
-          <span>© {new Date().getFullYear()} For Purpose Life. All rights reserved.</span>
+          <span>© {new Date().getFullYear()} Northwood Bids. All rights reserved.</span>
         </div>
       </main>
     </div>
