@@ -89,7 +89,7 @@ export default function PrivacyPage() {
               <li>Request deletion of your personal information (subject to legal retention requirements).</li>
               <li>Opt out of non-essential communications.</li>
             </ul>
-            <p className="mt-3">To exercise any of these rights, contact us at <a href="mailto:Ryan@for-purpose.com" className="text-[#a4592a] hover:underline">Ryan@for-purpose.com</a>.</p>
+            <p className="mt-3">To exercise any of these rights, contact us at <a href="mailto:goldenpawskennel@mail.com" className="text-[#a4592a] hover:underline">goldenpawskennel@mail.com</a>.</p>
           </section>
 
           <section>
@@ -117,7 +117,7 @@ export default function PrivacyPage() {
             <p>If you have any questions, concerns, or requests regarding this Privacy Policy, please contact us at:</p>
             <div className="mt-3 bg-[#f6ecda] border border-[#a4592a]/20 rounded-xl p-4">
               <p className="font-semibold text-[#241a12]">Northwood Bids</p>
-              <p>Email: <a href="mailto:Ryan@for-purpose.com" className="text-[#a4592a] hover:underline">Ryan@for-purpose.com</a></p>
+              <p>Email: <a href="mailto:goldenpawskennel@mail.com" className="text-[#a4592a] hover:underline">goldenpawskennel@mail.com</a></p>
               <p>Website: <a href="https://northwoodbids.com" className="text-[#a4592a] hover:underline">northwoodbids.com</a></p>
             </div>
           </section>

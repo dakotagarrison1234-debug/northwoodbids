@@ -117,7 +117,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-lg font-bold text-[#241a12] mb-3">16. Contact</h2>
-            <p>If you have any questions about these Terms, please contact us at <a href="mailto:Ryan@for-purpose.com" className="text-[#a4592a] hover:underline">Ryan@for-purpose.com</a>.</p>
+            <p>If you have any questions about these Terms, please contact us at <a href="mailto:goldenpawskennel@mail.com" className="text-[#a4592a] hover:underline">goldenpawskennel@mail.com</a>.</p>
           </section>
 
         </div>
