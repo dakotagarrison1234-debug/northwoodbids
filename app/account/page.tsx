@@ -130,7 +130,7 @@ export default function AccountPage() {
   if (!isLoaded || loadingProfile) {
     return (
       <main className="min-h-screen bg-[#f1e7d5] flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-[#a4592a]/30 border-t-[#a4592a] animate-spin" />
+        <div className="w-8 h-8 rounded-full border-2 border-[#6c4d39]/30 border-t-[#6c4d39] animate-spin" />
       </main>
     );
   }
@@ -157,7 +157,7 @@ export default function AccountPage() {
 
         {/* Page title */}
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full overflow-hidden bg-[#a4592a]/10 border border-[#a4592a]/20 flex items-center justify-center text-[#a4592a] font-bold text-xl shrink-0">
+          <div className="w-14 h-14 rounded-full overflow-hidden bg-[#6c4d39]/10 border border-[#6c4d39]/20 flex items-center justify-center text-[#6c4d39] font-bold text-xl shrink-0">
             {avatarKey ? (
               <Avatar avatarKey={avatarKey} className="w-full h-full" />
             ) : user?.imageUrl ? (
@@ -187,7 +187,7 @@ export default function AccountPage() {
                   aria-label={a.label}
                   className={`aspect-square rounded-2xl p-1.5 border-2 transition-colors ${
                     avatarKey === a.key
-                      ? "border-[#a4592a] bg-[#a4592a]/10"
+                      ? "border-[#6c4d39] bg-[#6c4d39]/10"
                       : "border-[#e3d6bf] hover:border-[#cdbda3] bg-white"
                   }`}
                 >
@@ -201,7 +201,7 @@ export default function AccountPage() {
         {/* Profile section */}
         <section className="bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden">
           <div className="flex items-center gap-3 px-5 py-4 border-b border-[#e3d6bf]">
-            <span className="text-[#a4592a]"><IcoUser /></span>
+            <span className="text-[#6c4d39]"><IcoUser /></span>
             <h2 className="font-semibold text-[#241a12]">Profile</h2>
           </div>
           <div className="px-5 py-5 space-y-4">
@@ -217,7 +217,7 @@ export default function AccountPage() {
                   value={f.value}
                   onChange={(e) => f.set(e.target.value)}
                   placeholder={f.placeholder}
-                  className="w-full bg-[#f1e7d5] border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]/60 transition-colors text-sm"
+                  className="w-full bg-[#f1e7d5] border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]/60 transition-colors text-sm"
                 />
                 {f.hint && <p className="text-[#8a7559] text-xs mt-1.5">{f.hint}</p>}
               </div>
@@ -225,7 +225,7 @@ export default function AccountPage() {
             {profileMsg && (
               <p className={`text-sm px-4 py-3 rounded-xl font-medium ${
                 profileMsg.ok
-                  ? "bg-[#a4592a]/10 text-[#a4592a] border border-[#a4592a]/20"
+                  ? "bg-[#6c4d39]/10 text-[#6c4d39] border border-[#6c4d39]/20"
                   : "bg-red-50 text-red-600 border border-red-500/20"
               }`}>
                 {profileMsg.text}
@@ -234,7 +234,7 @@ export default function AccountPage() {
             <button
               onClick={saveProfile}
               disabled={savingProfile}
-              className="bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white font-bold px-6 py-3 rounded-xl w-full sm:w-auto transition-all text-sm"
+              className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white font-bold px-6 py-3 rounded-xl w-full sm:w-auto transition-all text-sm"
             >
               {savingProfile ? "Saving…" : "Save Profile"}
             </button>
@@ -244,7 +244,7 @@ export default function AccountPage() {
         {/* Payment Methods section */}
         <section className="bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden">
           <div className="flex items-center gap-3 px-5 py-4 border-b border-[#e3d6bf]">
-            <span className="text-[#a4592a]"><IcoCard /></span>
+            <span className="text-[#6c4d39]"><IcoCard /></span>
             <div className="flex-1">
               <h2 className="font-semibold text-[#241a12]">Payment Methods</h2>
               <p className="text-xs text-[#8a7559] mt-0.5">Cards on file</p>
@@ -261,7 +261,7 @@ export default function AccountPage() {
             ) : (
               <div className="space-y-2.5">
                 {pmMsg && (
-                  <p className="text-sm px-4 py-3 rounded-xl font-medium bg-[#a4592a]/10 text-[#a4592a] border border-[#a4592a]/20 mb-3">
+                  <p className="text-sm px-4 py-3 rounded-xl font-medium bg-[#6c4d39]/10 text-[#6c4d39] border border-[#6c4d39]/20 mb-3">
                     {pmMsg}
                   </p>
                 )}
@@ -287,7 +287,7 @@ export default function AccountPage() {
                     {pm.stripeAccountId && pm.stripeChargesEnabled && (
                       <button
                         onClick={() => setCardModal({ orgId: pm.orgId, stripeAccountId: pm.stripeAccountId! })}
-                        className="text-xs text-[#a4592a] hover:text-[#c47b3e] font-semibold shrink-0 transition-colors border border-[#a4592a]/30 hover:border-[#a4592a]/60 px-3 py-1.5 rounded-lg"
+                        className="text-xs text-[#6c4d39] hover:text-[#c47b3e] font-semibold shrink-0 transition-colors border border-[#6c4d39]/30 hover:border-[#6c4d39]/60 px-3 py-1.5 rounded-lg"
                       >
                         {pm.hasCard ? "Update card" : "Add card"}
                       </button>

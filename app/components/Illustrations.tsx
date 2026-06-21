@@ -6,7 +6,7 @@
 
 const INK = "#241a12";
 const BARK = "#3a2a1b";
-const LEATHER = "#a4592a";
+const LEATHER = "#6c4d39";
 const LEATHER_LT = "#c47b3e";
 const MOSS = "#5f7a45";
 const MOSS_DK = "#47592f";

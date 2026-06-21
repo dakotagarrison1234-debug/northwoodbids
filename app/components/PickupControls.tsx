@@ -58,7 +58,7 @@ export default function PickupControls({ itemIds, mode, currentStatus }: Props) 
       disabled={loading}
       className={`text-xs px-3 py-1.5 rounded-lg font-semibold disabled:opacity-50 whitespace-nowrap transition-colors ${
         mode === "all"
-          ? "bg-[#a4592a] hover:bg-[#843f1c] text-white"
+          ? "bg-[#6c4d39] hover:bg-[#563e2c] text-white"
           : currentStatus === "SOLD"
           ? "bg-yellow-500 hover:bg-amber-400 text-black"
           : "bg-purple-500 hover:bg-purple-400 text-white"

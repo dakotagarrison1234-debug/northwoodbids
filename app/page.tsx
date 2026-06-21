@@ -99,20 +99,20 @@ export default async function HomePage() {
             className="h-28 sm:h-36 w-auto max-w-[300px] object-contain mx-auto mb-6 drop-shadow-sm"
           />
           {activeAuctions.length > 0 && (
-            <a href="#live-auctions" className="inline-flex items-center gap-2 bg-[#a4592a]/10 border border-[#a4592a]/30 text-[#a4592a] text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-full mb-6 hover:bg-[#a4592a]/15 transition-colors">
-              <span className="w-2 h-2 rounded-full bg-[#a4592a] animate-pulse inline-block" />
+            <a href="#live-auctions" className="inline-flex items-center gap-2 bg-[#6c4d39]/10 border border-[#6c4d39]/30 text-[#6c4d39] text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-full mb-6 hover:bg-[#6c4d39]/15 transition-colors">
+              <span className="w-2 h-2 rounded-full bg-[#6c4d39] animate-pulse inline-block" />
               {activeAuctions.length} live auction{activeAuctions.length !== 1 ? "s" : ""} happening now
             </a>
           )}
           <h1 className="font-display text-5xl sm:text-7xl font-black leading-[1.03] tracking-tight mb-5 text-[#241a12]">
             Going once.<br />
-            <span className="text-[#a4592a]">Going twice.</span>
+            <span className="text-[#6c4d39]">Going twice.</span>
           </h1>
           <p className="text-[#2c2317] font-medium text-lg sm:text-xl max-w-xl mx-auto mb-9 leading-relaxed">
             Real-time auctions with a handshake feel. Bid live, get outbid alerts, and check out securely the moment you win.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a href="#live-auctions" className="bg-[#a4592a] hover:bg-[#843f1c] text-white font-bold px-9 py-4 rounded-xl text-base transition-all hover:shadow-[0_6px_24px_rgba(164,89,42,0.35)] w-full sm:w-auto text-center">
+            <a href="#live-auctions" className="bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold px-9 py-4 rounded-xl text-base transition-all hover:shadow-[0_6px_24px_rgba(108, 77, 57,0.35)] w-full sm:w-auto text-center">
               {activeAuctions.length > 0 ? "See Live Auctions" : "Browse Auctions"}
             </a>
             {!userId && (
@@ -128,7 +128,7 @@ export default async function HomePage() {
       {/* Live Auctions */}
       <section id="live-auctions" className="px-4 sm:px-6 pt-4 pb-14 sm:pb-16 max-w-6xl mx-auto">
         <div className="flex items-center gap-3 mb-8">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#a4592a] animate-pulse shrink-0" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#6c4d39] animate-pulse shrink-0" />
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#241a12]">Live Auctions</h2>
           {activeAuctions.length > 0 && (
             <span className="text-[#8a7559] text-sm font-medium">({activeAuctions.length})</span>
@@ -141,16 +141,16 @@ export default async function HomePage() {
               const activeItems = auction.items.filter(i => i.status === "ACTIVE").length;
               return (
                 <Link key={auction.id} href={`/${auction.organization.slug}/${auction.slug}`}
-                  className="bg-white border border-[#e3d6bf] hover:border-[#a4592a]/40 rounded-2xl p-6 transition-all hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] group shadow-sm">
+                  className="bg-white border border-[#e3d6bf] hover:border-[#6c4d39]/40 rounded-2xl p-6 transition-all hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] group shadow-sm">
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div className="min-w-0">
-                      <h3 className="font-bold text-base group-hover:text-[#a4592a] transition-colors leading-snug text-[#241a12]">{auction.title}</h3>
+                      <h3 className="font-bold text-base group-hover:text-[#6c4d39] transition-colors leading-snug text-[#241a12]">{auction.title}</h3>
                     </div>
-                    <span className="text-xs bg-[#a4592a]/10 text-[#a4592a] border border-[#a4592a]/20 px-2.5 py-1 rounded-full shrink-0 font-bold whitespace-nowrap">Live</span>
+                    <span className="text-xs bg-[#6c4d39]/10 text-[#6c4d39] border border-[#6c4d39]/20 px-2.5 py-1 rounded-full shrink-0 font-bold whitespace-nowrap">Live</span>
                   </div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[#8a7559] mb-2">
                     <span>{activeItems} item{activeItems !== 1 ? "s" : ""}</span>
-                    {raised > 0 && <span className="text-[#a4592a] font-semibold">${raised.toLocaleString()} raised</span>}
+                    {raised > 0 && <span className="text-[#6c4d39] font-semibold">${raised.toLocaleString()} raised</span>}
                   </div>
                   <div className="text-xs text-[#b3a085] mt-3 border-t border-[#efe3d0] pt-3">
                     Closes <LocalDate iso={auction.endAt.toISOString()} />
@@ -187,8 +187,8 @@ export default async function HomePage() {
                   <span className="text-xs bg-[#efe3d0] text-[#8a7559] border border-[#e3d6bf] px-2.5 py-1 rounded-full shrink-0 font-semibold">Upcoming</span>
                 </div>
                 <div className="text-sm text-[#8a7559] mb-2">{auction._count.items} item{auction._count.items !== 1 ? "s" : ""}</div>
-                <div className="text-xs text-[#a4592a] font-medium mt-3 border-t border-[#efe3d0] pt-3 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#a4592a]/60 inline-block" />
+                <div className="text-xs text-[#6c4d39] font-medium mt-3 border-t border-[#efe3d0] pt-3 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#6c4d39]/60 inline-block" />
                   Opens <LocalDate iso={auction.startAt!.toISOString()} />
                 </div>
               </Link>
@@ -209,7 +209,7 @@ export default async function HomePage() {
               { icon: <IconTrophy />, title: "Win & pick up", desc: "Win and your card is charged automatically. Arrange pickup with the business." },
             ].map(({ icon, title, desc }) => (
               <div key={title} className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-white border border-[#e3d6bf] rounded-2xl flex items-center justify-center text-[#a4592a] shrink-0 shadow-sm">{icon}</div>
+                <div className="w-12 h-12 bg-white border border-[#e3d6bf] rounded-2xl flex items-center justify-center text-[#6c4d39] shrink-0 shadow-sm">{icon}</div>
                 <div>
                   <h3 className="font-bold text-[#241a12] mb-1.5">{title}</h3>
                   <p className="text-[#6f5b46] text-sm leading-relaxed">{desc}</p>
@@ -218,10 +218,10 @@ export default async function HomePage() {
             ))}
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-[#8a7559]">
-            <span className="flex items-center gap-2"><span className="text-[#a4592a]"><IconBot /></span> Max bidding</span>
-            <span className="flex items-center gap-2"><span className="text-[#a4592a]"><IconBell /></span> Outbid alerts</span>
-            <span className="flex items-center gap-2"><span className="text-[#a4592a]"><IconClock /></span> Anti-sniping timer</span>
-            <span className="flex items-center gap-2"><span className="text-[#a4592a]"><IconShield /></span> Secure Stripe checkout</span>
+            <span className="flex items-center gap-2"><span className="text-[#6c4d39]"><IconBot /></span> Max bidding</span>
+            <span className="flex items-center gap-2"><span className="text-[#6c4d39]"><IconBell /></span> Outbid alerts</span>
+            <span className="flex items-center gap-2"><span className="text-[#6c4d39]"><IconClock /></span> Anti-sniping timer</span>
+            <span className="flex items-center gap-2"><span className="text-[#6c4d39]"><IconShield /></span> Secure Stripe checkout</span>
           </div>
         </div>
       </section>

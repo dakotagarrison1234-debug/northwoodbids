@@ -189,7 +189,7 @@ export default function OrgCommandCenter({ org: initial }: { org: Org }) {
   ] as const;
 
   const statusColor = (s: string) => {
-    if (s === "OPEN" || s === "ACTIVE") return "text-[#a4592a] bg-[#a4592a]/20";
+    if (s === "OPEN" || s === "ACTIVE") return "text-[#6c4d39] bg-[#6c4d39]/20";
     if (s === "CLOSED" || s === "SOLD") return "text-[#6f5b46] bg-[#e7dcc6]";
     if (s === "DRAFT") return "text-amber-600 bg-yellow-500/20";
     return "text-[#6f5b46] bg-[#e7dcc6]";
@@ -204,7 +204,7 @@ export default function OrgCommandCenter({ org: initial }: { org: Org }) {
             <Link href="/superadmin/orgs" className="text-[#8a7559] hover:text-[#241a12] text-sm">← Orgs</Link>
             <span className="text-[#b3a085]">/</span>
             <h1 className="text-xl font-semibold">{org.name}</h1>
-            <span className={`text-xs px-2 py-0.5 rounded-full ${org.isActive ? "bg-[#a4592a]/20 text-[#a4592a]" : "bg-[#e7dcc6] text-[#8a7559]"}`}>
+            <span className={`text-xs px-2 py-0.5 rounded-full ${org.isActive ? "bg-[#6c4d39]/20 text-[#6c4d39]" : "bg-[#e7dcc6] text-[#8a7559]"}`}>
               {org.isActive ? "Active" : "Inactive"}
             </span>
           </div>
@@ -227,7 +227,7 @@ export default function OrgCommandCenter({ org: initial }: { org: Org }) {
               key={t.id}
               onClick={() => setTab(t.id)}
               className={`py-3 text-sm font-medium border-b-2 transition-colors ${
-                tab === t.id ? "border-[#a4592a] text-[#241a12]" : "border-transparent text-[#8a7559] hover:text-[#4a3a2b]"
+                tab === t.id ? "border-[#6c4d39] text-[#241a12]" : "border-transparent text-[#8a7559] hover:text-[#4a3a2b]"
               }`}
             >
               {t.label}
@@ -244,20 +244,20 @@ export default function OrgCommandCenter({ org: initial }: { org: Org }) {
             <div>
               <label className="text-sm text-[#6f5b46] mb-1 block">Name</label>
               <input value={editName} onChange={(e) => setEditName(e.target.value)}
-                className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] focus:outline-none focus:border-[#a4592a]" />
+                className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] focus:outline-none focus:border-[#6c4d39]" />
             </div>
             <div>
               <label className="text-sm text-[#6f5b46] mb-1 block">Description</label>
               <textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={3}
-                className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] focus:outline-none focus:border-[#a4592a] resize-none" />
+                className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] focus:outline-none focus:border-[#6c4d39] resize-none" />
             </div>
             <div className="flex items-center gap-3">
               <input type="checkbox" id="active" checked={editActive} onChange={(e) => setEditActive(e.target.checked)}
-                className="w-4 h-4 accent-[#a4592a]" />
+                className="w-4 h-4 accent-[#6c4d39]" />
               <label htmlFor="active" className="text-sm text-[#4a3a2b]">Organization is active</label>
             </div>
             <button onClick={saveOrg} disabled={savingOrg}
-              className="bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white font-semibold px-6 py-2.5 rounded-xl text-sm">
+              className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white font-semibold px-6 py-2.5 rounded-xl text-sm">
               {savingOrg ? "Saving..." : "Save Changes"}
             </button>
 
@@ -330,10 +330,10 @@ export default function OrgCommandCenter({ org: initial }: { org: Org }) {
                       const totalBid = auction.items.reduce((s, i) => s + Number(i.currentBid), 0);
                       return <>
                         <span>{auction.items.length} items</span>
-                        {active > 0 && <span className="text-[#a4592a]">{active} active</span>}
+                        {active > 0 && <span className="text-[#6c4d39]">{active} active</span>}
                         {sold > 0 && <span className="text-[#6f5b46]">{sold} sold</span>}
                         {draft > 0 && <span className="text-yellow-600">{draft} draft</span>}
-                        <span className="text-[#a4592a] ml-auto">${totalBid.toLocaleString()} raised</span>
+                        <span className="text-[#6c4d39] ml-auto">${totalBid.toLocaleString()} raised</span>
                       </>;
                     })()}
                   </div>

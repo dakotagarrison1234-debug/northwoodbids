@@ -93,8 +93,8 @@ export default function SearchBar({
   const clearAndClose = () => { setOpen(false); setQuery(""); };
 
   const inputClass = size === "large"
-    ? "w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl pl-12 pr-4 py-4 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a] text-base"
-    : "w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl pl-11 pr-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a] text-sm";
+    ? "w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl pl-12 pr-4 py-4 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] text-base"
+    : "w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl pl-11 pr-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] text-sm";
 
   return (
     <div ref={containerRef} className="relative w-full">
@@ -151,7 +151,7 @@ export default function SearchBar({
                         <div className="text-sm font-medium text-[#241a12] truncate">{item.title}</div>
                         <div className="text-xs text-[#8a7559] truncate">{item.organization.name}</div>
                       </div>
-                      <div className="text-[#a4592a] text-sm font-semibold shrink-0">${(Number(item.currentBid) || 0).toLocaleString()}</div>
+                      <div className="text-[#6c4d39] text-sm font-semibold shrink-0">${(Number(item.currentBid) || 0).toLocaleString()}</div>
                     </Link>
                   ))}
                 </div>
@@ -163,7 +163,7 @@ export default function SearchBar({
                   {results!.auctions.map(auction => (
                     <Link key={auction.id} href={`/${auction.organization.slug}/${auction.slug}`} onClick={clearAndClose}
                       className="flex items-center gap-3 px-4 py-3 hover:bg-[#efe3d0] transition-colors">
-                      <div className="w-10 h-10 bg-[#a4592a]/20 rounded-lg shrink-0 flex items-center justify-center text-[#a4592a]">
+                      <div className="w-10 h-10 bg-[#6c4d39]/20 rounded-lg shrink-0 flex items-center justify-center text-[#6c4d39]">
                         <svg width="16" height="16" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                           <circle cx="8" cy="8" r="6"/><path d="M8 5v3.5l2 1.5"/>
                         </svg>
@@ -172,7 +172,7 @@ export default function SearchBar({
                         <div className="text-sm font-medium text-[#241a12] truncate">{auction.title}</div>
                         <div className="text-xs text-[#8a7559]">{auction.organization.name} · {auction._count.items} items</div>
                       </div>
-                      <span className="text-xs bg-[#a4592a]/20 text-[#a4592a] px-2 py-0.5 rounded-full shrink-0">Live</span>
+                      <span className="text-xs bg-[#6c4d39]/20 text-[#6c4d39] px-2 py-0.5 rounded-full shrink-0">Live</span>
                     </Link>
                   ))}
                 </div>
@@ -187,7 +187,7 @@ export default function SearchBar({
                       {org.logoUrl ? (
                         <img src={org.logoUrl} alt={org.name} className="w-10 h-10 rounded-xl object-cover shrink-0"/>
                       ) : (
-                        <div className="w-10 h-10 bg-[#a4592a]/20 rounded-xl shrink-0 flex items-center justify-center text-[#a4592a] font-bold text-base">
+                        <div className="w-10 h-10 bg-[#6c4d39]/20 rounded-xl shrink-0 flex items-center justify-center text-[#6c4d39] font-bold text-base">
                           {org.name[0].toUpperCase()}
                         </div>
                       )}
@@ -195,7 +195,7 @@ export default function SearchBar({
                         <div className="text-sm font-medium text-[#241a12] truncate">{org.name}</div>
                         <div className="text-xs text-[#8a7559]">
                           {org.auctions.length > 0
-                            ? <span className="text-[#a4592a]">{org.auctions.length} live now</span>
+                            ? <span className="text-[#6c4d39]">{org.auctions.length} live now</span>
                             : `${org._count.auctions} auctions total`}
                         </div>
                       </div>
@@ -205,7 +205,7 @@ export default function SearchBar({
               )}
 
               <Link href={`/search?q=${encodeURIComponent(query)}`} onClick={() => setOpen(false)}
-                className="flex items-center justify-center gap-1 px-4 py-3 text-sm text-[#a4592a] hover:bg-[#efe3d0] border-t border-[#e3d6bf] transition-colors">
+                className="flex items-center justify-center gap-1 px-4 py-3 text-sm text-[#6c4d39] hover:bg-[#efe3d0] border-t border-[#e3d6bf] transition-colors">
                 See all results for &ldquo;{query}&rdquo; →
               </Link>
             </>

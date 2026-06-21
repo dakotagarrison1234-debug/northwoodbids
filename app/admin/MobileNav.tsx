@@ -39,7 +39,7 @@ export default function MobileNav({ navItems, orgName, role }: Props) {
     <>
       {/* Mobile top bar */}
       <div className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-[#e3d6bf]">
-        <Link href="/admin/dashboard" className="text-[#a4592a] font-bold text-xl">Northwood Bids</Link>
+        <Link href="/admin/dashboard" className="text-[#6c4d39] font-bold text-xl">Northwood Bids</Link>
         <button onClick={() => setOpen(true)} className="text-[#6f5b46] hover:text-[#241a12] p-2" aria-label="Open menu">
           <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="3" y1="6" x2="21" y2="6" />
@@ -58,7 +58,7 @@ export default function MobileNav({ navItems, orgName, role }: Props) {
           <div className="relative w-72 bg-white flex flex-col h-full shadow-2xl">
             <div className="px-6 py-5 border-b border-[#e3d6bf] flex items-center justify-between">
               <div>
-                <span className="text-[#a4592a] font-bold text-2xl">Northwood Bids</span>
+                <span className="text-[#6c4d39] font-bold text-2xl">Northwood Bids</span>
                 <p className="text-[#4a3a2b] text-base mt-0.5 font-medium truncate">{orgName}</p>
                 <span className="text-sm text-[#8a7559] capitalize">{role}</span>
               </div>

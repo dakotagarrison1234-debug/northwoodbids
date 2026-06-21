@@ -100,7 +100,7 @@ export default async function SearchPage({ searchParams }: Props) {
                 <Link
                   key={item.id}
                   href={`/${item.organization.slug}/${item.auction?.slug}/item/${item.id}`}
-                  className="bg-white border border-[#e3d6bf] hover:border-[#a4592a]/40 rounded-2xl p-4 flex items-center gap-4 transition-all hover:shadow-[0_0_20px_rgba(164,89,42,0.05)] group"
+                  className="bg-white border border-[#e3d6bf] hover:border-[#6c4d39]/40 rounded-2xl p-4 flex items-center gap-4 transition-all hover:shadow-[0_0_20px_rgba(108, 77, 57,0.05)] group"
                 >
                   {item.photos[0] ? (
                     <img
@@ -118,7 +118,7 @@ export default async function SearchPage({ searchParams }: Props) {
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold truncate group-hover:text-[#a4592a] transition-colors text-sm">
+                    <div className="font-semibold truncate group-hover:text-[#6c4d39] transition-colors text-sm">
                       {item.title}
                     </div>
                     <div className="text-xs text-[#8a7559] mt-0.5">{item.organization.name}</div>
@@ -128,7 +128,7 @@ export default async function SearchPage({ searchParams }: Props) {
                       </div>
                     )}
                   </div>
-                  <div className="text-[#a4592a] font-extrabold text-lg shrink-0">
+                  <div className="text-[#6c4d39] font-extrabold text-lg shrink-0">
                     ${(Number(item.currentBid) || 0).toLocaleString()}
                   </div>
                 </Link>
@@ -150,17 +150,17 @@ export default async function SearchPage({ searchParams }: Props) {
                   <Link
                     key={auction.id}
                     href={`/${auction.organization.slug}/${auction.slug}`}
-                    className="bg-white border border-[#e3d6bf] hover:border-[#a4592a]/40 rounded-2xl p-4 flex items-center justify-between gap-4 transition-all hover:shadow-[0_0_20px_rgba(164,89,42,0.05)] group"
+                    className="bg-white border border-[#e3d6bf] hover:border-[#6c4d39]/40 rounded-2xl p-4 flex items-center justify-between gap-4 transition-all hover:shadow-[0_0_20px_rgba(108, 77, 57,0.05)] group"
                   >
                     <div className="min-w-0">
-                      <div className="font-semibold truncate group-hover:text-[#a4592a] transition-colors">
+                      <div className="font-semibold truncate group-hover:text-[#6c4d39] transition-colors">
                         {auction.title}
                       </div>
                       <div className="text-xs text-[#8a7559] mt-0.5">
                         {auction.organization.name} · {auction.items.length} items · ${raised.toLocaleString()} raised
                       </div>
                     </div>
-                    <span className="text-xs bg-[#a4592a]/15 text-[#a4592a] border border-[#a4592a]/20 px-2 py-0.5 rounded-full shrink-0 font-semibold">
+                    <span className="text-xs bg-[#6c4d39]/15 text-[#6c4d39] border border-[#6c4d39]/20 px-2 py-0.5 rounded-full shrink-0 font-semibold">
                       Live
                     </span>
                   </Link>
@@ -186,12 +186,12 @@ export default async function SearchPage({ searchParams }: Props) {
                   <div className="mb-3">
                     <OrgLogo name={org.name} logoUrl={org.logoUrl} size="sm" />
                   </div>
-                  <div className="font-semibold text-sm truncate group-hover:text-[#a4592a] transition-colors">
+                  <div className="font-semibold text-sm truncate group-hover:text-[#6c4d39] transition-colors">
                     {org.name}
                   </div>
                   <div className="text-xs text-[#8a7559] mt-1">
                     {org.auctions.length > 0
-                      ? <span className="text-[#a4592a] font-medium">{org.auctions.length} live now</span>
+                      ? <span className="text-[#6c4d39] font-medium">{org.auctions.length} live now</span>
                       : `${org._count.auctions} auction${org._count.auctions !== 1 ? "s" : ""}`
                     }
                   </div>
@@ -214,7 +214,7 @@ export default async function SearchPage({ searchParams }: Props) {
             <p className="text-[#8a7559] text-sm mb-4">
               Only active items in live auctions appear in search.
             </p>
-            <Link href="/" className="text-[#a4592a] hover:text-[#c47b3e] text-sm transition-colors">
+            <Link href="/" className="text-[#6c4d39] hover:text-[#c47b3e] text-sm transition-colors">
               Browse all live auctions
             </Link>
           </div>

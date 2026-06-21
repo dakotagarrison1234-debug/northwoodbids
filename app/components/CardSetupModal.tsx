@@ -128,7 +128,7 @@ export default function CardSetupModal({ orgId, stripeAccountId, onSuccess, onCl
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-[#a4592a]/10 border border-[#a4592a]/20 rounded-xl flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 bg-[#6c4d39]/10 border border-[#6c4d39]/20 rounded-xl flex items-center justify-center shrink-0">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6f8a4f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="1" y="4" width="22" height="16" rx="2"/>
                 <line x1="1" y1="10" x2="23" y2="10"/>
@@ -155,7 +155,7 @@ export default function CardSetupModal({ orgId, stripeAccountId, onSuccess, onCl
         <div
           ref={cardRef}
           className={`bg-[#efe3d0] border rounded-xl px-4 py-3.5 mb-4 min-h-[46px] transition-colors ${
-            error ? "border-red-500/50" : "border-[#cdbda3] focus-within:border-[#a4592a]/50"
+            error ? "border-red-500/50" : "border-[#cdbda3] focus-within:border-[#6c4d39]/50"
           } ${!ready ? "opacity-50" : ""}`}
         />
 
@@ -166,7 +166,7 @@ export default function CardSetupModal({ orgId, stripeAccountId, onSuccess, onCl
         <button
           onClick={handleSave}
           disabled={saving || !ready}
-          className="w-full bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white font-semibold py-3 rounded-xl text-sm transition-colors"
+          className="w-full bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white font-semibold py-3 rounded-xl text-sm transition-colors"
         >
           {saving ? "Saving…" : "Save Card & Continue"}
         </button>

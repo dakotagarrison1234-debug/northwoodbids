@@ -95,7 +95,7 @@ export default function AuctionStatusButtons({ auctionId, status }: Props) {
         <>
           <button
             onClick={() => updateStatus("OPEN")}
-            className="bg-[#a4592a] hover:bg-[#843f1c] text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors"
+            className="bg-[#6c4d39] hover:bg-[#563e2c] text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors"
           >
             Open Auction
           </button>

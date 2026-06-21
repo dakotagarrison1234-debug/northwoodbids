@@ -81,7 +81,7 @@ export default function SuperAdminPaymentsPage() {
             {data?.fetchedAt && (
               <span className="text-[10px] text-[#b3a085]">· as of {new Date(data.fetchedAt).toLocaleTimeString()}</span>
             )}
-            <button onClick={load} disabled={loading} className="text-[10px] text-[#a4592a] hover:underline disabled:opacity-40">
+            <button onClick={load} disabled={loading} className="text-[10px] text-[#6c4d39] hover:underline disabled:opacity-40">
               {loading ? "Loading…" : "Refresh"}
             </button>
           </div>
@@ -91,7 +91,7 @@ export default function SuperAdminPaymentsPage() {
             onClick={() => setView("revenue")}
             className={`text-xs px-4 py-2 rounded-xl font-semibold transition-colors ${
               view === "revenue"
-                ? "bg-[#a4592a] text-white"
+                ? "bg-[#6c4d39] text-white"
                 : "bg-[#efe3d0] text-[#6f5b46] hover:text-[#241a12] border border-[#cdbda3]"
             }`}
           >
@@ -121,11 +121,11 @@ export default function SuperAdminPaymentsPage() {
       <div className="px-4 sm:px-8 pt-5 pb-2 grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white border border-[#e3d6bf] rounded-2xl px-4 py-3.5">
           <div className="text-xs text-[#8a7559] font-medium mb-1">My Revenue</div>
-          <div className="text-xl font-extrabold text-[#a4592a]">
+          <div className="text-xl font-extrabold text-[#6c4d39]">
             {loading ? <span className="text-[#cdbda3]">—</span> : `$${fmt(data?.totalRevenue ?? 0)}`}
           </div>
           <div className="flex items-center gap-1 mt-0.5">
-            <span className="text-[10px] text-[#a4592a]/60 font-semibold">✓ Stripe verified</span>
+            <span className="text-[10px] text-[#6c4d39]/60 font-semibold">✓ Stripe verified</span>
           </div>
         </div>
 
@@ -157,7 +157,7 @@ export default function SuperAdminPaymentsPage() {
       <div className="px-4 sm:px-8 py-4 max-w-5xl">
         {loading ? (
           <div className="flex items-center justify-center py-16 gap-3">
-            <div className="w-5 h-5 rounded-full border-2 border-[#a4592a]/30 border-t-[#a4592a] animate-spin" />
+            <div className="w-5 h-5 rounded-full border-2 border-[#6c4d39]/30 border-t-[#6c4d39] animate-spin" />
             <span className="text-sm text-[#8a7559]">Fetching from Stripe…</span>
           </div>
         ) : view === "revenue" ? (
@@ -171,7 +171,7 @@ export default function SuperAdminPaymentsPage() {
               {/* Column headers */}
               <div className="hidden sm:grid grid-cols-[1fr_140px_80px_100px] gap-4 px-4 text-xs text-[#8a7559] font-semibold uppercase tracking-wide pb-1">
                 <span>Organization</span>
-                <span className="text-right text-[#a4592a]">My Cut (Stripe)</span>
+                <span className="text-right text-[#6c4d39]">My Cut (Stripe)</span>
                 <span className="text-right">Charges</span>
                 <span className="text-right">Last Activity</span>
               </div>
@@ -182,13 +182,13 @@ export default function SuperAdminPaymentsPage() {
                     <div>
                       <Link
                         href={`/superadmin/orgs/${org.orgId}`}
-                        className="font-semibold text-sm hover:text-[#a4592a] transition-colors"
+                        className="font-semibold text-sm hover:text-[#6c4d39] transition-colors"
                       >
                         {org.orgName}
                       </Link>
                     </div>
                     <div className="sm:text-right">
-                      <span className="text-sm font-bold text-[#a4592a]">${fmt(org.platformRevenue)}</span>
+                      <span className="text-sm font-bold text-[#6c4d39]">${fmt(org.platformRevenue)}</span>
                     </div>
                     <div className="sm:text-right text-sm text-[#6f5b46]">{org.feeCount}</div>
                     <div className="sm:text-right text-xs text-[#8a7559]">
@@ -207,9 +207,9 @@ export default function SuperAdminPaymentsPage() {
               )}
 
               {/* Total row */}
-              <div className="bg-white border border-[#a4592a]/20 rounded-xl px-4 sm:px-5 py-3.5 flex items-center justify-between">
+              <div className="bg-white border border-[#6c4d39]/20 rounded-xl px-4 sm:px-5 py-3.5 flex items-center justify-between">
                 <span className="text-sm font-bold text-[#241a12]">Total ({data.feeCount} charges)</span>
-                <span className="text-base font-extrabold text-[#a4592a]">${fmt(data.totalRevenue)}</span>
+                <span className="text-base font-extrabold text-[#6c4d39]">${fmt(data.totalRevenue)}</span>
               </div>
             </div>
           )
@@ -234,7 +234,7 @@ export default function SuperAdminPaymentsPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           {org && (
-                            <Link href={`/superadmin/orgs/${org.id}`} className="font-semibold text-sm hover:text-[#a4592a] transition-colors">
+                            <Link href={`/superadmin/orgs/${org.id}`} className="font-semibold text-sm hover:text-[#6c4d39] transition-colors">
                               {org.name}
                             </Link>
                           )}
@@ -250,7 +250,7 @@ export default function SuperAdminPaymentsPage() {
                       <div className="text-right shrink-0">
                         <div className="font-bold text-sm">${p.amount.toFixed(2)}</div>
                         {p.applicationFeeAmount && (
-                          <div className="text-[#a4592a] text-xs">${p.applicationFeeAmount.toFixed(2)} my cut</div>
+                          <div className="text-[#6c4d39] text-xs">${p.applicationFeeAmount.toFixed(2)} my cut</div>
                         )}
                       </div>
 

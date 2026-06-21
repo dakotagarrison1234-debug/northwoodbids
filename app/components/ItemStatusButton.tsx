@@ -8,7 +8,7 @@ interface Props {
 }
 
 const transitions: Record<string, { label: string; next: string; color: string }> = {
-  SOLD: { label: "Ready for Pickup", next: "PENDING_PICKUP", color: "bg-[#a4592a] hover:bg-[#843f1c] text-white" },
+  SOLD: { label: "Ready for Pickup", next: "PENDING_PICKUP", color: "bg-[#6c4d39] hover:bg-[#563e2c] text-white" },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   PENDING_PICKUP: { label: "Mark Picked Up", next: "PICKED_UP" as any, color: "bg-[#4a3a2b] hover:bg-[#241a12] text-white" },
 };

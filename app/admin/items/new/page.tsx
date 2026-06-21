@@ -102,14 +102,14 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
   };
 
   return (
-    <div className="bg-gradient-to-br from-[#a4592a]/8 to-[#f6ecda] border border-[#a4592a]/25 rounded-xl p-5 mb-6">
+    <div className="bg-gradient-to-br from-[#6c4d39]/8 to-[#f6ecda] border border-[#6c4d39]/25 rounded-xl p-5 mb-6">
       <div className="flex items-center gap-2 mb-3">
-        <svg className="w-5 h-5 text-[#a4592a] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
+        <svg className="w-5 h-5 text-[#6c4d39] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
           <path d="M3 9V5a2 2 0 0 1 2-2h4M3 15v4a2 2 0 0 0 2 2h4M21 9V5a2 2 0 0 0-2-2h-4M21 15v4a2 2 0 0 1-2 2h-4"/>
           <line x1="7" y1="12" x2="7" y2="12.01"/><line x1="10" y1="9" x2="10" y2="15"/><line x1="13" y1="12" x2="13" y2="12.01"/><line x1="16" y1="9" x2="16" y2="15"/>
         </svg>
         <span className="font-bold text-[#241a12] text-base">Barcode Auto-Fill</span>
-        <span className="text-[10px] text-[#a4592a] bg-[#a4592a]/10 border border-[#a4592a]/20 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide ml-1">New</span>
+        <span className="text-[10px] text-[#6c4d39] bg-[#6c4d39]/10 border border-[#6c4d39]/20 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide ml-1">New</span>
       </div>
       <p className="text-sm text-[#6f5b46] mb-3">Scan or type a barcode to auto-fill title, description, category, and retail value.</p>
 
@@ -121,7 +121,7 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
           className={`flex items-center gap-1.5 px-4 py-3 rounded-xl text-base font-semibold border shrink-0 transition-colors ${
             scanning
               ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
-              : "bg-[#a4592a]/10 text-[#a4592a] border-[#a4592a]/25 hover:bg-[#a4592a]/20"
+              : "bg-[#6c4d39]/10 text-[#6c4d39] border-[#6c4d39]/25 hover:bg-[#6c4d39]/20"
           }`}
         >
           {scanning ? (
@@ -136,14 +136,14 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
           onChange={e => setBarcode(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Type or scan barcode number…"
-          className="flex-1 bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a] text-base"
+          className="flex-1 bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] text-base"
           inputMode="numeric"
         />
         <button
           type="button"
           onClick={() => doLookup(barcode)}
           disabled={loading || !barcode.trim()}
-          className="bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-40 text-white px-4 py-3 rounded-xl text-base font-semibold shrink-0 transition-colors"
+          className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-40 text-white px-4 py-3 rounded-xl text-base font-semibold shrink-0 transition-colors"
         >
           {loading ? "…" : "Look Up"}
         </button>
@@ -151,10 +151,10 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
 
       {/* Camera preview */}
       {scanning && (
-        <div className="mt-3 rounded-xl overflow-hidden border-2 border-[#a4592a]/30 relative bg-black">
+        <div className="mt-3 rounded-xl overflow-hidden border-2 border-[#6c4d39]/30 relative bg-black">
           <video ref={videoRef} className="w-full max-h-48 object-cover" playsInline muted />
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-48 h-24 border-2 border-[#a4592a] rounded-lg opacity-60" />
+            <div className="w-48 h-24 border-2 border-[#6c4d39] rounded-lg opacity-60" />
           </div>
           <div className="absolute bottom-2 left-0 right-0 text-center text-white/80 text-xs">Point at barcode</div>
         </div>
@@ -167,14 +167,14 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
 
       {/* Result preview */}
       {result && (
-        <div className="mt-3 bg-white border border-[#a4592a]/25 rounded-xl p-4">
+        <div className="mt-3 bg-white border border-[#6c4d39]/25 rounded-xl p-4">
           <div className="flex items-start justify-between gap-3 mb-3">
             <div className="min-w-0">
-              <div className="text-xs text-[#a4592a] font-semibold mb-0.5">Found product</div>
+              <div className="text-xs text-[#6c4d39] font-semibold mb-0.5">Found product</div>
               <div className="font-bold text-[#241a12] text-sm leading-snug">{result.title}</div>
               {result.brand && <div className="text-xs text-[#8a7559] mt-0.5">{result.brand}</div>}
               <div className="flex flex-wrap gap-2 mt-1.5">
-                {result.category && <span className="text-[10px] bg-[#a4592a]/10 text-[#a4592a] px-2 py-0.5 rounded-full font-medium">{result.category}</span>}
+                {result.category && <span className="text-[10px] bg-[#6c4d39]/10 text-[#6c4d39] px-2 py-0.5 rounded-full font-medium">{result.category}</span>}
               </div>
             </div>
           </div>
@@ -189,7 +189,7 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
                     key={i}
                     type="button"
                     onClick={() => applyResult(img)}
-                    className="w-16 h-16 shrink-0 rounded-lg overflow-hidden border-2 border-transparent hover:border-[#a4592a] transition-colors bg-[#efe3d0]"
+                    className="w-16 h-16 shrink-0 rounded-lg overflow-hidden border-2 border-transparent hover:border-[#6c4d39] transition-colors bg-[#efe3d0]"
                   >
                     <img src={img} alt="" className="w-full h-full object-contain" />
                   </button>
@@ -202,7 +202,7 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
             <button
               type="button"
               onClick={() => applyResult()}
-              className="flex-1 bg-[#a4592a] hover:bg-[#843f1c] text-white text-base font-bold py-3 rounded-xl transition-colors"
+              className="flex-1 bg-[#6c4d39] hover:bg-[#563e2c] text-white text-base font-bold py-3 rounded-xl transition-colors"
             >
               Auto-fill form
             </button>
@@ -338,7 +338,7 @@ function NewItemForm() {
           <h1 className="text-2xl sm:text-3xl font-semibold">Add New Item</h1>
         </div>
         <button onClick={handleSave} disabled={saving || uploading}
-          className="bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white text-base px-6 py-3.5 rounded-xl font-semibold shrink-0 transition-colors">
+          className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white text-base px-6 py-3.5 rounded-xl font-semibold shrink-0 transition-colors">
           {saving ? "Saving..." : uploading ? "Uploading..." : "Save Item"}
         </button>
       </header>
@@ -356,19 +356,19 @@ function NewItemForm() {
               <div>
                 <label className="text-base text-[#6f5b46] mb-1.5 block">Item Title *</label>
                 <input name="title" value={formData.title} onChange={handleChange} placeholder='e.g. Apple iPad Pro 12.9"'
-                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]" />
+                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]" />
               </div>
               <div>
                 <label className="text-base text-[#6f5b46] mb-1.5 block">Description</label>
                 <textarea name="description" value={formData.description} onChange={handleChange} rows={3}
                   placeholder="Describe the item..."
-                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a] resize-none" />
+                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] resize-none" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-base text-[#6f5b46] mb-1.5 block">Condition *</label>
                   <select name="condition" value={formData.condition} onChange={handleChange}
-                    className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a]">
+                    className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]">
                     <option value="NEW">New</option>
                     <option value="LIKE_NEW">Like New</option>
                     <option value="GOOD">Good</option>
@@ -379,7 +379,7 @@ function NewItemForm() {
                 <div>
                   <label className="text-base text-[#6f5b46] mb-1.5 block">Category</label>
                   <select name="category" value={formData.category} onChange={handleChange}
-                    className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a]">
+                    className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]">
                     <option value="">Select category</option>
                     {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
@@ -403,7 +403,7 @@ function NewItemForm() {
                     <span className="absolute left-3 top-3 text-[#8a7559]">$</span>
                     <input name={field.name} value={formData[field.name as keyof typeof formData] as string}
                       onChange={handleChange} type="number" placeholder={field.placeholder}
-                      className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl pl-7 pr-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]" />
+                      className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl pl-7 pr-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]" />
                   </div>
                 </div>
               ))}
@@ -415,7 +415,7 @@ function NewItemForm() {
             <h2 className="text-lg font-semibold mb-4">Photos <span className="text-[#8a7559] text-base font-normal">(up to 10)</span></h2>
             <input type="file" accept="image/*" multiple id="photo-upload" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
             <label htmlFor="photo-upload"
-              className="border-2 border-dashed border-[#cdbda3] rounded-xl p-8 text-center hover:border-[#a4592a] transition-colors cursor-pointer block">
+              className="border-2 border-dashed border-[#cdbda3] rounded-xl p-8 text-center hover:border-[#6c4d39] transition-colors cursor-pointer block">
               <div className="text-[#8a7559] mb-2 flex justify-center">
                 <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="2" y="6" width="20" height="15" rx="2"/><circle cx="12" cy="13.5" r="4"/><path d="M9 6l1.5-3h3L15 6"/>
@@ -447,11 +447,11 @@ function NewItemForm() {
                 <label className="text-base text-[#6f5b46] mb-1.5 block">Donor Name</label>
                 <input name="donorName" value={formData.donorName} onChange={handleChange}
                   placeholder="Who donated this?"
-                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]" />
+                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]" />
               </div>
               <div className="flex items-center gap-3">
                 <input type="checkbox" name="taxDeductible" checked={formData.taxDeductible}
-                  onChange={handleChange} id="taxDeductible" className="w-5 h-5 accent-[#a4592a]" />
+                  onChange={handleChange} id="taxDeductible" className="w-5 h-5 accent-[#6c4d39]" />
                 <label htmlFor="taxDeductible" className="text-base text-[#4a3a2b]">Tax deductible donation</label>
               </div>
             </div>
@@ -461,7 +461,7 @@ function NewItemForm() {
             <h2 className="text-lg font-semibold mb-4">Storage Location</h2>
             <input name="storageLocation" value={formData.storageLocation} onChange={handleChange}
               placeholder="e.g. Room B / Shelf 2 / Bin 4"
-              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]" />
+              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]" />
             <p className="text-[#8a7559] text-sm mt-2">Used by staff to locate item during pickup</p>
           </div>
 
@@ -470,11 +470,11 @@ function NewItemForm() {
             {preselectedAuctionId ? (
               <div className="w-full bg-[#efe3d0]/50 border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] flex items-center justify-between">
                 <span>{auctions.find(a => a.id === preselectedAuctionId)?.title ?? "Loading..."}</span>
-                <span className="text-xs text-[#a4592a] bg-[#a4592a]/10 px-2 py-1 rounded-full">Pre-assigned</span>
+                <span className="text-xs text-[#6c4d39] bg-[#6c4d39]/10 px-2 py-1 rounded-full">Pre-assigned</span>
               </div>
             ) : (
               <select name="auctionId" value={formData.auctionId} onChange={handleChange}
-                className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a]">
+                className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]">
                 <option value="">Save as draft</option>
                 {auctions.map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}
               </select>
@@ -485,7 +485,7 @@ function NewItemForm() {
             <h2 className="text-lg font-semibold mb-4">Staff Notes</h2>
             <textarea name="notes" value={formData.notes} onChange={handleChange} rows={3}
               placeholder="Internal notes — not visible to bidders"
-              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a] resize-none" />
+              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] resize-none" />
           </div>
         </div>
       </div>

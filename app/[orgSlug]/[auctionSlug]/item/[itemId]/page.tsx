@@ -360,7 +360,7 @@ export default function ItemPage() {
           <h1 className="text-2xl font-bold mb-2">Item not found</h1>
           <p className="text-[#6f5b46] text-sm mb-6">This item may have been removed or the link is incorrect.</p>
           <div className="flex flex-col gap-2.5">
-            <Link href={`/${orgSlug}/${auctionSlug}`} className="w-full bg-[#a4592a] hover:bg-[#843f1c] text-white font-semibold py-3 rounded-xl transition-colors">
+            <Link href={`/${orgSlug}/${auctionSlug}`} className="w-full bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold py-3 rounded-xl transition-colors">
               Back to auction
             </Link>
             <Link href="/auctions" className="w-full border border-[#cdbda3] hover:border-[#b3a085] text-[#4a3a2b] hover:text-[#241a12] font-medium py-3 rounded-xl transition-colors">
@@ -452,7 +452,7 @@ export default function ItemPage() {
                     <button
                       key={i}
                       onClick={() => setSelectedPhotoIdx(i)}
-                      className={`w-1.5 h-1.5 rounded-full transition-colors ${i === selectedPhotoIdx ? "bg-[#a4592a]" : "bg-[#b3a085]"}`}
+                      className={`w-1.5 h-1.5 rounded-full transition-colors ${i === selectedPhotoIdx ? "bg-[#6c4d39]" : "bg-[#b3a085]"}`}
                       aria-label={`Go to photo ${i + 1}`}
                     />
                   ))}
@@ -468,7 +468,7 @@ export default function ItemPage() {
                   key={i}
                   onClick={() => setSelectedPhotoIdx(i)}
                   className={`aspect-square bg-white rounded-lg overflow-hidden flex items-center justify-center border-2 transition-colors ${
-                    i === selectedPhotoIdx ? "border-[#a4592a]" : "border-transparent hover:border-[#a4592a]/40"
+                    i === selectedPhotoIdx ? "border-[#6c4d39]" : "border-transparent hover:border-[#6c4d39]/40"
                   }`}
                   aria-label={`Photo ${i + 1}`}
                 >
@@ -483,13 +483,13 @@ export default function ItemPage() {
         <div>
           <div className="flex items-center gap-2 mb-3 flex-wrap">
             {item.category && (
-              <span className="text-xs text-[#a4592a] bg-[#a4592a]/10 border border-[#a4592a]/20 px-2.5 py-1 rounded-full font-medium">{item.category}</span>
+              <span className="text-xs text-[#6c4d39] bg-[#6c4d39]/10 border border-[#6c4d39]/20 px-2.5 py-1 rounded-full font-medium">{item.category}</span>
             )}
             <span className="text-xs text-[#6f5b46] bg-[#efe3d0] border border-[#e3d6bf] px-2.5 py-1 rounded-full capitalize font-medium">
               {item.condition.replace("_", " ").toLowerCase()}
             </span>
             {item.taxDeductible && (
-              <span className="text-xs text-[#a4592a] bg-[#a4592a]/10 border border-[#a4592a]/20 px-2.5 py-1 rounded-full font-medium">Tax Deductible</span>
+              <span className="text-xs text-[#6c4d39] bg-[#6c4d39]/10 border border-[#6c4d39]/20 px-2.5 py-1 rounded-full font-medium">Tax Deductible</span>
             )}
           </div>
 
@@ -501,7 +501,7 @@ export default function ItemPage() {
             <div className={`rounded-2xl px-4 py-3 mb-6 flex items-center justify-between border transition-all ${
               biddingEnded
                 ? "bg-white border-[#e3d6bf]"
-                : "bg-[#f6ecda] border-[#a4592a]/25"
+                : "bg-[#f6ecda] border-[#6c4d39]/25"
             }`}>
               <span className="text-[#8a7559] text-sm font-medium">
                 {biddingEnded ? "Bidding ended" : "Time remaining"}
@@ -517,30 +517,30 @@ export default function ItemPage() {
           {/* Donor / retail value */}
           <div className="grid grid-cols-2 gap-3 mb-6">
             {item.retailValue && (
-              <div className="bg-[#f6ecda] border border-[#a4592a]/25 rounded-xl p-4">
-                <div className="text-[#a4592a] text-xs font-semibold uppercase tracking-wide mb-1">Retail Value</div>
-                <div className="text-[#843f1c] font-extrabold text-xl">${item.retailValue.toLocaleString()}</div>
+              <div className="bg-[#f6ecda] border border-[#6c4d39]/25 rounded-xl p-4">
+                <div className="text-[#6c4d39] text-xs font-semibold uppercase tracking-wide mb-1">Retail Value</div>
+                <div className="text-[#563e2c] font-extrabold text-xl">${item.retailValue.toLocaleString()}</div>
               </div>
             )}
             {item.donorName && (
-              <div className="bg-[#f6ecda] border border-[#a4592a]/20 rounded-xl p-4">
-                <div className="text-[#a4592a] text-xs font-semibold uppercase tracking-wide mb-1">Donated by</div>
+              <div className="bg-[#f6ecda] border border-[#6c4d39]/20 rounded-xl p-4">
+                <div className="text-[#6c4d39] text-xs font-semibold uppercase tracking-wide mb-1">Donated by</div>
                 <div className="text-[#241a12] font-bold text-sm leading-snug">{item.donorName}</div>
               </div>
             )}
           </div>
 
           {/* ── Unified bidding card: Max Bid (primary) + manual bid (secondary) ── */}
-          <div className="bg-white border border-[#e3d6bf] rounded-2xl p-4 sm:p-6 mb-6 shadow-[0_0_25px_rgba(164,89,42,0.04)]">
+          <div className="bg-white border border-[#e3d6bf] rounded-2xl p-4 sm:p-6 mb-6 shadow-[0_0_25px_rgba(108, 77, 57,0.04)]">
 
             {/* Current bid header */}
             <div className="flex items-center justify-between mb-4">
               <div>
                 <div className="text-[#8a7559] text-sm">{item.currentBid > 0 ? "Current Bid" : "Starting Bid"}</div>
-                <div className="text-[#a4592a] font-bold text-3xl sm:text-4xl">${currentBid.toLocaleString()}</div>
+                <div className="text-[#6c4d39] font-bold text-3xl sm:text-4xl">${currentBid.toLocaleString()}</div>
                 {showWinning && (
                   <div className="mt-1.5">
-                    <span className="inline-flex items-center gap-1.5 text-xs bg-[#a4592a]/20 text-[#c47b3e] border border-[#a4592a]/30 px-2.5 py-0.5 rounded-full font-semibold">
+                    <span className="inline-flex items-center gap-1.5 text-xs bg-[#6c4d39]/20 text-[#c47b3e] border border-[#6c4d39]/30 px-2.5 py-0.5 rounded-full font-semibold">
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                         <path d="M3 5H1V3h2M9 5h2V3h-2M3 5h6v3a3 3 0 0 1-6 0V5zM4 11h4M6 8v3" />
                       </svg>
@@ -555,7 +555,7 @@ export default function ItemPage() {
                   <div className="text-[#241a12] font-bold text-xl">{liveBids.length}</div>
                 </div>
                 {hasActiveProxy && (
-                  <span className="text-xs bg-[#a4592a]/15 text-[#843f1c] px-2 py-0.5 rounded-full font-medium">
+                  <span className="text-xs bg-[#6c4d39]/15 text-[#563e2c] px-2 py-0.5 rounded-full font-medium">
                     Max Bid Active
                   </span>
                 )}
@@ -576,7 +576,7 @@ export default function ItemPage() {
               <div className="text-center">
                 <p className="text-[#6f5b46] text-sm mb-3">You must be signed in to place a bid.</p>
                 <SignInButton mode="modal">
-                  <button className="w-full bg-[#a4592a] hover:bg-[#843f1c] text-white font-semibold py-3 rounded-xl">
+                  <button className="w-full bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold py-3 rounded-xl">
                     Sign In to Bid
                   </button>
                 </SignInButton>
@@ -586,7 +586,7 @@ export default function ItemPage() {
                 {/* ═══════════════════════════════════════════════════════════
                     MAX BID — PRIMARY option
                 ═══════════════════════════════════════════════════════════ */}
-                <div className="bg-[#f6ecda] border border-[#a4592a]/25 rounded-xl p-3 mb-4">
+                <div className="bg-[#f6ecda] border border-[#6c4d39]/25 rounded-xl p-3 mb-4">
                   {/* section header */}
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-1.5">
@@ -597,19 +597,19 @@ export default function ItemPage() {
                       <button
                         onClick={() => setShowMaxBidExplainer(true)}
                         aria-label="Learn how max bidding works"
-                        className="w-5 h-5 rounded-full bg-[#a4592a]/20 text-[#a4592a] text-xs font-bold flex items-center justify-center hover:bg-[#a4592a]/35 transition-colors leading-none shrink-0"
+                        className="w-5 h-5 rounded-full bg-[#6c4d39]/20 text-[#6c4d39] text-xs font-bold flex items-center justify-center hover:bg-[#6c4d39]/35 transition-colors leading-none shrink-0"
                       >
                         ?
                       </button>
                     </div>
-                    <span className="text-[11px] font-semibold text-[#a4592a] bg-[#a4592a]/10 px-2 py-0.5 rounded-full shrink-0">
+                    <span className="text-[11px] font-semibold text-[#6c4d39] bg-[#6c4d39]/10 px-2 py-0.5 rounded-full shrink-0">
                       Recommended
                     </span>
                   </div>
 
                   {proxyMessage && (
                     <div className={`text-sm mb-3 px-3 py-2 rounded-lg ${
-                      proxyMessage.type === "success" ? "bg-[#a4592a]/20 text-[#a4592a]" : "bg-red-500/20 text-red-600"
+                      proxyMessage.type === "success" ? "bg-[#6c4d39]/20 text-[#6c4d39]" : "bg-red-500/20 text-red-600"
                     }`}>
                       {proxyMessage.text}
                     </div>
@@ -621,7 +621,7 @@ export default function ItemPage() {
                       <div>
                         <p className="text-[#4a3a2b] text-sm font-medium">
                           Your max bid:{" "}
-                          <span className="text-[#a4592a] font-bold text-base">${userProxy.maxAmount.toLocaleString()}</span>
+                          <span className="text-[#6c4d39] font-bold text-base">${userProxy.maxAmount.toLocaleString()}</span>
                         </p>
                         <p className="text-[#8a7559] text-xs mt-0.5">We&apos;re auto-bidding on your behalf up to this amount.</p>
                       </div>
@@ -657,7 +657,7 @@ export default function ItemPage() {
                             onClick={() => setProxyAmount(String(s))}
                             className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
                               proxyAmount === String(s)
-                                ? "bg-[#a4592a] border-[#a4592a] text-white"
+                                ? "bg-[#6c4d39] border-[#6c4d39] text-white"
                                 : "bg-white border-[#cdbda3] text-[#4a3a2b] hover:bg-[#efe3d0]"
                             }`}
                           >
@@ -674,12 +674,12 @@ export default function ItemPage() {
                           onChange={e => setProxyAmount(e.target.value)}
                           onKeyDown={e => e.key === "Enter" && !proxyPlacing && handleSetProxy()}
                           placeholder={`$${minProxy.toLocaleString()} or more`}
-                          className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]"
+                          className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]"
                         />
                         <button
                           onClick={handleSetProxy}
                           disabled={proxyPlacing}
-                          className="w-full bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-all hover:shadow-[0_0_20px_rgba(164,89,42,0.3)]"
+                          className="w-full bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-all hover:shadow-[0_0_20px_rgba(108, 77, 57,0.3)]"
                         >
                           {proxyPlacing ? "Setting…" : "Set Max Bid"}
                         </button>
@@ -724,7 +724,7 @@ export default function ItemPage() {
                   <div className="text-[#8a7559] text-xs mb-3">{item.currentBid > 0 ? `Minimum next bid: $${minBid.toLocaleString()}` : `Be the first bidder — start at $${minBid.toLocaleString()}`}</div>
                   {message && (
                     <div className={`text-sm mb-3 px-3 py-2 rounded-lg ${
-                      message.type === "success" ? "bg-[#a4592a]/20 text-[#a4592a]" : "bg-red-500/20 text-red-600"
+                      message.type === "success" ? "bg-[#6c4d39]/20 text-[#6c4d39]" : "bg-red-500/20 text-red-600"
                     }`}>
                       {message.text}
                     </div>
@@ -738,7 +738,7 @@ export default function ItemPage() {
                       onChange={e => setBidAmount(e.target.value)}
                       onKeyDown={e => e.key === "Enter" && !placing && handleBid()}
                       placeholder={`Enter $${minBid.toLocaleString()} or more`}
-                      className="flex-1 bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]"
+                      className="flex-1 bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]"
                     />
                     <button
                       onClick={handleBid}
@@ -807,7 +807,7 @@ export default function ItemPage() {
                     </div>
                     <button
                       onClick={() => setShowCardModal(true)}
-                      className="text-xs text-[#a4592a] hover:text-[#c47b3e] font-medium transition-colors"
+                      className="text-xs text-[#6c4d39] hover:text-[#c47b3e] font-medium transition-colors"
                     >
                       {hasCard ? "Update card" : "Add card"}
                     </button>
@@ -832,10 +832,10 @@ export default function ItemPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-[#6f5b46]">{bid.user}</span>
                       {bid.isProxy && (
-                        <span className="text-xs text-[#a4592a] bg-[#a4592a]/10 px-1.5 py-0.5 rounded">auto</span>
+                        <span className="text-xs text-[#6c4d39] bg-[#6c4d39]/10 px-1.5 py-0.5 rounded">auto</span>
                       )}
                     </div>
-                    <span className="text-[#a4592a] font-semibold">${bid.amount.toLocaleString()}</span>
+                    <span className="text-[#6c4d39] font-semibold">${bid.amount.toLocaleString()}</span>
                     <span className="text-[#8a7559] text-sm">{bid.time}</span>
                   </div>
                 ))}

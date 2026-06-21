@@ -17,7 +17,7 @@ const W = "#fffdf7";
 
 function Fox({ className }: IconProps) {
   return (
-    <S bg="#e9a06a" className={className}>
+    <S bg="#33485f" className={className}>
       <path d="M14 20 L24 30 L18 40 Z M50 20 L40 30 L46 40 Z" fill="#c9622b" />
       <path d="M32 24 L48 30 Q44 48 32 50 Q20 48 16 30 Z" fill="#ec9a5e" />
       <path d="M32 38 L44 32 Q40 46 32 49 Q24 46 20 32 Z" fill={W} />
@@ -28,7 +28,7 @@ function Fox({ className }: IconProps) {
 }
 function Bear({ className }: IconProps) {
   return (
-    <S bg="#b98a5e" className={className}>
+    <S bg="#5f8c84" className={className}>
       <circle cx="20" cy="22" r="7" fill="#8a6440" /><circle cx="44" cy="22" r="7" fill="#8a6440" />
       <circle cx="32" cy="34" r="18" fill="#a87a4f" />
       <circle cx="32" cy="38" r="9" fill="#e7d2b3" />
@@ -39,7 +39,7 @@ function Bear({ className }: IconProps) {
 }
 function Deer({ className }: IconProps) {
   return (
-    <S bg="#cf9a6a" className={className}>
+    <S bg="#7089a8" className={className}>
       <path d="M22 14 q-4 -6 -8 -4 M22 14 q-7 -2 -9 2 M42 14 q4 -6 8 -4 M42 14 q7 -2 9 2" stroke="#7a5230" strokeWidth="2.4" fill="none" strokeLinecap="round" />
       <path d="M32 20 q14 2 12 18 q-2 14 -12 16 q-10 -2 -12 -16 q-2 -16 12 -18 Z" fill="#d8a87a" />
       <ellipse cx="32" cy="42" rx="7" ry="6" fill="#efdcc6" />
@@ -51,7 +51,7 @@ function Deer({ className }: IconProps) {
 }
 function Owl({ className }: IconProps) {
   return (
-    <S bg="#8a7d9b" className={className}>
+    <S bg="#cf9b3f" className={className}>
       <path d="M16 22 q16 -10 32 0 q4 18 -4 28 q-12 8 -24 0 q-8 -10 -4 -28 Z" fill="#6f6383" />
       {/* wise glasses */}
       <circle cx="25" cy="32" r="9" fill={W} /><circle cx="39" cy="32" r="9" fill={W} />
@@ -64,7 +64,7 @@ function Owl({ className }: IconProps) {
 }
 function Rabbit({ className }: IconProps) {
   return (
-    <S bg="#cbb6c9" className={className}>
+    <S bg="#a86e8e" className={className}>
       <ellipse cx="26" cy="16" rx="4.5" ry="12" fill={W} /><ellipse cx="38" cy="16" rx="4.5" ry="12" fill={W} />
       <ellipse cx="26" cy="17" rx="2" ry="8" fill="#f0c4d2" /><ellipse cx="38" cy="17" rx="2" ry="8" fill="#f0c4d2" />
       <circle cx="32" cy="38" r="16" fill={W} />
@@ -76,7 +76,7 @@ function Rabbit({ className }: IconProps) {
 }
 function Raccoon({ className }: IconProps) {
   return (
-    <S bg="#9aa3ad" className={className}>
+    <S bg="#3f6f68" className={className}>
       <path d="M16 20 l8 8 M48 20 l-8 8" stroke="#5b626b" strokeWidth="7" strokeLinecap="round" />
       <circle cx="32" cy="34" r="18" fill="#c2c8cf" />
       <path d="M20 32 q6 -7 11 -2 q-2 8 -11 6 q-3 -2 0 -4 Z" fill="#4a5159" />
@@ -88,7 +88,7 @@ function Raccoon({ className }: IconProps) {
 }
 function Wolf({ className }: IconProps) {
   return (
-    <S bg="#7f8a93" className={className}>
+    <S bg="#6a4f6e" className={className}>
       <path d="M16 18 L24 30 L18 34 Z M48 18 L40 30 L46 34 Z" fill="#5a636b" />
       <path d="M32 22 q15 4 13 20 q-2 12 -13 14 q-11 -2 -13 -14 q-2 -16 13 -20 Z" fill="#9aa4ad" />
       <path d="M32 40 q-8 0 -10 6 q10 6 20 0 q-2 -6 -10 -6 Z" fill="#e7ecef" />
@@ -99,7 +99,7 @@ function Wolf({ className }: IconProps) {
 }
 function Cat({ className }: IconProps) {
   return (
-    <S bg="#d98c8c" className={className}>
+    <S bg="#5f8c72" className={className}>
       <path d="M18 18 L26 30 L20 34 Z M46 18 L38 30 L44 34 Z" fill="#b85d5d" />
       <circle cx="32" cy="36" r="17" fill="#e5a3a3" />
       {/* girl bow */}
@@ -112,7 +112,7 @@ function Cat({ className }: IconProps) {
 }
 function Dog({ className }: IconProps) {
   return (
-    <S bg="#cdaa7a" className={className}>
+    <S bg="#5f7fa0" className={className}>
       <ellipse cx="17" cy="34" rx="6" ry="12" fill="#8a6a44" /><ellipse cx="47" cy="34" rx="6" ry="12" fill="#8a6a44" />
       <circle cx="32" cy="34" r="17" fill="#dcbd92" />
       {/* young cap */}
@@ -125,7 +125,7 @@ function Dog({ className }: IconProps) {
 }
 function Frog({ className }: IconProps) {
   return (
-    <S bg="#8bb86a" className={className}>
+    <S bg="#6f9bc4" className={className}>
       <circle cx="22" cy="20" r="8" fill="#7aa856" /><circle cx="42" cy="20" r="8" fill="#7aa856" />
       <circle cx="22" cy="20" r="4" fill={W} /><circle cx="42" cy="20" r="4" fill={W} />
       <circle cx="22" cy="21" r="2" fill={INK} /><circle cx="42" cy="21" r="2" fill={INK} />
@@ -136,7 +136,7 @@ function Frog({ className }: IconProps) {
 }
 function Hedgehog({ className }: IconProps) {
   return (
-    <S bg="#b79b86" className={className}>
+    <S bg="#5f86a0" className={className}>
       <path d="M30 16 L34 16 L40 22 L46 20 L48 28 L52 30 L46 36 Q40 24 30 24 Z" fill="#6e5743" />
       <path d="M14 36 q4 -16 22 -14 q16 2 14 16 q-2 12 -18 12 q-16 0 -18 -14 Z" fill="#7d6450" />
       <ellipse cx="26" cy="40" rx="14" ry="11" fill="#e7d2bd" />
@@ -147,7 +147,7 @@ function Hedgehog({ className }: IconProps) {
 }
 function Panda({ className }: IconProps) {
   return (
-    <S bg="#9fb0b6" className={className}>
+    <S bg="#b56f4f" className={className}>
       <circle cx="20" cy="20" r="7" fill={INK} /><circle cx="44" cy="20" r="7" fill={INK} />
       <circle cx="32" cy="34" r="18" fill={W} />
       <ellipse cx="25" cy="32" rx="5" ry="6" fill={INK} transform="rotate(-20 25 32)" />

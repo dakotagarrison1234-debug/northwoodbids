@@ -69,7 +69,7 @@ function NavLink({
   onClick: () => void;
   accent?: "teal" | "orange";
 }) {
-  const accentColor = accent === "orange" ? "#f97316" : accent === "teal" ? "#a4592a" : undefined;
+  const accentColor = accent === "orange" ? "#f97316" : accent === "teal" ? "#6c4d39" : undefined;
   return (
     <Link
       href={href}
@@ -153,7 +153,7 @@ export default function UserMenu() {
         </Link>
         <Link
           href="/sign-up"
-          className="bg-[#a4592a] hover:bg-[#843f1c] text-white text-sm px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors"
+          className="bg-[#6c4d39] hover:bg-[#563e2c] text-white text-sm px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors"
         >
           Get Started
         </Link>
@@ -198,7 +198,7 @@ export default function UserMenu() {
         {/* User header */}
         <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #e3d6bf", display: "flex", alignItems: "flex-start", gap: 12, justifyContent: "space-between", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-            <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: "rgba(164,89,42,0.10)", border: "1px solid rgba(164,89,42,0.20)", display: "flex", alignItems: "center", justifyContent: "center", color: "#a4592a", fontWeight: 700, fontSize: 16, flexShrink: 0 }}>
+            <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: "rgba(108, 77, 57,0.10)", border: "1px solid rgba(108, 77, 57,0.20)", display: "flex", alignItems: "center", justifyContent: "center", color: "#6c4d39", fontWeight: 700, fontSize: 16, flexShrink: 0 }}>
               {hasAvatar(me?.avatarKey) ? (
                 <Avatar avatarKey={me?.avatarKey} className="w-full h-full" />
               ) : user?.imageUrl ? (
@@ -279,7 +279,7 @@ export default function UserMenu() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="w-9 h-9 rounded-full overflow-hidden bg-[#a4592a]/10 border border-[#a4592a]/20 flex items-center justify-center text-[#a4592a] font-semibold text-sm hover:bg-[#843f1c]/20 transition-colors shrink-0"
+        className="w-9 h-9 rounded-full overflow-hidden bg-[#6c4d39]/10 border border-[#6c4d39]/20 flex items-center justify-center text-[#6c4d39] font-semibold text-sm hover:bg-[#563e2c]/20 transition-colors shrink-0"
         aria-label="Open account menu"
       >
         {hasAvatar(me?.avatarKey) ? (

@@ -86,7 +86,7 @@ export default async function PickupPage() {
         {totalItems > 0 && (
           <div className="mt-3 h-2 bg-[#efe3d0] rounded-full overflow-hidden">
             <div
-              className="h-full bg-[#a4592a] rounded-full transition-all"
+              className="h-full bg-[#6c4d39] rounded-full transition-all"
               style={{ width: `${pct}%` }}
             />
           </div>
@@ -129,7 +129,7 @@ export default async function PickupPage() {
                         {profile?.name ?? "Unknown Bidder"}
                       </span>
                       {allDone ? (
-                        <span className="text-xs bg-[#a4592a]/20 text-[#a4592a] px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                        <span className="text-xs bg-[#6c4d39]/20 text-[#6c4d39] px-2 py-0.5 rounded-full inline-flex items-center gap-1">
                           <IcoPickedUp /> All picked up
                         </span>
                       ) : (
@@ -145,7 +145,7 @@ export default async function PickupPage() {
                     <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-sm text-[#8a7559]">
                       <span>
                         {paidCount === bids.length ? (
-                          <span className="text-[#a4592a] inline-flex items-center gap-0.5"><IcoPickedUp />Fully paid</span>
+                          <span className="text-[#6c4d39] inline-flex items-center gap-0.5"><IcoPickedUp />Fully paid</span>
                         ) : (
                           <span className="text-amber-600">{paidCount}/{bids.length} items paid</span>
                         )}
@@ -178,7 +178,7 @@ export default async function PickupPage() {
                         {/* Status dot */}
                         <span
                           className={`text-xl shrink-0 leading-none ${
-                            isPickedUp ? "text-[#a4592a]" : isPendingPickup ? "text-amber-600" : "text-[#8a7559]"
+                            isPickedUp ? "text-[#6c4d39]" : isPendingPickup ? "text-amber-600" : "text-[#8a7559]"
                           }`}
                         >
                           {isPickedUp ? <IcoPickedUp /> : isPendingPickup ? <IcoPending /> : <IcoOpen />}
@@ -194,7 +194,7 @@ export default async function PickupPage() {
                             {bid.item.title}
                           </div>
                           {bid.item.storageLocation ? (
-                            <div className="text-sm font-mono text-[#a4592a] mt-0.5 flex items-center gap-0.5">
+                            <div className="text-sm font-mono text-[#6c4d39] mt-0.5 flex items-center gap-0.5">
                               <IcoPin />{bid.item.storageLocation}
                             </div>
                           ) : (
@@ -208,7 +208,7 @@ export default async function PickupPage() {
                             ${Number(bid.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                           {payment?.status === "PAID" ? (
-                            <span className="text-xs bg-[#a4592a]/20 text-[#a4592a] px-2 py-0.5 rounded-full">
+                            <span className="text-xs bg-[#6c4d39]/20 text-[#6c4d39] px-2 py-0.5 rounded-full">
                               Paid
                             </span>
                           ) : (

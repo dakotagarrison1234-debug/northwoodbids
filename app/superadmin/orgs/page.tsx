@@ -44,14 +44,14 @@ export default async function SuperAdminOrgsPage() {
                       <span>{org.items.length} items</span>
                       <span>{org.auctions.length} auctions</span>
                       {openAuctions > 0 && (
-                        <span className="text-[#a4592a] font-medium">{openAuctions} live</span>
+                        <span className="text-[#6c4d39] font-medium">{openAuctions} live</span>
                       )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2.5 shrink-0">
                     <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
                       org.isActive
-                        ? "bg-[#a4592a]/20 text-[#a4592a]"
+                        ? "bg-[#6c4d39]/20 text-[#6c4d39]"
                         : "bg-[#efe3d0] text-[#8a7559]"
                     }`}>
                       {org.isActive ? "Active" : "Inactive"}

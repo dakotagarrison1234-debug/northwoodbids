@@ -16,7 +16,7 @@ const money = (n: number) =>
   "$" + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 function StatCard({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: "moss" | "leather" | "ink" }) {
-  const color = accent === "moss" ? "text-[#5f7a45]" : accent === "leather" ? "text-[#a4592a]" : "text-[#241a12]";
+  const color = accent === "moss" ? "text-[#5f7a45]" : accent === "leather" ? "text-[#6c4d39]" : "text-[#241a12]";
   return (
     <div className="bg-white border border-[#e3d6bf] rounded-2xl p-6 sm:p-7">
       <div className="text-sm font-semibold text-[#8a7559] uppercase tracking-wider mb-2">{label}</div>
@@ -82,7 +82,7 @@ export default function ReportsPage() {
                 <div key={m.label} className="flex items-center gap-3">
                   <span className="w-14 text-sm text-[#6f5b46] shrink-0">{m.label}</span>
                   <div className="flex-1 bg-[#efe3d0] rounded-lg h-7 overflow-hidden">
-                    <div className="h-full bg-[#a4592a] rounded-lg" style={{ width: `${(m.total / maxMonth) * 100}%` }} />
+                    <div className="h-full bg-[#6c4d39] rounded-lg" style={{ width: `${(m.total / maxMonth) * 100}%` }} />
                   </div>
                   <span className="w-24 text-right text-base font-semibold text-[#241a12] shrink-0">{money(m.total)}</span>
                 </div>
@@ -112,7 +112,7 @@ export default function ReportsPage() {
         {/* Who owes */}
         <section>
           <h2 className="text-lg font-bold mb-4">
-            Payments due {outstanding.count > 0 && <span className="text-[#a4592a]">({money(outstanding.total)})</span>}
+            Payments due {outstanding.count > 0 && <span className="text-[#6c4d39]">({money(outstanding.total)})</span>}
           </h2>
           {outstanding.owers.length === 0 ? (
             <div className="bg-white border border-[#e3d6bf] rounded-2xl p-6 text-base text-[#6f5b46]">
@@ -127,7 +127,7 @@ export default function ReportsPage() {
                     <div className="text-sm text-[#8a7559] truncate">{o.email}{o.phone ? ` · ${o.phone}` : ""}</div>
                     {o.items.length > 0 && <div className="text-sm text-[#8a7559] truncate mt-0.5">{o.items.join(", ")}</div>}
                   </div>
-                  <div className="text-lg font-bold text-[#a4592a] shrink-0">{money(o.amountDue)}</div>
+                  <div className="text-lg font-bold text-[#6c4d39] shrink-0">{money(o.amountDue)}</div>
                 </div>
               ))}
             </div>

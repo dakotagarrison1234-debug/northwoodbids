@@ -127,7 +127,7 @@ export default function EditItemPage() {
           <h1 className="text-2xl sm:text-3xl font-semibold">Edit Item</h1>
         </div>
         <button onClick={handleSave} disabled={saving || uploading}
-          className="bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white text-base px-6 py-3.5 rounded-xl font-semibold shrink-0 transition-colors">
+          className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white text-base px-6 py-3.5 rounded-xl font-semibold shrink-0 transition-colors">
           {saving ? "Saving..." : uploading ? "Uploading..." : "Save Changes"}
         </button>
       </header>
@@ -140,18 +140,18 @@ export default function EditItemPage() {
               <div>
                 <label className="text-base text-[#6f5b46] mb-1.5 block">Item Title *</label>
                 <input name="title" value={formData.title} onChange={handleChange}
-                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a]" />
+                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]" />
               </div>
               <div>
                 <label className="text-base text-[#6f5b46] mb-1.5 block">Description</label>
                 <textarea name="description" value={formData.description} onChange={handleChange} rows={3}
-                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a] resize-none" />
+                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39] resize-none" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-base text-[#6f5b46] mb-1.5 block">Condition</label>
                   <select name="condition" value={formData.condition} onChange={handleChange}
-                    className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a]">
+                    className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]">
                     <option value="NEW">New</option>
                     <option value="LIKE_NEW">Like New</option>
                     <option value="GOOD">Good</option>
@@ -162,7 +162,7 @@ export default function EditItemPage() {
                 <div>
                   <label className="text-base text-[#6f5b46] mb-1.5 block">Category</label>
                   <select name="category" value={formData.category} onChange={handleChange}
-                    className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a]">
+                    className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]">
                     <option value="">Select category</option>
                     {["Electronics","Sports","Experiences","Food & Drink","Outdoors","Home & Garden","Art & Collectibles","Gift Cards","Other"].map(c => (
                       <option key={c} value={c}>{c}</option>
@@ -187,7 +187,7 @@ export default function EditItemPage() {
                     <span className="absolute left-3 top-3 text-[#8a7559]">$</span>
                     <input name={field.name} value={formData[field.name as keyof typeof formData] as string}
                       onChange={handleChange} type="number"
-                      className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl pl-7 pr-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a]" />
+                      className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl pl-7 pr-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]" />
                   </div>
                 </div>
               ))}
@@ -209,7 +209,7 @@ export default function EditItemPage() {
             )}
             <input type="file" accept="image/*" multiple id="photo-upload" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
             <label htmlFor="photo-upload"
-              className="border-2 border-dashed border-[#cdbda3] rounded-xl p-6 text-center hover:border-[#a4592a] transition-colors cursor-pointer block">
+              className="border-2 border-dashed border-[#cdbda3] rounded-xl p-6 text-center hover:border-[#6c4d39] transition-colors cursor-pointer block">
               <div className="text-[#8a7559] mb-1 flex justify-center"><svg width="22" height="22" fill="none" viewBox="0 0 22 22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="18" height="14" rx="2"/><circle cx="11" cy="12" r="3.5"/><path d="M8 5l1.5-2.5h3L14 5"/></svg></div>
               <div className="text-[#6f5b46] text-base">{uploading ? "Uploading..." : "Click to add photos"}</div>
             </label>
@@ -223,11 +223,11 @@ export default function EditItemPage() {
               <div>
                 <label className="text-base text-[#6f5b46] mb-1.5 block">Donor Name</label>
                 <input name="donorName" value={formData.donorName} onChange={handleChange}
-                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a]" />
+                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]" />
               </div>
               <div className="flex items-center gap-3">
                 <input type="checkbox" name="taxDeductible" checked={formData.taxDeductible}
-                  onChange={handleChange} id="taxDeductible" className="w-5 h-5 accent-[#a4592a]" />
+                  onChange={handleChange} id="taxDeductible" className="w-5 h-5 accent-[#6c4d39]" />
                 <label htmlFor="taxDeductible" className="text-base text-[#4a3a2b]">Tax deductible</label>
               </div>
             </div>
@@ -236,13 +236,13 @@ export default function EditItemPage() {
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4">Storage Location</h2>
             <input name="storageLocation" value={formData.storageLocation} onChange={handleChange}
-              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a]" />
+              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]" />
           </div>
 
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4">Assign to Auction</h2>
             <select name="auctionId" value={formData.auctionId} onChange={handleChange}
-              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a]">
+              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]">
               <option value="">Save as draft</option>
               {auctions.map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}
             </select>
@@ -251,7 +251,7 @@ export default function EditItemPage() {
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4">Staff Notes</h2>
             <textarea name="notes" value={formData.notes} onChange={handleChange} rows={3}
-              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a] resize-none" />
+              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39] resize-none" />
           </div>
         </div>
       </div>

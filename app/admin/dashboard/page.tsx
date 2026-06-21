@@ -56,7 +56,7 @@ export default async function AdminDashboard() {
         <h1 className="text-2xl sm:text-3xl font-semibold">Dashboard</h1>
         <Link
           href="/admin/auctions/new"
-          className="bg-[#a4592a] hover:bg-[#843f1c] text-white text-base font-semibold px-6 py-3.5 rounded-xl transition-colors"
+          className="bg-[#6c4d39] hover:bg-[#563e2c] text-white text-base font-semibold px-6 py-3.5 rounded-xl transition-colors"
         >
           + New Auction
         </Link>
@@ -103,7 +103,7 @@ export default async function AdminDashboard() {
                         })}
                       </div>
                     </div>
-                    <span className="text-[#a4592a] font-semibold text-base shrink-0">
+                    <span className="text-[#6c4d39] font-semibold text-base shrink-0">
                       ${Number(bid.amount).toLocaleString()}
                     </span>
                   </div>
@@ -120,7 +120,7 @@ export default async function AdminDashboard() {
               <p className="text-[#8a7559] text-base mb-4">No auctions yet.</p>
               <Link
                 href="/admin/auctions/new"
-                className="block text-center bg-[#a4592a] hover:bg-[#843f1c] text-white text-base font-semibold px-6 py-3.5 rounded-xl transition-colors"
+                className="block text-center bg-[#6c4d39] hover:bg-[#563e2c] text-white text-base font-semibold px-6 py-3.5 rounded-xl transition-colors"
               >
                 Create Auction
               </Link>
@@ -140,7 +140,7 @@ export default async function AdminDashboard() {
                 </div>
                 <div className="flex justify-between text-base">
                   <span className="text-[#8a7559]">Raised</span>
-                  <span className="text-[#a4592a] font-semibold">
+                  <span className="text-[#6c4d39] font-semibold">
                     ${activeAuction.items
                       .filter((i) => soldStatuses.includes(i.status))
                       .reduce((s, i) => s + Number(i.currentBid), 0)
@@ -151,7 +151,7 @@ export default async function AdminDashboard() {
                   <span className="text-[#8a7559]">Status</span>
                   <span
                     className={`capitalize ${
-                      activeAuction.status === "OPEN" ? "text-[#a4592a]" : "text-[#6f5b46]"
+                      activeAuction.status === "OPEN" ? "text-[#6c4d39]" : "text-[#6f5b46]"
                     }`}
                   >
                     {activeAuction.status.toLowerCase()}

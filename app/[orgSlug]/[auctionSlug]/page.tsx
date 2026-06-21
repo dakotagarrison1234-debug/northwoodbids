@@ -108,12 +108,12 @@ export default async function AuctionPage({ params }: Props) {
       {/* Auction hero */}
       <div className="relative overflow-hidden bg-[#efe5d3]/80 border-b border-[#e3d6bf]/60 px-4 sm:px-6 py-6 sm:py-8">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] bg-[#a4592a]/4 rounded-full blur-[60px]" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] bg-[#6c4d39]/4 rounded-full blur-[60px]" />
         </div>
         <div className="relative max-w-6xl mx-auto flex items-start sm:items-center justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <Link href={`/${orgSlug}`} className="text-xs text-[#8a7559] hover:text-[#a4592a] transition-colors font-medium">
+              <Link href={`/${orgSlug}`} className="text-xs text-[#8a7559] hover:text-[#6c4d39] transition-colors font-medium">
                 {orgSlug.replace(/-/g, " ")}
               </Link>
             </div>
@@ -131,7 +131,7 @@ export default async function AuctionPage({ params }: Props) {
           </div>
           {totalRaised > 0 && (
             <div className="text-right shrink-0">
-              <div className="text-2xl sm:text-3xl font-extrabold text-[#a4592a]">${totalRaised.toLocaleString()}</div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-[#6c4d39]">${totalRaised.toLocaleString()}</div>
               <div className="text-[#8a7559] text-xs mt-0.5">total raised</div>
             </div>
           )}
@@ -154,7 +154,7 @@ export default async function AuctionPage({ params }: Props) {
                 : "No items in this auction yet"}
             </p>
             <div className="flex justify-center">
-              <Link href="/auctions" className="bg-[#a4592a] hover:bg-[#843f1c] text-white font-semibold py-3.5 px-7 rounded-xl transition-colors text-base">
+              <Link href="/auctions" className="bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold py-3.5 px-7 rounded-xl transition-colors text-base">
                 Browse Auctions
               </Link>
             </div>
@@ -170,8 +170,8 @@ export default async function AuctionPage({ params }: Props) {
               const bidClass = isClosed || isItemClosed
                 ? "bg-[#efe3d0] text-[#8a7559] text-xs px-3 py-1.5 rounded-xl font-medium"
                 : winning
-                ? "bg-[#efe0c9] text-[#843f1c] text-xs px-3 py-1.5 rounded-xl font-bold border border-[#a4592a]/30"
-                : "bg-[#a4592a] hover:bg-[#843f1c] text-white text-xs px-3 py-1.5 rounded-xl font-bold transition-colors";
+                ? "bg-[#efe0c9] text-[#563e2c] text-xs px-3 py-1.5 rounded-xl font-bold border border-[#6c4d39]/30"
+                : "bg-[#6c4d39] hover:bg-[#563e2c] text-white text-xs px-3 py-1.5 rounded-xl font-bold transition-colors";
 
               const primaryPhoto = item.photos.find(p => p.isPrimary)?.url || item.photos[0]?.url;
 
@@ -187,10 +187,10 @@ export default async function AuctionPage({ params }: Props) {
                   href={`/${orgSlug}/${auctionSlug}/item/${item.id}`}
                   className={`bg-white border rounded-2xl overflow-hidden transition-all group ${
                     winning
-                      ? "border-[#a4592a]/50 shadow-[0_0_0_1px_rgba(164,89,42,0.15),0_0_20px_rgba(164,89,42,0.08)]"
+                      ? "border-[#6c4d39]/50 shadow-[0_0_0_1px_rgba(108, 77, 57,0.15),0_0_20px_rgba(108, 77, 57,0.08)]"
                       : isClosed || isItemClosed
                       ? "border-[#e3d6bf]/60 opacity-80 hover:border-[#cdbda3]"
-                      : "border-[#e3d6bf] hover:border-[#a4592a]/40 hover:shadow-[0_0_25px_rgba(164,89,42,0.06)]"
+                      : "border-[#e3d6bf] hover:border-[#6c4d39]/40 hover:shadow-[0_0_25px_rgba(108, 77, 57,0.06)]"
                   }`}
                 >
                   {/* Photo */}
@@ -214,7 +214,7 @@ export default async function AuctionPage({ params }: Props) {
                     )}
                     {isItemLive && <ItemCardTimer itemId={item.id} endAt={itemEndAtIso} />}
                     {winning && (
-                      <div className="absolute top-2.5 left-2.5 bg-[#a4592a] text-white text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1 shadow-sm">
+                      <div className="absolute top-2.5 left-2.5 bg-[#6c4d39] text-white text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1 shadow-sm">
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                           <path d="M2 4.5H1V2.5h1M10 4.5h1V2.5h-1M2 4.5h8v2.5a4 4 0 0 1-8 0V4.5zM3.5 10h5M6 7.5V10"/>
                         </svg>
@@ -235,7 +235,7 @@ export default async function AuctionPage({ params }: Props) {
 
                   {/* Info */}
                   <div className="p-3">
-                    <h3 className="font-bold text-sm leading-tight group-hover:text-[#a4592a] transition-colors line-clamp-2 mb-2">
+                    <h3 className="font-bold text-sm leading-tight group-hover:text-[#6c4d39] transition-colors line-clamp-2 mb-2">
                       {item.title}
                     </h3>
                     <div className="flex items-center justify-between">
@@ -243,7 +243,7 @@ export default async function AuctionPage({ params }: Props) {
                         <div className="text-[10px] text-[#8a7559] uppercase tracking-wide">
                           {isItemSold ? "Sold" : isItemUnsold ? "Final" : "Bid"}
                         </div>
-                        <div className={`font-extrabold text-base ${isItemUnsold ? "text-[#8a7559]" : "text-[#a4592a]"}`}>
+                        <div className={`font-extrabold text-base ${isItemUnsold ? "text-[#8a7559]" : "text-[#6c4d39]"}`}>
                           ${(Number(item.currentBid) || Number(item.startingBid)).toLocaleString()}
                         </div>
                       </div>

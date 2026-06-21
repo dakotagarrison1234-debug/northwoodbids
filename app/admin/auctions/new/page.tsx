@@ -62,7 +62,7 @@ export default function NewAuctionPage() {
           <h1 className="text-2xl sm:text-3xl font-semibold">New Auction</h1>
         </div>
         <button onClick={handleSave} disabled={saving}
-          className="bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white text-base px-6 py-3.5 rounded-xl font-semibold shrink-0 transition-colors">
+          className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white text-base px-6 py-3.5 rounded-xl font-semibold shrink-0 transition-colors">
           {saving ? "Creating..." : "Create Auction"}
         </button>
       </header>
@@ -73,24 +73,24 @@ export default function NewAuctionPage() {
             <label className="text-base text-[#6f5b46] mb-1.5 block">Auction Title *</label>
             <input name="title" value={formData.title} onChange={handleChange}
               placeholder="e.g. Spring Gala 2025"
-              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]" />
+              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]" />
           </div>
           <div>
             <label className="text-base text-[#6f5b46] mb-1.5 block">Description</label>
             <textarea name="description" value={formData.description} onChange={handleChange} rows={3}
               placeholder="Tell bidders about this auction..."
-              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a] resize-none" />
+              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] resize-none" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-base text-[#6f5b46] mb-1.5 block">Start Date & Time *</label>
               <input name="startAt" value={formData.startAt} onChange={handleChange} type="datetime-local"
-                className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a]" />
+                className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]" />
             </div>
             <div>
               <label className="text-base text-[#6f5b46] mb-1.5 block">End Date & Time *</label>
               <input name="endAt" value={formData.endAt} onChange={handleChange} type="datetime-local"
-                className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a]" />
+                className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]" />
             </div>
           </div>
         </div>

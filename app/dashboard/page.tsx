@@ -311,7 +311,7 @@ function BidderDashboardInner() {
     return (
       <main className="min-h-screen bg-[#f1e7d5] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-[#a4592a]/30 border-t-[#a4592a] animate-spin" />
+          <div className="w-8 h-8 rounded-full border-2 border-[#6c4d39]/30 border-t-[#6c4d39] animate-spin" />
           <p className="text-[#8a7559] text-sm">Loading your dashboard…</p>
         </div>
       </main>
@@ -353,14 +353,14 @@ function BidderDashboardInner() {
               }`}
             >
               <div className="flex items-center gap-3">
-                <span className={tab === item.id ? "text-[#a4592a]" : ""}>{item.icon}</span>
+                <span className={tab === item.id ? "text-[#6c4d39]" : ""}>{item.icon}</span>
                 <span className="text-sm font-medium">{item.label}</span>
               </div>
               {item.count !== undefined && item.count > 0 && (
                 <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
                   item.id === "losing"
                     ? "bg-red-500/15 text-red-600"
-                    : "bg-[#a4592a]/15 text-[#a4592a]"
+                    : "bg-[#6c4d39]/15 text-[#6c4d39]"
                 }`}>
                   {item.count}
                 </span>
@@ -395,7 +395,7 @@ function BidderDashboardInner() {
               </div>
             </div>
             {retryMsg && (
-              <p className={`text-sm mt-1 ${retryMsg.ok ? "text-[#a4592a]" : "text-red-600"}`}>
+              <p className={`text-sm mt-1 ${retryMsg.ok ? "text-[#6c4d39]" : "text-red-600"}`}>
                 {retryMsg.text}
               </p>
             )}
@@ -435,7 +435,7 @@ function BidderDashboardInner() {
                 const awaitingPickup = past.filter(b => b.outcome === "won" && b.paid && !b.pickedUp);
                 if (awaitingPickup.length === 0) return null;
                 return (
-                  <div className="bg-[#a4592a]/8 border border-[#a4592a]/25 rounded-2xl px-5 py-4">
+                  <div className="bg-[#6c4d39]/8 border border-[#6c4d39]/25 rounded-2xl px-5 py-4">
                     <div className="flex items-center gap-2 mb-1">
                       <IcoPackage />
                       <span className="font-bold text-[#c47b3e] text-sm">
@@ -454,7 +454,7 @@ function BidderDashboardInner() {
                               <div className="text-xs text-[#8a7559] mt-0.5">Pickup: {b.storageLocation}</div>
                             )}
                           </div>
-                          <div className="shrink-0 text-[#a4592a] font-bold text-sm ml-auto">
+                          <div className="shrink-0 text-[#6c4d39] font-bold text-sm ml-auto">
                             ${b.finalBid.toLocaleString()}
                           </div>
                         </div>
@@ -466,9 +466,9 @@ function BidderDashboardInner() {
 
               {/* Stat cards */}
               <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                <div className={`bg-white border rounded-2xl p-3 sm:p-5 transition-all ${winning.length > 0 ? "border-[#a4592a]/25 shadow-[0_0_20px_rgba(164,89,42,0.06)]" : "border-[#e3d6bf]"}`}>
+                <div className={`bg-white border rounded-2xl p-3 sm:p-5 transition-all ${winning.length > 0 ? "border-[#6c4d39]/25 shadow-[0_0_20px_rgba(108, 77, 57,0.06)]" : "border-[#e3d6bf]"}`}>
                   <div className="text-[#8a7559] text-xs sm:text-sm mb-1">Winning</div>
-                  <div className={`text-xl sm:text-2xl font-extrabold ${winning.length > 0 ? "text-[#a4592a]" : "text-[#6f5b46]"}`}>{winning.length}</div>
+                  <div className={`text-xl sm:text-2xl font-extrabold ${winning.length > 0 ? "text-[#6c4d39]" : "text-[#6f5b46]"}`}>{winning.length}</div>
                 </div>
                 <div className={`bg-white border rounded-2xl p-3 sm:p-5 transition-all ${losing.length > 0 ? "border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.05)]" : "border-[#e3d6bf]"}`}>
                   <div className="text-[#8a7559] text-xs sm:text-sm mb-1">Outbid</div>
@@ -484,22 +484,22 @@ function BidderDashboardInner() {
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <h2 className="font-bold text-[#4a3a2b] text-xs uppercase tracking-wider">Currently Winning</h2>
-                    <button onClick={() => setTab("winning")} className="text-[#a4592a] text-sm hover:text-[#c47b3e] transition-colors flex items-center gap-1">
+                    <button onClick={() => setTab("winning")} className="text-[#6c4d39] text-sm hover:text-[#c47b3e] transition-colors flex items-center gap-1">
                       View all <IcoArrow />
                     </button>
                   </div>
                   <div className="space-y-2">
                     {winning.slice(0, 3).map((b) => (
                       <Link key={b.itemId} href={`/${b.orgSlug}/${b.auctionSlug}/item/${b.itemId}`}
-                        className="flex items-center gap-3 bg-white border border-[#a4592a]/15 rounded-2xl px-4 py-3 hover:border-[#a4592a]/35 transition-all hover:shadow-[0_0_20px_rgba(164,89,42,0.05)]">
+                        className="flex items-center gap-3 bg-white border border-[#6c4d39]/15 rounded-2xl px-4 py-3 hover:border-[#6c4d39]/35 transition-all hover:shadow-[0_0_20px_rgba(108, 77, 57,0.05)]">
                         <Photo url={b.photo} title={b.itemTitle} />
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-sm truncate">{b.itemTitle}</div>
                           <div className="text-[#8a7559] text-xs truncate">{b.auctionTitle}</div>
                         </div>
                         <div className="text-right shrink-0">
-                          <div className="text-[#a4592a] font-bold text-sm">${b.myBid.toLocaleString()}</div>
-                          <div className="text-xs text-[#843f1c] font-semibold mt-0.5">✓ Winning</div>
+                          <div className="text-[#6c4d39] font-bold text-sm">${b.myBid.toLocaleString()}</div>
+                          <div className="text-xs text-[#563e2c] font-semibold mt-0.5">✓ Winning</div>
                         </div>
                       </Link>
                     ))}
@@ -541,14 +541,14 @@ function BidderDashboardInner() {
                   <div className="space-y-2">
                     {past.slice(0, 5).map((b, i) => (
                       <div key={i}
-                        className={`flex items-center gap-3 bg-white border rounded-2xl px-4 py-3 ${b.outcome === "won" ? "border-[#a4592a]/15" : "border-[#e3d6bf]/60"}`}>
+                        className={`flex items-center gap-3 bg-white border rounded-2xl px-4 py-3 ${b.outcome === "won" ? "border-[#6c4d39]/15" : "border-[#e3d6bf]/60"}`}>
                         <Photo url={b.photo} title={b.itemTitle} />
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-sm truncate">{b.itemTitle}</div>
                           <div className="text-[#8a7559] text-xs truncate">{b.auctionTitle}</div>
                         </div>
                         <div className="text-right shrink-0">
-                          <div className={`font-bold text-sm ${b.outcome === "won" ? "text-[#a4592a]" : "text-[#8a7559]"}`}>
+                          <div className={`font-bold text-sm ${b.outcome === "won" ? "text-[#6c4d39]" : "text-[#8a7559]"}`}>
                             ${b.myBid.toLocaleString()}
                           </div>
                           <div className={`text-xs mt-0.5 ${
@@ -575,7 +575,7 @@ function BidderDashboardInner() {
                   <p className="font-display text-[#6f5b46] mb-5 text-base">You haven&apos;t placed any bids yet.</p>
                   <button
                     onClick={() => setTab("auctions")}
-                    className="bg-[#a4592a] hover:bg-[#843f1c] text-white font-bold px-6 py-3 rounded-2xl text-sm transition-all hover:shadow-[0_0_25px_rgba(164,89,42,0.25)]"
+                    className="bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold px-6 py-3 rounded-2xl text-sm transition-all hover:shadow-[0_0_25px_rgba(108, 77, 57,0.25)]"
                   >
                     Browse Live Auctions
                   </button>
@@ -595,18 +595,18 @@ function BidderDashboardInner() {
               <Link key={a.id} href={`/${a.org.slug}/${a.slug}`}
                 className={`flex items-center gap-4 bg-white rounded-2xl px-4 sm:px-6 py-4 transition-all group ${
                   highlighted
-                    ? "border border-[#a4592a]/30 hover:border-[#a4592a]/60 hover:shadow-[0_0_25px_rgba(164,89,42,0.12)]"
-                    : "border border-[#e3d6bf] hover:border-[#a4592a]/35 hover:shadow-[0_0_20px_rgba(164,89,42,0.05)]"
+                    ? "border border-[#6c4d39]/30 hover:border-[#6c4d39]/60 hover:shadow-[0_0_25px_rgba(108, 77, 57,0.12)]"
+                    : "border border-[#e3d6bf] hover:border-[#6c4d39]/35 hover:shadow-[0_0_20px_rgba(108, 77, 57,0.05)]"
                 }`}>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs text-[#a4592a] font-semibold mb-1 truncate">{a.org.name}</div>
-                  <div className="font-bold truncate group-hover:text-[#a4592a] transition-colors">{a.title}</div>
+                  <div className="text-xs text-[#6c4d39] font-semibold mb-1 truncate">{a.org.name}</div>
+                  <div className="font-bold truncate group-hover:text-[#6c4d39] transition-colors">{a.title}</div>
                   <div className="flex items-center gap-3 mt-1 text-xs text-[#8a7559]">
                     <span>{a.activeItems} item{a.activeItems !== 1 ? "s" : ""}</span>
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <span className="text-xs bg-[#a4592a]/15 text-[#a4592a] border border-[#a4592a]/20 px-2 py-0.5 rounded-full font-semibold">Live</span>
+                  <span className="text-xs bg-[#6c4d39]/15 text-[#6c4d39] border border-[#6c4d39]/20 px-2 py-0.5 rounded-full font-semibold">Live</span>
                   <div className="text-xs text-[#8a7559] mt-2">
                     Ends {new Date(a.endAt).toLocaleDateString([], { month: "short", day: "numeric" })}
                   </div>
@@ -618,10 +618,10 @@ function BidderDashboardInner() {
               <div className="max-w-3xl">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2 text-sm text-[#8a7559]">
-                    <span className="w-2 h-2 rounded-full bg-[#a4592a] animate-pulse inline-block" />
+                    <span className="w-2 h-2 rounded-full bg-[#6c4d39] animate-pulse inline-block" />
                     {loadingAuctions ? "Loading…" : `${liveAuctions.length} live auction${liveAuctions.length !== 1 ? "s" : ""}`}
                   </div>
-                  <Link href="/auctions" className="text-xs text-[#a4592a] hover:text-[#c47b3e] font-medium transition-colors flex items-center gap-1">
+                  <Link href="/auctions" className="text-xs text-[#6c4d39] hover:text-[#c47b3e] font-medium transition-colors flex items-center gap-1">
                     Full page <IcoArrow />
                   </Link>
                 </div>
@@ -650,7 +650,7 @@ function BidderDashboardInner() {
                     {preferredAuctions.length > 0 && preferredOrg && (
                       <div>
                         <div className="flex items-center gap-2 mb-3">
-                          <Link href={`/${preferredOrg.slug}`} className="text-xs font-bold text-[#a4592a] uppercase tracking-wider hover:text-[#c47b3e] transition-colors">
+                          <Link href={`/${preferredOrg.slug}`} className="text-xs font-bold text-[#6c4d39] uppercase tracking-wider hover:text-[#c47b3e] transition-colors">
                             {preferredOrg.name}
                           </Link>
                           <span className="text-[#e3d6bf]">·</span>
@@ -688,13 +688,13 @@ function BidderDashboardInner() {
                     <WoodenCrate className="w-28 h-24" />
                   </div>
                   <p className="font-display text-[#6f5b46] mb-4 text-base">Not currently winning any items.</p>
-                  <button onClick={() => setTab("auctions")} className="text-[#a4592a] hover:text-[#c47b3e] text-sm transition-colors">Browse live auctions</button>
+                  <button onClick={() => setTab("auctions")} className="text-[#6c4d39] hover:text-[#c47b3e] text-sm transition-colors">Browse live auctions</button>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {winning.map((b) => (
                     <Link key={b.itemId} href={`/${b.orgSlug}/${b.auctionSlug}/item/${b.itemId}`}
-                      className="flex items-center gap-4 bg-white border border-[#a4592a]/15 rounded-2xl px-4 sm:px-6 py-4 hover:border-[#a4592a]/35 transition-all hover:shadow-[0_0_20px_rgba(164,89,42,0.05)]">
+                      className="flex items-center gap-4 bg-white border border-[#6c4d39]/15 rounded-2xl px-4 sm:px-6 py-4 hover:border-[#6c4d39]/35 transition-all hover:shadow-[0_0_20px_rgba(108, 77, 57,0.05)]">
                       <Photo url={b.photo} title={b.itemTitle} />
                       <div className="flex-1 min-w-0">
                         <div className="font-bold truncate">{b.itemTitle}</div>
@@ -702,8 +702,8 @@ function BidderDashboardInner() {
                         <div className="text-[#8a7559] text-xs mt-1">Ends {formatEnd(b.itemEndAt ?? b.auctionEndAt)}</div>
                       </div>
                       <div className="text-right shrink-0">
-                        <div className="text-[#a4592a] font-extrabold text-lg">${b.myBid.toLocaleString()}</div>
-                        <div className="text-xs bg-[#a4592a]/15 text-[#843f1c] font-bold px-2 py-0.5 rounded-full mt-0.5 inline-block">✓ Winning</div>
+                        <div className="text-[#6c4d39] font-extrabold text-lg">${b.myBid.toLocaleString()}</div>
+                        <div className="text-xs bg-[#6c4d39]/15 text-[#563e2c] font-bold px-2 py-0.5 rounded-full mt-0.5 inline-block">✓ Winning</div>
                       </div>
                     </Link>
                   ))}
@@ -753,13 +753,13 @@ function BidderDashboardInner() {
               {/* Link to dedicated account page */}
               <Link
                 href="/account"
-                className="flex items-center justify-between bg-[#a4592a]/8 border border-[#a4592a]/20 rounded-2xl px-4 py-3 mb-5 hover:bg-[#a4592a]/12 transition-colors group"
+                className="flex items-center justify-between bg-[#6c4d39]/8 border border-[#6c4d39]/20 rounded-2xl px-4 py-3 mb-5 hover:bg-[#6c4d39]/12 transition-colors group"
               >
                 <div>
-                  <div className="text-sm font-semibold text-[#a4592a]">Account Settings</div>
+                  <div className="text-sm font-semibold text-[#6c4d39]">Account Settings</div>
                   <div className="text-xs text-[#6f5b46] mt-0.5">Profile, payment cards & more</div>
                 </div>
-                <svg className="w-4 h-4 text-[#a4592a] group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+                <svg className="w-4 h-4 text-[#6c4d39] group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
               </Link>
               <div className="flex items-center gap-4 mb-6 pb-6 border-b border-[#e3d6bf]/60">
                 <UserMenu />
@@ -781,7 +781,7 @@ function BidderDashboardInner() {
                       value={f.value}
                       onChange={(e) => f.set(e.target.value)}
                       placeholder={f.placeholder}
-                      className="w-full bg-white border border-[#cdbda3]/80 rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]/60 transition-colors"
+                      className="w-full bg-white border border-[#cdbda3]/80 rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]/60 transition-colors"
                     />
                     {f.hint && <p className="text-[#8a7559] text-xs mt-1.5">{f.hint}</p>}
                   </div>
@@ -789,14 +789,14 @@ function BidderDashboardInner() {
                 {profileMsg && (
                   <p className={`text-sm px-4 py-3 rounded-xl font-medium ${
                     profileMsg.ok
-                      ? "bg-[#a4592a]/10 text-[#a4592a] border border-[#a4592a]/20"
+                      ? "bg-[#6c4d39]/10 text-[#6c4d39] border border-[#6c4d39]/20"
                       : "bg-red-50 text-red-600 border border-red-500/20"
                   }`}>
                     {profileMsg.text}
                   </p>
                 )}
                 <button onClick={saveProfile} disabled={savingProfile}
-                  className="bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white font-bold px-6 py-3 rounded-2xl w-full transition-all hover:shadow-[0_0_25px_rgba(164,89,42,0.2)]">
+                  className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white font-bold px-6 py-3 rounded-2xl w-full transition-all hover:shadow-[0_0_25px_rgba(108, 77, 57,0.2)]">
                   {savingProfile ? "Saving…" : "Save Profile"}
                 </button>
 
@@ -834,7 +834,7 @@ function BidderDashboardInner() {
                           {pm.stripeAccountId && pm.stripeChargesEnabled && (
                             <button
                               onClick={() => setCardModal({ orgId: pm.orgId, stripeAccountId: pm.stripeAccountId! })}
-                              className="text-xs text-[#a4592a] hover:text-[#c47b3e] font-medium shrink-0 transition-colors"
+                              className="text-xs text-[#6c4d39] hover:text-[#c47b3e] font-medium shrink-0 transition-colors"
                             >
                               {pm.hasCard ? "Update" : "Add card"}
                             </button>
@@ -878,14 +878,14 @@ function BidderDashboardInner() {
             key={item.id}
             onClick={() => setTab(item.id)}
             className={`flex-1 flex flex-col items-center justify-center py-2.5 gap-1 relative transition-colors ${
-              tab === item.id ? "text-[#a4592a]" : "text-[#8a7559] hover:text-[#6f5b46]"
+              tab === item.id ? "text-[#6c4d39]" : "text-[#8a7559] hover:text-[#6f5b46]"
             }`}
           >
             {item.icon}
             <span className="text-[9px] font-semibold leading-none tracking-wide uppercase">{item.shortLabel}</span>
             {item.count !== undefined && item.count > 0 && (
               <span className={`absolute top-1.5 right-[10%] text-[9px] w-3.5 h-3.5 rounded-full flex items-center justify-center font-bold ${
-                item.id === "losing" ? "bg-red-500 text-white" : "bg-[#a4592a] text-white"
+                item.id === "losing" ? "bg-red-500 text-white" : "bg-[#6c4d39] text-white"
               }`}>
                 {item.count}
               </span>
@@ -902,7 +902,7 @@ export default function BidderDashboard() {
   return (
     <Suspense fallback={
       <main className="min-h-screen bg-[#f1e7d5] flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-[#a4592a]/30 border-t-[#a4592a] animate-spin" />
+        <div className="w-8 h-8 rounded-full border-2 border-[#6c4d39]/30 border-t-[#6c4d39] animate-spin" />
       </main>
     }>
       <BidderDashboardInner />

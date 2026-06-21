@@ -80,20 +80,20 @@ export default async function WinnersPage() {
                     return (
                       <tr key={bid.id} className="border-b border-[#e3d6bf] last:border-0 hover:bg-[#efe3d0]/50">
                         <td className="px-6 py-4 font-medium text-base">{bid.item.title}</td>
-                        <td className="px-6 py-4 text-[#a4592a] font-bold text-base">${Number(bid.amount).toLocaleString()}</td>
+                        <td className="px-6 py-4 text-[#6c4d39] font-bold text-base">${Number(bid.amount).toLocaleString()}</td>
                         <td className="px-6 py-4 text-[#4a3a2b] text-base">
                           {displayName(bid.clerkUserId)}
                         </td>
                         <td className="px-6 py-4">
                           {payment?.status === "PAID" ? (
-                            <span className="text-xs bg-[#a4592a]/20 text-[#a4592a] px-2 py-1 rounded-full">Paid</span>
+                            <span className="text-xs bg-[#6c4d39]/20 text-[#6c4d39] px-2 py-1 rounded-full">Paid</span>
                           ) : (
                             <span className="text-xs bg-yellow-500/20 text-amber-600 px-2 py-1 rounded-full">Unpaid</span>
                           )}
                         </td>
                         <td className="px-6 py-4">
                           <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                            bid.item.status === "SOLD" ? "bg-[#a4592a]/15 text-[#843f1c]"
+                            bid.item.status === "SOLD" ? "bg-[#6c4d39]/15 text-[#563e2c]"
                             : (bid.item.status as string) === "PENDING_PICKUP" ? "bg-amber-50 text-amber-700"
                             : (bid.item.status as string) === "PICKED_UP" ? "bg-[#efe3d0] text-[#4a3a2b]"
                             : "bg-[#e7dcc6] text-[#6f5b46]"
@@ -139,7 +139,7 @@ export default async function WinnersPage() {
                     <tr key={bid.id} className="border-b border-[#e3d6bf] last:border-0 hover:bg-[#efe3d0]/50">
                       <td className="px-6 py-4 font-medium text-base">{bid.item.title}</td>
                       <td className="px-6 py-4 text-[#6f5b46] text-base">{bid.item.auction?.title || "—"}</td>
-                      <td className="px-6 py-4 text-[#a4592a] font-bold text-base">${Number(bid.amount).toLocaleString()}</td>
+                      <td className="px-6 py-4 text-[#6c4d39] font-bold text-base">${Number(bid.amount).toLocaleString()}</td>
                       <td className="px-6 py-4 text-[#4a3a2b] text-base">{displayName(bid.clerkUserId)}</td>
                     </tr>
                   ))}

@@ -38,7 +38,7 @@ export default async function ManageAuctionPage({ params }: Props) {
       <div className="flex items-center justify-center flex-1">
         <div className="text-center">
           <h1 className="text-2xl sm:text-3xl font-bold mb-2">Auction not found</h1>
-          <Link href="/admin/auctions" className="text-[#a4592a] text-base font-semibold">Back to auctions</Link>
+          <Link href="/admin/auctions" className="text-[#6c4d39] text-base font-semibold">Back to auctions</Link>
         </div>
       </div>
     );
@@ -63,10 +63,10 @@ export default async function ManageAuctionPage({ params }: Props) {
           <span className="text-[#8a7559]">/</span>
           <h1 className="text-2xl sm:text-3xl font-semibold truncate">{auction.title}</h1>
           <span className={`text-sm font-semibold px-2.5 py-1 rounded-full shrink-0 ${
-            auction.status === "OPEN" ? "bg-[#a4592a]/20 text-[#843f1c]"
+            auction.status === "OPEN" ? "bg-[#6c4d39]/20 text-[#563e2c]"
             : auction.status === "CLOSING" ? "bg-amber-100 text-amber-700"
             : auction.status === "CLOSED" || auction.status === "SETTLED" ? "bg-red-50 text-red-600"
-            : isScheduled ? "bg-[#a4592a]/15 text-[#843f1c]"
+            : isScheduled ? "bg-[#6c4d39]/15 text-[#563e2c]"
             : "bg-[#e7dcc6] text-[#4a3a2b]"
           }`}>
             {isScheduled ? "scheduled" : auction.status.toLowerCase()}
@@ -112,11 +112,11 @@ export default async function ManageAuctionPage({ params }: Props) {
         <div className="bg-white border border-[#e3d6bf] rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-4 text-base">
           <div className="flex items-center gap-3 flex-1">
             <span className="text-[#8a7559] shrink-0">Opens</span>
-            <span className={`font-medium ${auction.status === "OPEN" || auction.status === "CLOSED" || auction.status === "SETTLED" ? "text-[#a4592a]" : "text-[#241a12]"}`}>
+            <span className={`font-medium ${auction.status === "OPEN" || auction.status === "CLOSED" || auction.status === "SETTLED" ? "text-[#6c4d39]" : "text-[#241a12]"}`}>
               <LocalDate iso={auction.startAt.toISOString()} />
             </span>
             {(auction.status === "OPEN" || auction.status === "CLOSED" || auction.status === "SETTLED") && (
-              <span className="text-[#a4592a] text-xs inline-flex items-center gap-0.5"><IcoCheck /> opened</span>
+              <span className="text-[#6c4d39] text-xs inline-flex items-center gap-0.5"><IcoCheck /> opened</span>
             )}
           </div>
           <div className="hidden sm:block text-[#b3a085]">→</div>
@@ -147,7 +147,7 @@ export default async function ManageAuctionPage({ params }: Props) {
             ) : (
               <Link
                 href={`/admin/items/new?auctionId=${auction.id}`}
-                className="bg-[#a4592a] hover:bg-[#843f1c] text-white text-base font-semibold px-6 py-3.5 rounded-xl transition-colors whitespace-nowrap"
+                className="bg-[#6c4d39] hover:bg-[#563e2c] text-white text-base font-semibold px-6 py-3.5 rounded-xl transition-colors whitespace-nowrap"
               >
                 + Add Item
               </Link>
@@ -165,7 +165,7 @@ export default async function ManageAuctionPage({ params }: Props) {
                   <p className="text-[#8a7559] text-base mb-6">Add items to this auction so bidders can start bidding.</p>
                   <Link
                     href={`/admin/items/new?auctionId=${auction.id}`}
-                    className="bg-[#a4592a] hover:bg-[#843f1c] text-white text-base font-semibold px-6 py-3.5 rounded-xl inline-block transition-colors"
+                    className="bg-[#6c4d39] hover:bg-[#563e2c] text-white text-base font-semibold px-6 py-3.5 rounded-xl inline-block transition-colors"
                   >
                     + Add First Item
                   </Link>
@@ -208,16 +208,16 @@ export default async function ManageAuctionPage({ params }: Props) {
                           <div className="font-medium text-base">{item.title}</div>
                           {item.category && <div className="text-sm text-[#8a7559]">{item.category}</div>}
                           {item.storageLocation && (
-                            <div className="text-sm font-mono text-[#a4592a] mt-0.5 flex items-center gap-0.5"><IcoPin />{item.storageLocation}</div>
+                            <div className="text-sm font-mono text-[#6c4d39] mt-0.5 flex items-center gap-0.5"><IcoPin />{item.storageLocation}</div>
                           )}
                         </td>
                         <td className="px-4 py-3 text-[#6f5b46] text-base">${Number(item.startingBid)}</td>
-                        <td className="px-4 py-3 text-[#a4592a] font-semibold text-base">${Number(item.currentBid)}</td>
+                        <td className="px-4 py-3 text-[#6c4d39] font-semibold text-base">${Number(item.currentBid)}</td>
                         <td className="px-4 py-3 text-[#6f5b46] text-base">{item.bids.length}</td>
                         <td className="px-4 py-3">
                           <span className={`text-sm font-semibold px-2.5 py-1 rounded-full ${
-                            item.status === "ACTIVE" ? "bg-[#a4592a]/20 text-[#843f1c]"
-                            : item.status === "SOLD" ? "bg-[#efe0c9] text-[#843f1c]"
+                            item.status === "ACTIVE" ? "bg-[#6c4d39]/20 text-[#563e2c]"
+                            : item.status === "SOLD" ? "bg-[#efe0c9] text-[#563e2c]"
                             : (item.status as string) === "PENDING_PICKUP" ? "bg-amber-50 text-amber-700"
                             : (item.status as string) === "PICKED_UP" ? "bg-[#efe3d0] text-[#4a3a2b]"
                             : "bg-[#e7dcc6] text-[#4a3a2b]"

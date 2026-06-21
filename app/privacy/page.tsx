@@ -89,7 +89,7 @@ export default function PrivacyPage() {
               <li>Request deletion of your personal information (subject to legal retention requirements).</li>
               <li>Opt out of non-essential communications.</li>
             </ul>
-            <p className="mt-3">To exercise any of these rights, contact us at <a href="mailto:goldenpawskennel@mail.com" className="text-[#a4592a] hover:underline">goldenpawskennel@mail.com</a>.</p>
+            <p className="mt-3">To exercise any of these rights, contact us at <a href="mailto:goldenpawskennel@mail.com" className="text-[#6c4d39] hover:underline">goldenpawskennel@mail.com</a>.</p>
           </section>
 
           <section>
@@ -115,18 +115,18 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-bold text-[#241a12] mb-3">11. Contact Us</h2>
             <p>If you have any questions, concerns, or requests regarding this Privacy Policy, please contact us at:</p>
-            <div className="mt-3 bg-[#f6ecda] border border-[#a4592a]/20 rounded-xl p-4">
+            <div className="mt-3 bg-[#f6ecda] border border-[#6c4d39]/20 rounded-xl p-4">
               <p className="font-semibold text-[#241a12]">Northwood Bids</p>
-              <p>Email: <a href="mailto:goldenpawskennel@mail.com" className="text-[#a4592a] hover:underline">goldenpawskennel@mail.com</a></p>
-              <p>Website: <a href="https://northwoodbids.com" className="text-[#a4592a] hover:underline">northwoodbids.com</a></p>
+              <p>Email: <a href="mailto:goldenpawskennel@mail.com" className="text-[#6c4d39] hover:underline">goldenpawskennel@mail.com</a></p>
+              <p>Website: <a href="https://northwoodbids.com" className="text-[#6c4d39] hover:underline">northwoodbids.com</a></p>
             </div>
           </section>
 
         </div>
 
         <div className="mt-12 pt-8 border-t border-[#e3d6bf] flex flex-wrap gap-4 text-sm text-[#8a7559]">
-          <Link href="/terms" className="hover:text-[#a4592a] transition-colors">Terms of Service</Link>
-          <Link href="/" className="hover:text-[#a4592a] transition-colors">Home</Link>
+          <Link href="/terms" className="hover:text-[#6c4d39] transition-colors">Terms of Service</Link>
+          <Link href="/" className="hover:text-[#6c4d39] transition-colors">Home</Link>
           <span>© {new Date().getFullYear()} Northwood Bids. All rights reserved.</span>
         </div>
       </main>

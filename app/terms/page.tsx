@@ -117,14 +117,14 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-lg font-bold text-[#241a12] mb-3">16. Contact</h2>
-            <p>If you have any questions about these Terms, please contact us at <a href="mailto:goldenpawskennel@mail.com" className="text-[#a4592a] hover:underline">goldenpawskennel@mail.com</a>.</p>
+            <p>If you have any questions about these Terms, please contact us at <a href="mailto:goldenpawskennel@mail.com" className="text-[#6c4d39] hover:underline">goldenpawskennel@mail.com</a>.</p>
           </section>
 
         </div>
 
         <div className="mt-12 pt-8 border-t border-[#e3d6bf] flex flex-wrap gap-4 text-sm text-[#8a7559]">
-          <Link href="/privacy" className="hover:text-[#a4592a] transition-colors">Privacy Policy</Link>
-          <Link href="/" className="hover:text-[#a4592a] transition-colors">Home</Link>
+          <Link href="/privacy" className="hover:text-[#6c4d39] transition-colors">Privacy Policy</Link>
+          <Link href="/" className="hover:text-[#6c4d39] transition-colors">Home</Link>
           <span>© {new Date().getFullYear()} Northwood Bids. All rights reserved.</span>
         </div>
       </main>

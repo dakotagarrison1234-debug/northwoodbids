@@ -85,7 +85,7 @@ export default function ApplicationReviewCard({ application }: { application: Ap
             <div>
               <span className="text-[#8a7559] text-xs font-medium uppercase tracking-wide">Website</span>
               <div className="mt-0.5">
-                <a href={application.website} target="_blank" rel="noopener noreferrer" className="text-[#a4592a] hover:underline text-sm break-all">
+                <a href={application.website} target="_blank" rel="noopener noreferrer" className="text-[#6c4d39] hover:underline text-sm break-all">
                   {application.website}
                 </a>
               </div>
@@ -105,7 +105,7 @@ export default function ApplicationReviewCard({ application }: { application: Ap
           value={reviewNote}
           onChange={(e) => setReviewNote(e.target.value)}
           placeholder="Optional note (shown on rejection)"
-          className="w-full bg-[#efe3d0] border border-[#cdbda3]/80 rounded-xl px-3 py-2.5 text-sm text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]/60 transition-colors"
+          className="w-full bg-[#efe3d0] border border-[#cdbda3]/80 rounded-xl px-3 py-2.5 text-sm text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]/60 transition-colors"
         />
 
         {/* Tax status — set at approval by Northwood Bids */}
@@ -116,7 +116,7 @@ export default function ApplicationReviewCard({ application }: { application: Ap
               type="checkbox"
               checked={taxExempt}
               onChange={(e) => { setTaxExempt(e.target.checked); if (e.target.checked) setTaxPercent("0"); }}
-              className="w-4 h-4 accent-[#a4592a]"
+              className="w-4 h-4 accent-[#6c4d39]"
             />
             <span className="text-sm text-[#2c2317]">Tax exempt (most nonprofits)</span>
           </label>
@@ -130,7 +130,7 @@ export default function ApplicationReviewCard({ application }: { application: Ap
                   step="0.1"
                   value={taxPercent}
                   onChange={(e) => setTaxPercent(e.target.value)}
-                  className="w-full bg-[#efe3d0] border border-[#b9a98c] rounded-lg px-3 py-1.5 text-sm text-[#241a12] focus:outline-none focus:border-[#a4592a]/60 pr-7"
+                  className="w-full bg-[#efe3d0] border border-[#b9a98c] rounded-lg px-3 py-1.5 text-sm text-[#241a12] focus:outline-none focus:border-[#6c4d39]/60 pr-7"
                 />
                 <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a7559] text-xs">%</span>
               </div>
@@ -143,7 +143,7 @@ export default function ApplicationReviewCard({ application }: { application: Ap
           <button
             onClick={() => handleAction("approve")}
             disabled={loading !== null}
-            className="flex-1 bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
+            className="flex-1 bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
           >
             {loading === "approve" ? "Approving…" : "Approve"}
           </button>

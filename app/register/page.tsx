@@ -96,12 +96,12 @@ function RegisterForm() {
     <main className="flex-1 flex items-center justify-center">
       <div className="bg-white border border-[#e3d6bf] rounded-2xl p-8 max-w-md w-full mx-4">
         {orgSlug && (
-          <div className="flex items-center gap-2 mb-5 bg-[#a4592a]/8 border border-[#a4592a]/20 rounded-xl px-4 py-2.5">
-            <svg className="w-4 h-4 text-[#a4592a] shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+          <div className="flex items-center gap-2 mb-5 bg-[#6c4d39]/8 border border-[#6c4d39]/20 rounded-xl px-4 py-2.5">
+            <svg className="w-4 h-4 text-[#6c4d39] shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
               <path d="M3 8l3.5 3.5L13 4" />
             </svg>
             <p className="text-sm text-[#4a3a2b]">
-              You&apos;ll be connected to <span className="font-semibold text-[#a4592a]">{orgSlug.replace(/-/g, " ")}</span> after sign up
+              You&apos;ll be connected to <span className="font-semibold text-[#6c4d39]">{orgSlug.replace(/-/g, " ")}</span> after sign up
             </p>
           </div>
         )}
@@ -118,13 +118,13 @@ function RegisterForm() {
               onChange={e => setPhone(e.target.value)}
               onKeyDown={e => e.key === "Enter" && !saving && handleSubmit()}
               placeholder="+1 (555) 000-0000"
-              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]"
+              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]"
             />
           </div>
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="w-full bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white font-semibold py-3 rounded-xl"
+            className="w-full bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white font-semibold py-3 rounded-xl"
           >
             {saving ? "Saving..." : "Save & Continue"}
           </button>

@@ -59,7 +59,7 @@ function JoinPageInner() {
             <h1 className="text-2xl font-bold mb-3">Invalid Invite</h1>
             <p className="text-[#6f5b46] mb-8">This invite link is missing a token. Please ask for a new invite.</p>
             <div className="flex flex-col gap-2.5">
-              <Link href="/auctions" className="w-full bg-[#a4592a] hover:bg-[#843f1c] text-white font-semibold py-3 rounded-xl transition-colors">
+              <Link href="/auctions" className="w-full bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold py-3 rounded-xl transition-colors">
                 Browse auctions
               </Link>
               <Link href="/" className="w-full border border-[#cdbda3] hover:border-[#b3a085] text-[#4a3a2b] hover:text-[#241a12] font-medium py-3 rounded-xl transition-colors">
@@ -72,14 +72,14 @@ function JoinPageInner() {
             <div className="flex justify-center mb-5">
               <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
                 <circle cx="28" cy="28" r="26" stroke="#374151" strokeWidth="1.5"/>
-                <circle cx="28" cy="28" r="18" stroke="#a4592a" strokeWidth="1.2" strokeOpacity="0.4"/>
-                <circle cx="28" cy="28" r="12" fill="rgba(164,89,42,0.12)" stroke="#a4592a" strokeWidth="1.5"/>
-                <path d="M21 28l5 5 9-9" stroke="#a4592a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <circle cx="28" cy="28" r="18" stroke="#6c4d39" strokeWidth="1.2" strokeOpacity="0.4"/>
+                <circle cx="28" cy="28" r="12" fill="rgba(108, 77, 57,0.12)" stroke="#6c4d39" strokeWidth="1.5"/>
+                <path d="M21 28l5 5 9-9" stroke="#6c4d39" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
             <h1 className="text-2xl font-bold mb-2">You&apos;re in!</h1>
             <p className="text-[#6f5b46] mb-6">Redirecting to your dashboard...</p>
-            <Link href="/admin/dashboard" className="w-full inline-block bg-[#a4592a] hover:bg-[#843f1c] text-white font-semibold py-3 rounded-xl transition-colors">
+            <Link href="/admin/dashboard" className="w-full inline-block bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold py-3 rounded-xl transition-colors">
               Go to dashboard
             </Link>
           </>
@@ -97,7 +97,7 @@ function JoinPageInner() {
             <button
               onClick={handleAccept}
               disabled={status === "joining"}
-              className="w-full bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white font-semibold py-3 rounded-xl"
+              className="w-full bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white font-semibold py-3 rounded-xl"
             >
               {status === "joining" ? "Joining..." : "Accept Invite"}
             </button>

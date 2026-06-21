@@ -102,7 +102,7 @@ export default function StaffPage() {
 
   const roleColor = (role: string) => {
     if (role === "OWNER") return "text-orange-400";
-    if (role === "ADMIN") return "text-[#a4592a]";
+    if (role === "ADMIN") return "text-[#6c4d39]";
     return "text-[#6f5b46]";
   };
 
@@ -207,7 +207,7 @@ export default function StaffPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="teammate@email.com"
-                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]"
+                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]"
                 />
               </div>
               <div>
@@ -215,7 +215,7 @@ export default function StaffPage() {
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value as "STAFF" | "ADMIN")}
-                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#a4592a]"
+                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]"
                 >
                   <option value="STAFF">Staff — can manage items and auctions</option>
                   <option value="ADMIN">Admin — can manage everything including team</option>
@@ -227,14 +227,14 @@ export default function StaffPage() {
               <button
                 onClick={handleInvite}
                 disabled={sending}
-                className="w-full bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white text-base font-semibold py-3.5 rounded-xl transition-colors"
+                className="w-full bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white text-base font-semibold py-3.5 rounded-xl transition-colors"
               >
                 {sending ? "Generating Invite..." : "Generate Invite Link"}
               </button>
 
               {inviteUrl && (
-                <div className="bg-[#a4592a]/10 border border-[#a4592a]/30 rounded-xl p-4">
-                  <p className="text-[#a4592a] text-base font-semibold mb-2">Invite link created! Share this:</p>
+                <div className="bg-[#6c4d39]/10 border border-[#6c4d39]/30 rounded-xl p-4">
+                  <p className="text-[#6c4d39] text-base font-semibold mb-2">Invite link created! Share this:</p>
                   <div className="flex items-center gap-2">
                     <input
                       readOnly

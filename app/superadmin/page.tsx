@@ -65,7 +65,7 @@ export default async function SuperAdminPage() {
                   <span
                     className={`text-xs px-3 py-1 rounded-full font-bold self-start sm:self-auto shrink-0 ${
                       app.status === "APPROVED"
-                        ? "bg-[#a4592a]/20 text-[#a4592a]"
+                        ? "bg-[#6c4d39]/20 text-[#6c4d39]"
                         : "bg-red-500/20 text-red-600"
                     }`}
                   >

@@ -46,9 +46,9 @@ export default function HomeHeader() {
             value={searchQ}
             onChange={e => setSearchQ(e.target.value)}
             placeholder="Search items, auctions, businesses…"
-            className="flex-1 bg-[#efe3d0] border border-[#e3d6bf] rounded-xl px-4 py-2 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]/60 text-sm transition-colors"
+            className="flex-1 bg-[#efe3d0] border border-[#e3d6bf] rounded-xl px-4 py-2 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]/60 text-sm transition-colors"
           />
-          <button type="submit" className="bg-[#a4592a] hover:bg-[#843f1c] text-white px-4 py-2 rounded-xl text-sm font-semibold shrink-0 transition-colors">
+          <button type="submit" className="bg-[#6c4d39] hover:bg-[#563e2c] text-white px-4 py-2 rounded-xl text-sm font-semibold shrink-0 transition-colors">
             Search
           </button>
           <button type="button" onClick={() => { setSearchOpen(false); setSearchQ(""); }}

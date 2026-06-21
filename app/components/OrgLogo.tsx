@@ -28,7 +28,7 @@ export default function OrgLogo({ name, logoUrl, size = "md", className = "" }: 
 
   return (
     <div
-      className={`${sizeClass} bg-[#a4592a]/20 flex items-center justify-center font-bold text-[#a4592a] shrink-0 ${className}`}
+      className={`${sizeClass} bg-[#6c4d39]/20 flex items-center justify-center font-bold text-[#6c4d39] shrink-0 ${className}`}
     >
       {name[0]?.toUpperCase() ?? "?"}
     </div>

@@ -18,11 +18,11 @@ interface UserDetail {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  ACTIVE: "bg-[#a4592a]/20 text-[#a4592a]",
+  ACTIVE: "bg-[#6c4d39]/20 text-[#6c4d39]",
   WON: "bg-blue-500/20 text-blue-600",
   OUTBID: "bg-red-500/20 text-red-600",
   CANCELLED: "bg-[#e7dcc6] text-[#6f5b46]",
-  PAID: "bg-[#a4592a]/20 text-[#a4592a]",
+  PAID: "bg-[#6c4d39]/20 text-[#6c4d39]",
   FAILED: "bg-red-500/20 text-red-600",
   PENDING: "bg-yellow-500/20 text-amber-600",
   REFUNDED: "bg-[#e7dcc6] text-[#6f5b46]",
@@ -88,7 +88,7 @@ export default function UserDetailPage() {
   if (loading || !data) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="w-6 h-6 rounded-full border-2 border-[#a4592a]/30 border-t-[#a4592a] animate-spin" />
+        <div className="w-6 h-6 rounded-full border-2 border-[#6c4d39]/30 border-t-[#6c4d39] animate-spin" />
       </div>
     );
   }
@@ -113,7 +113,7 @@ export default function UserDetailPage() {
           <span>·</span>
           <span>{wonBids.length} won</span>
           <span>·</span>
-          <span className="text-[#a4592a] font-semibold">${paidTotal.toLocaleString()} paid</span>
+          <span className="text-[#6c4d39] font-semibold">${paidTotal.toLocaleString()} paid</span>
         </div>
       </header>
 
@@ -125,7 +125,7 @@ export default function UserDetailPage() {
               key={t}
               onClick={() => setTab(t)}
               className={`py-3 text-sm font-medium border-b-2 capitalize transition-colors ${
-                tab === t ? "border-[#a4592a] text-[#241a12]" : "border-transparent text-[#8a7559] hover:text-[#4a3a2b]"
+                tab === t ? "border-[#6c4d39] text-[#241a12]" : "border-transparent text-[#8a7559] hover:text-[#4a3a2b]"
               }`}
             >
               {t === "bids" ? `Bids (${bids.length})` : t === "payments" ? `Payments (${payments.length})` : t === "orgs" ? `Orgs (${memberships.length})` : "Profile"}
@@ -150,19 +150,19 @@ export default function UserDetailPage() {
                   value={f.value}
                   onChange={(e) => f.set(e.target.value)}
                   placeholder={f.placeholder}
-                  className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#a4592a]"
+                  className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]"
                 />
               </div>
             ))}
             {saveMsg && (
-              <p className={`text-sm px-3 py-2 rounded-lg ${saveMsg.ok ? "bg-[#a4592a]/10 text-[#a4592a]" : "bg-red-50 text-red-600"}`}>
+              <p className={`text-sm px-3 py-2 rounded-lg ${saveMsg.ok ? "bg-[#6c4d39]/10 text-[#6c4d39]" : "bg-red-50 text-red-600"}`}>
                 {saveMsg.text}
               </p>
             )}
             <button
               onClick={saveProfile}
               disabled={saving}
-              className="bg-[#a4592a] hover:bg-[#843f1c] disabled:opacity-50 text-white font-semibold px-6 py-2.5 rounded-xl text-sm"
+              className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white font-semibold px-6 py-2.5 rounded-xl text-sm"
             >
               {saving ? "Saving…" : "Save Profile"}
             </button>
@@ -190,7 +190,7 @@ export default function UserDetailPage() {
                   </div>
                   <div className="text-right shrink-0 flex items-center gap-3">
                     <div>
-                      <div className="text-[#a4592a] font-semibold text-sm">${bid.amount.toLocaleString()}</div>
+                      <div className="text-[#6c4d39] font-semibold text-sm">${bid.amount.toLocaleString()}</div>
                       <div className="text-[#8a7559] text-xs">{new Date(bid.placedAt).toLocaleDateString()}</div>
                     </div>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[bid.status] || "bg-[#e7dcc6] text-[#6f5b46]"}`}>
@@ -257,7 +257,7 @@ export default function UserDetailPage() {
               memberships.map((m) => (
                 <div key={m.id} className="bg-white border border-[#e3d6bf] rounded-xl px-5 py-4 flex items-center justify-between">
                   <div>
-                    <Link href={`/superadmin/orgs/${m.organization.id}`} className="font-medium hover:text-[#a4592a] transition-colors">
+                    <Link href={`/superadmin/orgs/${m.organization.id}`} className="font-medium hover:text-[#6c4d39] transition-colors">
                       {m.organization.name}
                     </Link>
                     <div className="text-[#8a7559] text-xs mt-0.5">/{m.organization.slug}</div>

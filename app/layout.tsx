@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   },
   other: {
     "mobile-web-app-capable": "yes",
-    "msapplication-TileColor": "#a4592a",
+    "msapplication-TileColor": "#6c4d39",
     "msapplication-tap-highlight": "no",
   },
 };
@@ -57,7 +57,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${bitter.variable} h-full antialiased`}
       >
         <head>
-          <meta name="theme-color" content="#a4592a" />
+          <meta name="theme-color" content="#6c4d39" />
           <meta name="color-scheme" content="light" />
         </head>
         <body className="min-h-full flex flex-col">
