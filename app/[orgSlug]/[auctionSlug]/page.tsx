@@ -52,8 +52,8 @@ export default async function AuctionPage({ params }: Props) {
         title="Auction not found"
         message="This auction may have ended or the link is incorrect."
         actions={[
-          { href: `/${orgSlug}`, label: "View business", primary: true },
-          { href: "/auctions", label: "Browse all auctions" },
+          { href: "/auctions", label: "Browse Auctions", primary: true },
+          { href: "/", label: "Go home" },
         ]}
       />
     );
@@ -153,12 +153,9 @@ export default async function AuctionPage({ params }: Props) {
                 ? "All items have ended — final results are being processed."
                 : "No items in this auction yet"}
             </p>
-            <div className="flex flex-col sm:flex-row gap-2.5 justify-center max-w-sm mx-auto">
-              <Link href={`/${orgSlug}`} className="bg-[#a4592a] hover:bg-[#843f1c] text-white font-semibold py-2.5 px-5 rounded-xl transition-colors">
-                More from {orgSlug.replace(/-/g, " ")}
-              </Link>
-              <Link href="/auctions" className="border border-[#cdbda3] hover:border-[#b3a085] text-[#4a3a2b] hover:text-[#241a12] font-medium py-2.5 px-5 rounded-xl transition-colors">
-                Browse all auctions
+            <div className="flex justify-center">
+              <Link href="/auctions" className="bg-[#a4592a] hover:bg-[#843f1c] text-white font-semibold py-3.5 px-7 rounded-xl transition-colors text-base">
+                Browse Auctions
               </Link>
             </div>
           </div>
