@@ -3,7 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import LocalDate from "./components/LocalDate";
-import { PineRidge, MountainRange, GavelEmblem, WoodenCrate, BranchDivider, PineMark } from "./components/Illustrations";
+import { PineRidge, MountainRange, WoodenCrate, BranchDivider, PineMark } from "./components/Illustrations";
 
 function IconSearch() {
   return (
@@ -92,7 +92,12 @@ export default async function HomePage() {
       <section className="relative px-4 sm:px-6 pt-14 pb-28 sm:pt-16 sm:pb-32 overflow-hidden">
         <MountainRange className="pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 w-[860px] max-w-none opacity-40" />
         <div className="relative max-w-3xl mx-auto text-center">
-          <GavelEmblem className="w-16 h-16 mx-auto mb-6 drop-shadow-sm" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://assets.cdn.filesafe.space/TwuL7EwKfW8oGIV0Zo5q/media/6a373b261c5d711b35bf4e56.png"
+            alt="Northwood Bids"
+            className="h-28 sm:h-36 w-auto max-w-[300px] object-contain mx-auto mb-6 drop-shadow-sm"
+          />
           {activeAuctions.length > 0 && (
             <a href="#live-auctions" className="inline-flex items-center gap-2 bg-[#a4592a]/10 border border-[#a4592a]/30 text-[#a4592a] text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-full mb-6 hover:bg-[#a4592a]/15 transition-colors">
               <span className="w-2 h-2 rounded-full bg-[#a4592a] animate-pulse inline-block" />
