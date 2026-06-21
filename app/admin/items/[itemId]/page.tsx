@@ -218,22 +218,6 @@ export default function EditItemPage() {
 
         <div className="space-y-6">
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">Donor Info</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="text-base text-[#6f5b46] mb-1.5 block">Donor Name</label>
-                <input name="donorName" value={formData.donorName} onChange={handleChange}
-                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]" />
-              </div>
-              <div className="flex items-center gap-3">
-                <input type="checkbox" name="taxDeductible" checked={formData.taxDeductible}
-                  onChange={handleChange} id="taxDeductible" className="w-5 h-5 accent-[#6c4d39]" />
-                <label htmlFor="taxDeductible" className="text-base text-[#4a3a2b]">Tax deductible</label>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4">Storage Location</h2>
             <input name="storageLocation" value={formData.storageLocation} onChange={handleChange}
               className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]" />
