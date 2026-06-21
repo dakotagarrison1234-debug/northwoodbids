@@ -64,8 +64,8 @@ export async function GET(
       return NextResponse.json({ item: staffItem });
     }
 
-    const { reservePrice, storageLocation, notes, organization, ...publicItemFields } = item;
-    void reservePrice; void storageLocation; void notes; void organization; // intentionally stripped
+    const { reservePrice, storageLocation, notes, itemCode, organization, ...publicItemFields } = item;
+    void reservePrice; void storageLocation; void notes; void itemCode; void organization; // intentionally stripped
     const publicBids = item.bids.map((b) => ({
       id: b.id,
       amount: Number(b.amount),
@@ -179,6 +179,7 @@ export async function PATCH(
       }),
       ...(body.donorName !== undefined && { donorName: body.donorName || null }),
       ...(body.taxDeductible !== undefined && { taxDeductible: body.taxDeductible || false }),
+      ...(body.itemCode !== undefined && { itemCode: body.itemCode || null }),
       ...(body.storageLocation !== undefined && { storageLocation: body.storageLocation || null }),
       ...(body.locationId !== undefined && { locationId: body.locationId || null }),
       ...(body.notes !== undefined && { notes: body.notes || null }),

@@ -99,6 +99,7 @@ enum AuctionStatus {
   currentBid      Decimal      @default(0) @db.Decimal(10, 2)
   donorName       String?
   taxDeductible   Boolean      @default(false)
+  itemCode        String?
   storageLocation String?
   notes           String?
   status          ItemStatus   @default(DRAFT)

@@ -3,9 +3,6 @@ import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
-// ── Category list ─────────────────────────────────────────────────────────────
-const CATEGORIES = ["Electronics","Sports","Experiences","Food & Drink","Outdoors","Home & Garden","Art & Collectibles","Gift Cards","Other"];
-
 // ── Barcode scanner card ───────────────────────────────────────────────────────
 interface BarcodeResult {
   title: string;
@@ -385,11 +382,11 @@ function NewItemForm() {
     title: searchParams.get("title") || "",
     description: searchParams.get("description") || "",
     condition: searchParams.get("condition") || "GOOD",
-    category: searchParams.get("category") || "",
     retailValue: searchParams.get("retailValue") || "",
     startingBid: searchParams.get("startingBid") || "",
     reservePrice: searchParams.get("reservePrice") || "",
     taxDeductible: searchParams.get("taxDeductible") === "true",
+    itemCode: searchParams.get("itemCode") || "",
     storageLocation: searchParams.get("storageLocation") || "",
     locationId: searchParams.get("locationId") || "",
     auctionId: preselectedAuctionId,
@@ -422,7 +419,6 @@ function NewItemForm() {
       ...prev,
       title: result.title || prev.title,
       description: result.description || prev.description,
-      category: result.category || prev.category,
       retailValue: result.retailValue != null ? String(result.retailValue) : prev.retailValue,
     }));
     // Import all images (up to 3)
@@ -488,6 +484,7 @@ function NewItemForm() {
     if (uploading) { alert("Please wait for photos to finish uploading."); return; }
     if (saving) return;
     if (!formData.title) { alert("Please enter an item title"); return; }
+    if (!formData.locationId) { alert("Please choose a warehouse for this item."); return; }
     if (!orgId) { alert("Business not loaded. Please refresh."); return; }
     setSaving(true);
     setBanner(null);
@@ -509,7 +506,8 @@ function NewItemForm() {
             startingBid: "",
             reservePrice: "",
             taxDeductible: false,
-            // preserved: condition, category, storageLocation, locationId, auctionId
+            itemCode: "",
+            // preserved: condition, storageLocation (spot), locationId (warehouse), auctionId
           }));
           setPhotos([]);
           setBanner("Item saved. Ready for the next one.");
@@ -565,26 +563,16 @@ function NewItemForm() {
                   placeholder="Describe the item..."
                   className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] resize-none" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-base text-[#6f5b46] mb-1.5 block">Condition *</label>
-                  <select name="condition" value={formData.condition} onChange={handleChange}
-                    className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]">
-                    <option value="NEW">New</option>
-                    <option value="LIKE_NEW">Like New</option>
-                    <option value="GOOD">Good</option>
-                    <option value="FAIR">Fair</option>
-                    <option value="POOR">Poor</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-base text-[#6f5b46] mb-1.5 block">Category</label>
-                  <select name="category" value={formData.category} onChange={handleChange}
-                    className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]">
-                    <option value="">Select category</option>
-                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
+              <div>
+                <label className="text-base text-[#6f5b46] mb-1.5 block">Condition *</label>
+                <select name="condition" value={formData.condition} onChange={handleChange}
+                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]">
+                  <option value="NEW">New</option>
+                  <option value="LIKE_NEW">Like New</option>
+                  <option value="GOOD">Good</option>
+                  <option value="FAIR">Fair</option>
+                  <option value="POOR">Poor</option>
+                </select>
               </div>
             </div>
           </div>
@@ -653,19 +641,30 @@ function NewItemForm() {
         {/* ── Sidebar ── */}
         <div className="space-y-6">
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">Storage Location</h2>
-            <input name="storageLocation" value={formData.storageLocation} onChange={handleChange}
-              placeholder="e.g. Room B / Shelf 2 / Bin 4"
+            <h2 className="text-lg font-semibold mb-4">Item Location</h2>
+
+            <label className="text-base text-[#6f5b46] mb-1.5 block">Item Code</label>
+            <input name="itemCode" value={formData.itemCode} onChange={handleChange}
+              placeholder="e.g. lot / SKU / barcode"
               className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]" />
-            <p className="text-[#8a7559] text-sm mt-2">Used by staff to locate item during pickup</p>
+            <p className="text-[#8a7559] text-sm mt-2">A code that identifies this item</p>
+
             <div className="mt-4">
               <label className="text-base text-[#6f5b46] mb-1.5 block">Location</label>
+              <input name="storageLocation" value={formData.storageLocation} onChange={handleChange}
+                placeholder="e.g. Shelf 2 / Bin 4 / Row C"
+                className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]" />
+              <p className="text-[#8a7559] text-sm mt-2">Where it sits inside the warehouse</p>
+            </div>
+
+            <div className="mt-4">
+              <label className="text-base text-[#6f5b46] mb-1.5 block">Warehouse *</label>
               <select name="locationId" value={formData.locationId} onChange={handleChange}
                 className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]">
-                <option value="">—</option>
+                <option value="">Choose a warehouse…</option>
                 {pickupLocations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
               </select>
-              <p className="text-[#8a7559] text-sm mt-2">Which pickup location this item lives at</p>
+              <p className="text-[#8a7559] text-sm mt-2">Which warehouse this item is in (Owosso, Gladwin, …)</p>
             </div>
           </div>
 

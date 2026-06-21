@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       reservePrice,
       donorName,
       taxDeductible,
+      itemCode,
       storageLocation,
       locationId,
       notes,
@@ -45,6 +46,15 @@ export async function POST(request: NextRequest) {
     if (!title || !organizationId) {
       return NextResponse.json(
         { error: "Title and organization are required" },
+        { status: 400 }
+      );
+    }
+
+    // A warehouse (pickup location) is required on every item so transfers and
+    // pickup scheduling always know where it lives.
+    if (!locationId) {
+      return NextResponse.json(
+        { error: "Please choose a warehouse for this item." },
         { status: 400 }
       );
     }
@@ -106,6 +116,7 @@ export async function POST(request: NextRequest) {
       reservePrice: reservePrice ? parseFloat(reservePrice) : null,
       donorName: donorName || null,
       taxDeductible: taxDeductible || false,
+      itemCode: itemCode || null,
       storageLocation: storageLocation || null,
       locationId: locationId || null,
       notes: notes || null,
