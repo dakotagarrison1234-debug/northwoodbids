@@ -33,58 +33,123 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
   const [showSearch, setShowSearch] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const controlsRef = useRef<any>(null);
+  const controlsRef = useRef<any>(null);          // ZXing scanner controls (fallback path)
+  const streamRef = useRef<MediaStream | null>(null);
+  const cancelScanRef = useRef<(() => void) | null>(null); // stops the native detect loop
   const detectedRef = useRef(false);
+  const playingRef = useRef(false);
 
-  // Fully stop the scanner: @zxing/browser has NO reader.reset(); you must stop
-  // the controls returned by decodeFromVideoDevice and release the camera tracks.
-  // Without this the old decode loop keeps running and re-fires the last result.
+  // Fully stop the scanner and release the camera (loop, ZXing controls, tracks).
   const stopCamera = () => {
+    playingRef.current = false;
+    try { cancelScanRef.current?.(); } catch { /* ignore */ }
+    cancelScanRef.current = null;
     try { controlsRef.current?.stop(); } catch { /* ignore */ }
     controlsRef.current = null;
-    try {
-      const stream = videoRef.current?.srcObject as MediaStream | null;
-      stream?.getTracks().forEach((t) => t.stop());
-      if (videoRef.current) videoRef.current.srcObject = null;
-    } catch { /* ignore */ }
+    try { streamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* ignore */ }
+    streamRef.current = null;
+    try { if (videoRef.current) videoRef.current.srcObject = null; } catch { /* ignore */ }
     setScanning(false);
   };
 
+  // Fire once on the first good read.
+  const handleDetected = (raw: string) => {
+    if (detectedRef.current) return;
+    detectedRef.current = true;
+    const code = raw.trim();
+    stopCamera();
+    setBarcode(code);
+    doLookup(code);
+  };
+
   const startCamera = async () => {
-    // Clear any prior scan so a fresh scan can't show the previous item.
     stopCamera();
     setError(null);
     setResult(null);
     setBarcode("");
     setScanning(true);
     detectedRef.current = false;
+    playingRef.current = true;
     try {
-      const { BrowserMultiFormatReader } = await import("@zxing/browser");
-      const codeReader = new BrowserMultiFormatReader();
-
-      const devices = await BrowserMultiFormatReader.listVideoInputDevices();
-      // Prefer rear camera on mobile
-      const deviceId = devices.find(d =>
-        d.label.toLowerCase().includes("back") ||
-        d.label.toLowerCase().includes("rear") ||
-        d.label.toLowerCase().includes("environment")
-      )?.deviceId ?? devices[devices.length - 1]?.deviceId ?? undefined;
-
-      const controls = await codeReader.decodeFromVideoDevice(deviceId, videoRef.current!, (res, err) => {
-        // Guard: only act on the first detection
-        if (res && !detectedRef.current) {
-          detectedRef.current = true;
-          const code = res.getText();
-          stopCamera();
-          setBarcode(code);
-          doLookup(code);
-        }
-        void err;
+      // High-res rear camera + continuous autofocus = crisp, fast reads.
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: false,
       });
-      controlsRef.current = controls;
+      streamRef.current = stream;
+      const video = videoRef.current!;
+      video.srcObject = stream;
+      video.setAttribute("playsinline", "true");
+      video.muted = true;
+      await video.play().catch(() => {});
+
+      // Best-effort continuous focus (helps small/blurry barcodes resolve fast).
+      try {
+        const track = stream.getVideoTracks()[0];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const caps = (track.getCapabilities?.() ?? {}) as any;
+        if (caps?.focusMode?.includes?.("continuous")) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] } as any);
+        }
+      } catch { /* ignore */ }
+
+      // ── Fast path: native BarcodeDetector (hardware-accelerated) ──
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const W = window as any;
+      if (W.BarcodeDetector) {
+        let formats = ["upc_a", "upc_e", "ean_13", "ean_8", "code_128", "code_39"];
+        try {
+          const supported = await W.BarcodeDetector.getSupportedFormats?.();
+          if (Array.isArray(supported) && supported.length) {
+            const f = formats.filter((x) => supported.includes(x));
+            if (f.length) formats = f;
+          }
+        } catch { /* ignore */ }
+        const detector = new W.BarcodeDetector({ formats });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const vid = video as any;
+        const useRVFC = typeof vid.requestVideoFrameCallback === "function";
+        let timeoutId: ReturnType<typeof setTimeout> | null = null;
+        let stopped = false;
+        cancelScanRef.current = () => { stopped = true; if (timeoutId) clearTimeout(timeoutId); };
+        const scan = async () => {
+          if (stopped || detectedRef.current || !playingRef.current) return;
+          try {
+            const codes = await detector.detect(video);
+            if (codes && codes.length && codes[0].rawValue) { handleDetected(codes[0].rawValue); return; }
+          } catch { /* frame not ready */ }
+          if (stopped) return;
+          if (useRVFC) vid.requestVideoFrameCallback(() => scan());
+          else timeoutId = setTimeout(scan, 60);
+        };
+        if (useRVFC) vid.requestVideoFrameCallback(() => scan());
+        else timeoutId = setTimeout(scan, 60);
+        return;
+      }
+
+      // ── Fallback: ZXing, but only the formats we use + scan ~12×/sec ──
+      const [{ BrowserMultiFormatReader }, zlib] = await Promise.all([
+        import("@zxing/browser"),
+        import("@zxing/library"),
+      ]);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { DecodeHintType, BarcodeFormat } = zlib as any;
+      const hints = new Map();
+      hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+        BarcodeFormat.UPC_A, BarcodeFormat.UPC_E, BarcodeFormat.EAN_13,
+        BarcodeFormat.EAN_8, BarcodeFormat.CODE_128, BarcodeFormat.CODE_39,
+      ]);
+      const reader = new BrowserMultiFormatReader(hints, {
+        delayBetweenScanAttempts: 80,   // default is 500ms — far too slow
+        delayBetweenScanSuccess: 250,
+      });
+      controlsRef.current = await reader.decodeFromStream(stream, video, (res: { getText: () => string } | undefined) => {
+        if (res && !detectedRef.current) handleDetected(res.getText());
+      });
     } catch {
       setError("Camera not available. Enter the barcode number manually.");
-      setScanning(false);
+      stopCamera();
     }
   };
 
