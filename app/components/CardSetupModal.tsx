@@ -63,7 +63,6 @@ export default function CardSetupModal({ orgId, onSuccess, onClose }: Props) {
         elementsRef.current = elements;
         paymentEl = elements.create("payment", {
           layout: { type: "tabs", defaultCollapsed: false },
-          fields: { billingDetails: { address: { country: "never", postalCode: "auto" } } },
         });
         if (mountRef.current && !cancelled) {
           paymentEl.mount(mountRef.current);
@@ -113,8 +112,10 @@ export default function CardSetupModal({ orgId, onSuccess, onClose }: Props) {
         return;
       }
       onSuccess();
-    } catch {
-      setError("Something went wrong. Please try again.");
+    } catch (err) {
+      // Surface the real Stripe/JS error so issues (key mismatch, etc.) are visible.
+      console.error("[card setup] save failed:", err);
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setSaving(false);
     }
