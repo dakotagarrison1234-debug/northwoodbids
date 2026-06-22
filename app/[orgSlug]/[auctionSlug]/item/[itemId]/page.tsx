@@ -8,6 +8,7 @@ import Countdown from "@/app/components/Countdown";
 import { getNextValidBid, getProxySuggestions } from "@/lib/bidIncrements";
 import CardSetupModal from "@/app/components/CardSetupModal";
 import MaxBidExplainerModal from "@/app/components/MaxBidExplainerModal";
+import ExpandableDescription from "@/app/components/ExpandableDescription";
 import { BranchDivider } from "@/app/components/Illustrations";
 
 interface Item {
@@ -498,7 +499,7 @@ export default function ItemPage() {
           </div>
 
           <h1 className="font-display text-2xl sm:text-3xl font-bold mb-2">{item.title}</h1>
-          {item.description && <p className="text-[#6f5b46] mb-6">{item.description}</p>}
+          {item.description && <ExpandableDescription text={item.description} />}
 
           {/* Countdown */}
           {effectiveEndAt && !auctionClosed && !itemSold && !itemNotActive && (
