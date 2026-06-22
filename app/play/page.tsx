@@ -525,7 +525,7 @@ export default function PlayPage() {
                       {/* bullseye core */}
                       <div className="bullseye absolute top-0 bottom-0" style={{ left: `${zone.start + zone.width / 2 - zone.width * BULL_FRAC}%`, width: `${bullW}%` }} />
                       {/* marker trail + gavel-head marker (GPU transform) */}
-                      <div className="marker-wrap absolute top-0 bottom-0 left-0 w-0" style={{ transform: `translateX(${marker}%)`, willChange: "transform" }}>
+                      <div className="marker-wrap absolute top-0 bottom-0 left-0 w-full pointer-events-none" style={{ transform: `translateX(${marker}%)`, willChange: "transform" }}>
                         <div className="marker-trail" />
                         <div className="marker" />
                       </div>
