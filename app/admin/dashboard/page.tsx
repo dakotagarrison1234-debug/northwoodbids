@@ -50,26 +50,35 @@ export default async function AdminDashboard() {
   const totalRaised = Number(totalRaisedAgg._sum.currentBid ?? 0);
   const uniqueBidders = uniqueBidderRows.length;
 
-  // Prefer OPEN, then CLOSING, then DRAFT (scheduled), otherwise none.
-  // status enum string order isn't our priority order, so resolve in priority order;
-  // each is a single indexed lookup (organizationId, status) — not a full table scan.
-  const activeAuction =
-    (await prisma.auction.findFirst({ where: { organizationId: orgId, status: "OPEN" }, orderBy: { endAt: "asc" }, include: { _count: { select: { items: true } } } })) ||
-    (await prisma.auction.findFirst({ where: { organizationId: orgId, status: "CLOSING" }, orderBy: { endAt: "asc" }, include: { _count: { select: { items: true } } } })) ||
-    (await prisma.auction.findFirst({ where: { organizationId: orgId, status: "DRAFT" }, orderBy: { endAt: "asc" }, include: { _count: { select: { items: true } } } })) ||
-    null;
+  // ALL currently-live auctions (OPEN + CLOSING) — show every one, not just the first.
+  const liveAuctions = await prisma.auction.findMany({
+    where: { organizationId: orgId, status: { in: ["OPEN", "CLOSING"] } },
+    orderBy: { endAt: "asc" },
+    include: { _count: { select: { items: true } } },
+  });
 
-  // "Raised" for the active auction (sum of sold items' current bid), computed in the DB.
-  const activeAuctionRaised = activeAuction
-    ? Number(
-        (
-          await prisma.item.aggregate({
-            where: { auctionId: activeAuction.id, status: { in: soldStatuses } },
-            _sum: { currentBid: true },
-          })
-        )._sum.currentBid ?? 0
-      )
-    : 0;
+  // If nothing is live yet, surface the soonest scheduled (DRAFT) so the card isn't empty.
+  const upcomingAuction =
+    liveAuctions.length === 0
+      ? await prisma.auction.findFirst({
+          where: { organizationId: orgId, status: "DRAFT" },
+          orderBy: { startAt: "asc" },
+          include: { _count: { select: { items: true } } },
+        })
+      : null;
+
+  const shownAuctions = liveAuctions.length > 0 ? liveAuctions : upcomingAuction ? [upcomingAuction] : [];
+
+  // "Raised" per shown auction (sum of sold items' current bid) — one grouped DB query.
+  const shownIds = shownAuctions.map((a) => a.id);
+  const raisedRows = shownIds.length
+    ? await prisma.item.groupBy({
+        by: ["auctionId"],
+        where: { auctionId: { in: shownIds }, status: { in: soldStatuses } },
+        _sum: { currentBid: true },
+      })
+    : [];
+  const raisedByAuction = new Map(raisedRows.map((r) => [r.auctionId, Number(r._sum.currentBid ?? 0)]));
 
   // Resolve bidder display names for recent bids
   const recentIds = [...new Set(recentBids.map((b) => b.clerkUserId))];
@@ -142,8 +151,14 @@ export default async function AdminDashboard() {
         </div>
 
         <div className="bg-white border border-[#e3d6bf] rounded-xl p-6 sm:p-7">
-          <h2 className="text-lg font-semibold mb-4">Active Auction</h2>
-          {!activeAuction ? (
+          <h2 className="text-lg font-semibold mb-4">
+            {liveAuctions.length > 0
+              ? `Live Auctions (${liveAuctions.length})`
+              : upcomingAuction
+              ? "Next Auction"
+              : "Active Auction"}
+          </h2>
+          {shownAuctions.length === 0 ? (
             <div>
               <p className="text-[#8a7559] text-base mb-4">No auctions yet.</p>
               <Link
@@ -154,42 +169,48 @@ export default async function AdminDashboard() {
               </Link>
             </div>
           ) : (
-            <>
-              <div className="mb-4">
-                <div className="text-lg font-semibold">{activeAuction.title}</div>
-                <div className="text-[#8a7559] text-base mt-0.5">
-                  Closes <LocalDate iso={activeAuction.endAt.toISOString()} />
-                </div>
-              </div>
-              <div className="space-y-2 mb-4">
-                <div className="flex justify-between text-base">
-                  <span className="text-[#8a7559]">Items</span>
-                  <span>{activeAuction._count.items}</span>
-                </div>
-                <div className="flex justify-between text-base">
-                  <span className="text-[#8a7559]">Raised</span>
-                  <span className="text-[#6c4d39] font-semibold">
-                    ${activeAuctionRaised.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between text-base">
-                  <span className="text-[#8a7559]">Status</span>
-                  <span
-                    className={`capitalize ${
-                      activeAuction.status === "OPEN" ? "text-[#6c4d39]" : "text-[#6f5b46]"
-                    }`}
-                  >
-                    {activeAuction.status.toLowerCase()}
-                  </span>
-                </div>
-              </div>
-              <Link
-                href={`/admin/auctions/${activeAuction.id}`}
-                className="block text-center bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] text-[#241a12] text-base font-semibold px-6 py-3.5 rounded-xl transition-colors"
-              >
-                Manage Auction
-              </Link>
-            </>
+            <div className="space-y-4">
+              {shownAuctions.map((a) => {
+                const raised = raisedByAuction.get(a.id) ?? 0;
+                return (
+                  <div key={a.id} className="border border-[#e3d6bf] rounded-xl p-4">
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="min-w-0">
+                        <div className="text-base font-semibold truncate">{a.title}</div>
+                        <div className="text-[#8a7559] text-sm mt-0.5">
+                          {a.status === "DRAFT" ? (
+                            <>Opens <LocalDate iso={a.startAt.toISOString()} /></>
+                          ) : (
+                            <>Closes <LocalDate iso={a.endAt.toISOString()} /></>
+                          )}
+                        </div>
+                      </div>
+                      <span
+                        className={`text-xs font-bold uppercase tracking-wide px-2 py-1 rounded-full shrink-0 ${
+                          a.status === "OPEN"
+                            ? "bg-[#5f7a45]/15 text-[#3f5430]"
+                            : a.status === "CLOSING"
+                            ? "bg-[#8a5a2b]/15 text-[#8a5a2b]"
+                            : "bg-[#6c4d39]/10 text-[#6c4d39]"
+                        }`}
+                      >
+                        {a.status.toLowerCase()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-[#6f5b46] mb-3">
+                      <span>{a._count.items} item{a._count.items !== 1 ? "s" : ""}</span>
+                      <span className="text-[#6c4d39] font-semibold">${raised.toLocaleString()} raised</span>
+                    </div>
+                    <Link
+                      href={`/admin/auctions/${a.id}`}
+                      className="block text-center bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] text-[#241a12] text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
+                    >
+                      Manage
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       </div>
