@@ -668,12 +668,29 @@ function BidderDashboardInner() {
                     <span>{a.activeItems} item{a.activeItems !== 1 ? "s" : ""}</span>
                   </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <span className="text-xs bg-[#6c4d39]/15 text-[#6c4d39] border border-[#6c4d39]/20 px-2 py-0.5 rounded-full font-semibold">Live</span>
-                  <div className="text-xs text-[#8a7559] mt-2">
-                    Ends {new Date(a.endAt).toLocaleDateString([], { month: "short", day: "numeric" })}
-                  </div>
-                </div>
+                {(() => {
+                  const msLeft = new Date(a.endAt).getTime() - Date.now();
+                  const closing = msLeft > 0 && msLeft < 3_600_000; // closing within 1h
+                  const closingNow = msLeft > 0 && msLeft < 300_000; // final 5 min
+                  return (
+                    <div className="text-right shrink-0">
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full font-bold border ${
+                          closingNow
+                            ? "bg-red-50 text-red-600 border-red-200"
+                            : closing
+                            ? "bg-amber-50 text-amber-600 border-amber-200"
+                            : "bg-green-50 text-green-700 border-green-200"
+                        }`}
+                      >
+                        {closingNow ? "Closing now" : closing ? "Closing soon" : "Open"}
+                      </span>
+                      <div className="text-xs text-[#8a7559] mt-2">
+                        Ends {new Date(a.endAt).toLocaleDateString([], { month: "short", day: "numeric" })}
+                      </div>
+                    </div>
+                  );
+                })()}
               </Link>
             );
 

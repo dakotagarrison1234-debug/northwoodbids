@@ -85,8 +85,8 @@ function UrgencyPill({ endAt, now }: { endAt: Date; now: Date }) {
     <span
       className={`text-xs px-2.5 py-1 rounded-full shrink-0 font-bold whitespace-nowrap inline-flex items-center gap-1 ${
         u.tone === "urgent"
-          ? "bg-[#efe0c9] text-[#8a5a2b] border border-[#d8b483]"
-          : "bg-[#6c4d39]/10 text-[#6c4d39] border border-[#6c4d39]/20"
+          ? "bg-red-50 text-red-600 border border-red-200"
+          : "bg-amber-50 text-amber-600 border border-amber-200"
       }`}
     >
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">

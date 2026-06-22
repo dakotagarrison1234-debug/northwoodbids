@@ -6,9 +6,11 @@ interface Props {
   onExpire?: () => void; // called once when timer hits zero
 }
 
+type Tier = "closed" | "urgent" | "soon" | "normal";
+
 export default function Countdown({ endAt, onExpire }: Props) {
   const [timeLeft, setTimeLeft] = useState("");
-  const [urgent, setUrgent] = useState(false);
+  const [tier, setTier] = useState<Tier>("normal");
   const firedRef = useRef(false);
 
   useEffect(() => {
@@ -19,7 +21,7 @@ export default function Countdown({ endAt, onExpire }: Props) {
       const diff = new Date(endAt).getTime() - Date.now();
       if (diff <= 0) {
         setTimeLeft("Bidding closed");
-        setUrgent(false);
+        setTier("closed");
         if (!firedRef.current) {
           firedRef.current = true;
           onExpire?.();
@@ -30,7 +32,9 @@ export default function Countdown({ endAt, onExpire }: Props) {
       const h = Math.floor((diff % 86400000) / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
-      setUrgent(diff < 150_000); // red in last 2:30 (popcorn window)
+      // Color by urgency so the timer reads at a glance: green plenty of time,
+      // amber under an hour, red in the final few minutes.
+      setTier(diff < 300_000 ? "urgent" : diff < 3_600_000 ? "soon" : "normal");
       if (d > 0) setTimeLeft(`${d}d ${h}h ${m}m`);
       else if (h > 0) setTimeLeft(`${h}h ${m}m ${s}s`);
       else setTimeLeft(`${m}m ${s}s`);
@@ -41,9 +45,14 @@ export default function Countdown({ endAt, onExpire }: Props) {
     return () => clearInterval(interval);
   }, [endAt, onExpire]);
 
-  return (
-    <span className={urgent ? "text-red-600 font-bold animate-pulse" : "text-[#4a3a2b] font-semibold"}>
-      {timeLeft || "..."}
-    </span>
-  );
+  const cls =
+    tier === "urgent"
+      ? "text-red-600 font-extrabold animate-pulse"
+      : tier === "soon"
+      ? "text-amber-600 font-bold"
+      : tier === "closed"
+      ? "text-[#8a7559] font-semibold"
+      : "text-green-700 font-bold";
+
+  return <span className={cls}>{timeLeft || "..."}</span>;
 }

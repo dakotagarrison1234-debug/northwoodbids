@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import LocationBadge from "@/app/components/LocationBadge";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface ItemCard {
@@ -215,11 +216,15 @@ function SlotPicker({
                         <span>{fmtTime(s.startsAt)}</span>
                         {low && (
                           <span
-                            className={`mt-0.5 text-xs font-semibold ${
-                              isSelected ? "text-[#f1e7d5]" : "text-[#8a5a2b]"
+                            className={`mt-0.5 text-xs font-bold ${
+                              isSelected
+                                ? "text-[#f1e7d5]"
+                                : s.remaining === 1
+                                ? "text-red-600"
+                                : "text-amber-600"
                             }`}
                           >
-                            {s.remaining} left
+                            {s.remaining === 1 ? "Last one!" : `${s.remaining} left`}
                           </span>
                         )}
                       </button>
@@ -467,13 +472,13 @@ export default function PickupPage() {
         {/* ── Has an upcoming appointment ── */}
         {appointment && !rescheduling && (
           <div className="space-y-6">
-            <div className="bg-white border-2 border-[#6c4d39]/30 rounded-2xl overflow-hidden">
-              <div className="bg-[#6c4d39] text-white px-6 py-5">
-                <div className="text-base font-medium opacity-90">Your pickup is scheduled for</div>
-                <div className="text-2xl font-semibold mt-1">{fmtDateTime(appointment.startsAt)}</div>
+            <div className="bg-white border-2 border-green-200 rounded-2xl overflow-hidden">
+              <div className="bg-green-50 border-b border-green-200 px-6 py-5">
+                <div className="text-base font-semibold text-green-700">Your pickup is scheduled for</div>
+                <div className="text-2xl font-extrabold mt-1 text-green-700">{fmtDateTime(appointment.startsAt)}</div>
               </div>
               <div className="px-6 py-5">
-                <div className="text-lg font-semibold text-[#241a12]">{appointment.location.name}</div>
+                <LocationBadge name={appointment.location.name} />
                 {appointment.location.address && (
                   <div className="text-base text-[#6f5b46] mt-0.5">{appointment.location.address}</div>
                 )}
@@ -601,19 +606,14 @@ export default function PickupPage() {
         {!rescheduling && pendingTransfers.length > 0 && (
           <div className="space-y-4 mt-6">
             {pendingTransfers.map((t) => (
-              <div key={t.id} className="rounded-2xl border-2 border-[#6c4d39]/25 bg-[#efe3d0] px-5 py-5">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="text-lg font-semibold text-[#241a12]">
-                    {t.items.length} item{t.items.length !== 1 ? "s" : ""} moving to {t.toLocationName}
+              <div key={t.id} className="rounded-2xl border-2 border-amber-200 bg-amber-50 px-5 py-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2 text-lg font-semibold text-[#241a12]">
+                    <span>{t.items.length} item{t.items.length !== 1 ? "s" : ""} moving to</span>
+                    <LocationBadge name={t.toLocationName} />
                   </div>
-                  <span
-                    className={`text-sm px-3 py-1 rounded-full font-semibold shrink-0 ${
-                      t.status === "LOADED"
-                        ? "bg-[#5f7a45]/15 text-[#5f7a45]"
-                        : "bg-[#6c4d39]/15 text-[#6c4d39]"
-                    }`}
-                  >
-                    {t.status === "LOADED" ? "Loaded / in transit" : "Requested"}
+                  <span className="text-sm px-3 py-1 rounded-full font-bold shrink-0 bg-amber-50 text-amber-600 border border-amber-200">
+                    {t.status === "LOADED" ? "Loaded / in transit" : "In progress"}
                   </span>
                 </div>
                 <p className="text-base text-[#6f5b46] mt-2">
@@ -640,7 +640,7 @@ export default function PickupPage() {
             {appointment ? (
               <>
                 {readyHere.length > 0 && (
-                  <p className="text-base text-[#5f7a45] bg-[#5f7a45]/10 border border-[#5f7a45]/30 rounded-xl px-4 py-3">
+                  <p className="text-base font-semibold text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
                     {readyHere.length} newly won item{readyHere.length !== 1 ? "s have" : " has"} been added to your pickup above.
                   </p>
                 )}
@@ -649,9 +649,10 @@ export default function PickupPage() {
                     <div className="text-lg font-semibold text-[#241a12]">
                       You&apos;ve also won items at another location
                     </div>
-                    <p className="text-base text-[#6f5b46] mt-2">
-                      Request a transfer to {appointment.location.name} to add them to this pickup.
-                      Transfers usually take 5–6 days.
+                    <p className="text-base text-[#6f5b46] mt-2 flex flex-wrap items-center gap-1.5">
+                      <span>Request a transfer to</span>
+                      <LocationBadge name={appointment.location.name} size="sm" />
+                      <span>to add them to this pickup. Transfers usually take 5–6 days.</span>
                     </p>
                     <ul className="mt-3 space-y-1.5 text-base text-[#241a12]">
                       {elsewhere.map((it) => (
@@ -723,8 +724,9 @@ export default function PickupPage() {
                         {readyHere.length > 0 && (
                           <div className="bg-white border border-[#e3d6bf] rounded-2xl px-6 py-6 space-y-5">
                             <div>
-                              <div className="text-lg font-semibold text-[#241a12]">
-                                {readyHere.length} item{readyHere.length !== 1 ? "s" : ""} ready at {chosenLocation.name}
+                              <div className="flex flex-wrap items-center gap-2 text-lg font-semibold text-[#241a12]">
+                                <span>{readyHere.length} item{readyHere.length !== 1 ? "s" : ""} ready at</span>
+                                <LocationBadge name={chosenLocation.name} />
                               </div>
                               <ul className="mt-2 space-y-1 text-base text-[#241a12]">
                                 {readyHere.map((it) => (
@@ -747,9 +749,10 @@ export default function PickupPage() {
                             <div className="text-lg font-semibold text-[#241a12]">
                               These items are at another location
                             </div>
-                            <p className="text-base text-[#6f5b46] mt-2">
-                              Request a transfer to {chosenLocation.name} so you can pick them up there.
-                              Transfers usually take 5–6 days.
+                            <p className="text-base text-[#6f5b46] mt-2 flex flex-wrap items-center gap-1.5">
+                              <span>Request a transfer to</span>
+                              <LocationBadge name={chosenLocation.name} size="sm" />
+                              <span>so you can pick them up there. Transfers usually take 5–6 days.</span>
                             </p>
                             <ul className="mt-3 space-y-1.5 text-base text-[#241a12]">
                               {elsewhere.map((it) => (

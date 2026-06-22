@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import LocationBadge from "@/app/components/LocationBadge";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Window {
@@ -381,14 +382,14 @@ export default function AdminPickupPage() {
                               {a.bidder.phone && <span>{a.bidder.phone}</span>}
                             </div>
                           </div>
-                          <span className="text-sm bg-[#6c4d39]/15 text-[#6c4d39] px-3 py-1 rounded-full font-semibold shrink-0">
+                          <span className="text-sm bg-green-50 text-green-700 border border-green-200 px-3 py-1 rounded-full font-bold shrink-0">
                             Scheduled
                           </span>
                         </div>
 
-                        <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-base">
-                          <span className="font-semibold text-[#241a12]">{fmtDateTime(a.startsAt)}</span>
-                          <span className="text-[#6f5b46]">{a.location.name}</span>
+                        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-base">
+                          <span className="font-extrabold text-[#241a12]">{fmtDateTime(a.startsAt)}</span>
+                          <LocationBadge name={a.location.name} />
                         </div>
 
                         <div className="mt-3">
@@ -480,11 +481,13 @@ export default function AdminPickupPage() {
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <div className="font-semibold text-base text-[#241a12]">{a.bidder.name || "Unknown Bidder"}</div>
-                          <div className="text-base text-[#8a7559]">
-                            {fmtDateTime(a.startsAt)} · {a.location.name} · {a.items.length} item{a.items.length !== 1 ? "s" : ""}
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-base text-[#8a7559]">
+                            <span className="font-semibold text-[#241a12]">{fmtDateTime(a.startsAt)}</span>
+                            <LocationBadge name={a.location.name} size="sm" />
+                            <span>· {a.items.length} item{a.items.length !== 1 ? "s" : ""}</span>
                           </div>
                         </div>
-                        <span className="text-sm bg-[#5f7a45]/15 text-[#5f7a45] px-3 py-1 rounded-full font-semibold">
+                        <span className="text-sm bg-green-50 text-green-700 border border-green-200 px-3 py-1 rounded-full font-bold">
                           Collected
                         </span>
                       </div>
@@ -518,18 +521,19 @@ export default function AdminPickupPage() {
                       </div>
                     </div>
                     <span
-                      className={`text-sm px-3 py-1 rounded-full font-semibold shrink-0 ${
+                      className={`text-sm px-3 py-1 rounded-full font-bold shrink-0 border ${
                         t.status === "LOADED"
-                          ? "bg-[#5f7a45]/15 text-[#5f7a45]"
-                          : "bg-[#6c4d39]/15 text-[#6c4d39]"
+                          ? "bg-blue-50 text-blue-700 border-blue-200"
+                          : "bg-amber-50 text-amber-600 border-amber-200"
                       }`}
                     >
                       {t.status === "LOADED" ? "Loaded / in transit" : `Requested ${fmtDateTime(t.createdAt)}`}
                     </span>
                   </div>
 
-                  <div className="mt-3 text-lg font-semibold text-[#5f7a45]">
-                    → {t.toLocation.name}
+                  <div className="mt-3 flex items-center gap-2 text-lg font-semibold text-[#241a12]">
+                    <span aria-hidden>→</span>
+                    <LocationBadge name={t.toLocation.name} />
                   </div>
 
                   <div className="mt-3">
@@ -540,9 +544,11 @@ export default function AdminPickupPage() {
                       {t.items.map((it) => (
                         <li key={it.id} className="flex items-start gap-2 bg-[#f1e7d5] rounded-xl px-4 py-2.5">
                           <span className="text-[#5f7a45] mt-0.5">☐</span>
-                          <span className="text-base text-[#241a12]">
+                          <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-base text-[#241a12]">
                             <span className="font-semibold">{it.title}</span>
-                            {" "}— now at {it.fromLocationName || "Unassigned"} · {it.storageLocation || "no spot"}
+                            <span className="text-[#6f5b46]">— now at</span>
+                            <LocationBadge name={it.fromLocationName || "Unassigned"} size="sm" />
+                            <span className="text-[#6f5b46]">· {it.storageLocation || "no spot"}</span>
                           </span>
                         </li>
                       ))}
@@ -579,12 +585,14 @@ export default function AdminPickupPage() {
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <div className="font-semibold text-base text-[#241a12]">{t.bidder.name || "Unknown Bidder"}</div>
-                          <div className="text-base text-[#8a7559]">
-                            → {t.toLocation.name} · {t.items.length} item{t.items.length !== 1 ? "s" : ""}
-                            {t.completedAt ? ` · ${fmtDateTime(t.completedAt)}` : ""}
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-base text-[#8a7559]">
+                            <span aria-hidden>→</span>
+                            <LocationBadge name={t.toLocation.name} size="sm" />
+                            <span>· {t.items.length} item{t.items.length !== 1 ? "s" : ""}
+                            {t.completedAt ? ` · ${fmtDateTime(t.completedAt)}` : ""}</span>
                           </div>
                         </div>
-                        <span className="text-sm bg-[#5f7a45]/15 text-[#5f7a45] px-3 py-1 rounded-full font-semibold">
+                        <span className="text-sm bg-green-50 text-green-700 border border-green-200 px-3 py-1 rounded-full font-bold">
                           Dropped off
                         </span>
                       </div>
