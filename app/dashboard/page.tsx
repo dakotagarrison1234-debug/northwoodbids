@@ -329,6 +329,11 @@ function BidderDashboardInner() {
   if (!data) return null;
 
   const { winning, losing, past, unpaidWins } = data;
+  // Active bids ordered by soonest end first, so the most urgent are up top.
+  const endMs = (b: { itemEndAt: string | null; auctionEndAt: string }) =>
+    new Date(b.itemEndAt ?? b.auctionEndAt).getTime();
+  const winningSorted = [...winning].sort((a, b) => endMs(a) - endMs(b));
+  const losingSorted = [...losing].sort((a, b) => endMs(a) - endMs(b));
   const totalOwed = unpaidWins.reduce((s, i) => s + (i.totalDue ?? i.amountOwed), 0);
   const failedWins = unpaidWins.filter((w) => w.paymentFailed);
   const pendingWins = unpaidWins.filter((w) => !w.paymentFailed);
@@ -800,7 +805,7 @@ function BidderDashboardInner() {
                         <h2 className="font-bold text-[#5f7a45] text-sm uppercase tracking-wider">You&apos;re winning ({winning.length})</h2>
                       </div>
                       <div className="space-y-3">
-                        {winning.map((b) => (
+                        {winningSorted.map((b) => (
                           <div key={b.itemId}
                             className="flex flex-wrap items-center gap-4 bg-white border border-[#5f7a45]/30 rounded-2xl px-4 sm:px-6 py-4">
                             <Photo url={b.photo} title={b.itemTitle} />
@@ -834,7 +839,7 @@ function BidderDashboardInner() {
                         <h2 className="font-bold text-red-600 text-sm uppercase tracking-wider">You&apos;ve been outbid ({losing.length})</h2>
                       </div>
                       <div className="space-y-3">
-                        {losing.map((b) => {
+                        {losingSorted.map((b) => {
                           const nextBid = b.currentBid > b.myBid ? b.currentBid : null;
                           return (
                             <div key={b.itemId}
