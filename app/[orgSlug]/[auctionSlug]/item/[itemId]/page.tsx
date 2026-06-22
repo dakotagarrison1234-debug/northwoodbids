@@ -542,7 +542,7 @@ export default function ItemPage() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <div className="text-[#8a7559] text-sm">{item.currentBid > 0 ? "Current Bid" : "Starting Bid"}</div>
-                <div className="text-[#6c4d39] font-bold text-3xl sm:text-4xl">${currentBid.toLocaleString()}</div>
+                <div className="text-green-700 font-extrabold text-3xl sm:text-4xl">${currentBid.toLocaleString()}</div>
                 {showWinning && (
                   <div className="mt-1.5">
                     <span className="inline-flex items-center gap-1.5 text-xs bg-[#6c4d39]/20 text-[#c47b3e] border border-[#6c4d39]/30 px-2.5 py-0.5 rounded-full font-semibold">

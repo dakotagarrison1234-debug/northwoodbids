@@ -222,7 +222,7 @@ export default async function ManageAuctionPage({ params }: Props) {
                           )}
                         </td>
                         <td className="px-4 py-3 text-[#6f5b46] text-base">{money(Number(item.startingBid))}</td>
-                        <td className="px-4 py-3 text-[#6c4d39] font-semibold text-base">{money(Number(item.currentBid))}</td>
+                        <td className="px-4 py-3 text-green-700 font-bold text-base">{money(Number(item.currentBid))}</td>
                         <td className="px-4 py-3 text-[#6f5b46] text-base">{item._count.bids}</td>
                         <td className="px-4 py-3">
                           <StatusPill status={item.status} />
