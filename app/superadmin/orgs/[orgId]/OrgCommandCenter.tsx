@@ -327,7 +327,7 @@ export default function OrgCommandCenter({ org: initial }: { org: Org }) {
                         {active > 0 && <span className="text-[#6c4d39]">{active} active</span>}
                         {sold > 0 && <span className="text-[#6f5b46]">{sold} sold</span>}
                         {draft > 0 && <span className="text-yellow-600">{draft} draft</span>}
-                        <span className="text-[#6c4d39] ml-auto">{money(totalBid)} raised</span>
+                        <span className="text-[#6c4d39] ml-auto">{money(totalBid)} total</span>
                       </>;
                     })()}
                   </div>

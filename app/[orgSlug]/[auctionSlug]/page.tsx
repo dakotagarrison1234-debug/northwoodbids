@@ -138,7 +138,7 @@ export default async function AuctionPage({ params }: Props) {
           {totalRaised > 0 && (
             <div className="text-right shrink-0">
               <div className="text-2xl sm:text-3xl font-extrabold text-[#6c4d39]">${totalRaised.toLocaleString()}</div>
-              <div className="text-[#8a7559] text-xs mt-0.5">total raised</div>
+              <div className="text-[#8a7559] text-xs mt-0.5">total</div>
             </div>
           )}
         </div>

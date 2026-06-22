@@ -232,7 +232,7 @@ export default async function HomePage() {
                   </div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[#8a7559] mb-2">
                     <span>{activeItems} item{activeItems !== 1 ? "s" : ""}</span>
-                    {raised > 0 && <span className="text-[#6c4d39] font-semibold">${raised.toLocaleString()} raised</span>}
+                    {raised > 0 && <span className="text-[#6c4d39] font-semibold">${raised.toLocaleString()} total</span>}
                   </div>
                   <AuctionPreviewThumbs items={auction.items} />
                   <div className="text-xs text-[#b3a085] mt-3 border-t border-[#efe3d0] pt-3">

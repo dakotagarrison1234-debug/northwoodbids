@@ -65,7 +65,7 @@ export default async function AuctionsPage() {
                       </div>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-base text-[#8a7559]">
                         <span>{auction.items.length} items</span>
-                        <span className="text-[#6c4d39] font-medium">${raised.toLocaleString()} raised</span>
+                        <span className="text-[#6c4d39] font-medium">${raised.toLocaleString()} total</span>
                         {totalBids > 0 && <span>{totalBids} bids</span>}
                         <span>
                           <LocalDate iso={auction.startAt.toISOString()} format="date" /> → <LocalDate iso={auction.endAt.toISOString()} format="date" />

@@ -102,7 +102,7 @@ export default async function AdminDashboard() {
       {/* Stats */}
       <div className="px-4 sm:px-8 py-6 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {[
-          { label: "Total Raised", value: `$${totalRaised.toLocaleString()}` },
+          { label: "Total Sales", value: `$${totalRaised.toLocaleString()}` },
           { label: "Items Listed", value: itemCount },
           { label: "Active Bidders", value: uniqueBidders },
           { label: "Bids Placed", value: bidCount },
@@ -199,7 +199,7 @@ export default async function AdminDashboard() {
                     </div>
                     <div className="flex items-center gap-4 text-sm text-[#6f5b46] mb-3">
                       <span>{a._count.items} item{a._count.items !== 1 ? "s" : ""}</span>
-                      <span className="text-[#6c4d39] font-semibold">${raised.toLocaleString()} raised</span>
+                      <span className="text-[#6c4d39] font-semibold">${raised.toLocaleString()} total</span>
                     </div>
                     <Link
                       href={`/admin/auctions/${a.id}`}
