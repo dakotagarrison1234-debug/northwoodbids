@@ -3,6 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import LocalDate from "./components/LocalDate";
+import AuctionPreviewThumbs from "./components/AuctionPreviewThumbs";
 import { PineRidge, MountainRange, WoodenCrate, BranchDivider, PineMark } from "./components/Illustrations";
 
 function IconSearch() {
@@ -105,6 +106,17 @@ export default async function HomePage() {
       where: { status: "OPEN" },
       include: {
         organization: true,
+        // Preview the most-popular items (most bids first; any items if none have bids).
+        items: {
+          where: { status: "ACTIVE" },
+          orderBy: [{ bids: { _count: "desc" } }, { currentBid: "desc" }],
+          take: 6,
+          select: {
+            id: true,
+            photos: { take: 1, orderBy: [{ isPrimary: "desc" }, { order: "asc" }], select: { url: true } },
+            _count: { select: { bids: true } },
+          },
+        },
       },
       orderBy: { endAt: "asc" },
       take: 9,
@@ -114,6 +126,15 @@ export default async function HomePage() {
       include: {
         organization: true,
         _count: { select: { items: true } },
+        items: {
+          take: 6,
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            photos: { take: 1, orderBy: [{ isPrimary: "desc" }, { order: "asc" }], select: { url: true } },
+            _count: { select: { bids: true } },
+          },
+        },
       },
       orderBy: { startAt: "asc" },
       take: 6,
@@ -213,6 +234,7 @@ export default async function HomePage() {
                     <span>{activeItems} item{activeItems !== 1 ? "s" : ""}</span>
                     {raised > 0 && <span className="text-[#6c4d39] font-semibold">${raised.toLocaleString()} raised</span>}
                   </div>
+                  <AuctionPreviewThumbs items={auction.items} />
                   <div className="text-xs text-[#b3a085] mt-3 border-t border-[#efe3d0] pt-3">
                     Closes <LocalDate iso={auction.endAt.toISOString()} />
                   </div>
@@ -248,6 +270,7 @@ export default async function HomePage() {
                   <span className="text-xs bg-[#efe3d0] text-[#8a7559] border border-[#e3d6bf] px-2.5 py-1 rounded-full shrink-0 font-semibold">Upcoming</span>
                 </div>
                 <div className="text-sm text-[#8a7559] mb-2">{auction._count.items} item{auction._count.items !== 1 ? "s" : ""}</div>
+                <AuctionPreviewThumbs items={auction.items} />
                 <div className="text-xs text-[#6c4d39] font-medium mt-3 border-t border-[#efe3d0] pt-3 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#6c4d39]/60 inline-block" />
                   Opens <LocalDate iso={auction.startAt!.toISOString()} />

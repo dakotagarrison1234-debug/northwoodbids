@@ -3,6 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import LocalDate from "@/app/components/LocalDate";
 import OrgLogo from "@/app/components/OrgLogo";
+import AuctionPreviewThumbs from "@/app/components/AuctionPreviewThumbs";
 import PusherRefresh from "@/app/components/PusherRefresh";
 import { PineRidge, MountainRange, GavelEmblem, WoodenCrate } from "@/app/components/Illustrations";
 
@@ -46,6 +47,17 @@ export default async function AuctionsPage() {
     where: { status: "OPEN" },
     include: {
       organization: { select: { id: true, name: true, slug: true, logoUrl: true } },
+      // Preview the most-popular items (most bids first; any items if none have bids).
+      items: {
+        where: { status: "ACTIVE" },
+        orderBy: [{ bids: { _count: "desc" } }, { currentBid: "desc" }],
+        take: 6,
+        select: {
+          id: true,
+          photos: { take: 1, orderBy: [{ isPrimary: "desc" }, { order: "asc" }], select: { url: true } },
+          _count: { select: { bids: true } },
+        },
+      },
     },
     orderBy: { endAt: "asc" },
   });
@@ -137,6 +149,9 @@ export default async function AuctionsPage() {
                       <span className="text-[#6c4d39] font-semibold">${raised.toLocaleString()} raised</span>
                     )}
                   </div>
+
+                  {/* Most-popular item previews */}
+                  <AuctionPreviewThumbs items={auction.items} />
 
                   {/* End time */}
                   <div className="text-xs text-[#8a7559] border-t border-[#e3d6bf] pt-2 mt-auto">
