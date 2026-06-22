@@ -389,6 +389,7 @@ function NewItemForm() {
   const [pickupLocations, setPickupLocations] = useState<{ id: string; name: string }[]>([]);
   const [orgId, setOrgId] = useState<string>("");
   const [banner, setBanner] = useState<string | null>(null);
+  const [nextCode, setNextCode] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: searchParams.get("title") || "",
     description: searchParams.get("description") || "",
@@ -397,6 +398,7 @@ function NewItemForm() {
     startingBid: searchParams.get("startingBid") || "",
     reservePrice: searchParams.get("reservePrice") || "",
     taxDeductible: searchParams.get("taxDeductible") === "true",
+    itemCode: "",
     storageLocation: searchParams.get("storageLocation") || "",
     locationId: searchParams.get("locationId") || "",
     auctionId: preselectedAuctionId,
@@ -416,6 +418,20 @@ function NewItemForm() {
       );
     }).catch(() => {});
   }, []);
+
+  // Mint a random code so staff can tag the item before saving.
+  const genCode = async () => {
+    try {
+      const d = await fetch("/api/admin/next-item-code").then((r) => r.json());
+      if (d.code) {
+        setNextCode(d.code);
+        setFormData((prev) => ({ ...prev, itemCode: d.code }));
+      }
+    } catch { /* non-critical */ }
+  };
+
+  // Generate a code once on load.
+  useEffect(() => { genCode(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const target = e.target as HTMLInputElement;
@@ -519,6 +535,8 @@ function NewItemForm() {
             // preserved: condition, storageLocation (spot), locationId (warehouse), auctionId
           }));
           setPhotos([]);
+          // Mint a fresh code for the next item.
+          genCode();
           setBanner("Item saved. Ready for the next one.");
           if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
         } else {
@@ -651,7 +669,14 @@ function NewItemForm() {
         <div className="space-y-6">
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-1">Item Location</h2>
-            <p className="text-[#8a7559] text-sm mb-4">Item codes are assigned automatically per auction (001, 002, …).</p>
+            <p className="text-[#8a7559] text-sm mb-4">Each item gets a unique random code — write it on the tag.</p>
+
+            {nextCode && (
+              <div className="mb-4 rounded-xl bg-[#6c4d39]/10 border border-[#6c4d39]/30 px-4 py-3 flex items-center justify-between gap-3">
+                <span className="text-sm font-semibold text-[#6f5b46] leading-tight">Write this on the item tag</span>
+                <span className="font-mono text-3xl font-extrabold text-[#6c4d39] tracking-wider whitespace-nowrap">#{nextCode}</span>
+              </div>
+            )}
 
             <div>
               <label className="text-base text-[#6f5b46] mb-1.5 block">Location</label>

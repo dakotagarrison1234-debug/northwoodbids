@@ -9,6 +9,7 @@ const LOGO_URL =
 
 interface Line {
   title: string;
+  itemCode: string | null;
   photo: string | null;
   bid: number;
   premium: number;
@@ -205,7 +206,12 @@ function InvoiceInner() {
                           ) : (
                             <div className="invoice-thumb w-9 h-9 rounded bg-[#efe3d0] shrink-0" />
                           )}
-                          <span className="font-medium">{l.title}</span>
+                          <span className="font-medium">
+                            {l.itemCode && (
+                              <span className="font-mono font-bold text-[#6c4d39] mr-1.5">#{l.itemCode}</span>
+                            )}
+                            {l.title}
+                          </span>
                         </div>
                       </td>
                       <td className="text-right py-2.5 whitespace-nowrap">{money(l.bid)}</td>

@@ -16,7 +16,7 @@ export async function GET() {
       },
       include: {
         location: { select: { id: true, name: true } },
-        items: { select: { id: true, title: true } },
+        items: { select: { id: true, title: true, itemCode: true, storageLocation: true } },
       },
       orderBy: { startsAt: "asc" },
     });

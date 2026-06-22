@@ -22,6 +22,8 @@ interface Location {
 interface ApptItem {
   id: string;
   title: string;
+  itemCode: string | null;
+  storageLocation: string | null;
 }
 interface Bidder {
   name: string | null;
@@ -396,9 +398,14 @@ export default function AdminPickupPage() {
                           <div className="text-sm font-semibold text-[#8a7559] uppercase tracking-wide mb-1">
                             {a.items.length} item{a.items.length !== 1 ? "s" : ""}
                           </div>
-                          <ul className="text-base text-[#241a12] space-y-0.5">
+                          <ul className="text-base text-[#241a12] space-y-1">
                             {a.items.map((it) => (
-                              <li key={it.id}>• {it.title}</li>
+                              <li key={it.id} className="flex items-start gap-2">
+                                {it.itemCode && (
+                                  <span className="font-mono font-bold text-[#6c4d39] bg-[#6c4d39]/10 border border-[#6c4d39]/20 rounded px-1.5 py-0.5 text-sm shrink-0">{it.itemCode}</span>
+                                )}
+                                <span>{it.title}{it.storageLocation ? <span className="text-[#8a7559] text-sm"> · {it.storageLocation}</span> : null}</span>
+                              </li>
                             ))}
                           </ul>
                         </div>

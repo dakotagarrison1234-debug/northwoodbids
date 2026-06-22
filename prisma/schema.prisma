@@ -125,6 +125,7 @@ enum AuctionStatus {
   @@index([pickupAppointmentId])
   @@index([locationId])
   @@index([organizationId, status])
+  @@index([itemCode])
 }
 
 model PickupLocation {

@@ -53,6 +53,7 @@ export async function GET(
         item: {
           select: {
             title: true,
+            itemCode: true,
             photos: { select: { url: true, isPrimary: true } },
             auction: {
               select: {
@@ -100,6 +101,7 @@ export async function GET(
       const tax = num(p.taxAmount);
       return {
         title: p.item.title,
+        itemCode: p.item.itemCode ?? null,
         photo: primary?.url ?? null,
         bid,
         premium,
