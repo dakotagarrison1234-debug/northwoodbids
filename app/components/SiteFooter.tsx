@@ -28,7 +28,7 @@ export default function SiteFooter() {
         style={{ background: "radial-gradient(130% 90% at 50% -15%, rgba(108,77,57,0.5), transparent 55%)" }}
       />
 
-      <div className="relative max-w-5xl mx-auto px-6 pt-10 pb-8">
+      <div className="relative safe-x max-w-5xl mx-auto px-6 pt-10 pb-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
             <PineMark className="w-7 h-7" />

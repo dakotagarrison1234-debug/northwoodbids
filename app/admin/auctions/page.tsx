@@ -3,6 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireUserOrg } from "@/lib/auth";
 import LocalDate from "@/app/components/LocalDate";
+import RefreshButton from "../RefreshButton";
 
 const SOLD_STATUSES = ["SOLD", "PENDING_PICKUP", "PICKED_UP"];
 
@@ -21,9 +22,12 @@ export default async function AuctionsPage() {
     <>
       <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-5 flex items-center justify-between gap-3">
         <h1 className="text-2xl sm:text-3xl font-semibold">Auctions ({auctions.length})</h1>
-        <Link href="/admin/auctions/new" className="bg-[#6c4d39] hover:bg-[#563e2c] text-white text-base font-semibold px-6 py-3.5 rounded-xl transition-colors">
-          + New Auction
-        </Link>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <RefreshButton />
+          <Link href="/admin/auctions/new" className="bg-[#6c4d39] hover:bg-[#563e2c] text-white text-base font-semibold px-6 py-3.5 rounded-xl transition-colors">
+            + New Auction
+          </Link>
+        </div>
       </header>
 
       <div className="px-4 sm:px-8 py-6">

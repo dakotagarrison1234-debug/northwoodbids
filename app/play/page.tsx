@@ -410,7 +410,7 @@ export default function PlayPage() {
 
   return (
     <div className="min-h-screen text-[#241a12] arcade-root">
-      <header className="border-b border-[#e3d6bf] px-4 sm:px-6 py-4 flex items-center gap-2 bg-[#fffdf7]/85 backdrop-blur relative z-20">
+      <header className="bar-safe-top safe-x border-b border-[#e3d6bf] px-4 sm:px-6 pb-4 flex items-center gap-2 bg-[#fffdf7]/85 backdrop-blur sticky top-0 z-20">
         <Link href="/" className="text-[#6c4d39] hover:text-[#241a12] text-base font-semibold shrink-0">← Home</Link>
         <span className="text-[#8a7559]">/</span>
         <h1 className="text-2xl font-extrabold font-display">Auction Arcade</h1>

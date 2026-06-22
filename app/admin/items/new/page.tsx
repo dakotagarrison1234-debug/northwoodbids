@@ -481,6 +481,9 @@ function NewItemForm() {
   const [orgId, setOrgId] = useState<string>("");
   const [banner, setBanner] = useState<string | null>(null);
   const [nextCode, setNextCode] = useState<string | null>(null);
+  // Bumping this remounts the BarcodeScanner, clearing its internal state
+  // (barcode, result, error, search results) — used by "Start fresh".
+  const [scannerKey, setScannerKey] = useState(0);
   const [formData, setFormData] = useState({
     title: searchParams.get("title") || "",
     description: searchParams.get("description") || "",
@@ -595,6 +598,32 @@ function NewItemForm() {
     });
   };
 
+  // "Start fresh" — wipe the whole form back to a blank new item without a full
+  // page reload (there's no browser refresh in the installed standalone app).
+  // Clears every field + photos, mints a new code, and remounts the scanner so
+  // its barcode/result/error/search state is cleared too.
+  const resetForm = () => {
+    setFormData({
+      title: "",
+      description: "",
+      condition: "GOOD",
+      retailValue: "",
+      startingBid: "",
+      reservePrice: "",
+      taxDeductible: false,
+      itemCode: "",
+      storageLocation: "",
+      locationId: "",
+      auctionId: preselectedAuctionId,
+    });
+    setPhotos([]);
+    setBanner(null);
+    setNextCode(null);
+    genCode();
+    setScannerKey((k) => k + 1);
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   // addAnother = true → after saving, reset only the per-item fields and stay on
   // the page so the owner can keep building the catalog quickly.
   const handleSave = async (addAnother = false) => {
@@ -628,6 +657,8 @@ function NewItemForm() {
           setPhotos([]);
           // Mint a fresh code for the next item.
           genCode();
+          // Remount the scanner so its barcode/result/search state is cleared too.
+          setScannerKey((k) => k + 1);
           setBanner("Item saved. Ready for the next one.");
           if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
         } else {
@@ -650,6 +681,17 @@ function NewItemForm() {
         )}
         <span className="text-[#8a7559]">/</span>
         <h1 className="text-2xl sm:text-3xl font-semibold">Add New Item</h1>
+        <button
+          type="button"
+          onClick={resetForm}
+          title="Clear everything and start a fresh item"
+          className="ml-auto shrink-0 inline-flex items-center gap-1.5 min-h-[44px] text-[#6f5b46] hover:text-[#241a12] hover:bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-3.5 py-2 text-base font-semibold transition-colors"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9" /><path d="M13.5 2v3h-3" />
+          </svg>
+          <span className="hidden sm:inline">Start fresh</span>
+        </button>
       </header>
 
       <div className="flex-1 px-4 sm:px-8 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 overflow-auto">
@@ -663,8 +705,8 @@ function NewItemForm() {
             </div>
           )}
 
-          {/* ── Barcode scanner ── */}
-          <BarcodeScanner onFill={handleBarcodeFill} />
+          {/* ── Barcode scanner ── (keyed so "Start fresh" / "Save & Add Another" remount it clean) */}
+          <BarcodeScanner key={scannerKey} onFill={handleBarcodeFill} />
 
           {/* ── Item details ── */}
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
@@ -807,7 +849,7 @@ function NewItemForm() {
       </div>
 
       {/* ── Bottom action bar ── */}
-      <footer className="border-t border-[#e3d6bf] bg-[#faf5ea] px-4 sm:px-8 py-4 flex flex-col sm:flex-row sm:justify-end gap-3">
+      <footer className="bar-safe-bottom safe-x border-t border-[#e3d6bf] bg-[#faf5ea] px-4 sm:px-8 pt-4 flex flex-col sm:flex-row sm:justify-end gap-3">
         <button onClick={() => handleSave(true)} disabled={saving || uploading}
           className="bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] disabled:opacity-50 text-[#241a12] text-base px-6 py-3.5 rounded-xl font-semibold transition-colors">
           {saving ? "Saving..." : "Save & Add Another"}

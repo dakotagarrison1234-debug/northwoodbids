@@ -38,7 +38,7 @@ export default function MobileNav({ navItems, orgName, role }: Props) {
   return (
     <>
       {/* Mobile top bar */}
-      <div className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-[#e3d6bf]">
+      <div className="md:hidden bar-safe-top safe-x flex items-center justify-between px-4 pb-3 bg-white border-b border-[#e3d6bf] sticky top-0 z-40">
         <Link href="/admin/dashboard" className="text-[#6c4d39] font-bold text-xl">Northwood Bids</Link>
         <button onClick={() => setOpen(true)} className="text-[#6f5b46] hover:text-[#241a12] p-2" aria-label="Open menu">
           <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2">
@@ -56,7 +56,7 @@ export default function MobileNav({ navItems, orgName, role }: Props) {
           <div className="absolute inset-0 bg-black/60" onClick={() => setOpen(false)} />
           {/* Drawer */}
           <div className="relative w-72 bg-white flex flex-col h-full shadow-2xl">
-            <div className="px-6 py-5 border-b border-[#e3d6bf] flex items-center justify-between">
+            <div className="bar-safe-top px-6 pb-5 border-b border-[#e3d6bf] flex items-center justify-between">
               <div>
                 <span className="text-[#6c4d39] font-bold text-2xl">Northwood Bids</span>
                 <p className="text-[#4a3a2b] text-base mt-0.5 font-medium truncate">{orgName}</p>
@@ -104,7 +104,7 @@ export default function MobileNav({ navItems, orgName, role }: Props) {
             </nav>
 
             {/* Sign out */}
-            <div className="px-4 pb-5 pt-3 border-t border-[#e3d6bf]">
+            <div className="bar-safe-bottom px-4 pt-3 border-t border-[#e3d6bf]">
               <button
                 onClick={handleSignOut}
                 className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-red-600 hover:text-red-300 hover:bg-red-50 transition-colors text-base font-semibold"

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import type { ItemStatus } from "@prisma/client";
 import { requireUserOrg } from "@/lib/auth";
 import LocalDate from "@/app/components/LocalDate";
+import RefreshButton from "../RefreshButton";
 
 function QuickIcon({ name }: { name: string }) {
   const s = { width: 16, height: 16, fill: "none", viewBox: "0 0 16 16", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
@@ -91,12 +92,15 @@ export default async function AdminDashboard() {
     <>
       <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-5 flex items-center justify-between gap-3">
         <h1 className="text-2xl sm:text-3xl font-semibold">Dashboard</h1>
-        <Link
-          href="/admin/auctions/new"
-          className="bg-[#6c4d39] hover:bg-[#563e2c] text-white text-base font-semibold px-6 py-3.5 rounded-xl transition-colors"
-        >
-          + New Auction
-        </Link>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <RefreshButton />
+          <Link
+            href="/admin/auctions/new"
+            className="bg-[#6c4d39] hover:bg-[#563e2c] text-white text-base font-semibold px-6 py-3.5 rounded-xl transition-colors"
+          >
+            + New Auction
+          </Link>
+        </div>
       </header>
 
       {/* Stats */}

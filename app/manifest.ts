@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Northwood Bids",
     short_name: "Northwood Bids",
-    description: "Charity auctions for churches, schools, and nonprofits",
+    description: "Northwood Bids — live auctions, bid in real time and pick up local.",
     start_url: "/",
     display: "standalone",
     background_color: "#f1e7d5",

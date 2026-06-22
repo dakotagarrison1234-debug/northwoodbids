@@ -37,6 +37,17 @@ html, body {
   max-width: 100%;
 }
 
+/* ── Safe-area helpers (installed/standalone app on notched phones) ──
+   With viewport-fit=cover the app draws edge-to-edge; these keep bars and
+   content clear of the notch, status bar, and home indicator. */
+.pt-safe { padding-top: env(safe-area-inset-top); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+.safe-x { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+/* sticky top bars: add the status-bar inset on top of their own padding */
+.bar-safe-top { padding-top: calc(env(safe-area-inset-top) + 0.5rem); }
+/* bottom nav bars: lift above the home indicator */
+.bar-safe-bottom { padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem); }
+
 body {
   background-color: var(--background);
   /* faint paper grain so flat cream feels like stock/paper */
