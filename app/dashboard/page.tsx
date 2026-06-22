@@ -340,12 +340,35 @@ function BidderDashboardInner() {
   const pastWins = past.filter((b) => b.outcome === "won");
   const activeCount = winning.length + losing.length;
 
-  const navItems: { id: Tab; label: string; shortLabel: string; count?: number; icon: React.ReactNode }[] = [
-    { id: "overview",  label: "Overview",         shortLabel: "Home",     icon: <IcoGrid /> },
-    { id: "active",    label: "Active Bids",      shortLabel: "Active",   count: activeCount,     icon: <IcoUp /> },
-    { id: "history",   label: "Bid History",      shortLabel: "History",  count: pastWins.length, icon: <IcoHistory /> },
-    { id: "auctions",  label: "Current Auctions", shortLabel: "Auctions", icon: <IcoGavel /> },
-    { id: "profile",   label: "Account",          shortLabel: "Account",  icon: <IcoUser /> },
+  const myBidsTabs: Tab[] = ["overview", "active", "history"];
+  const inMyBids = myBidsTabs.includes(tab);
+
+  const navItems: { key: string; label: string; shortLabel: string; count?: number; icon: React.ReactNode; active: boolean; onClick: () => void }[] = [
+    {
+      key: "myBids",
+      label: "My Bids",
+      shortLabel: "Bids",
+      icon: <IcoGrid />,
+      active: inMyBids,
+      onClick: () => setTab(activeCount > 0 ? "active" : "overview"),
+      count: activeCount,
+    },
+    {
+      key: "auctions",
+      label: "Current Auctions",
+      shortLabel: "Auctions",
+      icon: <IcoGavel />,
+      active: tab === "auctions",
+      onClick: () => setTab("auctions"),
+    },
+    {
+      key: "profile",
+      label: "Account",
+      shortLabel: "Account",
+      icon: <IcoUser />,
+      active: tab === "profile",
+      onClick: () => setTab("profile"),
+    },
   ];
 
   return (
@@ -362,16 +385,16 @@ function BidderDashboardInner() {
         <nav className="flex-1 px-3 py-3 space-y-0.5">
           {navItems.map((item) => (
             <button
-              key={item.id}
-              onClick={() => setTab(item.id)}
+              key={item.key}
+              onClick={item.onClick}
               className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${
-                tab === item.id
+                item.active
                   ? "bg-[#efe3d0] text-[#241a12]"
                   : "text-[#8a7559] hover:text-[#241a12] hover:bg-[#efe3d0]/50"
               }`}
             >
               <div className="flex items-center gap-3">
-                <span className={tab === item.id ? "text-[#6c4d39]" : ""}>{item.icon}</span>
+                <span className={item.active ? "text-[#6c4d39]" : ""}>{item.icon}</span>
                 <span className="text-sm font-medium">{item.label}</span>
               </div>
               {item.count !== undefined && item.count > 0 && (
@@ -468,15 +491,52 @@ function BidderDashboardInner() {
         {/* Desktop page title */}
         <header className="hidden md:block border-b border-[#e3d6bf]/60 px-8 py-4">
           <h1 className="text-lg font-bold">
-            {tab === "overview"  && "Overview"}
-            {tab === "auctions"  && "Current Auctions"}
-            {tab === "active"    && "Active Bids"}
-            {tab === "history"   && "Bid History"}
-            {tab === "profile"   && "Account"}
+            {inMyBids           && "My Bids"}
+            {tab === "auctions" && "Current Auctions"}
+            {tab === "profile"  && "Account"}
           </h1>
         </header>
 
         <div className="flex-1 overflow-auto px-4 sm:px-8 py-5 sm:py-7">
+
+          {/* ── My Bids segmented sub-nav ── */}
+          {inMyBids && (() => {
+            const subTabs: { id: Tab; label: string; count?: number; icon: React.ReactNode }[] = [
+              { id: "overview", label: "Overview", icon: <IcoGrid /> },
+              { id: "active",   label: "Active",  count: activeCount,     icon: <IcoUp /> },
+              { id: "history",  label: "Past",    count: pastWins.length, icon: <IcoHistory /> },
+            ];
+            return (
+              <div className="mb-5 sm:mb-6 -mx-1 overflow-x-auto">
+                <div className="inline-flex flex-nowrap gap-1 p-1 rounded-2xl bg-[#efe3d0]/70 border border-[#e3d6bf]/60">
+                  {subTabs.map((st) => {
+                    const isActive = tab === st.id;
+                    return (
+                      <button
+                        key={st.id}
+                        onClick={() => setTab(st.id)}
+                        className={`flex items-center gap-2 py-2 px-4 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
+                          isActive
+                            ? "bg-[#6c4d39] text-white shadow-sm"
+                            : "text-[#6f5b46] hover:bg-[#efe3d0] hover:text-[#241a12]"
+                        }`}
+                      >
+                        <span className="shrink-0">{st.icon}</span>
+                        {st.label}
+                        {st.count !== undefined && st.count > 0 && (
+                          <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
+                            isActive ? "bg-white/25 text-white" : "bg-[#6c4d39]/15 text-[#6c4d39]"
+                          }`}>
+                            {st.count}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* ── Overview ── */}
           {tab === "overview" && (
@@ -1080,10 +1140,10 @@ function BidderDashboardInner() {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-[#e3d6bf]/60 flex z-50 bar-safe-bottom safe-x">
         {navItems.map((item) => (
           <button
-            key={item.id}
-            onClick={() => setTab(item.id)}
+            key={item.key}
+            onClick={item.onClick}
             className={`flex-1 flex flex-col items-center justify-center py-2.5 gap-1 relative transition-colors ${
-              tab === item.id ? "text-[#6c4d39]" : "text-[#8a7559] hover:text-[#6f5b46]"
+              item.active ? "text-[#6c4d39]" : "text-[#8a7559] hover:text-[#6f5b46]"
             }`}
           >
             {item.icon}
