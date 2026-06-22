@@ -5,6 +5,7 @@ import type { ItemStatus } from "@prisma/client";
 import { requireUserOrg } from "@/lib/auth";
 import LocalDate from "@/app/components/LocalDate";
 import RefreshButton from "../RefreshButton";
+import PusherRefresh from "@/app/components/PusherRefresh";
 
 function QuickIcon({ name }: { name: string }) {
   const s = { width: 16, height: 16, fill: "none", viewBox: "0 0 16 16", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
@@ -90,6 +91,7 @@ export default async function AdminDashboard() {
 
   return (
     <>
+      <PusherRefresh channel="auctions" event="auction-updated" />
       <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-5 flex items-center justify-between gap-3">
         <h1 className="text-2xl sm:text-3xl font-semibold">Dashboard</h1>
         <div className="flex items-center gap-2 sm:gap-3">

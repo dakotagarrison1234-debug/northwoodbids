@@ -6,6 +6,7 @@ import LocalDate from "@/app/components/LocalDate";
 import StatusPill from "@/app/components/StatusPill";
 import { money } from "@/lib/format";
 import DeleteAuctionButton from "./DeleteAuctionButton";
+import PusherRefresh from "@/app/components/PusherRefresh";
 
 function IcoWarning() {
   return <svg width="14" height="14" fill="none" viewBox="0 0 14 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 2L1.5 12h11L7 2z"/><path d="M7 6v3M7 10.5v.5"/></svg>;
@@ -67,6 +68,7 @@ export default async function ManageAuctionPage({ params }: Props) {
 
   return (
     <>
+      <PusherRefresh channel="auctions" event="auction-updated" />
       <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <Link href="/admin/auctions" className="text-[#6f5b46] hover:text-[#241a12] text-base font-semibold shrink-0">← Auctions</Link>

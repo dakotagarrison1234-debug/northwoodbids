@@ -5,6 +5,7 @@ import Link from "next/link";
 import ItemStatusButton from "@/app/components/ItemStatusButton";
 import StatusPill from "@/app/components/StatusPill";
 import { money } from "@/lib/format";
+import PusherRefresh from "@/app/components/PusherRefresh";
 
 export default async function WinnersPage() {
   const membership = await requireUserOrg();
@@ -58,6 +59,7 @@ export default async function WinnersPage() {
 
   return (
     <>
+      <PusherRefresh channel="auctions" event="auction-updated" />
       <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-5">
         <h1 className="text-2xl sm:text-3xl font-semibold">Winners &amp; Payments</h1>
       </header>

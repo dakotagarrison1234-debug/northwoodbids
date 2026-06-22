@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUserOrg } from "@/lib/auth";
 import LocalDate from "@/app/components/LocalDate";
 import RefreshButton from "../RefreshButton";
+import PusherRefresh from "@/app/components/PusherRefresh";
 
 const SOLD_STATUSES = ["SOLD", "PENDING_PICKUP", "PICKED_UP"];
 
@@ -20,6 +21,7 @@ export default async function AuctionsPage() {
 
   return (
     <>
+      <PusherRefresh channel="auctions" event="auction-updated" />
       <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-5 flex items-center justify-between gap-3">
         <h1 className="text-2xl sm:text-3xl font-semibold">Auctions ({auctions.length})</h1>
         <div className="flex items-center gap-2 sm:gap-3">

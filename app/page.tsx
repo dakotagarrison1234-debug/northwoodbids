@@ -5,6 +5,7 @@ import { auth } from "@clerk/nextjs/server";
 import LocalDate from "./components/LocalDate";
 import AuctionPreviewThumbs from "./components/AuctionPreviewThumbs";
 import SiteFooter from "./components/SiteFooter";
+import PusherRefresh from "./components/PusherRefresh";
 import { PineRidge, MountainRange, WoodenCrate, BranchDivider } from "./components/Illustrations";
 
 function IconSearch() {
@@ -168,6 +169,7 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
+      <PusherRefresh channel="auctions" event="auction-updated" />
       {/* Hero */}
       <section className="relative px-4 sm:px-6 pt-3 pb-28 sm:pt-4 sm:pb-32 overflow-hidden">
         <MountainRange className="pointer-events-none absolute bottom-0 left-0 w-full h-[55%] opacity-25" />

@@ -17,9 +17,11 @@ interface Props {
   event: string;
   /** Optional: only refresh when this condition is true (e.g. orgSlug matches) */
   filter?: (data: Record<string, unknown>) => boolean;
+  /** Min ms between refreshes — coalesces bursts during a bidding war. */
+  throttleMs?: number;
 }
 
-export default function PusherRefresh({ channel, event, filter }: Props) {
+export default function PusherRefresh({ channel, event, filter, throttleMs = 1200 }: Props) {
   const router = useRouter();
 
   useEffect(() => {
@@ -27,18 +29,29 @@ export default function PusherRefresh({ channel, event, filter }: Props) {
       cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
     });
 
+    // Throttle (trailing): refresh immediately, then at most once per window while
+    // events keep arriving — keeps it near-real-time without a refresh stampede.
+    let last = 0;
+    let pending: ReturnType<typeof setTimeout> | null = null;
+    const doRefresh = () => { last = Date.now(); router.refresh(); };
+    const schedule = () => {
+      const since = Date.now() - last;
+      if (since >= throttleMs) { doRefresh(); return; }
+      if (pending) return;
+      pending = setTimeout(() => { pending = null; doRefresh(); }, throttleMs - since);
+    };
+
     const ch = pusher.subscribe(channel);
     ch.bind(event, (data: Record<string, unknown>) => {
-      if (!filter || filter(data)) {
-        router.refresh();
-      }
+      if (!filter || filter(data)) schedule();
     });
 
     return () => {
+      if (pending) clearTimeout(pending);
       ch.unbind_all();
       pusher.disconnect();
     };
-  }, [channel, event, filter, router]);
+  }, [channel, event, filter, router, throttleMs]);
 
   return null;
 }
