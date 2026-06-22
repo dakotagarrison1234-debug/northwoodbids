@@ -51,6 +51,12 @@ export async function POST(request: NextRequest) {
 
     // Require a completed bidder profile
     const profile = await prisma.bidderProfile.findUnique({ where: { clerkUserId: userId } });
+    if (profile?.blocked) {
+      return NextResponse.json(
+        { error: "Your account is blocked from bidding. Please contact the auction house." },
+        { status: 403 }
+      );
+    }
     if (!profile?.phone || !profile?.email) {
       return NextResponse.json(
         { error: "You must complete registration before bidding", requiresRegistration: true },
