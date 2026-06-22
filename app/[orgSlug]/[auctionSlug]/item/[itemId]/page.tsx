@@ -842,7 +842,7 @@ export default function ItemPage() {
                 {liveBids.map((bid, i) => (
                   <div key={i} className="flex items-center justify-between bg-white rounded-lg px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-[#6f5b46]">Bid {i + 1}</span>
+                      <span className="text-[#6f5b46]">Bid {liveBids.length - i}</span>
                       {bid.isProxy && (
                         <span className="text-xs text-[#6c4d39] bg-[#6c4d39]/10 px-1.5 py-0.5 rounded">auto</span>
                       )}
