@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUserOrg } from "@/lib/auth";
 import Link from "next/link";
 import ItemStatusButton from "@/app/components/ItemStatusButton";
+import RefundButton from "@/app/components/RefundButton";
 import StatusPill from "@/app/components/StatusPill";
 import { money } from "@/lib/format";
 import PusherRefresh from "@/app/components/PusherRefresh";
@@ -169,6 +170,13 @@ export default async function WinnersPage() {
                               >
                                 Receipt
                               </Link>
+                            )}
+                            {payment?.status === "PAID" && (
+                              <RefundButton
+                                paymentId={payment.id}
+                                amount={Number(bid.amount)}
+                                winnerName={displayName(bid.clerkUserId)}
+                              />
                             )}
                           </div>
                         </td>

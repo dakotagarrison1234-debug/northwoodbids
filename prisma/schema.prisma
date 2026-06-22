@@ -22,12 +22,12 @@ model Organization {
   logoUrl                String?
   status                 OrgStatus   @default(APPROVED)
   stripeAccountId        String?     @unique
-  stripeChargesEnabled   Boolean     @default(false)
+  stripeChargesEnabled   Boolean     @default(true)
   stripePayoutsEnabled   Boolean     @default(false)
   stripeDetailsSubmitted Boolean     @default(false)
-  platformFeePercent     Decimal     @default(20) @db.Decimal(5, 2)
-  taxPercent             Decimal     @default(0) @db.Decimal(5, 2)
-  taxExempt              Boolean     @default(true)
+  platformFeePercent     Decimal     @default(15) @db.Decimal(5, 2)
+  taxPercent             Decimal     @default(6) @db.Decimal(5, 2)
+  taxExempt              Boolean     @default(false)
   isActive               Boolean     @default(true)
   createdAt              DateTime    @default(now())
   updatedAt              DateTime    @updatedAt

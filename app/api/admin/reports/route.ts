@@ -94,11 +94,11 @@ export async function GET() {
         })
       )
     ),
-    // Who owes: sum due (bid + tax) per buyer in the DB.
+    // Who owes: sum due (bid + premium + tax) per buyer in the DB.
     prisma.payment.groupBy({
       by: ["clerkUserId"],
       where: outstandingWhere,
-      _sum: { amount: true, taxAmount: true },
+      _sum: { amount: true, taxAmount: true, applicationFeeAmount: true },
     }),
     // Item titles for the owers (outstanding rows only — a small, bounded subset).
     prisma.payment.findMany({
@@ -148,7 +148,7 @@ export async function GET() {
   const owers = owedGroups
     .map((g) => {
       const pr = pMap.get(g.clerkUserId);
-      const amountDue = num(g._sum?.amount) + num(g._sum?.taxAmount);
+      const amountDue = num(g._sum?.amount) + num(g._sum?.taxAmount) + num(g._sum?.applicationFeeAmount);
       return {
         name: pr?.name ?? "Bidder",
         email: pr?.email ?? "",

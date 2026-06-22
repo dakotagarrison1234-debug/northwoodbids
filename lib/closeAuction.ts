@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import Stripe from "stripe";
 import { triggerAuctionUpdated } from "@/lib/pusherServer";
 import { attachToUpcomingAppointment } from "@/lib/pickup";
+import { notifyPaymentFailed, notifyPaymentReceipt } from "@/lib/paymentNotify";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -187,6 +188,11 @@ async function chargeOneWinner(
     // No card on file — mark all items as FAILED so bidder sees them on dashboard
     console.warn(`Auto-charge: no card on file for ${clerkUserId} in org ${org.id}`);
     await recordWinnerStatus(winner, "FAILED", now, { failureReason: "No payment card on file" });
+    notifyPaymentFailed({
+      clerkUserId,
+      itemCount: itemIds.length,
+      reason: "No payment card on file",
+    }).catch((e) => console.error("notifyPaymentFailed (no card) failed:", e));
     return;
   }
 
@@ -235,6 +241,11 @@ async function chargeOneWinner(
     }
     console.error(`Auto-charge FAILED for ${clerkUserId}:`, failureReason);
     await recordWinnerStatus(winner, "FAILED", now, { failureReason });
+    notifyPaymentFailed({
+      clerkUserId,
+      itemCount: itemIds.length,
+      reason: failureReason,
+    }).catch((e) => console.error("notifyPaymentFailed (decline) failed:", e));
     return;
   }
 
@@ -250,6 +261,10 @@ async function chargeOneWinner(
     });
     // Fold newly-won items into any upcoming pickup appointment.
     await attachToUpcomingAppointment(clerkUserId, org.id);
+    notifyPaymentReceipt({
+      clerkUserId,
+      amount: Number((chargeAmountCents / 100).toFixed(2)),
+    }).catch((e) => console.error("notifyPaymentReceipt (auto-charge) failed:", e));
     console.log(
       `Auto-charge: $${(chargeAmountCents / 100).toFixed(2)} charged to ${clerkUserId} (PI: ${paymentIntent.id})`
     );
@@ -275,6 +290,11 @@ async function chargeOneWinner(
     failureReason: status,
     stripePaymentIntentId: paymentIntent.id,
   });
+  notifyPaymentFailed({
+    clerkUserId,
+    itemCount: itemIds.length,
+    reason: status,
+  }).catch((e) => console.error("notifyPaymentFailed (non-succeeded) failed:", e));
 }
 
 /**
@@ -567,18 +587,35 @@ export async function notifyAuctionEndingSoon(): Promise<{ notifiedAuctions: num
   const now = new Date();
   const inOneHour = new Date(now.getTime() + 60 * 60 * 1000);
 
-  const soonAuctions = await prisma.auction.findMany({
+  // Popcorn extensions only push out item.itemEndAt, never auction.endAt, so the
+  // 60-minute window must be gated on each auction's LATEST effective item end —
+  // MAX(COALESCE(itemEndAt, auction.endAt)) — not the static auction.endAt.
+  const candidateAuctions = await prisma.auction.findMany({
     where: {
       status: "OPEN",
-      endAt: { gte: now, lte: inOneHour },
       endingSoonNotifiedAt: null,
     },
-    include: { organization: { select: { id: true, name: true, slug: true } } },
+    include: {
+      organization: { select: { id: true, name: true, slug: true } },
+      items: { select: { itemEndAt: true } },
+    },
   });
 
   let notifiedAuctions = 0;
 
-  for (const auction of soonAuctions) {
+  for (const auction of candidateAuctions) {
+    // Effective end = latest of each item's end (itemEndAt, or auction.endAt when null).
+    const effectiveEnd = auction.items.reduce<Date>(
+      (max, it) => {
+        const end = it.itemEndAt ?? auction.endAt;
+        return end > max ? end : max;
+      },
+      auction.endAt
+    );
+
+    // Only alert (and stamp) once items are genuinely within the 60-minute window.
+    if (!(effectiveEnd >= now && effectiveEnd <= inOneHour)) continue;
+
     // Find all unique bidders currently winning items in this auction
     const activeBids = await prisma.bid.findMany({
       where: {
@@ -621,7 +658,7 @@ export async function notifyAuctionEndingSoon(): Promise<{ notifiedAuctions: num
             auctionName: auction.title,
             auctionUrl,
             orgName: auction.organization.name,
-            endsAt: auction.endAt.toISOString(),
+            endsAt: effectiveEnd.toISOString(),
           }),
         }).catch((err) => console.error("GHL auction-ending-soon webhook failed:", err));
       }

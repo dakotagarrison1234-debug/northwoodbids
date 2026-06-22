@@ -527,21 +527,15 @@ export default function ItemPage() {
             </div>
           )}
 
-          {/* Donor / retail value */}
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            {item.retailValue && (
+          {/* Retail value */}
+          {item.retailValue && (
+            <div className="grid grid-cols-2 gap-3 mb-6">
               <div className="bg-[#f6ecda] border border-[#6c4d39]/25 rounded-xl p-4">
                 <div className="text-[#6c4d39] text-xs font-semibold uppercase tracking-wide mb-1">Retail Value</div>
                 <div className="text-[#563e2c] font-extrabold text-xl">${item.retailValue.toLocaleString()}</div>
               </div>
-            )}
-            {item.donorName && (
-              <div className="bg-[#f6ecda] border border-[#6c4d39]/20 rounded-xl p-4">
-                <div className="text-[#6c4d39] text-xs font-semibold uppercase tracking-wide mb-1">Donated by</div>
-                <div className="text-[#241a12] font-bold text-sm leading-snug">{item.donorName}</div>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* ── Unified bidding card: Max Bid (primary) + manual bid (secondary) ── */}
           <div className="bg-white border border-[#e3d6bf] rounded-2xl p-4 sm:p-6 mb-6 shadow-[0_0_25px_rgba(108,77,57,0.04)]">

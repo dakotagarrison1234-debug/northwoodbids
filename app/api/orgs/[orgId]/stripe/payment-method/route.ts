@@ -77,6 +77,19 @@ export async function POST(request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Customer not found — start setup again" }, { status: 404 });
     }
 
+    // Verify the payment method actually belongs to this customer before making
+    // it the default. Without this, a user could pass an arbitrary payment-method
+    // id (belonging to someone else) and have it set on their customer record.
+    let pm: Stripe.PaymentMethod;
+    try {
+      pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+    } catch {
+      return NextResponse.json({ error: "Invalid payment method" }, { status: 400 });
+    }
+    if (pm.customer !== bidderCustomer.stripeCustomerId) {
+      return NextResponse.json({ error: "Payment method does not belong to this customer" }, { status: 400 });
+    }
+
     // Set as default on the platform-account customer
     await stripe.customers.update(
       bidderCustomer.stripeCustomerId,

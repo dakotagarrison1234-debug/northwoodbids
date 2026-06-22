@@ -154,6 +154,7 @@ function BidderDashboardInner() {
   const [tab, setTab] = useState<Tab>(initialTab);
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editPhone, setEditPhone] = useState("");
@@ -169,16 +170,27 @@ function BidderDashboardInner() {
 
   const load = useCallback(() => {
     fetch("/api/my-bids")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to load bids");
+        return r.json();
+      })
       .then((d: DashboardData) => {
         setData(d);
         setEditName(d.profile?.name || "");
         setEditEmail(d.profile?.email || user?.primaryEmailAddress?.emailAddress || "");
         setEditPhone(d.profile?.phone || "");
       })
-      .catch(() => {})
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
   }, [user]);
+
+  // User-triggered retry: reset state, then re-run the fetch.
+  const retryLoad = useCallback(() => {
+    setLoading(true);
+    setLoadError(false);
+    setData(null);
+    load();
+  }, [load]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -326,7 +338,27 @@ function BidderDashboardInner() {
       </main>
     );
   }
-  if (!data) return null;
+  if (loadError || !data) {
+    return (
+      <main className="min-h-screen bg-[#f1e7d5] text-[#241a12] flex items-center justify-center px-4">
+        <div className="bg-white border border-[#e3d6bf] rounded-2xl px-6 py-12 text-center max-w-md w-full">
+          <div className="w-12 h-12 rounded-full bg-red-50 border border-red-500/20 flex items-center justify-center mx-auto mb-4 text-red-600">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" />
+            </svg>
+          </div>
+          <p className="text-lg font-semibold text-[#241a12]">Couldn&apos;t load your bids</p>
+          <p className="text-base text-[#8a7559] mt-2">Please check your connection and try again.</p>
+          <button
+            onClick={retryLoad}
+            className="inline-block mt-6 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold text-base px-6 py-3.5 rounded-xl transition-colors"
+          >
+            Try again
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   const { winning, losing, past, unpaidWins } = data;
   // Active bids ordered by soonest end first, so the most urgent are up top.

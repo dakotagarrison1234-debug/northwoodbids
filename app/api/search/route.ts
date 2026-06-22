@@ -18,7 +18,6 @@ export async function GET(request: NextRequest) {
           { title: { contains: q, mode: "insensitive" } },
           { category: { contains: q, mode: "insensitive" } },
           { description: { contains: q, mode: "insensitive" } },
-          { donorName: { contains: q, mode: "insensitive" } },
         ],
       },
       include: {

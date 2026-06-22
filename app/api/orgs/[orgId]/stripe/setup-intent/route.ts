@@ -29,9 +29,16 @@ export async function POST(_request: NextRequest, { params }: Props) {
     // Org must exist. Payments run directly on the platform Stripe account.
     const org = await prisma.organization.findUnique({
       where: { id: orgId },
-      select: { id: true },
+      select: { id: true, isActive: true, status: true, stripeChargesEnabled: true },
     });
     if (!org) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    // Guard against IDOR: only allow saving a card against an org that is live
+    // and able to take charges. Without this, any signed-in user could mint a
+    // Stripe customer / SetupIntent against an arbitrary orgId.
+    if (!org.isActive || org.status !== "LIVE" || !org.stripeChargesEnabled) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     // Look up existing BidderStripeCustomer for this user + org
     const existing = await prisma.bidderStripeCustomer.findUnique({

@@ -35,12 +35,16 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // State machine guard — prevent illegal backward transitions
+    // State machine guard — prevent illegal backward transitions.
     // PICKED_UP is terminal. PENDING_PICKUP can only go to PICKED_UP.
     // SOLD can only advance (PENDING_PICKUP). Nothing can go back to DRAFT/ACTIVE once sold.
+    // NOTE: ACTIVE cannot be moved directly to SOLD or UNSOLD here — selling happens
+    // only via the auction-close pipeline (which records the winning bid + charge).
+    // Letting a member flip ACTIVE→SOLD manually would create a "sold" item with no
+    // winning bid and no payment, a data-integrity hole.
     const allowedTransitions: Record<string, string[]> = {
       DRAFT:          ["ACTIVE", "UNSOLD"],
-      ACTIVE:         ["SOLD", "UNSOLD", "DRAFT"],
+      ACTIVE:         ["DRAFT"],
       SOLD:           ["PENDING_PICKUP", "UNSOLD"],
       UNSOLD:         ["ACTIVE"],        // allow re-activation for edge cases
       PENDING_PICKUP: ["PICKED_UP"],

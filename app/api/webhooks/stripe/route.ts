@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { attachToUpcomingAppointment } from "@/lib/pickup";
+import { notifyPaymentFailed, notifyPaymentReceipt } from "@/lib/paymentNotify";
 import Stripe from "stripe";
 
 // App Router route handlers expose the raw body via request.text(), so no
@@ -54,7 +55,21 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case "payment_intent.succeeded": {
         const pi = event.data.object as Stripe.PaymentIntent;
-        await markPaymentsPaid(pi.id);
+        const transitioned = await markPaymentsPaid(pi.id);
+        // Only send a receipt if THIS webhook actually flipped rows from
+        // non-PAID to PAID. If the inline auto-charge already marked them PAID,
+        // transitioned is empty and we skip — preventing a double receipt.
+        const totalsByUser = new Map<string, number>();
+        for (const p of transitioned) {
+          const total = (totalsByUser.get(p.clerkUserId) ?? 0) + p.total;
+          totalsByUser.set(p.clerkUserId, total);
+        }
+        for (const [clerkUserId, amount] of totalsByUser) {
+          notifyPaymentReceipt({
+            clerkUserId,
+            amount: Number(amount.toFixed(2)),
+          }).catch((e) => console.error("notifyPaymentReceipt (webhook) failed:", e));
+        }
         break;
       }
       case "payment_intent.payment_failed": {
@@ -63,7 +78,13 @@ export async function POST(request: NextRequest) {
           pi.last_payment_error?.message ??
           pi.last_payment_error?.code ??
           "Payment failed";
-        await markPaymentsFailed(pi.id, reason);
+        const failedUserIds = await markPaymentsFailed(pi.id, reason);
+        // Notify each affected winner once (deduped by user).
+        for (const clerkUserId of failedUserIds) {
+          notifyPaymentFailed({ clerkUserId, reason }).catch((e) =>
+            console.error("notifyPaymentFailed (webhook) failed:", e)
+          );
+        }
         break;
       }
       case "charge.refunded": {
@@ -101,15 +122,23 @@ export async function POST(request: NextRequest) {
 /**
  * Marks all Payment rows for a PaymentIntent PAID and moves their items to
  * PENDING_PICKUP. Idempotent — skips rows already PAID.
+ *
+ * Returns ONLY the rows this call actually transitioned from non-PAID to PAID,
+ * so the caller can send a receipt exactly once (and not double up when the
+ * inline auto-charge already marked them PAID before the webhook arrived).
  */
-async function markPaymentsPaid(paymentIntentId: string): Promise<void> {
+async function markPaymentsPaid(
+  paymentIntentId: string
+): Promise<{ clerkUserId: string; total: number }[]> {
   const payments = await prisma.payment.findMany({
     where: { stripePaymentIntentId: paymentIntentId },
   });
   if (payments.length === 0) {
     console.warn(`[stripe-webhook] no Payment rows for PI ${paymentIntentId} (succeeded)`);
-    return;
+    return [];
   }
+
+  const transitioned: { clerkUserId: string; total: number }[] = [];
 
   for (const payment of payments) {
     if (payment.status === "PAID") continue; // already reconciled
@@ -124,18 +153,34 @@ async function markPaymentsPaid(paymentIntentId: string): Promise<void> {
       }),
     ]);
     await attachToUpcomingAppointment(payment.clerkUserId, await orgIdForItem(payment.itemId));
+    // Charged total for this row = bid + buyer's premium + tax (nulls => 0).
+    const rowTotal =
+      Number(payment.amount) +
+      Number(payment.applicationFeeAmount ?? 0) +
+      Number(payment.taxAmount ?? 0);
+    transitioned.push({ clerkUserId: payment.clerkUserId, total: rowTotal });
   }
+
+  return transitioned;
 }
 
 /**
  * Marks all Payment rows for a PaymentIntent FAILED, leaving items SOLD.
  * Idempotent — never downgrades an already-PAID row.
+ *
+ * Returns the unique clerkUserIds whose rows were affected so the caller can
+ * notify each affected winner once.
  */
-async function markPaymentsFailed(paymentIntentId: string, reason: string): Promise<void> {
+async function markPaymentsFailed(paymentIntentId: string, reason: string): Promise<string[]> {
+  const affected = await prisma.payment.findMany({
+    where: { stripePaymentIntentId: paymentIntentId, status: { not: "PAID" } },
+    select: { clerkUserId: true },
+  });
   await prisma.payment.updateMany({
     where: { stripePaymentIntentId: paymentIntentId, status: { not: "PAID" } },
     data: { status: "FAILED", failureReason: reason },
   });
+  return [...new Set(affected.map((p) => p.clerkUserId))];
 }
 
 /** Marks all Payment rows for a PaymentIntent REFUNDED. */

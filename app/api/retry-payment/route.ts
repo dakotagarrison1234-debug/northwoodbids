@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { attachToUpcomingAppointment } from "@/lib/pickup";
+import { notifyPaymentReceipt } from "@/lib/paymentNotify";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -96,10 +97,7 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    if (
-      paymentIntent.status === "succeeded" ||
-      paymentIntent.status === "processing"
-    ) {
+    if (paymentIntent.status === "succeeded") {
       // Mark payment PAID — upsert on the DB-unique compound key (itemId + clerkUserId)
       await prisma.payment.upsert({
         where: { itemId_clerkUserId: { itemId, clerkUserId: userId } },
@@ -129,7 +127,38 @@ export async function POST(request: NextRequest) {
       });
       await attachToUpcomingAppointment(userId, org.id);
 
+      notifyPaymentReceipt({
+        clerkUserId: userId,
+        amount: Number((chargeAmount / 100).toFixed(2)),
+      }).catch((e) => console.error("notifyPaymentReceipt (retry) failed:", e));
+
       return NextResponse.json({ success: true });
+    } else if (paymentIntent.status === "processing") {
+      // Async settlement in progress — record PENDING and DON'T release the item.
+      // The Stripe webhook (payment_intent.succeeded) reconciles it to PAID later.
+      await prisma.payment.upsert({
+        where: { itemId_clerkUserId: { itemId, clerkUserId: userId } },
+        update: {
+          status: "PENDING",
+          stripePaymentIntentId: paymentIntent.id,
+          failureReason: null,
+          autoChargeAttemptedAt: new Date(),
+          applicationFeeAmount: feeAmount / 100,
+          taxAmount: taxAmount / 100,
+        },
+        create: {
+          clerkUserId: userId,
+          itemId,
+          amount: bidAmount,
+          applicationFeeAmount: feeAmount / 100,
+          taxAmount: taxAmount / 100,
+          stripePaymentIntentId: paymentIntent.id,
+          status: "PENDING",
+          autoChargeAttemptedAt: new Date(),
+        },
+      });
+
+      return NextResponse.json({ success: true, processing: true });
     } else if (
       paymentIntent.status === "requires_action" ||
       paymentIntent.status === "requires_confirmation"

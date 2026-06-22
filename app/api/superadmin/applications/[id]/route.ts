@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireSuperAdmin } from "@/lib/auth";
+import { isSuperAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 
@@ -10,8 +10,13 @@ interface Props {
 // PATCH /api/superadmin/applications/[id]
 // body: { action: "approve" | "reject", reviewNote?: string }
 export async function PATCH(request: NextRequest, { params }: Props) {
+  // Gate BEFORE the try block so the super-admin check's redirect/throw is not
+  // swallowed by the catch (which would leak internals via a 500 to non-admins).
+  if (!(await isSuperAdmin())) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   try {
-    await requireSuperAdmin();
     const { userId } = await auth();
     const { id } = await params;
     const { action, reviewNote, taxExempt, taxPercent } = await request.json();
@@ -90,8 +95,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Internal error";
-    console.error("[superadmin/applications PATCH]:", msg, err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[superadmin/applications PATCH]:", err);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }

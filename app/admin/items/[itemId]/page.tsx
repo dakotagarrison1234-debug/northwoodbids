@@ -222,7 +222,7 @@ export default function EditItemPage() {
               <span>{formData.itemCode || "—"}</span>
               <span className="text-xs font-sans font-normal text-[#8a7559]">auto-assigned</span>
             </div>
-            <p className="text-[#8a7559] text-sm mt-2">Numbered automatically per auction</p>
+            <p className="text-[#8a7559] text-sm mt-2">Unique code, assigned automatically</p>
 
             <div className="mt-4">
               <label className="text-base text-[#6f5b46] mb-1.5 block">Location</label>
