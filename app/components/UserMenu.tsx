@@ -25,9 +25,6 @@ function IcoSearch() {
 function IcoHome() {
   return <svg width="16" height="16" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 7L8 2l6 5v7a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7z"/><path d="M6 14V9h4v5"/></svg>;
 }
-function IcoHistory() {
-  return <svg width="16" height="16" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3.5l2 1.5"/></svg>;
-}
 function IcoCard() {
   return <svg width="16" height="16" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="14" height="10" rx="1.5"/><path d="M1 7h14"/></svg>;
 }
@@ -233,8 +230,7 @@ export default function UserMenu() {
           <NavLink href="/search" iconEl={<IcoSearch />} label="Search Items" onClick={close} />
 
           <SectionLabel>My Bids</SectionLabel>
-          <NavLink href="/dashboard" iconEl={<IcoGavel />} label="Active Bids" sublabel="What you're currently bidding" onClick={close} />
-          <NavLink href="/dashboard?tab=past" iconEl={<IcoHistory />} label="Bid History" sublabel="Past bids & wins" onClick={close} />
+          <NavLink href="/dashboard" iconEl={<IcoGavel />} label="My Bids" sublabel="Active, past wins & invoices" onClick={close} />
           <NavLink href="/pickup" iconEl={<IcoPickup />} label="Pickup" sublabel="Schedule item collection" onClick={close} />
 
           <SectionLabel>Account</SectionLabel>
