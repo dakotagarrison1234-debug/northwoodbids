@@ -38,32 +38,74 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
   const cancelScanRef = useRef<(() => void) | null>(null); // stops the native detect loop
   const detectedRef = useRef(false);
   const playingRef = useRef(false);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Fully stop the scanner and release the camera (loop, ZXing controls, tracks).
-  const stopCamera = () => {
+  // Stop just the decode loop (keep the camera/stream alive).
+  const stopLoop = () => {
     playingRef.current = false;
     try { cancelScanRef.current?.(); } catch { /* ignore */ }
     cancelScanRef.current = null;
     try { controlsRef.current?.stop(); } catch { /* ignore */ }
     controlsRef.current = null;
+  };
+
+  // Fully release the camera (light off). Next scan will re-request permission.
+  const releaseCamera = () => {
+    if (idleTimerRef.current) { clearTimeout(idleTimerRef.current); idleTimerRef.current = null; }
+    stopLoop();
     try { streamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* ignore */ }
     streamRef.current = null;
     try { if (videoRef.current) videoRef.current.srcObject = null; } catch { /* ignore */ }
     setScanning(false);
   };
 
-  // Fire once on the first good read.
+  // Pause scanning but KEEP the permission warm, so listing the next item doesn't
+  // re-prompt for the camera. Auto-releases after a stretch of inactivity.
+  const pauseWarm = () => {
+    stopLoop();
+    try { streamRef.current?.getVideoTracks().forEach((t) => (t.enabled = false)); } catch { /* ignore */ }
+    setScanning(false);
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = setTimeout(() => releaseCamera(), 45000);
+  };
+
+  // Reuse the already-granted stream when it's still live; else request once.
+  const acquireStream = async (): Promise<MediaStream> => {
+    if (idleTimerRef.current) { clearTimeout(idleTimerRef.current); idleTimerRef.current = null; }
+    const s = streamRef.current;
+    if (s && s.getVideoTracks().some((t) => t.readyState === "live")) {
+      s.getVideoTracks().forEach((t) => (t.enabled = true));
+      return s;
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false,
+    });
+    streamRef.current = stream;
+    try {
+      const track = stream.getVideoTracks()[0];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const caps = (track.getCapabilities?.() ?? {}) as any;
+      if (caps?.focusMode?.includes?.("continuous")) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] } as any);
+      }
+    } catch { /* ignore */ }
+    return stream;
+  };
+
+  // Fire once on the first good read — pause warm so the next item is instant.
   const handleDetected = (raw: string) => {
     if (detectedRef.current) return;
     detectedRef.current = true;
     const code = raw.trim();
-    stopCamera();
+    pauseWarm();
     setBarcode(code);
     doLookup(code);
   };
 
   const startCamera = async () => {
-    stopCamera();
+    stopLoop();              // cancel any prior loop, but keep the warm stream
     setError(null);
     setResult(null);
     setBarcode("");
@@ -71,28 +113,12 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
     detectedRef.current = false;
     playingRef.current = true;
     try {
-      // High-res rear camera + continuous autofocus = crisp, fast reads.
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-        audio: false,
-      });
-      streamRef.current = stream;
+      const stream = await acquireStream();
       const video = videoRef.current!;
-      video.srcObject = stream;
+      if (video.srcObject !== stream) video.srcObject = stream;
       video.setAttribute("playsinline", "true");
       video.muted = true;
       await video.play().catch(() => {});
-
-      // Best-effort continuous focus (helps small/blurry barcodes resolve fast).
-      try {
-        const track = stream.getVideoTracks()[0];
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const caps = (track.getCapabilities?.() ?? {}) as any;
-        if (caps?.focusMode?.includes?.("continuous")) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] } as any);
-        }
-      } catch { /* ignore */ }
 
       // ── Fast path: native BarcodeDetector (hardware-accelerated) ──
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -149,7 +175,7 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
       });
     } catch {
       setError("Camera not available. Enter the barcode number manually.");
-      stopCamera();
+      releaseCamera();
     }
   };
 
@@ -246,7 +272,7 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
 
   // cleanup on unmount
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => () => stopCamera(), []);
+  useEffect(() => () => releaseCamera(), []);
 
   const applyResult = (imgOverride?: string) => {
     if (!result) return;
@@ -271,7 +297,7 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
       <div className="flex gap-2">
         <button
           type="button"
-          onClick={scanning ? stopCamera : startCamera}
+          onClick={scanning ? releaseCamera : startCamera}
           className={`flex items-center gap-1.5 px-4 py-3 rounded-xl text-base font-semibold border shrink-0 transition-colors ${
             scanning
               ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
