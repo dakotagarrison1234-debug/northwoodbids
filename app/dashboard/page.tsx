@@ -9,7 +9,7 @@ import CardSetupModal from "@/app/components/CardSetupModal";
 import { PineMark, WoodenCrate } from "@/app/components/Illustrations";
 import { money } from "@/lib/format";
 
-type Tab = "overview" | "winning" | "losing" | "auctions" | "profile";
+type Tab = "overview" | "active" | "history" | "auctions" | "profile";
 
 interface BidBase {
   itemId: string;
@@ -85,13 +85,6 @@ function IcoUp() {
     </svg>
   );
 }
-function IcoDown() {
-  return (
-    <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M10 5v10M15 10l-5 5-5-5" />
-    </svg>
-  );
-}
 function IcoUser() {
   return (
     <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
@@ -126,6 +119,15 @@ function IcoPackage() {
   );
 }
 
+function IcoHistory() {
+  return (
+    <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="10" cy="10" r="7.5" />
+      <path d="M10 5.5V10l3 2" />
+    </svg>
+  );
+}
+
 function Photo({ url, title }: { url: string | null; title: string }) {
   return url ? (
     <img src={url} alt={title} className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl object-cover shrink-0" />
@@ -142,7 +144,13 @@ function BidderDashboardInner() {
   const { user, isSignedIn, isLoaded } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialTab = (searchParams.get("tab") as Tab) || "overview";
+  const rawTab = searchParams.get("tab");
+  const initialTab: Tab =
+    rawTab === "winning" || rawTab === "losing" || rawTab === "active"
+      ? "active"
+      : rawTab === "history" || rawTab === "auctions" || rawTab === "profile"
+      ? rawTab
+      : "overview";
   const [tab, setTab] = useState<Tab>(initialTab);
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -324,11 +332,15 @@ function BidderDashboardInner() {
   const totalOwed = unpaidWins.reduce((s, i) => s + (i.totalDue ?? i.amountOwed), 0);
   const failedWins = unpaidWins.filter((w) => w.paymentFailed);
   const pendingWins = unpaidWins.filter((w) => !w.paymentFailed);
+  const pastWins = past.filter((b) => b.outcome === "won");
+  const activeCount = winning.length + losing.length;
 
   const navItems: { id: Tab; label: string; shortLabel: string; count?: number; icon: React.ReactNode }[] = [
-    { id: "overview",  label: "Overview",      shortLabel: "Home",     icon: <IcoGrid /> },
-    { id: "winning",   label: "Active Bids",   shortLabel: "Active",   count: winning.length, icon: <IcoUp /> },
-    { id: "losing",    label: "Outbid",        shortLabel: "Outbid",   count: losing.length,  icon: <IcoDown /> },
+    { id: "overview",  label: "Overview",         shortLabel: "Home",     icon: <IcoGrid /> },
+    { id: "active",    label: "Active Bids",      shortLabel: "Active",   count: activeCount,     icon: <IcoUp /> },
+    { id: "history",   label: "Bid History",      shortLabel: "History",  count: pastWins.length, icon: <IcoHistory /> },
+    { id: "auctions",  label: "Current Auctions", shortLabel: "Auctions", icon: <IcoGavel /> },
+    { id: "profile",   label: "Account",          shortLabel: "Account",  icon: <IcoUser /> },
   ];
 
   return (
@@ -358,11 +370,7 @@ function BidderDashboardInner() {
                 <span className="text-sm font-medium">{item.label}</span>
               </div>
               {item.count !== undefined && item.count > 0 && (
-                <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-                  item.id === "losing"
-                    ? "bg-red-500/15 text-red-600"
-                    : "bg-[#6c4d39]/15 text-[#6c4d39]"
-                }`}>
+                <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-[#6c4d39]/15 text-[#6c4d39]">
                   {item.count}
                 </span>
               )}
@@ -457,8 +465,8 @@ function BidderDashboardInner() {
           <h1 className="text-lg font-bold">
             {tab === "overview"  && "Overview"}
             {tab === "auctions"  && "Current Auctions"}
-            {tab === "winning"   && "Active Bids"}
-            {tab === "losing"    && "Outbid"}
+            {tab === "active"    && "Active Bids"}
+            {tab === "history"   && "Bid History"}
             {tab === "profile"   && "Account"}
           </h1>
         </header>
@@ -539,7 +547,7 @@ function BidderDashboardInner() {
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <h2 className="font-bold text-[#4a3a2b] text-xs uppercase tracking-wider">Currently Winning</h2>
-                    <button onClick={() => setTab("winning")} className="text-[#6c4d39] text-sm hover:text-[#c47b3e] transition-colors flex items-center gap-1">
+                    <button onClick={() => setTab("active")} className="text-[#6c4d39] text-sm hover:text-[#c47b3e] transition-colors flex items-center gap-1">
                       View all <IcoArrow />
                     </button>
                   </div>
@@ -566,7 +574,7 @@ function BidderDashboardInner() {
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <h2 className="font-bold text-[#4a3a2b] text-xs uppercase tracking-wider">You&apos;ve Been Outbid</h2>
-                    <button onClick={() => setTab("losing")} className="text-red-600 text-sm hover:text-red-300 transition-colors flex items-center gap-1">
+                    <button onClick={() => setTab("active")} className="text-red-600 text-sm hover:text-red-300 transition-colors flex items-center gap-1">
                       View all <IcoArrow />
                     </button>
                   </div>
@@ -592,7 +600,14 @@ function BidderDashboardInner() {
               {/* Recent Bids */}
               {past.length > 0 && (
                 <div>
-                  <h2 className="font-bold text-[#4a3a2b] text-xs uppercase tracking-wider mb-3">Recent Bids</h2>
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="font-bold text-[#4a3a2b] text-xs uppercase tracking-wider">Recent Bids</h2>
+                    {pastWins.length > 0 && (
+                      <button onClick={() => setTab("history")} className="text-[#6c4d39] text-sm hover:text-[#c47b3e] transition-colors flex items-center gap-1">
+                        Bid history <IcoArrow />
+                      </button>
+                    )}
+                  </div>
                   <div className="space-y-2">
                     {past.slice(0, 5).map((b, i) => (
                       <div key={i}
@@ -759,72 +774,177 @@ function BidderDashboardInner() {
             );
           })()}
 
-          {/* ── Active Bids ── */}
-          {tab === "winning" && (
-            <div className="max-w-3xl">
-              {winning.length === 0 ? (
+          {/* ── Active Bids (winning + outbid combined) ── */}
+          {tab === "active" && (
+            <div className="max-w-3xl space-y-8">
+              {winning.length === 0 && losing.length === 0 ? (
                 <div className="bg-white border border-[#e3d6bf] rounded-2xl p-12 text-center">
                   <div className="mb-4 flex justify-center">
                     <WoodenCrate className="w-28 h-24" />
                   </div>
-                  <p className="font-display text-[#6f5b46] mb-4 text-base">Not currently winning any items.</p>
-                  <button onClick={() => setTab("auctions")} className="text-[#6c4d39] hover:text-[#c47b3e] text-sm transition-colors">Browse live auctions</button>
+                  <p className="font-display text-[#6f5b46] mb-5 text-base">You don&apos;t have any live bids right now.</p>
+                  <button
+                    onClick={() => setTab("auctions")}
+                    className="bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold px-6 py-3 rounded-2xl text-sm transition-all hover:shadow-[0_0_25px_rgba(108,77,57,0.25)]"
+                  >
+                    Browse live auctions
+                  </button>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {winning.map((b) => (
-                    <Link key={b.itemId} href={`/${b.orgSlug}/${b.auctionSlug}/item/${b.itemId}`}
-                      className="flex items-center gap-4 bg-white border border-[#6c4d39]/15 rounded-2xl px-4 sm:px-6 py-4 hover:border-[#6c4d39]/35 transition-all hover:shadow-[0_0_20px_rgba(108,77,57,0.05)]">
-                      <Photo url={b.photo} title={b.itemTitle} />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-bold truncate">{b.itemTitle}</div>
-                        <div className="text-[#8a7559] text-xs sm:text-sm mt-0.5 truncate">{b.auctionTitle} · {b.orgName}</div>
-                        <div className="text-[#8a7559] text-xs mt-1">Ends {formatEnd(b.itemEndAt ?? b.auctionEndAt)}</div>
+                <>
+                  {/* You're winning */}
+                  {winning.length > 0 && (
+                    <section>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="w-2 h-2 rounded-full bg-[#5f7a45] inline-block" />
+                        <h2 className="font-bold text-[#5f7a45] text-sm uppercase tracking-wider">You&apos;re winning ({winning.length})</h2>
                       </div>
-                      <div className="text-right shrink-0">
-                        <div className="text-[#6c4d39] font-extrabold text-lg">${b.myBid.toLocaleString()}</div>
-                        <div className="text-xs bg-[#6c4d39]/15 text-[#563e2c] font-bold px-2 py-0.5 rounded-full mt-0.5 inline-block">✓ Winning</div>
+                      <div className="space-y-3">
+                        {winning.map((b) => (
+                          <div key={b.itemId}
+                            className="flex flex-wrap items-center gap-4 bg-white border border-[#5f7a45]/30 rounded-2xl px-4 sm:px-6 py-4">
+                            <Photo url={b.photo} title={b.itemTitle} />
+                            <div className="flex-1 min-w-0">
+                              <div className="font-bold truncate">{b.itemTitle}</div>
+                              <div className="text-[#8a7559] text-xs sm:text-sm mt-0.5 truncate">{b.auctionTitle} · {b.orgName}</div>
+                              <div className="text-[#8a7559] text-xs mt-1">Ends {formatEnd(b.itemEndAt ?? b.auctionEndAt)}</div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <div className="text-[#8a7559] text-xs">your bid · current high</div>
+                              <div className="text-[#5f7a45] font-extrabold text-lg">{money(b.myBid)}</div>
+                              <div className="text-xs bg-[#5f7a45]/15 text-[#4a6235] font-bold px-2 py-0.5 rounded-full mt-0.5 inline-block">✓ Winning</div>
+                            </div>
+                            <Link
+                              href={`/${b.orgSlug}/${b.auctionSlug}/item/${b.itemId}`}
+                              className="w-full sm:w-auto shrink-0 text-center bg-[#5f7a45] hover:bg-[#4a6235] text-white font-bold text-sm px-5 py-3 rounded-xl transition-colors"
+                            >
+                              Manage bid
+                            </Link>
+                          </div>
+                        ))}
                       </div>
-                    </Link>
-                  ))}
-                </div>
+                    </section>
+                  )}
+
+                  {/* You've been outbid */}
+                  {losing.length > 0 && (
+                    <section>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="w-2 h-2 rounded-full bg-red-600 inline-block" />
+                        <h2 className="font-bold text-red-600 text-sm uppercase tracking-wider">You&apos;ve been outbid ({losing.length})</h2>
+                      </div>
+                      <div className="space-y-3">
+                        {losing.map((b) => {
+                          const nextBid = b.currentBid > b.myBid ? b.currentBid : null;
+                          return (
+                            <div key={b.itemId}
+                              className="flex flex-wrap items-center gap-4 bg-white border border-red-500/25 rounded-2xl px-4 sm:px-6 py-4">
+                              <Photo url={b.photo} title={b.itemTitle} />
+                              <div className="flex-1 min-w-0">
+                                <div className="font-bold truncate">{b.itemTitle}</div>
+                                <div className="text-[#8a7559] text-xs sm:text-sm mt-0.5 truncate">{b.auctionTitle} · {b.orgName}</div>
+                                <div className="text-[#8a7559] text-xs mt-1">Ends {formatEnd(b.itemEndAt ?? b.auctionEndAt)}</div>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <div className="text-[#8a7559] text-xs">your bid</div>
+                                <div className="text-[#6f5b46] font-bold">{money(b.myBid)}</div>
+                                <div className="text-[#8a7559] text-xs mt-1">current high bid</div>
+                                <div className="text-red-600 font-extrabold text-lg">{money(b.currentBid)}</div>
+                              </div>
+                              <Link
+                                href={`/${b.orgSlug}/${b.auctionSlug}/item/${b.itemId}`}
+                                className="w-full sm:w-auto shrink-0 text-center bg-red-600 hover:bg-red-700 text-white font-bold text-sm px-5 py-3 rounded-xl transition-colors"
+                              >
+                                Bid again{nextBid !== null ? ` (top ${money(nextBid)})` : ""}
+                              </Link>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  )}
+                </>
               )}
             </div>
           )}
 
-          {/* ── Outbid ── */}
-          {tab === "losing" && (
-            <div className="max-w-3xl">
-              {losing.length === 0 ? (
-                <div className="bg-white border border-[#e3d6bf] rounded-2xl p-12 text-center">
-                  <div className="mb-4 flex justify-center">
-                    <WoodenCrate className="w-28 h-24" />
+          {/* ── Bid History (past wins only, grouped by auction) ── */}
+          {tab === "history" && (() => {
+            type Group = { key: string; auctionTitle: string; orgName: string; auctionId: string | null; endAt: string; items: PastBid[] };
+            const groups = new Map<string, Group>();
+            for (const b of pastWins) {
+              const key = b.auctionId ?? `slug:${b.auctionSlug}`;
+              const g = groups.get(key);
+              if (g) g.items.push(b);
+              else groups.set(key, { key, auctionTitle: b.auctionTitle, orgName: b.orgName, auctionId: b.auctionId, endAt: b.auctionEndAt, items: [b] });
+            }
+            const grouped = [...groups.values()].sort(
+              (a, c) => new Date(c.endAt).getTime() - new Date(a.endAt).getTime()
+            );
+
+            if (grouped.length === 0) {
+              return (
+                <div className="max-w-3xl">
+                  <div className="bg-white border border-[#e3d6bf] rounded-2xl p-12 text-center">
+                    <div className="mb-4 flex justify-center">
+                      <WoodenCrate className="w-28 h-24" />
+                    </div>
+                    <p className="font-display text-[#6f5b46] text-base">Your past winning bids and invoices will show up here.</p>
                   </div>
-                  <p className="font-display text-[#6f5b46] text-base">You&apos;re not being outbid on anything right now.</p>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {losing.map((b) => (
-                    <Link key={b.itemId} href={`/${b.orgSlug}/${b.auctionSlug}/item/${b.itemId}`}
-                      className="flex items-center gap-4 bg-white border border-red-500/15 rounded-2xl px-4 sm:px-6 py-4 hover:border-red-200 transition-all">
-                      <Photo url={b.photo} title={b.itemTitle} />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-bold truncate">{b.itemTitle}</div>
-                        <div className="text-[#8a7559] text-xs sm:text-sm mt-0.5 truncate">{b.auctionTitle} · {b.orgName}</div>
-                        <div className="text-[#8a7559] text-xs mt-1">Ends {formatEnd(b.itemEndAt ?? b.auctionEndAt)}</div>
+              );
+            }
+
+            return (
+              <div className="max-w-3xl space-y-6">
+                {grouped.map((g) => (
+                  <section key={g.key} className="bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden">
+                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-[#e3d6bf]/60 bg-[#f1e7d5]/40">
+                      <div className="min-w-0">
+                        <div className="font-bold truncate text-[#241a12]">{g.auctionTitle}</div>
+                        <div className="text-xs text-[#8a7559] mt-0.5 truncate">
+                          {g.orgName} · {g.items.length} item{g.items.length !== 1 ? "s" : ""} won
+                        </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <div className="text-[#8a7559] text-xs">your bid</div>
-                        <div className="text-[#6f5b46] font-bold">${b.myBid.toLocaleString()}</div>
-                        <div className="text-[#8a7559] text-xs mt-1">high bid</div>
-                        <div className="text-red-600 font-extrabold">${b.currentBid.toLocaleString()}</div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                      {g.auctionId && (
+                        <Link
+                          href={`/invoice/${g.auctionId}`}
+                          className="shrink-0 inline-flex items-center gap-2 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold text-sm px-4 py-2.5 rounded-xl transition-colors"
+                        >
+                          View / print invoice <IcoArrow />
+                        </Link>
+                      )}
+                    </div>
+                    <div className="divide-y divide-[#e3d6bf]/50">
+                      {g.items.map((b) => (
+                        <div key={b.itemId} className="flex items-center gap-4 px-4 sm:px-6 py-3.5">
+                          <Photo url={b.photo} title={b.itemTitle} />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-sm truncate">{b.itemTitle}</div>
+                            <div className="flex flex-wrap gap-1.5 mt-1">
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                b.paid ? "bg-[#5f7a45]/15 text-[#4a6235]" : "bg-orange-500/15 text-orange-600"
+                              }`}>
+                                {b.paid ? "Paid" : "Awaiting payment"}
+                              </span>
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                b.pickedUp ? "bg-[#6c4d39]/12 text-[#6c4d39]" : "bg-[#efe3d0] text-[#8a7559]"
+                              }`}>
+                                {b.pickedUp ? "Picked up" : "Ready for pickup"}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <div className="text-[#6c4d39] font-extrabold">{money(b.finalBid)}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            );
+          })()}
 
 
           {/* ── Account ── */}
@@ -964,9 +1084,7 @@ function BidderDashboardInner() {
             {item.icon}
             <span className="text-[9px] font-semibold leading-none tracking-wide uppercase">{item.shortLabel}</span>
             {item.count !== undefined && item.count > 0 && (
-              <span className={`absolute top-1.5 right-[10%] text-[9px] w-3.5 h-3.5 rounded-full flex items-center justify-center font-bold ${
-                item.id === "losing" ? "bg-red-500 text-white" : "bg-[#6c4d39] text-white"
-              }`}>
+              <span className="absolute top-1.5 right-[10%] text-[9px] w-3.5 h-3.5 rounded-full flex items-center justify-center font-bold bg-[#6c4d39] text-white">
                 {item.count}
               </span>
             )}
