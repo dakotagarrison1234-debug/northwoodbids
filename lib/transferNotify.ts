@@ -52,6 +52,7 @@ export async function notifyTransferRequested(transferId: string): Promise<void>
       lastName: name.split(" ").slice(1).join(" ") || "",
       // Event payload
       event: "transfer_requested",
+      smsMessage: `Transfer requested: ${transfer.items.length} item${transfer.items.length !== 1 ? "s" : ""} → ${transfer.toLocation.name}, move within 5–6 days. See the admin Transfers board.`,
       toLocation: transfer.toLocation.name,
       itemCount: transfer.items.length,
       items: transfer.items.map((it) => ({
@@ -105,6 +106,7 @@ export async function notifyTransferArrived(transferId: string): Promise<void> {
         lastName: name.split(" ").slice(1).join(" ") || "",
         // Event payload
         event: "transfer_arrived",
+        smsMessage: `Northwood Bids: Your items arrived at ${transfer.toLocation.name}. Schedule your pickup: ${process.env.NEXT_PUBLIC_APP_URL}/pickup`,
         toLocation: transfer.toLocation.name,
         itemCount: transfer.items.length,
         items: transfer.items.map((it) => ({ title: it.title })),

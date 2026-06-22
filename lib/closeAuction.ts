@@ -496,6 +496,7 @@ async function notifyWinners(winnerMap: Map<string, WinnerEntry>): Promise<void>
           lastName: name.split(" ").slice(1).join(" ") || "",
           // Notification payload
           event: "auction_won",
+          smsMessage: `Northwood Bids: You won ${itemCount} item${itemCount !== 1 ? "s" : ""} in ${winner.auctionName} — total $${totalAmount}. Your card on file is charged automatically. Receipt & pickup: ${paymentUrl}`,
           bidderEmail: email,
           bidderPhone: phone,
           bidderName: name,
@@ -543,6 +544,7 @@ export async function notifyAuctionStartedToFollowers(
         firstName: name.split(" ")[0] || name,
         lastName: name.split(" ").slice(1).join(" ") || "",
         event: "auction_started",
+        smsMessage: `Northwood Bids: ${auction.title} is LIVE. Start bidding: ${auctionUrl}`,
         bidderEmail: email,
         bidderPhone: phone,
         bidderName: name,
@@ -612,6 +614,7 @@ export async function notifyAuctionEndingSoon(): Promise<{ notifiedAuctions: num
             firstName: name.split(" ")[0] || name,
             lastName: name.split(" ").slice(1).join(" ") || "",
             event: "auction_ending_soon",
+            smsMessage: `Northwood Bids: ${auction.title} closes within the hour and you're winning items — last chance: ${auctionUrl}`,
             bidderEmail: email,
             bidderPhone: phone,
             bidderName: name,
