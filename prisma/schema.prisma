@@ -324,6 +324,19 @@ model BidderProfile {
   updatedAt      DateTime      @default(now()) @updatedAt
 }
 
+model GameScore {
+  id          String   @id @default(cuid())
+  clerkUserId String   @unique
+  name        String?
+  avatarKey   String?
+  bestScore   Int      @default(0)
+  plays       Int      @default(0)
+  updatedAt   DateTime @default(now()) @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@index([bestScore])
+}
+
 model OrgApplication {
   id           String            @id @default(cuid())
   clerkUserId  String
