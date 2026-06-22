@@ -397,7 +397,6 @@ function NewItemForm() {
     startingBid: searchParams.get("startingBid") || "",
     reservePrice: searchParams.get("reservePrice") || "",
     taxDeductible: searchParams.get("taxDeductible") === "true",
-    itemCode: searchParams.get("itemCode") || "",
     storageLocation: searchParams.get("storageLocation") || "",
     locationId: searchParams.get("locationId") || "",
     auctionId: preselectedAuctionId,
@@ -517,7 +516,6 @@ function NewItemForm() {
             startingBid: "",
             reservePrice: "",
             taxDeductible: false,
-            itemCode: "",
             // preserved: condition, storageLocation (spot), locationId (warehouse), auctionId
           }));
           setPhotos([]);
@@ -652,15 +650,10 @@ function NewItemForm() {
         {/* ── Sidebar ── */}
         <div className="space-y-6">
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">Item Location</h2>
+            <h2 className="text-lg font-semibold mb-1">Item Location</h2>
+            <p className="text-[#8a7559] text-sm mb-4">Item codes are assigned automatically per auction (001, 002, …).</p>
 
-            <label className="text-base text-[#6f5b46] mb-1.5 block">Item Code</label>
-            <input name="itemCode" value={formData.itemCode} onChange={handleChange}
-              placeholder="e.g. lot / SKU / barcode"
-              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]" />
-            <p className="text-[#8a7559] text-sm mt-2">A code that identifies this item</p>
-
-            <div className="mt-4">
+            <div>
               <label className="text-base text-[#6f5b46] mb-1.5 block">Location</label>
               <input name="storageLocation" value={formData.storageLocation} onChange={handleChange}
                 placeholder="e.g. Shelf 2 / Bin 4 / Row C"

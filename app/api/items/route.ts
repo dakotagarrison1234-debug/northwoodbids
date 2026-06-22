@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { canAccessOrg } from "@/lib/auth";
+import { nextItemCode } from "@/lib/itemCode";
 
 // Accept only http(s) URLs for photos — blocks javascript:/data:/file: etc.
 function isHttpUrl(value: unknown): boolean {
@@ -34,7 +35,6 @@ export async function POST(request: NextRequest) {
       reservePrice,
       donorName,
       taxDeductible,
-      itemCode,
       storageLocation,
       locationId,
       notes,
@@ -106,6 +106,10 @@ export async function POST(request: NextRequest) {
       if (parentAuction.status === "OPEN") itemStatus = "ACTIVE";
     }
 
+    // Item codes are auto-numbered per auction (001, 002, …). Drafts with no
+    // auction get a code when they're later assigned to one (see PATCH).
+    const autoItemCode = auctionId ? await nextItemCode(auctionId) : null;
+
     const baseData = {
       title,
       description: description || null,
@@ -116,7 +120,7 @@ export async function POST(request: NextRequest) {
       reservePrice: reservePrice ? parseFloat(reservePrice) : null,
       donorName: donorName || null,
       taxDeductible: taxDeductible || false,
-      itemCode: itemCode || null,
+      itemCode: autoItemCode,
       storageLocation: storageLocation || null,
       locationId: locationId || null,
       notes: notes || null,

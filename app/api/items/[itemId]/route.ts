@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { canAccessOrg } from "@/lib/auth";
+import { nextItemCode } from "@/lib/itemCode";
 
 // Accept only http(s) URLs for photos — blocks javascript:/data:/file: etc.
 function isHttpUrl(value: unknown): boolean {
@@ -115,6 +116,7 @@ export async function PATCH(
         organizationId: true,
         status: true,
         auctionId: true,
+        itemCode: true,
         _count: { select: { bids: true } },
       },
     });
@@ -179,7 +181,6 @@ export async function PATCH(
       }),
       ...(body.donorName !== undefined && { donorName: body.donorName || null }),
       ...(body.taxDeductible !== undefined && { taxDeductible: body.taxDeductible || false }),
-      ...(body.itemCode !== undefined && { itemCode: body.itemCode || null }),
       ...(body.storageLocation !== undefined && { storageLocation: body.storageLocation || null }),
       ...(body.locationId !== undefined && { locationId: body.locationId || null }),
       ...(body.notes !== undefined && { notes: body.notes || null }),
@@ -196,6 +197,10 @@ export async function PATCH(
       }
       if (body.auctionId !== undefined) {
         data.auctionId = body.auctionId || null;
+        // Auto-assign a per-auction code when a draft is first put into an auction.
+        if (body.auctionId && !item.itemCode) {
+          data.itemCode = await nextItemCode(body.auctionId);
+        }
       }
     }
 

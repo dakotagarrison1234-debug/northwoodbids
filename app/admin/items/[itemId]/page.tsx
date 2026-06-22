@@ -218,10 +218,11 @@ export default function EditItemPage() {
             <h2 className="text-lg font-semibold mb-4">Item Location</h2>
 
             <label className="text-base text-[#6f5b46] mb-1.5 block">Item Code</label>
-            <input name="itemCode" value={formData.itemCode} onChange={handleChange}
-              placeholder="e.g. lot / SKU / barcode"
-              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]" />
-            <p className="text-[#8a7559] text-sm mt-2">A code that identifies this item</p>
+            <div className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base font-mono font-semibold text-[#241a12] flex items-center justify-between">
+              <span>{formData.itemCode || "—"}</span>
+              <span className="text-xs font-sans font-normal text-[#8a7559]">auto-assigned</span>
+            </div>
+            <p className="text-[#8a7559] text-sm mt-2">Numbered automatically per auction</p>
 
             <div className="mt-4">
               <label className="text-base text-[#6f5b46] mb-1.5 block">Location</label>
