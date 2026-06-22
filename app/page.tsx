@@ -311,6 +311,26 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Game CTA */}
+      <section className="px-4 sm:px-6 pb-14 sm:pb-16 max-w-6xl mx-auto">
+        <Link href="/play"
+          className="group relative block overflow-hidden rounded-2xl border border-[#6c4d39]/30 bg-gradient-to-br from-[#6c4d39] to-[#4a3a2b] text-[#f1e7d5] px-6 sm:px-10 py-8 shadow-sm hover:shadow-[0_8px_30px_rgba(74,58,43,0.35)] transition-shadow">
+          <div className="relative flex flex-col sm:flex-row items-center justify-between gap-5">
+            <div className="text-center sm:text-left">
+              <div className="text-xs font-bold uppercase tracking-widest text-[#e7dcc6]/70 mb-1">Auction Arcade</div>
+              <h2 className="font-display text-2xl sm:text-3xl font-black text-white">Going Once, Going Twice!</h2>
+              <p className="text-[#e7dcc6] text-sm sm:text-base mt-1">Slam the gavel, win the lots, and climb the high-score board.</p>
+            </div>
+            <span className="shrink-0 inline-flex items-center gap-2 bg-[#f1e7d5] text-[#4a3a2b] font-extrabold text-base px-7 py-3.5 rounded-xl group-hover:bg-white transition-colors">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 4l6 6-3 3M14 4l-3 3M14 4l-9 9 5 5 9-9M5 13l-3 9 9-3" />
+              </svg>
+              Play now
+            </span>
+          </div>
+        </Link>
+      </section>
+
       {/* Footer */}
       <SiteFooter />
     </main>
