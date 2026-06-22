@@ -23,29 +23,53 @@ function RegisterForm() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    fetch("/api/profile")
-      .then(res => res.json())
-      .then(data => {
-        if (data.profile?.phone) {
-          // Already registered — if coming from an org, still attach them and redirect there
-          if (orgSlug) {
-            fetch("/api/profile/attach-org", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ orgSlug }),
-            }).finally(() => {
-              document.cookie = "northwoodbids_org_ref=; max-age=0; path=/";
-              router.push(`/${orgSlug}`);
-            });
-          } else {
-            router.push(redirectUrl);
-          }
-        } else {
-          setChecking(false);
+
+    const finish = () => {
+      document.cookie = "northwoodbids_org_ref=; max-age=0; path=/";
+      if (orgSlug) {
+        fetch("/api/profile/attach-org", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orgSlug }),
+        }).finally(() => router.push(`/${orgSlug}`));
+      } else {
+        router.push(redirectUrl);
+      }
+    };
+
+    (async () => {
+      try {
+        const data = await fetch("/api/profile").then(r => r.json());
+        if (data.profile?.phone) { finish(); return; }
+
+        // No saved phone yet. If Clerk already captured one at sign-up, save it
+        // automatically so we never ask the same person for it twice.
+        const clerkPhone =
+          user?.primaryPhoneNumber?.phoneNumber ||
+          user?.phoneNumbers?.[0]?.phoneNumber ||
+          "";
+        const digits = clerkPhone.replace(/\D/g, "").slice(-10);
+        if (digits.length === 10) {
+          const save = await fetch("/api/profile", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              phone: digits,
+              email: user?.primaryEmailAddress?.emailAddress,
+              name: user?.fullName,
+              ...(orgSlug ? { orgSlug } : {}),
+            }),
+          }).then(r => r.json()).catch(() => null);
+          if (save?.success) { finish(); return; }
+          // Couldn't auto-save — fall through and show the form, prefilled.
+          setPhone(clerkPhone);
         }
-      })
-      .catch(() => setChecking(false));
-  }, [isLoaded, router, redirectUrl, orgSlug]);
+        setChecking(false);
+      } catch {
+        setChecking(false);
+      }
+    })();
+  }, [isLoaded, user, router, redirectUrl, orgSlug]);
 
   const handleSubmit = async () => {
     const digits = phone.replace(/\D/g, "");

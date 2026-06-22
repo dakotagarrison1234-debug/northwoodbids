@@ -33,24 +33,34 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
   const [showSearch, setShowSearch] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const readerRef = useRef<any>(null);
+  const controlsRef = useRef<any>(null);
   const detectedRef = useRef(false);
 
+  // Fully stop the scanner: @zxing/browser has NO reader.reset(); you must stop
+  // the controls returned by decodeFromVideoDevice and release the camera tracks.
+  // Without this the old decode loop keeps running and re-fires the last result.
   const stopCamera = () => {
-    try { readerRef.current?.reset(); } catch { /* ignore */ }
-    readerRef.current = null;
+    try { controlsRef.current?.stop(); } catch { /* ignore */ }
+    controlsRef.current = null;
+    try {
+      const stream = videoRef.current?.srcObject as MediaStream | null;
+      stream?.getTracks().forEach((t) => t.stop());
+      if (videoRef.current) videoRef.current.srcObject = null;
+    } catch { /* ignore */ }
     setScanning(false);
   };
 
   const startCamera = async () => {
+    // Clear any prior scan so a fresh scan can't show the previous item.
+    stopCamera();
     setError(null);
     setResult(null);
+    setBarcode("");
     setScanning(true);
     detectedRef.current = false;
     try {
       const { BrowserMultiFormatReader } = await import("@zxing/browser");
       const codeReader = new BrowserMultiFormatReader();
-      readerRef.current = codeReader;
 
       const devices = await BrowserMultiFormatReader.listVideoInputDevices();
       // Prefer rear camera on mobile
@@ -60,7 +70,7 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
         d.label.toLowerCase().includes("environment")
       )?.deviceId ?? devices[devices.length - 1]?.deviceId ?? undefined;
 
-      await codeReader.decodeFromVideoDevice(deviceId, videoRef.current!, (res, err) => {
+      const controls = await codeReader.decodeFromVideoDevice(deviceId, videoRef.current!, (res, err) => {
         // Guard: only act on the first detection
         if (res && !detectedRef.current) {
           detectedRef.current = true;
@@ -71,6 +81,7 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
         }
         void err;
       });
+      controlsRef.current = controls;
     } catch {
       setError("Camera not available. Enter the barcode number manually.");
       setScanning(false);
