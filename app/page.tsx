@@ -4,7 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import LocalDate from "./components/LocalDate";
 import AuctionPreviewThumbs from "./components/AuctionPreviewThumbs";
-import { PineRidge, MountainRange, WoodenCrate, BranchDivider, PineMark } from "./components/Illustrations";
+import SiteFooter from "./components/SiteFooter";
+import { PineRidge, MountainRange, WoodenCrate, BranchDivider } from "./components/Illustrations";
 
 function IconSearch() {
   return (
@@ -311,24 +312,7 @@ export default async function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#2f2114] text-[#e7dcc6] px-6 pt-10 pb-8">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-2.5">
-              <PineMark className="w-6 h-6" />
-              <span className="font-display font-extrabold text-lg text-white">Northwood Bids</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-[#cdbda3]">
-              <Link href="/help" className="hover:text-white transition-colors">Help &amp; Info</Link>
-              <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
-              <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
-            </div>
-          </div>
-          <div className="mt-6 pt-5 border-t border-white/10 text-xs text-[#b3a085]">
-            © {new Date().getFullYear()} Northwood Bids. All rights reserved.
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </main>
   );
 }
