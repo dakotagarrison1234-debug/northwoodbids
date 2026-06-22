@@ -169,7 +169,8 @@ export default function HelpPage() {
                     Bid increments are the <strong className="text-[#241a12]">minimum amount</strong> each new bid must increase over the current bid. They scale with the item's value.
                   </p>
                 </div>
-                <table className="w-full">
+                <div className="overflow-x-auto">
+                <table className="w-full min-w-[440px]">
                   <thead>
                     <tr className="bg-[#efe3d0]">
                       <th className="text-left px-6 py-3 text-xs font-bold uppercase tracking-wider text-[#8a7559]">Current Bid</th>
@@ -210,6 +211,7 @@ export default function HelpPage() {
                     </tr>
                   </tbody>
                 </table>
+                </div>
                 <div className="px-6 py-4 border-t border-[#e3d6bf] bg-[#f6efe1]">
                   <Tip>When using Max Bid, the system always uses the <strong>minimum valid increment</strong> — so you never overbid by accident.</Tip>
                 </div>

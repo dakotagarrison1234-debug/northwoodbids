@@ -225,7 +225,7 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
           onChange={e => setBarcode(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Barcode, FNSKU, or ASIN…"
-          className="flex-1 bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] text-base"
+          className="flex-1 min-w-0 bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] text-base"
           inputMode="text"
           autoCapitalize="characters"
           autoCorrect="off"

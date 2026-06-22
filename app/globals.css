@@ -29,6 +29,14 @@
   --font-display: var(--font-bitter);
 }
 
+/* Prevent page-level horizontal overflow on mobile from full-bleed decorative
+   art (mountain/pine ridges) or wide rows. `clip` (not `hidden`) preserves
+   position: sticky. Tables that need to scroll opt in via their own overflow-x. */
+html, body {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
 body {
   background-color: var(--background);
   /* faint paper grain so flat cream feels like stock/paper */

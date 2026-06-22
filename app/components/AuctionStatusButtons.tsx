@@ -8,7 +8,7 @@ interface Props {
 }
 
 const BTN_BASE =
-  "text-base font-semibold px-6 py-3.5 rounded-xl transition-colors whitespace-nowrap disabled:opacity-50";
+  "text-base font-semibold px-6 py-3.5 rounded-xl transition-colors whitespace-nowrap disabled:opacity-50 w-full sm:w-auto text-center";
 
 export default function AuctionStatusButtons({ auctionId, status }: Props) {
   const router = useRouter();
@@ -72,7 +72,7 @@ export default function AuctionStatusButtons({ auctionId, status }: Props) {
 
   return (
     <div>
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
         {status === "DRAFT" && (
           // Delete lives in the Danger Zone below — only one delete path.
           <button

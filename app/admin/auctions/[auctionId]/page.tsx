@@ -87,11 +87,11 @@ export default async function ManageAuctionPage({ params }: Props) {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 sm:shrink-0">
           <Link
             href={`/${auction.organization.slug}/${auction.slug}`}
             target="_blank"
-            className="text-[#4a3a2b] hover:text-[#241a12] font-semibold text-base bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] px-6 py-3.5 rounded-xl whitespace-nowrap transition-colors"
+            className="text-center w-full sm:w-auto text-[#4a3a2b] hover:text-[#241a12] font-semibold text-base bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] px-6 py-3.5 rounded-xl whitespace-nowrap transition-colors"
           >
             View ↗
           </Link>
