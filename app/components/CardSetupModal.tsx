@@ -4,19 +4,19 @@ import { loadStripe } from "@stripe/stripe-js";
 
 interface Props {
   orgId: string;
-  stripeAccountId: string;
+  stripeAccountId?: string | null; // unused in the direct-charge model; kept for caller compatibility
   onSuccess: () => void;
   onClose: () => void;
 }
 
 /**
  * Modal that collects and saves a payment card using Stripe.js Elements.
- * Initializes on the org's CONNECTED Stripe account so the card is usable
- * for off-session charges on that account at auction close.
+ * Payments run directly on the platform Stripe account (no Connect), so the
+ * card is saved against the platform account for off-session charging at close.
  *
  * Uses vanilla Stripe.js (no @stripe/react-stripe-js dependency needed).
  */
-export default function CardSetupModal({ orgId, stripeAccountId, onSuccess, onClose }: Props) {
+export default function CardSetupModal({ orgId, onSuccess, onClose }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
   const stripeRef = useRef<ReturnType<typeof import("@stripe/stripe-js").loadStripe> extends Promise<infer T> ? T : never>(null);
   const cardElementRef = useRef<{ destroy: () => void } | null>(null);
@@ -28,9 +28,8 @@ export default function CardSetupModal({ orgId, stripeAccountId, onSuccess, onCl
     let cancelled = false;
 
     async function init() {
-      const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!, {
-        stripeAccount: stripeAccountId,
-      });
+      // Direct charges → initialize on the platform account (no stripeAccount option).
+      const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
       if (!stripe || cancelled) return;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (stripeRef as any).current = stripe;
@@ -64,7 +63,7 @@ export default function CardSetupModal({ orgId, stripeAccountId, onSuccess, onCl
       cardElementRef.current?.destroy();
       cardElementRef.current = null;
     };
-  }, [stripeAccountId]);
+  }, []);
 
   const handleSave = async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

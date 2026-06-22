@@ -856,10 +856,9 @@ export default function ItemPage() {
 
       {/* Card setup modal — shown when user tries to bid without a card on file */}
       {showCardModal && (
-        item.org?.stripeAccountId ? (
+        item.org?.stripeChargesEnabled ? (
           <CardSetupModal
             orgId={item.org.id}
-            stripeAccountId={item.org.stripeAccountId}
             onSuccess={() => {
               setShowCardModal(false);
               setHasCard(true);

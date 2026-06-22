@@ -325,9 +325,9 @@ export default function AccountPage() {
                         <div className="text-xs text-yellow-600 mt-0.5 font-medium">No card saved</div>
                       )}
                     </div>
-                    {pm.stripeAccountId && pm.stripeChargesEnabled && (
+                    {pm.stripeChargesEnabled && (
                       <button
-                        onClick={() => setCardModal({ orgId: pm.orgId, stripeAccountId: pm.stripeAccountId! })}
+                        onClick={() => setCardModal({ orgId: pm.orgId, stripeAccountId: pm.stripeAccountId ?? "" })}
                         className="text-xs text-[#6c4d39] hover:text-[#c47b3e] font-semibold shrink-0 transition-colors border border-[#6c4d39]/30 hover:border-[#6c4d39]/60 px-3 py-1.5 rounded-lg"
                       >
                         {pm.hasCard ? "Update card" : "Add card"}

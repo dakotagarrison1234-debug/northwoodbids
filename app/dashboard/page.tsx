@@ -911,9 +911,9 @@ function BidderDashboardInner() {
                               <div className="text-xs text-yellow-500 mt-0.5">No card saved</div>
                             )}
                           </div>
-                          {pm.stripeAccountId && pm.stripeChargesEnabled && (
+                          {pm.stripeChargesEnabled && (
                             <button
-                              onClick={() => setCardModal({ orgId: pm.orgId, stripeAccountId: pm.stripeAccountId! })}
+                              onClick={() => setCardModal({ orgId: pm.orgId, stripeAccountId: pm.stripeAccountId ?? "" })}
                               className="text-xs text-[#6c4d39] hover:text-[#c47b3e] font-medium shrink-0 transition-colors"
                             >
                               {pm.hasCard ? "Update" : "Add card"}
