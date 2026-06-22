@@ -18,6 +18,10 @@ export async function POST(request: NextRequest) {
     if (!itemId || !Number.isFinite(amount) || amount <= 0) {
       return NextResponse.json({ error: "Item and a valid amount are required" }, { status: 400 });
     }
+    // Whole dollars only — no cents.
+    if (!Number.isInteger(amount)) {
+      return NextResponse.json({ error: "Bids must be whole dollar amounts (no cents)." }, { status: 400 });
+    }
     if (amount > 1_000_000) {
       return NextResponse.json({ error: "Bid exceeds the maximum allowed amount" }, { status: 400 });
     }
@@ -85,7 +89,7 @@ export async function POST(request: NextRequest) {
     // First bid floor is $1 even when startingBid is 0.
     const minBid = Number(item.currentBid) > 0
       ? getNextValidBid(Number(item.currentBid))
-      : Math.max(Number(item.startingBid), 1);
+      : Math.max(Math.ceil(Number(item.startingBid)), 1);
     if (amount < minBid) {
       return NextResponse.json({ error: `Minimum bid is $${minBid}` }, { status: 400 });
     }

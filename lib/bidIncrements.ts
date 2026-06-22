@@ -18,10 +18,11 @@ export function getIncrement(currentBid: number): number {
 
 /**
  * Returns the minimum valid next bid given the current bid level.
+ * Whole dollars only — the base is floored so a stray cent can't carry through.
  * Only call this when currentBid > 0 (for the first bid, use item.startingBid).
  */
 export function getNextValidBid(currentBid: number): number {
-  return currentBid + getIncrement(currentBid);
+  return Math.floor(currentBid) + getIncrement(currentBid);
 }
 
 /**

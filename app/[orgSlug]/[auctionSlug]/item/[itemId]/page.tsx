@@ -225,9 +225,13 @@ export default function ItemPage() {
     }
     const amount = parseFloat(bidAmount);
     const currentBid = item?.currentBid || 0;
-    const minBid = currentBid > 0 ? getNextValidBid(currentBid) : (item?.startingBid || 0);
+    const minBid = currentBid > 0 ? getNextValidBid(currentBid) : Math.ceil(item?.startingBid || 0);
     if (!bidAmount || amount < minBid) {
       setMessage({ text: `Minimum bid is $${minBid.toLocaleString()}`, type: "error" });
+      return;
+    }
+    if (!Number.isInteger(amount)) {
+      setMessage({ text: "Whole dollars only — no cents.", type: "error" });
       return;
     }
 
@@ -279,9 +283,13 @@ export default function ItemPage() {
     }
     const amount = parseFloat(proxyAmount);
     const currentBid = item?.currentBid || 0;
-    const minProxy = currentBid > 0 ? getNextValidBid(currentBid) : (item?.startingBid || 1);
+    const minProxy = currentBid > 0 ? getNextValidBid(currentBid) : Math.max(Math.ceil(item?.startingBid || 0), 1);
     if (!proxyAmount || isNaN(amount) || amount < minProxy) {
       setProxyMessage({ text: `Max bid must be at least $${minProxy.toLocaleString()}`, type: "error" });
+      return;
+    }
+    if (!Number.isInteger(amount)) {
+      setProxyMessage({ text: "Whole dollars only — no cents.", type: "error" });
       return;
     }
 
@@ -378,8 +386,8 @@ export default function ItemPage() {
   }
 
   const currentBid = item.currentBid || item.startingBid;
-  const minBid = item.currentBid > 0 ? getNextValidBid(item.currentBid) : item.startingBid;
-  const minProxy = item.currentBid > 0 ? getNextValidBid(item.currentBid) : (item.startingBid > 0 ? item.startingBid : 1);
+  const minBid = item.currentBid > 0 ? getNextValidBid(item.currentBid) : Math.max(Math.ceil(item.startingBid), 1);
+  const minProxy = item.currentBid > 0 ? getNextValidBid(item.currentBid) : Math.max(Math.ceil(item.startingBid), 1);
   // Fix #2: use getProxySuggestions — jumps are far apart so they can't accidentally reveal a competing proxy's max
   const proxySuggestions = getProxySuggestions(item.currentBid || 0, 4);
   const auctionClosed = item.auction?.status === "CLOSED" || item.auction?.status === "SETTLED";
