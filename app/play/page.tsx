@@ -43,7 +43,7 @@ export default function PlayPage() {
   const [yourBest, setYourBest] = useState<number | null>(null);
 
   const [state, setState] = useState<"idle" | "playing" | "over">("idle");
-  const [marker, setMarker] = useState(0);
+  const markerElRef = useRef<HTMLDivElement | null>(null);
   const [zone, setZone] = useState({ start: 36, width: ZONE_MAX });
   const [displayScore, setDisplayScore] = useState(0); // animated count-up
   const [score, setScore] = useState(0);
@@ -129,7 +129,9 @@ export default function PlayPage() {
     if (p >= 100) { p = 100; dirRef.current = -1; }
     if (p <= 0) { p = 0; dirRef.current = 1; }
     posRef.current = p;
-    setMarker(p);
+    // Drive the marker straight from the real position (no React state lag), so
+    // what's painted is exactly what slam() evaluates — frame-accurate & fair.
+    if (markerElRef.current) markerElRef.current.style.transform = `translateX(${p}%)`;
     rafRef.current = requestAnimationFrame(tickRef.current);
   }, []);
   // keep the self-scheduling ref pointed at the latest tick (set off-render)
@@ -195,7 +197,7 @@ export default function PlayPage() {
     if (!canvas) return;
     const w = canvas.width, h = canvas.height;
     // origin near the meter (vertical center of the play area)
-    const ox = (marker / 100) * w;
+    const ox = (posRef.current / 100) * w;
     const oy = h * 0.62;
     const woodChips = ["#6c4d39", "#8a6b4f", "#cdbda3", "#563e2c"];
     const sparks = ["#f59e0b", "#fbbf24", "#5f7a45", "#84cc16", "#fde68a"];
@@ -221,7 +223,7 @@ export default function PlayPage() {
       particlesRef.current.splice(0, particlesRef.current.length - 220);
     }
     ensureParticleLoop();
-  }, [marker, ensureParticleLoop]);
+  }, [ensureParticleLoop]);
 
   const confetti = useCallback(() => {
     const canvas = canvasRef.current;
@@ -290,6 +292,7 @@ export default function PlayPage() {
     setChatter(CHATTER[Math.floor(Math.random() * CHATTER.length)]);
     speedRef.current = BASE_SPEED;
     posRef.current = 0; dirRef.current = 1;
+    if (markerElRef.current) markerElRef.current.style.transform = "translateX(0%)";
     newZone(ZONE_MAX);
     setState("playing");
     playingRef.current = true;
@@ -525,7 +528,7 @@ export default function PlayPage() {
                       {/* bullseye core */}
                       <div className="bullseye absolute top-0 bottom-0" style={{ left: `${zone.start + zone.width / 2 - zone.width * BULL_FRAC}%`, width: `${bullW}%` }} />
                       {/* marker trail + gavel-head marker (GPU transform) */}
-                      <div className="marker-wrap absolute top-0 bottom-0 left-0 w-full pointer-events-none" style={{ transform: `translateX(${marker}%)`, willChange: "transform" }}>
+                      <div ref={markerElRef} className="marker-wrap absolute top-0 bottom-0 left-0 w-full pointer-events-none" style={{ transform: "translateX(0%)", willChange: "transform" }}>
                         <div className="marker-trail" />
                         <div className="marker" />
                       </div>
