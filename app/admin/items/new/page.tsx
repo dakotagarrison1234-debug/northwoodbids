@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import Skeleton from "@/app/components/Skeleton";
 
 // ── Barcode scanner card ───────────────────────────────────────────────────────
 interface BarcodeResult {
@@ -865,7 +866,33 @@ function NewItemForm() {
 
 export default function NewItemPage() {
   return (
-    <Suspense fallback={<div className="flex-1 flex items-center justify-center text-[#8a7559]">Loading...</div>}>
+    <Suspense fallback={
+      <>
+        <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-4 flex items-center gap-2">
+          <Skeleton className="h-8 w-48" />
+        </header>
+        <div className="flex-1 px-4 sm:px-8 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+          <div className="lg:col-span-2 space-y-6">
+            <Skeleton className="h-28 w-full rounded-xl" />
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="bg-white border border-[#e3d6bf] rounded-xl p-6 space-y-4">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-12 w-full rounded-xl" />
+                <Skeleton className="h-12 w-full rounded-xl" />
+              </div>
+            ))}
+          </div>
+          <div className="space-y-6">
+            {[0, 1].map((i) => (
+              <div key={i} className="bg-white border border-[#e3d6bf] rounded-xl p-6 space-y-4">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-12 w-full rounded-xl" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </>
+    }>
       <NewItemForm />
     </Suspense>
   );

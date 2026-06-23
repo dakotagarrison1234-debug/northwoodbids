@@ -22,14 +22,32 @@ const bitter = Bitter({
 });
 
 export const metadata: Metadata = {
-  title: "Northwood Bids",
-  description: "Northwood Bids — live auctions, bid in real time and check out securely.",
+  metadataBase: new URL("https://northwoodbids.com"),
+  title: {
+    default: "Northwood Bids",
+    template: "%s · Northwood Bids",
+  },
+  description: "Northwood Bids — live online auctions. Bid in real time, get text alerts, and pick up local.",
   applicationName: "Northwood Bids",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "Northwood Bids",
+  },
+  openGraph: {
+    type: "website",
+    siteName: "Northwood Bids",
+    title: "Northwood Bids",
+    description: "Live online auctions — bid in real time and pick up local.",
+    url: "https://northwoodbids.com",
+    images: [{ url: "/icon-512.png", width: 512, height: 512, alt: "Northwood Bids" }],
+  },
+  twitter: {
+    card: "summary",
+    title: "Northwood Bids",
+    description: "Live online auctions — bid in real time and pick up local.",
+    images: ["/icon-512.png"],
   },
   icons: {
     icon: [
@@ -66,6 +84,12 @@ export default function RootLayout({
         lang="en"
         className={`${geistSans.variable} ${geistMono.variable} ${bitter.variable} h-full antialiased`}
       >
+        <head>
+          {/* Warm up the TLS/DNS to the image CDNs so photos paint sooner. */}
+          <link rel="preconnect" href="https://pub-829fa846d09e430db535c94618889062.r2.dev" />
+          <link rel="preconnect" href="https://assets.cdn.filesafe.space" />
+          <link rel="dns-prefetch" href="https://pub-829fa846d09e430db535c94618889062.r2.dev" />
+        </head>
         <body className="min-h-full flex flex-col">
           <HomeHeader />
           {children}

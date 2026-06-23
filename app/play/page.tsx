@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useUser, SignInButton } from "@clerk/nextjs";
 import { Avatar, AVATARS } from "@/app/components/Avatars";
 import { SoundFx } from "./_sound";
@@ -507,8 +508,7 @@ export default function PlayPage() {
                     <div className="lot-spot" aria-hidden="true" />
                     <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-[#efe3d0] shrink-0 grid place-items-center ring-2 ring-[#fffdf7] shadow-md">
                       {lot?.photo
-                        // eslint-disable-next-line @next/next/no-img-element
-                        ? <img src={lot.photo} alt="" className="w-full h-full object-cover" />
+                        ? <Image src={lot.photo} alt="" fill sizes="80px" className="object-cover" />
                         : <LotGlyph />}
                     </div>
                     <div className="relative min-w-0">
@@ -638,7 +638,7 @@ export default function PlayPage() {
             ) : (
               <ol className="space-y-1.5">
                 {leaders.map((l) => (
-                  <li key={l.rank} className={`board-row flex items-center gap-3 rounded-xl px-2.5 py-2 ${l.rank === 1 ? "first" : ""}`}>
+                  <li key={l.rank} className={`cv-card board-row flex items-center gap-3 rounded-xl px-2.5 py-2 ${l.rank === 1 ? "first" : ""}`}>
                     <span className={`w-6 text-center font-display font-black ${l.rank === 1 ? "text-[#b45309]" : l.rank <= 3 ? "text-[#6c4d39]" : "text-[#a8997d]"}`}>
                       {l.rank === 1 ? "👑" : l.rank}
                     </span>

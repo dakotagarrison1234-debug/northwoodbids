@@ -119,7 +119,7 @@ export default async function AuctionsPage() {
                 <Link
                   key={auction.id}
                   href={`/${auction.organization.slug}/${auction.slug}`}
-                  className="bg-white border border-[#e3d6bf] hover:border-[#6c4d39]/40 rounded-2xl p-5 transition-all hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] group flex flex-col gap-3"
+                  className="cv-card bg-white border border-[#e3d6bf] hover:border-[#6c4d39]/40 rounded-2xl p-5 transition-all hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] group flex flex-col gap-3"
                 >
                   {/* Org + live badge */}
                   <div className="flex items-start justify-between gap-2">

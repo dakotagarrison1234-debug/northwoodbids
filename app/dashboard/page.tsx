@@ -1,12 +1,14 @@
 "use client";
 import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import Pusher from "pusher-js";
 import UserMenu from "@/app/components/UserMenu";
 import CardSetupModal from "@/app/components/CardSetupModal";
 import { PineMark, WoodenCrate } from "@/app/components/Illustrations";
+import Skeleton from "@/app/components/Skeleton";
 import { money } from "@/lib/format";
 
 type Tab = "overview" | "active" | "history" | "auctions" | "profile";
@@ -130,7 +132,9 @@ function IcoHistory() {
 
 function Photo({ url, title }: { url: string | null; title: string }) {
   return url ? (
-    <img src={url} alt={title} className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl object-cover shrink-0" />
+    <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden shrink-0">
+      <Image src={url} alt={title} fill sizes="56px" className="object-cover" />
+    </div>
   ) : (
     <div className="w-12 h-12 sm:w-14 sm:h-14 bg-[#efe3d0] rounded-xl flex items-center justify-center text-[#8a7559] text-xs shrink-0">—</div>
   );
@@ -330,10 +334,43 @@ function BidderDashboardInner() {
 
   if (!isLoaded || loading) {
     return (
-      <main className="min-h-screen bg-[#f1e7d5] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-[#6c4d39]/30 border-t-[#6c4d39] animate-spin" />
-          <p className="text-[#8a7559] text-sm">Loading your dashboard…</p>
+      <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
+        {/* Page title placeholder */}
+        <div className="border-b border-[#e3d6bf]/60 px-4 sm:px-8 py-4">
+          <Skeleton className="h-6 w-32" />
+        </div>
+        <div className="px-4 sm:px-8 py-5 sm:py-7 max-w-3xl">
+          {/* Sub-nav pills */}
+          <div className="flex gap-2 mb-6">
+            <Skeleton className="h-9 w-28 rounded-xl" />
+            <Skeleton className="h-9 w-24 rounded-xl" />
+            <Skeleton className="h-9 w-24 rounded-xl" />
+          </div>
+          {/* Stat cards */}
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-5">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-20 sm:h-24 rounded-2xl" />
+            ))}
+          </div>
+          {/* A few bid rows */}
+          <div className="space-y-2">
+            {[0, 1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="flex items-center gap-3 bg-white border border-[#e3d6bf] rounded-2xl px-4 py-3"
+              >
+                <Skeleton className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <Skeleton className="h-4 w-2/3 mb-2" />
+                  <Skeleton className="h-3 w-1/3" />
+                </div>
+                <div className="text-right shrink-0">
+                  <Skeleton className="h-4 w-16 mb-1.5 ml-auto" />
+                  <Skeleton className="h-3 w-12 ml-auto" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </main>
     );

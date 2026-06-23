@@ -1,5 +1,7 @@
 export const dynamic = "force-dynamic";
+import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import LocalDate from "@/app/components/LocalDate";
@@ -10,6 +12,54 @@ import { PineMark, BranchDivider, WoodenCrate } from "@/app/components/Illustrat
 
 interface Props {
   params: Promise<{ orgSlug: string; auctionSlug: string }>;
+}
+
+// Per-page share card: auction title + org name + first item's primary photo as
+// the OG image. Wrapped in try/catch so a DB hiccup falls back to a basic title
+// instead of 500-ing the route. Root layout supplies metadataBase + defaults.
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  try {
+    const { orgSlug, auctionSlug } = await params;
+    const org = await prisma.organization.findUnique({ where: { slug: orgSlug } });
+    const auction = org
+      ? await prisma.auction.findFirst({
+          where: { organizationId: org.id, slug: auctionSlug },
+          include: {
+            items: {
+              where: { status: { not: "DRAFT" } },
+              include: { photos: true },
+              take: 12,
+            },
+          },
+        })
+      : null;
+
+    if (!auction) {
+      return { title: "Auction" };
+    }
+
+    // First available item primary photo, else any photo, else the app icon.
+    let ogImage = "/icon-512.png";
+    for (const item of auction.items) {
+      const primary = item.photos.find((p) => p.isPrimary)?.url ?? item.photos[0]?.url;
+      if (primary) {
+        ogImage = primary;
+        break;
+      }
+    }
+
+    const title = auction.title;
+    const description = `${org!.name} · live auction — bid now`;
+
+    return {
+      title,
+      description,
+      openGraph: { title, description, images: [ogImage] },
+      twitter: { card: "summary_large_image", title, description, images: [ogImage] },
+    };
+  } catch {
+    return { title: "Auction" };
+  }
 }
 
 function IcoLock() {
@@ -191,7 +241,7 @@ export default async function AuctionPage({ params }: Props) {
                 <Link
                   key={item.id}
                   href={`/${orgSlug}/${auctionSlug}/item/${item.id}`}
-                  className={`bg-white border rounded-2xl overflow-hidden transition-all group ${
+                  className={`cv-card bg-white border rounded-2xl overflow-hidden transition-all group ${
                     winning
                       ? "border-[#6c4d39]/50 shadow-[0_0_0_1px_rgba(108,77,57,0.15),0_0_20px_rgba(108,77,57,0.08)]"
                       : isClosed || isItemClosed
@@ -202,11 +252,12 @@ export default async function AuctionPage({ params }: Props) {
                   {/* Photo */}
                   <div className="w-full aspect-square bg-[#efe3d0] flex items-center justify-center text-[#8a7559] overflow-hidden relative">
                     {primaryPhoto ? (
-                      <img
+                      <Image
                         src={primaryPhoto}
                         alt={item.title}
-                        loading="lazy"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        fill
+                        sizes="(max-width:640px) 50vw, 25vw"
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
                       <div className="flex flex-col items-center gap-2 text-[#b3a085]">

@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 import Link from "next/link";
+import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import AuctionStatusButtons from "@/app/components/AuctionStatusButtons";
 import LocalDate from "@/app/components/LocalDate";
@@ -205,11 +206,9 @@ export default async function ManageAuctionPage({ params }: Props) {
                       <tr key={item.id} className="border-b border-[#e3d6bf] last:border-0 hover:bg-[#efe3d0]/40 transition-colors">
                         <td className="px-4 py-3 w-14">
                           {photo ? (
-                            <img
-                              src={photo.url}
-                              alt={item.title}
-                              className="w-10 h-10 object-cover rounded-lg"
-                            />
+                            <div className="relative w-10 h-10 rounded-lg overflow-hidden">
+                              <Image src={photo.url} alt={item.title} fill sizes="40px" className="object-cover" />
+                            </div>
                           ) : (
                             <div className="w-10 h-10 bg-[#efe3d0] rounded-lg flex items-center justify-center text-[#8a7559] text-xs">
                               ?

@@ -178,6 +178,9 @@ export default async function HomePage() {
           <img
             src="https://assets.cdn.filesafe.space/TwuL7EwKfW8oGIV0Zo5q/media/6a373b261c5d711b35bf4e56.png"
             alt="Northwood Bids"
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
             className="h-40 sm:h-52 w-auto max-w-[420px] object-contain mx-auto mb-2 drop-shadow-sm"
           />
           {activeAuctions.length > 0 && (
@@ -223,7 +226,7 @@ export default async function HomePage() {
               const activeItems = activeItemsMap.get(auction.id) ?? 0;
               return (
                 <Link key={auction.id} href={`/${auction.organization.slug}/${auction.slug}`}
-                  className="bg-white border border-[#e3d6bf] hover:border-[#6c4d39]/40 rounded-2xl p-6 transition-all hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] group shadow-sm">
+                  className="cv-card bg-white border border-[#e3d6bf] hover:border-[#6c4d39]/40 rounded-2xl p-6 transition-all hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] group shadow-sm">
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div className="min-w-0">
                       <h3 className="font-bold text-base group-hover:text-[#6c4d39] transition-colors leading-snug text-[#241a12]">{auction.title}</h3>
@@ -265,7 +268,7 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {upcomingAuctions.map((auction) => (
               <Link key={auction.id} href={`/${auction.organization.slug}`}
-                className="bg-white border border-[#e3d6bf] hover:border-[#cdbda3] rounded-2xl p-6 transition-all group shadow-sm">
+                className="cv-card bg-white border border-[#e3d6bf] hover:border-[#cdbda3] rounded-2xl p-6 transition-all group shadow-sm">
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div className="min-w-0">
                     <h3 className="font-bold text-base leading-snug text-[#2c2317]">{auction.title}</h3>

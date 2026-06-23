@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useUser, SignInButton } from "@clerk/nextjs";
 import Pusher from "pusher-js";
@@ -10,6 +11,7 @@ import CardSetupModal from "@/app/components/CardSetupModal";
 import MaxBidExplainerModal from "@/app/components/MaxBidExplainerModal";
 import ExpandableDescription from "@/app/components/ExpandableDescription";
 import { BranchDivider } from "@/app/components/Illustrations";
+import Skeleton from "@/app/components/Skeleton";
 
 interface Item {
   id: string;
@@ -360,8 +362,47 @@ export default function ItemPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#f1e7d5] text-[#241a12] flex items-center justify-center">
-        <p className="text-[#6f5b46]">Loading...</p>
+      <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
+        {/* Breadcrumb placeholder */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4">
+          <Skeleton className="h-4 w-32" />
+        </div>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-12">
+          {/* Left: photo */}
+          <div>
+            <Skeleton className="w-full aspect-square rounded-2xl mb-3" />
+            <div className="grid grid-cols-5 gap-1.5">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="aspect-square rounded-lg" />
+              ))}
+            </div>
+          </div>
+          {/* Right: title + bid box */}
+          <div>
+            <div className="flex gap-2 mb-3">
+              <Skeleton className="h-6 w-20 rounded-full" />
+              <Skeleton className="h-6 w-24 rounded-full" />
+            </div>
+            <Skeleton className="h-8 w-3/4 mb-3" />
+            <Skeleton className="h-4 w-full mb-2" />
+            <Skeleton className="h-4 w-2/3 mb-6" />
+            {/* Bid card */}
+            <div className="bg-white border border-[#e3d6bf] rounded-2xl p-4 sm:p-6 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <Skeleton className="h-4 w-20 mb-2" />
+                  <Skeleton className="h-9 w-32" />
+                </div>
+                <div className="text-right">
+                  <Skeleton className="h-4 w-10 mb-2 ml-auto" />
+                  <Skeleton className="h-6 w-8 ml-auto" />
+                </div>
+              </div>
+              <Skeleton className="h-24 w-full rounded-xl mb-4" />
+              <Skeleton className="h-12 w-full rounded-xl" />
+            </div>
+          </div>
+        </div>
       </main>
     );
   }
@@ -430,10 +471,13 @@ export default function ItemPage() {
             }}
           >
             {item.photos.length > 0 ? (
-              <img
+              <Image
                 src={item.photos[selectedPhotoIdx]?.url || item.photos[0].url}
                 alt={item.title}
-                className="w-full h-full object-contain"
+                fill
+                priority
+                sizes="(max-width:1024px) 100vw, 50vw"
+                className="object-contain"
               />
             ) : (
               <div className="text-[#8a7559] text-sm">No photo</div>
@@ -480,12 +524,12 @@ export default function ItemPage() {
                 <button
                   key={i}
                   onClick={() => setSelectedPhotoIdx(i)}
-                  className={`aspect-square bg-white rounded-lg overflow-hidden flex items-center justify-center border-2 transition-colors ${
+                  className={`relative aspect-square bg-white rounded-lg overflow-hidden flex items-center justify-center border-2 transition-colors ${
                     i === selectedPhotoIdx ? "border-[#6c4d39]" : "border-transparent hover:border-[#6c4d39]/40"
                   }`}
                   aria-label={`Photo ${i + 1}`}
                 >
-                  <img src={photo.url} alt={`Photo ${i + 1}`} className="w-full h-full object-contain" loading="lazy" />
+                  <Image src={photo.url} alt={`Photo ${i + 1}`} fill sizes="64px" className="object-contain" />
                 </button>
               ))}
             </div>
