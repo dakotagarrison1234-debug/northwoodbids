@@ -82,6 +82,9 @@ function InvoiceInner() {
           .no-print { display: none !important; }
           .invoice-root { background: white !important; padding: 0 !important; }
           .invoice-thumb { display: none !important; }
+          /* Always print the wide table layout, never the mobile cards. */
+          .invoice-cards { display: none !important; }
+          .invoice-table { display: block !important; }
         }
         @page { size: letter; margin: 0.5in; }
       `}</style>
