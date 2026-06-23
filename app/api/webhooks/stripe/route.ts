@@ -104,6 +104,11 @@ export async function POST(request: NextRequest) {
       }
       case "charge.refunded": {
         const charge = event.data.object as Stripe.Charge;
+        // Per-item refunds are PARTIAL refunds of a shared (batch) PaymentIntent
+        // and are reconciled precisely by the admin refund route. Only act here
+        // when the WHOLE charge has been refunded (e.g. a full refund issued from
+        // the Stripe dashboard) — otherwise we'd wrongly mark sibling items.
+        if (charge.amount_refunded < charge.amount) break;
         const piId =
           typeof charge.payment_intent === "string"
             ? charge.payment_intent

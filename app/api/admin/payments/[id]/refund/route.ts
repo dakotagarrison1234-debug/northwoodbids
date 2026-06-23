@@ -34,22 +34,47 @@ export async function POST(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  if (payment.status !== "PAID" || !payment.stripePaymentIntentId) {
+  if (payment.status !== "PAID") {
     return NextResponse.json(
-      { error: "Only a paid payment with a recorded charge can be refunded." },
+      { error: "Only a paid payment can be refunded." },
       { status: 400 }
     );
   }
 
-  try {
-    await stripe.refunds.create({ payment_intent: payment.stripePaymentIntentId });
-  } catch (err) {
-    console.error("[admin refund] Stripe refund failed:", err);
-    return NextResponse.json(
-      { error: "Could not process the refund. Please try again." },
-      { status: 502 }
-    );
+  // A PaymentIntent is shared across ALL of a winner's items in an auction (we
+  // charge in one batch). So we must refund the EXACT amount charged for THIS
+  // item — bid + buyer's premium + tax − any Bid Bucks applied — as a PARTIAL
+  // refund, never the whole PaymentIntent.
+  const refundCents = Math.round(
+    (Number(payment.amount) +
+      Number(payment.applicationFeeAmount ?? 0) +
+      Number(payment.taxAmount ?? 0) -
+      Number(payment.creditApplied ?? 0)) *
+      100
+  );
+
+  if (refundCents > 0) {
+    if (!payment.stripePaymentIntentId) {
+      return NextResponse.json(
+        { error: "No card charge is recorded for this item, so there's nothing to refund." },
+        { status: 400 }
+      );
+    }
+    try {
+      await stripe.refunds.create({
+        payment_intent: payment.stripePaymentIntentId,
+        amount: refundCents, // partial: this item's share of the batch only
+      });
+    } catch (err) {
+      console.error("[admin refund] Stripe refund failed:", err);
+      return NextResponse.json(
+        { error: "Could not process the refund. Please try again." },
+        { status: 502 }
+      );
+    }
   }
+  // refundCents === 0 → the item was fully covered by Bid Bucks (no card charge);
+  // nothing to send back to Stripe, just restore the coupon + free the item below.
 
   const ops: Prisma.PrismaPromise<unknown>[] = [
     prisma.payment.update({ where: { id: payment.id }, data: { status: "REFUNDED" } }),

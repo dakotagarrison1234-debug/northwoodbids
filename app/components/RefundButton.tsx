@@ -18,7 +18,7 @@ export default function RefundButton({ paymentId, amount, winnerName }: Props) {
   const handleClick = async () => {
     if (
       !confirm(
-        `Refund ${money(amount)} to ${winnerName}? This returns the item to unsold.`
+        `Refund this item to ${winnerName}? They'll get back the full amount they paid for it — the ${money(amount)} winning bid plus its buyer's premium and tax (minus any Bid Bucks). Only this item is refunded; their other items in the same auction are untouched. The item returns to unsold.`
       )
     ) {
       return;
