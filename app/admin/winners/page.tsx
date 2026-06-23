@@ -17,7 +17,7 @@ export default async function WinnersPage() {
   const [wonBids, activeBids, payments] = await Promise.all([
     prisma.bid.findMany({
       where: { status: "WON", item: { organizationId: orgId } },
-      include: { item: { include: { photos: { where: { isPrimary: true }, take: 1 } } } },
+      include: { item: { include: { photos: { where: { isPrimary: true }, take: 1 }, auction: { select: { title: true } } } } },
       orderBy: { placedAt: "desc" },
       take: FETCH_CAP,
     }),
@@ -103,6 +103,7 @@ export default async function WinnersPage() {
       paid,
       status: bid.item.status,
       auctionId: bid.item.auctionId,
+      auctionTitle: bid.item.auction?.title ?? null,
       paymentId: payment?.id ?? null,
     });
     g.total += Number(bid.amount);

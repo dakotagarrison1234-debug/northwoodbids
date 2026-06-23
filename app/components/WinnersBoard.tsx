@@ -24,6 +24,7 @@ export type WinItem = {
   paid: boolean;
   status: string;
   auctionId: string | null;
+  auctionTitle: string | null;
   paymentId: string | null;
 };
 export type Winner = {
@@ -135,13 +136,70 @@ function LeadingBids({ leaders }: { leaders: Leader[] }) {
   );
 }
 
+type AuctionGroup = {
+  auctionId: string | null;
+  title: string;
+  items: WinItem[];
+  total: number;
+  unpaid: number;
+};
+
+function auctionsOf(w: Winner): AuctionGroup[] {
+  const map = new Map<string, AuctionGroup>();
+  for (const it of w.items) {
+    const key = it.auctionId ?? "__none__";
+    let g = map.get(key);
+    if (!g) {
+      g = { auctionId: it.auctionId, title: it.auctionTitle ?? "No auction", items: [], total: 0, unpaid: 0 };
+      map.set(key, g);
+    }
+    g.items.push(it);
+    g.total += it.amount;
+    if (!it.paid) g.unpaid += 1;
+  }
+  return [...map.values()].sort((a, b) => b.total - a.total);
+}
+
+function ItemRow({ it, winnerName }: { it: WinItem; winnerName: string }) {
+  return (
+    <div className="px-4 py-3 flex items-center gap-3">
+      <Link href={`/admin/items/${it.id}`} className="relative w-12 h-12 rounded-lg overflow-hidden bg-[#efe3d0] border border-[#e3d6bf] shrink-0">
+        {it.photo ? <Image src={it.photo} alt="" fill sizes="48px" className="object-cover" /> : null}
+      </Link>
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-medium text-[#241a12] truncate">{it.title}</div>
+        <div className="flex items-center gap-2 mt-0.5">
+          <span className="text-[#6c4d39] font-bold text-sm">{money(it.amount)}</span>
+          <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full border ${it.paid ? "bg-green-100 text-green-700 border-green-200" : "bg-amber-100 text-amber-700 border-amber-200"}`}>
+            {it.paid ? "Paid" : "Unpaid"}
+          </span>
+          <StatusPill status={it.status} />
+        </div>
+      </div>
+      <div className="shrink-0 flex flex-col items-end gap-1.5">
+        <ItemStatusButton itemId={it.id} currentStatus={it.status} />
+        {it.paid && it.paymentId && (
+          <RefundButton paymentId={it.paymentId} amount={it.amount} winnerName={winnerName} />
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ConfirmedWinners({ winners }: { winners: Winner[] }) {
   const [q, setQ] = useState("");
   const [limit, setLimit] = useState(PAGE);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openWinner, setOpenWinner] = useState<string | null>(null);
+  const [openAuction, setOpenAuction] = useState<string | null>(null); // `${winnerId}:${auctionKey}`
 
   const filtered = useMemo(
-    () => winners.filter((w) => matches(q, w.name, w.email, w.phone, w.items.map((i) => i.title))),
+    () =>
+      winners.filter((w) =>
+        matches(q, w.name, w.email, w.phone, [
+          ...w.items.map((i) => i.title),
+          ...w.items.map((i) => i.auctionTitle ?? ""),
+        ])
+      ),
     [winners, q]
   );
   const shown = filtered.slice(0, limit);
@@ -157,14 +215,16 @@ function ConfirmedWinners({ winners }: { winners: Winner[] }) {
         <p className="text-base text-[#8a7559]">No confirmed winners yet — winners are set when an auction closes.</p>
       ) : (
         <>
-          <SearchBox value={q} onChange={(v) => { setQ(v); setLimit(PAGE); }} placeholder="Search winner or item…" />
+          <SearchBox value={q} onChange={(v) => { setQ(v); setLimit(PAGE); }} placeholder="Search winner, auction, or item…" />
           <div className="space-y-2">
             {shown.map((w) => {
-              const open = openId === w.clerkUserId;
+              const open = openWinner === w.clerkUserId;
+              const groups = open ? auctionsOf(w) : [];
               return (
                 <div key={w.clerkUserId} className="bg-white border border-[#e3d6bf] rounded-xl overflow-hidden">
+                  {/* Level 1 — winner */}
                   <button
-                    onClick={() => setOpenId(open ? null : w.clerkUserId)}
+                    onClick={() => { setOpenWinner(open ? null : w.clerkUserId); setOpenAuction(null); }}
                     className="w-full px-4 py-3 flex items-start justify-between gap-3 text-left hover:bg-[#efe3d0]/40 transition-colors"
                   >
                     <div className="min-w-0">
@@ -187,39 +247,54 @@ function ConfirmedWinners({ winners }: { winners: Winner[] }) {
                     </div>
                   </button>
 
+                  {/* Level 2 — the winner's auctions */}
                   {open && (
                     <div className="border-t border-[#e3d6bf] divide-y divide-[#efe3d0]">
-                      {w.items.map((it) => (
-                        <div key={it.id} className="px-4 py-3 flex items-center gap-3">
-                          <Link href={`/admin/items/${it.id}`} className="relative w-12 h-12 rounded-lg overflow-hidden bg-[#efe3d0] border border-[#e3d6bf] shrink-0">
-                            {it.photo ? <Image src={it.photo} alt="" fill sizes="48px" className="object-cover" /> : null}
-                          </Link>
-                          <div className="min-w-0 flex-1">
-                            <div className="text-sm font-medium text-[#241a12] truncate">{it.title}</div>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[#6c4d39] font-bold text-sm">{money(it.amount)}</span>
-                              <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full border ${it.paid ? "bg-green-100 text-green-700 border-green-200" : "bg-amber-100 text-amber-700 border-amber-200"}`}>
-                                {it.paid ? "Paid" : "Unpaid"}
-                              </span>
-                              <StatusPill status={it.status} />
-                            </div>
-                          </div>
-                          <div className="shrink-0 flex flex-col items-end gap-1.5">
-                            <ItemStatusButton itemId={it.id} currentStatus={it.status} />
-                            {it.paid && it.auctionId && (
-                              <Link
-                                href={`/invoice/${it.auctionId}?user=${encodeURIComponent(w.clerkUserId)}`}
-                                className="text-xs text-[#6c4d39] hover:text-[#c47b3e] font-medium underline"
-                              >
-                                Receipt
-                              </Link>
+                      {groups.map((g) => {
+                        const akey = `${w.clerkUserId}:${g.auctionId ?? "__none__"}`;
+                        const aopen = openAuction === akey;
+                        return (
+                          <div key={akey}>
+                            <button
+                              onClick={() => setOpenAuction(aopen ? null : akey)}
+                              className="w-full px-4 py-2.5 flex items-center justify-between gap-3 text-left hover:bg-[#efe3d0]/40 transition-colors"
+                            >
+                              <div className="min-w-0">
+                                <div className="text-sm font-semibold text-[#241a12] truncate">{g.title}</div>
+                                <div className="text-xs text-[#8a7559]">
+                                  {g.items.length} item{g.items.length !== 1 ? "s" : ""}
+                                  {g.unpaid > 0 ? ` · ${g.unpaid} unpaid` : ""}
+                                </div>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <span className="font-bold text-[#6c4d39] text-sm">{money(g.total)}</span>
+                                <span className="text-xs text-[#8a7559] ml-1.5">{aopen ? "▴" : "▾"}</span>
+                              </div>
+                            </button>
+
+                            {/* Level 3 — items in that auction */}
+                            {aopen && (
+                              <div className="bg-[#faf6ee] border-t border-[#efe3d0]">
+                                {g.auctionId && g.items.some((i) => i.paid) && (
+                                  <div className="px-4 pt-3">
+                                    <Link
+                                      href={`/invoice/${g.auctionId}?user=${encodeURIComponent(w.clerkUserId)}`}
+                                      className="text-xs text-[#6c4d39] hover:text-[#c47b3e] font-medium underline"
+                                    >
+                                      View receipt for this auction
+                                    </Link>
+                                  </div>
+                                )}
+                                <div className="divide-y divide-[#efe3d0]">
+                                  {g.items.map((it) => (
+                                    <ItemRow key={it.id} it={it} winnerName={w.name} />
+                                  ))}
+                                </div>
+                              </div>
                             )}
-                            {it.paid && it.paymentId && (
-                              <RefundButton paymentId={it.paymentId} amount={it.amount} winnerName={w.name} />
-                            )}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
