@@ -9,6 +9,7 @@ import UserMenu from "@/app/components/UserMenu";
 import CardSetupModal from "@/app/components/CardSetupModal";
 import { PineMark, WoodenCrate } from "@/app/components/Illustrations";
 import Skeleton from "@/app/components/Skeleton";
+import PickupStatusCard from "@/app/components/PickupStatusCard";
 import { money } from "@/lib/format";
 
 type Tab = "overview" | "active" | "history" | "auctions" | "profile";
@@ -611,55 +612,8 @@ function BidderDashboardInner() {
           {tab === "overview" && (
             <div className="space-y-5 max-w-3xl">
 
-              {/* Ready for pickup */}
-              {(() => {
-                const awaitingPickup = past.filter(b => b.outcome === "won" && b.paid && !b.pickedUp);
-                if (awaitingPickup.length === 0) return null;
-                return (
-                  <div className="bg-[#6c4d39]/8 border border-[#6c4d39]/25 rounded-2xl px-5 py-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <IcoPackage />
-                      <span className="font-bold text-[#c47b3e] text-sm">
-                        {awaitingPickup.length} item{awaitingPickup.length !== 1 ? "s" : ""} ready for pickup
-                      </span>
-                    </div>
-                    <p className="text-[#6f5b46] text-xs mb-4">Payment confirmed. Schedule a time to collect your items.</p>
-                    <Link
-                      href="/pickup"
-                      className="inline-flex items-center gap-2 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors mb-4"
-                    >
-                      Schedule pickup <IcoArrow />
-                    </Link>
-                    <div className="space-y-3">
-                      {awaitingPickup.map((b) => (
-                        <div key={b.itemId} className="flex items-center gap-3">
-                          <Photo url={b.photo} title={b.itemTitle} />
-                          <div className="min-w-0 flex-1">
-                            <div className="text-sm font-semibold truncate">{b.itemTitle}</div>
-                            <div className="text-xs text-[#8a7559] truncate">{b.auctionTitle} · {b.orgName}</div>
-                            {b.storageLocation && (
-                              <div className="text-xs text-[#8a7559] mt-0.5">Pickup: {b.storageLocation}</div>
-                            )}
-                          </div>
-                          <div className="shrink-0 text-right ml-auto">
-                            <div className="text-[#6c4d39] font-bold text-sm">
-                              ${b.finalBid.toLocaleString()}
-                            </div>
-                            {b.auctionId && (
-                              <Link
-                                href={`/invoice/${b.auctionId}`}
-                                className="text-xs text-[#6c4d39] hover:text-[#c47b3e] underline mt-0.5 inline-block"
-                              >
-                                View / print receipt
-                              </Link>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
+              {/* Pickup status — distinguishes ready vs being-transferred vs scheduled */}
+              <PickupStatusCard />
 
               {/* Stat cards */}
               <div className="grid grid-cols-3 gap-2 sm:gap-3">

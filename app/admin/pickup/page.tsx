@@ -128,6 +128,8 @@ function localInputToIso(local: string) {
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function AdminPickupPage() {
   const [tab, setTab] = useState<"appointments" | "locations" | "transfers">("appointments");
+  const [selectedApptId, setSelectedApptId] = useState<string | null>(null);
+  const [apptSearch, setApptSearch] = useState("");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
@@ -309,6 +311,31 @@ export default function AdminPickupPage() {
 
   const scheduled = appointments.filter((a) => a.status === "SCHEDULED");
   const collected = appointments.filter((a) => a.status === "COLLECTED");
+
+  // Master-detail: searchable, soonest-first list; selecting one shows only that
+  // customer's items. Falls back to the first match so a customer is always shown.
+  const apptMatches = (a: Appointment, q: string) => {
+    const t = q.trim().toLowerCase();
+    if (!t) return true;
+    const hay = [
+      a.bidder.name,
+      a.bidder.email,
+      a.bidder.phone,
+      a.location.name,
+      ...a.items.map((i) => i.title),
+      ...a.items.map((i) => i.itemCode),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return hay.includes(t);
+  };
+  const sortedScheduled = [...scheduled].sort(
+    (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()
+  );
+  const filteredScheduled = sortedScheduled.filter((a) => apptMatches(a, apptSearch));
+  const activeAppt =
+    filteredScheduled.find((a) => a.id === selectedApptId) ?? filteredScheduled[0] ?? null;
   const activeTransfers = transfers.filter(
     (t) => t.status === "REQUESTED" || t.status === "LOADED"
   );
@@ -360,7 +387,7 @@ export default function AdminPickupPage() {
           <div className="text-center py-20 text-base text-[#8a7559]">Loading…</div>
         ) : tab === "appointments" ? (
           <div className="space-y-8">
-            {/* Scheduled */}
+            {/* Scheduled — master/detail: pick a customer, see only their items */}
             <div>
               <h2 className="text-xl font-semibold mb-4">
                 Upcoming ({scheduled.length})
@@ -370,110 +397,161 @@ export default function AdminPickupPage() {
                   No upcoming appointments yet.
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {scheduled.map((a) => (
-                    <div key={a.id} className="bg-white border border-[#cdbda3] rounded-xl overflow-hidden">
-                      <div className="px-5 py-4">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="text-lg font-semibold text-[#241a12]">
-                              {a.bidder.name || "Unknown Bidder"}
+                <div className="grid lg:grid-cols-[340px_1fr] gap-6 items-start">
+                  {/* List of customers */}
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      value={apptSearch}
+                      onChange={(e) => setApptSearch(e.target.value)}
+                      placeholder="Search customer or item…"
+                      className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-base focus:outline-none focus:border-[#6c4d39]"
+                    />
+                    {filteredScheduled.length === 0 ? (
+                      <p className="text-base text-[#8a7559] px-1 py-3">No matches.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {filteredScheduled.map((a) => {
+                          const isActive = activeAppt?.id === a.id;
+                          return (
+                            <button
+                              key={a.id}
+                              onClick={() => setSelectedApptId(a.id)}
+                              className={`w-full text-left rounded-xl border px-4 py-3 transition-colors ${
+                                isActive
+                                  ? "border-[#6c4d39] bg-[#efe3d0]"
+                                  : "border-[#e3d6bf] bg-white hover:bg-[#efe3d0]/60"
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <div className="font-semibold text-[#241a12] truncate">
+                                    {a.bidder.name || "Unknown Bidder"}
+                                  </div>
+                                  <div className="text-sm text-[#6f5b46] mt-0.5">{fmtDateTime(a.startsAt)}</div>
+                                  <div className="mt-1"><LocationBadge name={a.location.name} size="sm" /></div>
+                                </div>
+                                <span className="shrink-0 inline-flex items-center justify-center min-w-[1.75rem] h-7 px-2 rounded-full bg-[#6c4d39]/10 text-[#6c4d39] text-sm font-bold">
+                                  {a.items.length}
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Detail: selected customer's items + actions */}
+                  <div className="lg:sticky lg:top-4">
+                    {!activeAppt ? (
+                      <div className="text-base text-[#8a7559] bg-white border border-[#e3d6bf] rounded-xl px-5 py-10 text-center">
+                        Select a customer to see their items.
+                      </div>
+                    ) : (
+                      <div className="bg-white border border-[#cdbda3] rounded-xl overflow-hidden">
+                        <div className="px-5 py-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="text-lg font-semibold text-[#241a12]">
+                                {activeAppt.bidder.name || "Unknown Bidder"}
+                              </div>
+                              <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-0.5 text-base text-[#6f5b46]">
+                                {activeAppt.bidder.email && <span>{activeAppt.bidder.email}</span>}
+                                {activeAppt.bidder.phone && <span>{activeAppt.bidder.phone}</span>}
+                              </div>
                             </div>
-                            <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-0.5 text-base text-[#6f5b46]">
-                              {a.bidder.email && <span>{a.bidder.email}</span>}
-                              {a.bidder.phone && <span>{a.bidder.phone}</span>}
-                            </div>
+                            <span className="text-sm bg-green-50 text-green-700 border border-green-200 px-3 py-1 rounded-full font-bold shrink-0">
+                              Scheduled
+                            </span>
                           </div>
-                          <span className="text-sm bg-green-50 text-green-700 border border-green-200 px-3 py-1 rounded-full font-bold shrink-0">
-                            Scheduled
-                          </span>
-                        </div>
 
-                        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-base">
-                          <span className="font-extrabold text-[#241a12]">{fmtDateTime(a.startsAt)}</span>
-                          <LocationBadge name={a.location.name} />
-                        </div>
-
-                        <div className="mt-3">
-                          <div className="text-sm font-semibold text-[#8a7559] uppercase tracking-wide mb-1">
-                            {a.items.length} item{a.items.length !== 1 ? "s" : ""}
+                          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-base">
+                            <span className="font-extrabold text-[#241a12]">{fmtDateTime(activeAppt.startsAt)}</span>
+                            <LocationBadge name={activeAppt.location.name} />
                           </div>
-                          <ul className="text-base text-[#241a12] space-y-1">
-                            {a.items.map((it) => (
-                              <li key={it.id} className="flex items-start gap-2">
-                                {it.itemCode && (
-                                  <span className="font-mono font-bold text-[#6c4d39] bg-[#6c4d39]/10 border border-[#6c4d39]/20 rounded px-1.5 py-0.5 text-sm shrink-0">{it.itemCode}</span>
-                                )}
-                                <span>{it.title}{it.storageLocation ? <span className="text-[#8a7559] text-sm"> · {it.storageLocation}</span> : null}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
 
-                        {/* Reschedule editor */}
-                        {editingApptId === a.id ? (
-                          <div className="mt-4 bg-[#f1e7d5] rounded-xl p-4 space-y-3">
-                            <div>
-                              <label className="block text-base font-semibold mb-1">Date & time (Michigan)</label>
-                              <input
-                                type="datetime-local"
-                                value={editStartsAt}
-                                onChange={(e) => setEditStartsAt(e.target.value)}
-                                className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-base"
-                              />
+                          <div className="mt-4">
+                            <div className="text-sm font-semibold text-[#8a7559] uppercase tracking-wide mb-2">
+                              {activeAppt.items.length} item{activeAppt.items.length !== 1 ? "s" : ""} to gather
                             </div>
-                            <div>
-                              <label className="block text-base font-semibold mb-1">Location</label>
-                              <select
-                                value={editLocationId}
-                                onChange={(e) => setEditLocationId(e.target.value)}
-                                className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-base"
-                              >
-                                {locations.map((l) => (
-                                  <option key={l.id} value={l.id}>{l.name}</option>
-                                ))}
-                              </select>
+                            <ul className="text-base text-[#241a12] space-y-2">
+                              {activeAppt.items.map((it) => (
+                                <li key={it.id} className="flex items-start gap-2 bg-[#f1e7d5] rounded-xl px-4 py-2.5">
+                                  {it.itemCode && (
+                                    <span className="font-mono font-bold text-[#6c4d39] bg-[#6c4d39]/10 border border-[#6c4d39]/20 rounded px-1.5 py-0.5 text-sm shrink-0">{it.itemCode}</span>
+                                  )}
+                                  <span>{it.title}{it.storageLocation ? <span className="text-[#8a7559] text-sm"> · {it.storageLocation}</span> : null}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          {/* Reschedule editor */}
+                          {editingApptId === activeAppt.id ? (
+                            <div className="mt-4 bg-[#f1e7d5] rounded-xl p-4 space-y-3">
+                              <div>
+                                <label className="block text-base font-semibold mb-1">Date & time (Michigan)</label>
+                                <input
+                                  type="datetime-local"
+                                  value={editStartsAt}
+                                  onChange={(e) => setEditStartsAt(e.target.value)}
+                                  className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-base"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-base font-semibold mb-1">Location</label>
+                                <select
+                                  value={editLocationId}
+                                  onChange={(e) => setEditLocationId(e.target.value)}
+                                  className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-base"
+                                >
+                                  {locations.map((l) => (
+                                    <option key={l.id} value={l.id}>{l.name}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => saveReschedule(activeAppt.id)}
+                                  className="flex-1 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold text-base py-3 rounded-xl"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingApptId(null)}
+                                  className="flex-1 bg-white border border-[#cdbda3] text-[#6f5b46] font-semibold text-base py-3 rounded-xl"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex gap-2">
+                          ) : (
+                            <div className="mt-4 flex flex-wrap gap-2">
                               <button
-                                onClick={() => saveReschedule(a.id)}
-                                className="flex-1 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold text-base py-3 rounded-xl"
+                                onClick={() => startEdit(activeAppt)}
+                                className="bg-white border border-[#cdbda3] text-[#6f5b46] hover:bg-[#efe3d0] font-semibold text-base px-4 py-2.5 rounded-xl"
                               >
-                                Save
+                                Reschedule
                               </button>
                               <button
-                                onClick={() => setEditingApptId(null)}
-                                className="flex-1 bg-white border border-[#cdbda3] text-[#6f5b46] font-semibold text-base py-3 rounded-xl"
+                                onClick={() => markCollected(activeAppt.id)}
+                                className="bg-[#5f7a45] hover:bg-[#4f6639] text-white font-semibold text-base px-4 py-2.5 rounded-xl"
+                              >
+                                Mark Collected
+                              </button>
+                              <button
+                                onClick={() => cancelAppt(activeAppt.id)}
+                                className="bg-white border border-red-500/30 text-red-600 hover:bg-red-50 font-semibold text-base px-4 py-2.5 rounded-xl"
                               >
                                 Cancel
                               </button>
                             </div>
-                          </div>
-                        ) : (
-                          <div className="mt-4 flex flex-wrap gap-2">
-                            <button
-                              onClick={() => startEdit(a)}
-                              className="bg-white border border-[#cdbda3] text-[#6f5b46] hover:bg-[#efe3d0] font-semibold text-base px-4 py-2.5 rounded-xl"
-                            >
-                              Reschedule
-                            </button>
-                            <button
-                              onClick={() => markCollected(a.id)}
-                              className="bg-[#5f7a45] hover:bg-[#4f6639] text-white font-semibold text-base px-4 py-2.5 rounded-xl"
-                            >
-                              Mark Collected
-                            </button>
-                            <button
-                              onClick={() => cancelAppt(a.id)}
-                              className="bg-white border border-red-500/30 text-red-600 hover:bg-red-50 font-semibold text-base px-4 py-2.5 rounded-xl"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )}
+                  </div>
                 </div>
               )}
             </div>
