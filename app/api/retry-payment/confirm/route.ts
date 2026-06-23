@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-import { attachToUpcomingAppointment } from "@/lib/pickup";
+import { autoAttachPaidItems } from "@/lib/pickup";
 import { notifyPaymentReceipt } from "@/lib/paymentNotify";
 import { vestReferralForPayer } from "@/lib/referral";
 import Stripe from "stripe";
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
         data: { status: "PENDING_PICKUP" },
       });
     }
-    await attachToUpcomingAppointment(userId, org.id);
+    await autoAttachPaidItems(userId, org.id);
     // First successful payment by a referred bidder vests their inviter's reward.
     await vestReferralForPayer(userId);
 

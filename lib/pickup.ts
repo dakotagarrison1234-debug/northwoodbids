@@ -91,6 +91,83 @@ export async function attachToUpcomingAppointment(
   });
 }
 
+/**
+ * Fold a bidder's newly-won items into an EXISTING, not-yet-loaded transfer so
+ * they ride along to the same destination — as long as the transfer is still
+ * "REQUESTED" (once it's LOADED the truck is packed and nothing new can be added).
+ *
+ * Only items sitting at a DIFFERENT location than the transfer's destination are
+ * added (items already at the destination are "ready" and attach to the pickup
+ * appointment instead). When the bidder has several pending transfers, we target
+ * the one headed to their upcoming appointment's location; otherwise, the single
+ * pending transfer. Ambiguous cases (multiple transfers, no appointment) are left
+ * for the bidder to sort out manually.
+ */
+export async function attachToPendingTransfers(
+  clerkUserId: string,
+  organizationId: string
+): Promise<void> {
+  // Still-gathering transfers only — never touch LOADED/COMPLETED/CANCELLED ones.
+  const transfers = await prisma.transferRequest.findMany({
+    where: { clerkUserId, organizationId, status: "REQUESTED" },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, toLocationId: true },
+  });
+  if (transfers.length === 0) return;
+
+  // Prefer the transfer headed to the bidder's upcoming appointment location.
+  const appt = await prisma.pickupAppointment.findFirst({
+    where: { clerkUserId, organizationId, status: "SCHEDULED", startsAt: { gte: new Date() } },
+    orderBy: { startsAt: "asc" },
+    select: { locationId: true },
+  });
+
+  let target = appt ? transfers.find((t) => t.toLocationId === appt.locationId) ?? null : null;
+  if (!target) target = transfers.length === 1 ? transfers[0] : null;
+  if (!target) return; // ambiguous — don't guess
+
+  const wonBids = await prisma.bid.findMany({
+    where: { clerkUserId, status: "WON", item: { organizationId } },
+    select: { itemId: true },
+  });
+  const ids = [...new Set(wonBids.map((b) => b.itemId))];
+  if (ids.length === 0) return;
+
+  // Loose paid items not on an appointment or transfer, sitting somewhere OTHER
+  // than the destination (destination items are ready and go to the appointment).
+  const loose = await prisma.item.findMany({
+    where: {
+      id: { in: ids },
+      status: "PENDING_PICKUP",
+      pickupAppointmentId: null,
+      transferRequestId: null,
+      locationId: { not: null },
+      NOT: { locationId: target.toLocationId },
+    },
+    select: { id: true },
+  });
+  if (loose.length === 0) return;
+
+  await prisma.item.updateMany({
+    where: { id: { in: loose.map((i) => i.id) } },
+    data: { transferRequestId: target.id },
+  });
+}
+
+/**
+ * Run after a payment settles: fold the newly-paid items into the bidder's
+ * existing pickup appointment (items at its location) AND into any not-yet-loaded
+ * transfer (items elsewhere). Appointment attach runs first so destination items
+ * are claimed there, and the transfer pass only sweeps up what's left.
+ */
+export async function autoAttachPaidItems(
+  clerkUserId: string,
+  organizationId: string
+): Promise<void> {
+  await attachToUpcomingAppointment(clerkUserId, organizationId);
+  await attachToPendingTransfers(clerkUserId, organizationId);
+}
+
 /** Available bookable slots for a location over the next 4 weeks (capacity-aware, Michigan time). */
 export async function getAvailableSlots(locationId: string): Promise<Slot[]> {
   const windows = await prisma.pickupWindow.findMany({ where: { locationId, isActive: true } });

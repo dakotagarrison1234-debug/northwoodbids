@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { attachToUpcomingAppointment } from "@/lib/pickup";
+import { autoAttachPaidItems } from "@/lib/pickup";
 import { notifyPaymentFailed, notifyPaymentReceipt } from "@/lib/paymentNotify";
 import { vestReferralForPayer, releaseReferralCredit } from "@/lib/referral";
 import Stripe from "stripe";
@@ -164,7 +164,7 @@ async function markPaymentsPaid(
         data: { status: "PENDING_PICKUP" },
       }),
     ]);
-    await attachToUpcomingAppointment(payment.clerkUserId, await orgIdForItem(payment.itemId));
+    await autoAttachPaidItems(payment.clerkUserId, await orgIdForItem(payment.itemId));
     // Charged total for this row = bid + buyer's premium + tax (nulls => 0).
     const rowTotal =
       Number(payment.amount) +

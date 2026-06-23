@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import Stripe from "stripe";
 import { triggerAuctionUpdated } from "@/lib/pusherServer";
-import { attachToUpcomingAppointment } from "@/lib/pickup";
+import { autoAttachPaidItems } from "@/lib/pickup";
 import { notifyPaymentFailed, notifyPaymentReceipt } from "@/lib/paymentNotify";
 import {
   reserveReferralCredit,
@@ -226,7 +226,7 @@ async function chargeOneWinner(
       creditAppliedCents: discountCents,
       moveItemsToPendingPickup: true,
     });
-    await attachToUpcomingAppointment(clerkUserId, org.id);
+    await autoAttachPaidItems(clerkUserId, org.id);
     // NOTE: vesting the inviter's reward is deliberately done AFTER the whole
     // charge pass (see vestWinners), so credit earned in an auction is never
     // spent on that same auction's bill — it always lands on the NEXT bill.
@@ -295,7 +295,7 @@ async function chargeOneWinner(
       moveItemsToPendingPickup: true,
     });
     // Fold newly-won items into any upcoming pickup appointment.
-    await attachToUpcomingAppointment(clerkUserId, org.id);
+    await autoAttachPaidItems(clerkUserId, org.id);
     // Vesting happens AFTER the full charge pass (see vestWinners) so this
     // auction's credit can't be applied to this auction's own bills.
     notifyPaymentReceipt({
