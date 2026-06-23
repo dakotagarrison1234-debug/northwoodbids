@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
@@ -63,19 +63,26 @@ function fmtDateTime(iso: string) {
     minute: "2-digit",
   });
 }
-function fmtDayHeader(iso: string) {
-  return new Date(iso).toLocaleString("en-US", {
-    timeZone: "America/Detroit",
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-}
 function fmtTime(iso: string) {
   return new Date(iso).toLocaleString("en-US", {
     timeZone: "America/Detroit",
     hour: "numeric",
     minute: "2-digit",
+  });
+}
+function fmtDayShort(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", {
+    timeZone: "America/Detroit",
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+function fmtMonthDay(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", {
+    timeZone: "America/Detroit",
+    month: "short",
+    day: "numeric",
   });
 }
 function dayKey(iso: string) {
@@ -158,7 +165,9 @@ function groupByAuction(items: ItemCard[]) {
   return Object.entries(groups);
 }
 
-// ── Slot picker (day/time grid + book button) ──────────────────────────────────
+// ── Slot picker — one week at a time: pick a day, then its times appear ─────────
+const DAYS_PER_PAGE = 7;
+
 function SlotPicker({
   location,
   onBook,
@@ -170,72 +179,137 @@ function SlotPicker({
   busy: boolean;
   submitLabel: string;
 }) {
-  const [selected, setSelected] = useState<string | null>(null);
   const slots = location.slots ?? [];
 
-  // group slots by day
-  const days: { key: string; label: string; slots: Slot[] }[] = [];
-  for (const s of slots) {
-    const k = dayKey(s.startsAt);
-    let d = days.find((x) => x.key === k);
-    if (!d) {
-      d = { key: k, label: fmtDayHeader(s.startsAt), slots: [] };
-      days.push(d);
+  // Group slots into days with availability (already sorted ascending by the API).
+  const days = useMemo(() => {
+    const arr: { key: string; iso: string; slots: Slot[] }[] = [];
+    for (const s of slots) {
+      const k = dayKey(s.startsAt);
+      let d = arr.find((x) => x.key === k);
+      if (!d) {
+        d = { key: k, iso: s.startsAt, slots: [] };
+        arr.push(d);
+      }
+      d.slots.push(s);
     }
-    d.slots.push(s);
+    return arr;
+  }, [slots]);
+
+  const [pageStart, setPageStart] = useState(0);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+
+  if (days.length === 0) {
+    return (
+      <div className="rounded-xl border border-[#e3d6bf] bg-white px-4 py-6 text-base text-[#8a7559]">
+        No times are available at this location right now. Please check back soon.
+      </div>
+    );
   }
 
+  const pageDays = days.slice(pageStart, pageStart + DAYS_PER_PAGE);
+  const activeDay = days.find((d) => d.key === selectedDay) ?? null;
+  const hasPrev = pageStart > 0;
+  const hasNext = pageStart + DAYS_PER_PAGE < days.length;
+  const rangeLabel = pageDays.length
+    ? `${fmtMonthDay(pageDays[0].iso)} – ${fmtMonthDay(pageDays[pageDays.length - 1].iso)}`
+    : "";
+
+  const goPrev = () => {
+    setPageStart(Math.max(0, pageStart - DAYS_PER_PAGE));
+    setSelectedDay(null);
+    setSelected(null);
+  };
+  const goNext = () => {
+    setPageStart(pageStart + DAYS_PER_PAGE);
+    setSelectedDay(null);
+    setSelected(null);
+  };
+
+  const navBtn =
+    "flex items-center gap-1 rounded-xl border-2 border-[#e3d6bf] bg-white px-3 py-2 text-sm font-semibold text-[#241a12] hover:bg-[#efe3d0] disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* Week navigation */}
       <div>
-        <label className="block text-base font-semibold text-[#241a12] mb-2">Pick a day & time (Michigan time)</label>
-        {days.length === 0 ? (
-          <div className="rounded-xl border border-[#e3d6bf] bg-white px-4 py-6 text-base text-[#8a7559]">
-            No times are available at this location right now. Please check back soon.
-          </div>
-        ) : (
-          <div className="space-y-5">
-            {days.map((d) => (
-              <div key={d.key}>
-                <div className="text-base font-semibold text-[#6f5b46] mb-2">{d.label}</div>
-                <div className="flex flex-wrap gap-2">
-                  {d.slots.map((s) => {
-                    const isSelected = selected === s.startsAt;
-                    const low = s.remaining > 0 && s.remaining <= 2;
-                    return (
-                      <button
-                        key={s.startsAt}
-                        type="button"
-                        onClick={() => setSelected(s.startsAt)}
-                        className={`flex flex-col items-center rounded-xl border-2 px-4 py-3 text-base font-semibold transition-colors ${
-                          isSelected
-                            ? "border-[#6c4d39] bg-[#6c4d39] text-white"
-                            : "border-[#e3d6bf] bg-white text-[#241a12] hover:bg-[#efe3d0]"
-                        }`}
-                      >
-                        <span>{fmtTime(s.startsAt)}</span>
-                        {low && (
-                          <span
-                            className={`mt-0.5 text-xs font-bold ${
-                              isSelected
-                                ? "text-[#f1e7d5]"
-                                : s.remaining === 1
-                                ? "text-red-600"
-                                : "text-amber-600"
-                            }`}
-                          >
-                            {s.remaining === 1 ? "Last one!" : `${s.remaining} left`}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
+        <label className="block text-base font-semibold text-[#241a12] mb-2">Pick a day (Michigan time)</label>
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <button type="button" onClick={goPrev} disabled={!hasPrev} className={navBtn} aria-label="Previous week">
+            <span aria-hidden>‹</span> Earlier
+          </button>
+          <span className="text-base font-semibold text-[#6f5b46]">{rangeLabel}</span>
+          <button type="button" onClick={goNext} disabled={!hasNext} className={navBtn} aria-label="Next week">
+            Later <span aria-hidden>›</span>
+          </button>
+        </div>
+
+        {/* Day buttons for this week */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {pageDays.map((d) => {
+            const isSel = selectedDay === d.key;
+            return (
+              <button
+                key={d.key}
+                type="button"
+                onClick={() => {
+                  setSelectedDay(d.key);
+                  setSelected(null);
+                }}
+                className={`rounded-xl border-2 px-3 py-3 text-left transition-colors ${
+                  isSel ? "border-[#6c4d39] bg-[#6c4d39] text-white" : "border-[#e3d6bf] bg-white hover:bg-[#efe3d0]"
+                }`}
+              >
+                <div className="text-base font-semibold leading-tight">{fmtDayShort(d.iso)}</div>
+                <div className={`text-xs mt-0.5 ${isSel ? "text-[#e7dcc6]" : "text-[#8a7559]"}`}>
+                  {d.slots.length} time{d.slots.length !== 1 ? "s" : ""}
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              </button>
+            );
+          })}
+        </div>
       </div>
+
+      {/* Times for the chosen day */}
+      {activeDay ? (
+        <div>
+          <label className="block text-base font-semibold text-[#241a12] mb-2">
+            Pick a time — {fmtDayShort(activeDay.iso)}
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {activeDay.slots.map((s) => {
+              const isSelected = selected === s.startsAt;
+              const low = s.remaining > 0 && s.remaining <= 2;
+              return (
+                <button
+                  key={s.startsAt}
+                  type="button"
+                  onClick={() => setSelected(s.startsAt)}
+                  className={`flex flex-col items-center rounded-xl border-2 px-4 py-3 text-base font-semibold transition-colors ${
+                    isSelected
+                      ? "border-[#6c4d39] bg-[#6c4d39] text-white"
+                      : "border-[#e3d6bf] bg-white text-[#241a12] hover:bg-[#efe3d0]"
+                  }`}
+                >
+                  <span>{fmtTime(s.startsAt)}</span>
+                  {low && (
+                    <span
+                      className={`mt-0.5 text-xs font-bold ${
+                        isSelected ? "text-[#f1e7d5]" : s.remaining === 1 ? "text-red-600" : "text-amber-600"
+                      }`}
+                    >
+                      {s.remaining === 1 ? "Last one!" : `${s.remaining} left`}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <p className="text-base text-[#8a7559]">Pick a day above to see available times.</p>
+      )}
 
       <button
         type="button"
