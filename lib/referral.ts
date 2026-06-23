@@ -354,6 +354,12 @@ export type ReferralSummary = {
   // Exactly `cap` entries — the bidder's coupon book. Redeemed first, then
   // available, then still-locked slots they can still earn.
   coupons: CouponState[];
+  // When/where each $5 coupon was spent (newest first).
+  redemptions: {
+    amount: number;
+    date: string;
+    auctionTitle: string;
+  }[];
   referrals: {
     name: string;
     status: "PENDING" | "EARNED" | "CAPPED" | "BLOCKED";
@@ -371,7 +377,7 @@ function maskName(name: string | null): string {
 
 /** Everything the /refer page needs in one shot. */
 export async function getReferralSummary(clerkUserId: string): Promise<ReferralSummary> {
-  const [code, balance, referrals, redeemAgg, redeemedCount] = await Promise.all([
+  const [code, balance, referrals, redemptionRows] = await Promise.all([
     getOrCreateReferralCode(clerkUserId),
     getCreditBalance(clerkUserId),
     prisma.referral.findMany({
@@ -379,15 +385,41 @@ export async function getReferralSummary(clerkUserId: string): Promise<ReferralS
       orderBy: { createdAt: "desc" },
       take: 100,
     }),
-    prisma.creditLedger.aggregate({
+    // Each redemption row = one $5 coupon spent on one bill. The key encodes the
+    // auction it was used on: `autocharge-{auctionId}-{clerkUserId}`.
+    prisma.creditLedger.findMany({
       where: { clerkUserId, reason: "referral_redeemed" },
-      _sum: { amount: true },
-    }),
-    // Each redemption row = one $5 coupon spent on a bill.
-    prisma.creditLedger.count({
-      where: { clerkUserId, reason: "referral_redeemed" },
+      orderBy: { createdAt: "desc" },
+      select: { amount: true, createdAt: true, redemptionKey: true },
     }),
   ]);
+
+  const redeemedCount = redemptionRows.length;
+
+  // Resolve the auction title for each redemption from its key.
+  const redemptionAuctionIds = redemptionRows
+    .map((r) => {
+      const m = r.redemptionKey?.match(/^autocharge-([^-]+)-/);
+      return m ? m[1] : null;
+    })
+    .filter((x): x is string => !!x);
+  const auctions = redemptionAuctionIds.length
+    ? await prisma.auction.findMany({
+        where: { id: { in: [...new Set(redemptionAuctionIds)] } },
+        select: { id: true, title: true },
+      })
+    : [];
+  const auctionTitleById = new Map(auctions.map((a) => [a.id, a.title]));
+
+  const redemptions = redemptionRows.map((r) => {
+    const m = r.redemptionKey?.match(/^autocharge-([^-]+)-/);
+    const auctionId = m ? m[1] : null;
+    return {
+      amount: Math.abs(Number(r.amount)),
+      date: r.createdAt.toISOString(),
+      auctionTitle: (auctionId && auctionTitleById.get(auctionId)) || "an auction",
+    };
+  });
 
   const referredIds = referrals.map((r) => r.referredUserId);
   const profiles = referredIds.length
@@ -421,8 +453,9 @@ export async function getReferralSummary(clerkUserId: string): Promise<ReferralS
     availableCount: available,
     cap,
     pendingCount,
-    totalRedeemed: Math.abs(Number(redeemAgg._sum.amount ?? 0)),
+    totalRedeemed: redemptions.reduce((s, r) => s + r.amount, 0),
     coupons,
+    redemptions,
     referrals: referrals
       // Don't surface blocked rows as "referrals" — they're fraud signals, not invites.
       .filter((r) => r.status !== "BLOCKED")

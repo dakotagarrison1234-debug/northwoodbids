@@ -22,6 +22,7 @@ type Summary = {
   pendingCount: number;
   totalRedeemed: number;
   coupons: CouponState[];
+  redemptions: { amount: number; date: string; auctionTitle: string }[];
   referrals: Referral[];
 };
 
@@ -166,6 +167,26 @@ export default function ReferPage() {
               )}
             </p>
           </div>
+
+          {/* Coupons used */}
+          {data.redemptions.length > 0 && (
+            <div className="mt-4 bg-white border border-[#e3d6bf] rounded-2xl p-5">
+              <p className="text-[#241a12] font-semibold">Coupons used</p>
+              <div className="mt-3 divide-y divide-[#efe3d0]">
+                {data.redemptions.map((r, i) => (
+                  <div key={i} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                    <div className="min-w-0">
+                      <p className="text-[#241a12] text-sm font-medium truncate">{r.auctionTitle}</p>
+                      <p className="text-[#8a7559] text-xs">
+                        {new Date(r.date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                      </p>
+                    </div>
+                    <span className="text-green-700 font-semibold text-sm whitespace-nowrap">−${r.amount.toFixed(0)} off</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Share */}
           <div className="mt-4 bg-white border border-[#e3d6bf] rounded-2xl p-5">
