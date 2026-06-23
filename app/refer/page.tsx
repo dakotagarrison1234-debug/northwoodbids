@@ -9,16 +9,46 @@ type Referral = {
   earnedAt: string | null;
 };
 
+type CouponState = "available" | "redeemed" | "locked";
+
 type Summary = {
   code: string;
   link: string;
   balance: number;
   earnedCount: number;
+  redeemedCount: number;
+  availableCount: number;
   cap: number;
   pendingCount: number;
   totalRedeemed: number;
+  coupons: CouponState[];
   referrals: Referral[];
 };
+
+function Coupon({ state }: { state: CouponState }) {
+  if (state === "available") {
+    return (
+      <div className="relative rounded-xl border-2 border-[#6c4d39] bg-[#6c4d39] text-white p-3 text-center overflow-hidden">
+        <p className="font-display text-2xl font-extrabold leading-none">$5</p>
+        <p className="text-[10px] font-bold uppercase tracking-wider mt-1 text-[#e7dcc6]">Available</p>
+      </div>
+    );
+  }
+  if (state === "redeemed") {
+    return (
+      <div className="relative rounded-xl border-2 border-[#cdbda3] bg-[#efe3d0] text-[#8a7559] p-3 text-center overflow-hidden">
+        <p className="font-display text-2xl font-extrabold leading-none line-through decoration-2">$5</p>
+        <p className="text-[10px] font-bold uppercase tracking-wider mt-1">Redeemed</p>
+      </div>
+    );
+  }
+  return (
+    <div className="relative rounded-xl border-2 border-dashed border-[#cdbda3] bg-white/40 text-[#b3a085] p-3 text-center">
+      <p className="font-display text-2xl font-extrabold leading-none">$5</p>
+      <p className="text-[10px] font-bold uppercase tracking-wider mt-1">Locked</p>
+    </div>
+  );
+}
 
 function StatusBadge({ status }: { status: Referral["status"] }) {
   const map = {
@@ -109,31 +139,32 @@ export default function ReferPage() {
 
       {data && (
         <>
-          {/* Balance + progress */}
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-[#6c4d39] text-white rounded-2xl p-5 relative overflow-hidden">
-              <p className="text-[#e7dcc6] text-xs font-bold uppercase tracking-wider">Your balance</p>
-              <p className="font-display text-4xl font-extrabold mt-1">${data.balance.toFixed(0)}</p>
-              <p className="text-[#e7dcc6] text-sm mt-1">
-                {data.balance >= 5
-                  ? "$5 comes off your next bill automatically"
-                  : "Earn $5 when a friend wins their first item"}
+          {/* Coupon book */}
+          <div className="mt-6 bg-white border border-[#e3d6bf] rounded-2xl p-5">
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="text-[#241a12] font-semibold">Your $5 coupons</p>
+              <p className="text-sm text-[#6f5b46]">
+                {data.availableCount > 0
+                  ? `${data.availableCount} available`
+                  : data.redeemedCount >= data.cap
+                  ? "All used"
+                  : "None yet"}
               </p>
             </div>
-            <div className="bg-white border border-[#e3d6bf] rounded-2xl p-5">
-              <p className="text-[#8a7559] text-xs font-bold uppercase tracking-wider">Rewards earned</p>
-              <p className="font-display text-4xl font-extrabold text-[#241a12] mt-1">
-                {data.earnedCount}<span className="text-[#b3a085] text-2xl"> / {data.cap}</span>
-              </p>
-              <div className="mt-3 h-2 rounded-full bg-[#efe3d0] overflow-hidden">
-                <div className="h-full bg-[#6c4d39] rounded-full transition-all" style={{ width: `${(data.earnedCount / data.cap) * 100}%` }} />
-              </div>
-              <p className="text-[#6f5b46] text-sm mt-2">
-                {data.earnedCount >= data.cap
-                  ? "You've maxed out referral rewards — thank you!"
-                  : `${data.cap - data.earnedCount} more friend${data.cap - data.earnedCount !== 1 ? "s" : ""} can earn you $5 each`}
-              </p>
+            <div className="mt-3 grid grid-cols-5 gap-2 sm:gap-3">
+              {data.coupons.map((c, i) => (
+                <Coupon key={i} state={c} />
+              ))}
             </div>
+            <p className="text-[#6f5b46] text-sm mt-3">
+              {data.availableCount > 0 ? (
+                <>You have <strong className="text-[#241a12]">${(data.availableCount * 5).toFixed(0)}</strong> ready — one $5 coupon comes off each winning bill automatically.</>
+              ) : data.earnedCount >= data.cap ? (
+                "You've earned all 5 coupons — thanks for spreading the word!"
+              ) : (
+                "Earn a $5 coupon each time a friend you invited wins and pays. Up to 5."
+              )}
+            </p>
           </div>
 
           {/* Share */}
@@ -168,8 +199,8 @@ export default function ReferPage() {
               {[
                 ["Share your link", "Send your invite link to a friend who hasn't joined Northwood Bids yet."],
                 ["They sign up & bid", "They create an account through your link and start bidding."],
-                ["They win & pay", "The moment they win an item and their card is charged, you get $5 in Bid Bucks."],
-                ["You save automatically", "$5 comes off your next bill of $5 or more — no codes to enter."],
+                ["They win & pay", "The moment they win an item and their card is charged, you get a $5 coupon."],
+                ["You save automatically", "Your $5 coupon comes off your NEXT winning bill of $5 or more — not the auction it was earned in. No codes to enter."],
               ].map(([title, body], i) => (
                 <li key={i} className="flex gap-3">
                   <span className="shrink-0 w-7 h-7 rounded-full bg-[#efe3d0] text-[#6c4d39] font-bold text-sm flex items-center justify-center">{i + 1}</span>
@@ -214,9 +245,9 @@ export default function ReferPage() {
           <div className="mt-4 text-[#8a7559] text-xs leading-relaxed">
             <p className="font-semibold text-[#6f5b46] mb-1">The fine print</p>
             <p>
-              You earn $5 only after a bidder you invited wins an item and their payment goes through — not just for signing up or bidding.
-              One $5 credit applies per bill, and only to bills of $5 or more. You can earn from up to {data.cap} different friends.
-              Invites must be new bidders; self-referrals and accounts sharing your phone number or payment card don&apos;t qualify.
+              You earn a $5 coupon only after a bidder you invited wins an item and their payment goes through — not just for signing up or bidding.
+              Coupons apply to your <strong className="text-[#6f5b46]">next</strong> winning bill, not the auction they were earned in, and only one $5 coupon comes off any single bill (bills of $5 or more).
+              You can earn from up to {data.cap} different friends. Invites must be new bidders; self-referrals and accounts sharing your phone number or payment card don&apos;t qualify.
               Bid Bucks have no cash value and can&apos;t be withdrawn.
             </p>
           </div>

@@ -278,13 +278,13 @@ export default function HelpPage() {
                   <p className="font-semibold text-[#241a12] mb-2">How you earn</p>
                   <ul className="space-y-2">
                     <li className="flex gap-2"><span className="text-[#6c4d39] font-bold mt-0.5">→</span><span>A friend signs up through <strong className="text-[#241a12]">your link</strong> (they need to be new to Northwood Bids).</span></li>
-                    <li className="flex gap-2"><span className="text-[#6c4d39] font-bold mt-0.5">→</span><span>They <strong className="text-[#241a12]">win an item and their payment goes through</strong> — that's when your $5 unlocks. Signing up or just bidding doesn't count.</span></li>
-                    <li className="flex gap-2"><span className="text-[#6c4d39] font-bold mt-0.5">→</span><span>You can earn from up to <strong className="text-[#241a12]">5 friends</strong> — that's $25 in Bid Bucks.</span></li>
+                    <li className="flex gap-2"><span className="text-[#6c4d39] font-bold mt-0.5">→</span><span>They <strong className="text-[#241a12]">win an item and their payment goes through</strong> — that's when your $5 coupon unlocks. Signing up or just bidding doesn't count.</span></li>
+                    <li className="flex gap-2"><span className="text-[#6c4d39] font-bold mt-0.5">→</span><span>You can earn from up to <strong className="text-[#241a12]">5 friends</strong> — that's five $5 coupons ($25).</span></li>
                   </ul>
                 </div>
                 <div>
                   <p className="font-semibold text-[#241a12] mb-2">How it's used</p>
-                  <p>$5 comes off your next bill <strong className="text-[#241a12]">automatically</strong> — one credit per bill, on bills of $5 or more. No codes to enter.</p>
+                  <p>Your $5 coupon comes off your <strong className="text-[#241a12]">next</strong> winning bill <strong className="text-[#241a12]">automatically</strong> — not the auction it was earned in. One coupon per bill, on bills of $5 or more. No codes to enter.</p>
                 </div>
                 <Warn>Self-referrals don't qualify, and neither do accounts that share your phone number or payment card. Bid Bucks have no cash value.</Warn>
               </div>

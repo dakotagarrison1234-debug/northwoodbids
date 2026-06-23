@@ -157,6 +157,14 @@ export async function vestReferralForPayer(payerUserId: string): Promise<void> {
     const ref = await prisma.referral.findUnique({ where: { referredUserId: payerUserId } });
     if (!ref || ref.status !== "PENDING") return;
 
+    // Self-protecting: only vest once the referred bidder has a real PAID payment.
+    // This makes the function safe to call from anywhere (including a post-charge
+    // sweep over all auction winners, some of whom may have failed to pay).
+    const paidCount = await prisma.payment.count({
+      where: { clerkUserId: payerUserId, status: "PAID" },
+    });
+    if (paidCount === 0) return;
+
     const referrer = ref.referrerUserId;
 
     // ── Anti-abuse ──────────────────────────────────────────────────────────
@@ -331,14 +339,21 @@ export async function releaseReferralCredit(redemptionKey: string): Promise<void
   }
 }
 
+export type CouponState = "available" | "redeemed" | "locked";
+
 export type ReferralSummary = {
   code: string;
   link: string;
   balance: number;
   earnedCount: number;
+  redeemedCount: number;
+  availableCount: number;
   cap: number;
   pendingCount: number;
   totalRedeemed: number;
+  // Exactly `cap` entries — the bidder's coupon book. Redeemed first, then
+  // available, then still-locked slots they can still earn.
+  coupons: CouponState[];
   referrals: {
     name: string;
     status: "PENDING" | "EARNED" | "CAPPED" | "BLOCKED";
@@ -356,7 +371,7 @@ function maskName(name: string | null): string {
 
 /** Everything the /refer page needs in one shot. */
 export async function getReferralSummary(clerkUserId: string): Promise<ReferralSummary> {
-  const [code, balance, referrals, redeemAgg] = await Promise.all([
+  const [code, balance, referrals, redeemAgg, redeemedCount] = await Promise.all([
     getOrCreateReferralCode(clerkUserId),
     getCreditBalance(clerkUserId),
     prisma.referral.findMany({
@@ -367,6 +382,10 @@ export async function getReferralSummary(clerkUserId: string): Promise<ReferralS
     prisma.creditLedger.aggregate({
       where: { clerkUserId, reason: "referral_redeemed" },
       _sum: { amount: true },
+    }),
+    // Each redemption row = one $5 coupon spent on a bill.
+    prisma.creditLedger.count({
+      where: { clerkUserId, reason: "referral_redeemed" },
     }),
   ]);
 
@@ -382,14 +401,28 @@ export async function getReferralSummary(clerkUserId: string): Promise<ReferralS
   const earnedCount = referrals.filter((r) => r.status === "EARNED").length;
   const pendingCount = referrals.filter((r) => r.status === "PENDING").length;
 
+  // Build the coupon book: redeemed slots, then still-available, then locked.
+  const cap = MAX_EARNED_REFERRALS;
+  const redeemed = Math.min(redeemedCount, earnedCount);
+  const available = Math.max(0, earnedCount - redeemed);
+  const locked = Math.max(0, cap - redeemed - available);
+  const coupons: CouponState[] = [
+    ...Array<CouponState>(redeemed).fill("redeemed"),
+    ...Array<CouponState>(available).fill("available"),
+    ...Array<CouponState>(locked).fill("locked"),
+  ];
+
   return {
     code,
     link: referralLink(code),
     balance,
     earnedCount,
-    cap: MAX_EARNED_REFERRALS,
+    redeemedCount: redeemed,
+    availableCount: available,
+    cap,
     pendingCount,
     totalRedeemed: Math.abs(Number(redeemAgg._sum.amount ?? 0)),
+    coupons,
     referrals: referrals
       // Don't surface blocked rows as "referrals" — they're fraud signals, not invites.
       .filter((r) => r.status !== "BLOCKED")

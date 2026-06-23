@@ -17,12 +17,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     }
 
     const { auctionId } = await params;
-    const { status } = await request.json();
-
-    const validStatuses = ["DRAFT", "OPEN", "CLOSING", "CLOSED", "SETTLED"];
-    if (!validStatuses.includes(status)) {
-      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-    }
+    const { status, endAt } = await request.json();
 
     // Verify the user belongs to the org that owns this auction
     const auction = await prisma.auction.findUnique({
@@ -38,6 +33,46 @@ export async function PATCH(request: NextRequest, { params }: Props) {
         { error: "You don't have permission for this action" },
         { status: 403 }
       );
+    }
+
+    // ── Edit end time ─────────────────────────────────────────────────────────
+    // Reschedules when the auction closes. Snaps every item back to the auction
+    // end (clears any per-item "popcorn" extension) and re-arms the "ending soon"
+    // warning so it can fire again for the new end time. Allowed any time before
+    // the auction has closed.
+    if (endAt !== undefined) {
+      const newEnd = new Date(endAt);
+      if (isNaN(newEnd.getTime())) {
+        return NextResponse.json({ error: "Invalid end time" }, { status: 400 });
+      }
+      if (auction.status === "CLOSED" || auction.status === "SETTLED") {
+        return NextResponse.json(
+          { error: "This auction has already closed — its end time can't be changed." },
+          { status: 422 }
+        );
+      }
+
+      await prisma.$transaction([
+        prisma.auction.update({
+          where: { id: auctionId },
+          data: { endAt: newEnd, endingSoonNotifiedAt: null },
+        }),
+        // Snap all items to the auction's end (null = "ends with the auction").
+        prisma.item.updateMany({ where: { auctionId }, data: { itemEndAt: null } }),
+      ]);
+
+      triggerAuctionUpdated(auction.organization.slug).catch(() => {});
+
+      // If only the end time was sent, we're done.
+      if (status === undefined) {
+        return NextResponse.json({ success: true, endAt: newEnd.toISOString() });
+      }
+    }
+
+    // ── Status change ─────────────────────────────────────────────────────────
+    const validStatuses = ["DRAFT", "OPEN", "CLOSING", "CLOSED", "SETTLED"];
+    if (!validStatuses.includes(status)) {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
     // State machine guard — prevent illegal auction status transitions

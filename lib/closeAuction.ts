@@ -227,8 +227,9 @@ async function chargeOneWinner(
       moveItemsToPendingPickup: true,
     });
     await attachToUpcomingAppointment(clerkUserId, org.id);
-    // The payer just settled their first bill — vest their inviter's reward.
-    await vestReferralForPayer(clerkUserId);
+    // NOTE: vesting the inviter's reward is deliberately done AFTER the whole
+    // charge pass (see vestWinners), so credit earned in an auction is never
+    // spent on that same auction's bill — it always lands on the NEXT bill.
     console.log(
       `Auto-charge: $${(chargeAmountCents / 100).toFixed(2)} fully covered by Bid Bucks for ${clerkUserId}`
     );
@@ -295,8 +296,8 @@ async function chargeOneWinner(
     });
     // Fold newly-won items into any upcoming pickup appointment.
     await attachToUpcomingAppointment(clerkUserId, org.id);
-    // The payer just settled their first bill — vest their inviter's reward.
-    await vestReferralForPayer(clerkUserId);
+    // Vesting happens AFTER the full charge pass (see vestWinners) so this
+    // auction's credit can't be applied to this auction's own bills.
     notifyPaymentReceipt({
       clerkUserId,
       amount: Number((netChargeCents / 100).toFixed(2)),
@@ -529,6 +530,22 @@ export async function chargeUnchargedWinners(): Promise<{ chargedWinners: number
  * Fires one GHL "auction won" webhook per unique bidder.
  * Summarises all the items they won in that auction — no per-item spam.
  */
+/**
+ * Vests referral rewards for every winner who actually paid in this auction —
+ * run AFTER the whole charge pass. Because the inviter's own bill in this same
+ * auction was already charged before this runs, credit they earn here can never
+ * be applied to this auction's bill; it always lands on their NEXT win.
+ * vestReferralForPayer is a no-op for winners who aren't referred or didn't pay.
+ */
+async function vestWinners(winnerMap: Map<string, WinnerEntry>): Promise<void> {
+  if (winnerMap.size === 0) return;
+  await runPooled(
+    [...winnerMap.keys()],
+    (clerkUserId) => vestReferralForPayer(clerkUserId),
+    5
+  );
+}
+
 async function notifyWinners(winnerMap: Map<string, WinnerEntry>): Promise<void> {
   if (!process.env.GHL_AUCTION_WON_WEBHOOK || winnerMap.size === 0) return;
 
@@ -895,6 +912,8 @@ export async function closeExpiredItems(): Promise<{ closedItems: number; closed
 
     // Auto-charge winners BEFORE sending GHL notifications
     await chargeWinners(winnerMap, auction.organization, auctionId);
+    // Vest referral rewards AFTER charging (credit lands on the inviter's NEXT bill).
+    await vestWinners(winnerMap);
     await notifyWinners(winnerMap);
     triggerAuctionUpdated(auction.organization.slug).catch(() => {});
   }
@@ -967,6 +986,8 @@ export async function closeAuction(auctionId: string): Promise<{ winnersCount: n
 
   // Auto-charge winners BEFORE sending GHL notifications
   await chargeWinners(winnerMap, auction.organization, auctionId);
+  // Vest referral rewards AFTER charging (credit lands on the inviter's NEXT bill).
+  await vestWinners(winnerMap);
   await notifyWinners(winnerMap);
   triggerAuctionUpdated(auction.organization.slug).catch(() => {});
 
