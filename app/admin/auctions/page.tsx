@@ -15,7 +15,8 @@ export default async function AuctionsPage() {
     where: { organizationId: membership.organization.id },
     orderBy: { createdAt: "desc" },
     include: {
-      items: { include: { bids: { select: { id: true } } } },
+      // Only the fields the summary needs — never load bid rows (counts via _count).
+      items: { select: { status: true, currentBid: true, _count: { select: { bids: true } } } },
     },
   });
 
@@ -46,7 +47,7 @@ export default async function AuctionsPage() {
               const raised = auction.items
                 .filter(i => SOLD_STATUSES.includes(i.status))
                 .reduce((sum, i) => sum + Number(i.currentBid), 0);
-              const totalBids = auction.items.reduce((sum, i) => sum + i.bids.length, 0);
+              const totalBids = auction.items.reduce((sum, i) => sum + i._count.bids, 0);
               const isScheduled = auction.status === "DRAFT" && auction.startAt > new Date();
 
               return (

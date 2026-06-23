@@ -32,6 +32,9 @@ export default function AdminReferralsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+  const [balLimit, setBalLimit] = useState(50);
+  const [refLimit, setRefLimit] = useState(50);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -80,6 +83,20 @@ export default function AdminReferralsPage() {
     }
   };
 
+  const ql = q.trim().toLowerCase();
+  const filteredBalances = ql
+    ? balances.filter((b) => [b.name, b.email, b.phone].filter(Boolean).join(" ").toLowerCase().includes(ql))
+    : balances;
+  const filteredReferrals = ql
+    ? referrals.filter((r) =>
+        [r.referrer.name, r.referrer.email, r.referred.name, r.referred.email, r.code]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(ql)
+      )
+    : referrals;
+
   return (
     <>
       <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-5">
@@ -101,11 +118,19 @@ export default function AdminReferralsPage() {
           <p className="text-[#8a7559]">Loading…</p>
         ) : (
           <>
+            <input
+              type="text"
+              value={q}
+              onChange={(e) => { setQ(e.target.value); setBalLimit(50); setRefLimit(50); }}
+              placeholder="Search by name or email…"
+              className="w-full sm:max-w-sm bg-white border border-[#cdbda3] rounded-xl px-4 py-2.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]"
+            />
+
             {/* Balances */}
             <section>
               <h2 className="text-lg font-semibold mb-3">Bid Bucks balances</h2>
-              {balances.length === 0 ? (
-                <p className="text-[#8a7559] text-sm">No credit activity yet.</p>
+              {filteredBalances.length === 0 ? (
+                <p className="text-[#8a7559] text-sm">{balances.length === 0 ? "No credit activity yet." : "No matches."}</p>
               ) : (
                 <div className="bg-white border border-[#e3d6bf] rounded-xl overflow-x-auto">
                   <table className="w-full min-w-[560px]">
@@ -119,7 +144,7 @@ export default function AdminReferralsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {balances.map((b) => (
+                      {filteredBalances.slice(0, balLimit).map((b) => (
                         <tr key={b.clerkUserId} className="border-b border-[#e3d6bf] last:border-0">
                           <td className="px-4 py-3">
                             <div className="font-medium text-[#241a12]">{nameOf(b)}</div>
@@ -141,6 +166,13 @@ export default function AdminReferralsPage() {
                       ))}
                     </tbody>
                   </table>
+                  {filteredBalances.length > balLimit && (
+                    <div className="px-4 py-3 border-t border-[#e3d6bf]">
+                      <button onClick={() => setBalLimit((n) => n + 50)} className="text-sm font-semibold text-[#6c4d39] hover:text-[#563e2c]">
+                        Show more ({filteredBalances.length - balLimit} left)
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </section>
@@ -148,8 +180,8 @@ export default function AdminReferralsPage() {
             {/* Referrals */}
             <section>
               <h2 className="text-lg font-semibold mb-3">All referrals ({referrals.length})</h2>
-              {referrals.length === 0 ? (
-                <p className="text-[#8a7559] text-sm">No referrals yet.</p>
+              {filteredReferrals.length === 0 ? (
+                <p className="text-[#8a7559] text-sm">{referrals.length === 0 ? "No referrals yet." : "No matches."}</p>
               ) : (
                 <div className="bg-white border border-[#e3d6bf] rounded-xl overflow-x-auto">
                   <table className="w-full min-w-[680px]">
@@ -163,7 +195,7 @@ export default function AdminReferralsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {referrals.map((r) => (
+                      {filteredReferrals.slice(0, refLimit).map((r) => (
                         <tr key={r.id} className="border-b border-[#e3d6bf] last:border-0">
                           <td className="px-4 py-3">
                             <div className="font-medium text-[#241a12]">{nameOf(r.referrer)}</div>
@@ -191,6 +223,13 @@ export default function AdminReferralsPage() {
                       ))}
                     </tbody>
                   </table>
+                  {filteredReferrals.length > refLimit && (
+                    <div className="px-4 py-3 border-t border-[#e3d6bf]">
+                      <button onClick={() => setRefLimit((n) => n + 50)} className="text-sm font-semibold text-[#6c4d39] hover:text-[#563e2c]">
+                        Show more ({filteredReferrals.length - refLimit} left)
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </section>
