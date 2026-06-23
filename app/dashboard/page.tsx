@@ -336,10 +336,10 @@ function BidderDashboardInner() {
     return (
       <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
         {/* Page title placeholder */}
-        <div className="border-b border-[#e3d6bf]/60 px-4 sm:px-8 py-4">
+        <div className="border-b border-[#e3d6bf]/60 px-6 sm:px-8 py-4">
           <Skeleton className="h-6 w-32" />
         </div>
-        <div className="px-4 sm:px-8 py-5 sm:py-7 max-w-3xl">
+        <div className="px-6 sm:px-8 py-5 sm:py-7 max-w-3xl">
           {/* Sub-nav pills */}
           <div className="flex gap-2 mb-6">
             <Skeleton className="h-9 w-28 rounded-xl" />
@@ -493,7 +493,7 @@ function BidderDashboardInner() {
 
         {/* Failed charge — prominent, actionable */}
         {failedWins.length > 0 && (
-          <div className="bg-red-50 border-b border-red-500/25 px-4 sm:px-8 py-4">
+          <div className="bg-red-50 border-b border-red-500/25 px-6 sm:px-8 py-4">
             <div className="flex items-start gap-2.5 mb-1">
               <svg className="w-5 h-5 text-red-600 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" />
@@ -548,7 +548,7 @@ function BidderDashboardInner() {
 
         {/* Pending wins banner */}
         {pendingWins.length > 0 && (
-          <div className="bg-orange-500/8 border-b border-orange-500/20 px-4 sm:px-8 py-3">
+          <div className="bg-orange-500/8 border-b border-orange-500/20 px-6 sm:px-8 py-3">
             <div className="text-sm">
               <span className="text-orange-300 font-bold">{pendingWins.length} win{pendingWins.length !== 1 ? "s" : ""} pending payment</span>
               <span className="text-[#6f5b46]"> · {money(pendingWins.reduce((s, i) => s + (i.totalDue ?? i.amountOwed), 0))} total{pendingWins.some((i) => (i.feeAmount ?? 0) + (i.taxAmount ?? 0) > 0) ? " (incl. fee & tax)" : ""}</span>
@@ -566,7 +566,7 @@ function BidderDashboardInner() {
           </h1>
         </header>
 
-        <div className="flex-1 overflow-auto px-4 sm:px-8 py-5 sm:py-7">
+        <div className="flex-1 overflow-auto px-6 sm:px-8 py-5 sm:py-7">
 
           {/* ── My Bids segmented sub-nav ── */}
           {inMyBids && (() => {
@@ -805,7 +805,7 @@ function BidderDashboardInner() {
 
             const AuctionCard = ({ a, highlighted }: { a: LiveAuction; highlighted?: boolean }) => (
               <Link key={a.id} href={`/${a.org.slug}/${a.slug}`}
-                className={`flex items-center gap-4 bg-white rounded-2xl px-4 sm:px-6 py-4 transition-all group ${
+                className={`flex items-center gap-4 bg-white rounded-2xl px-6 sm:px-8 py-4 transition-all group ${
                   highlighted
                     ? "border border-[#6c4d39]/30 hover:border-[#6c4d39]/60 hover:shadow-[0_0_25px_rgba(108,77,57,0.12)]"
                     : "border border-[#e3d6bf] hover:border-[#6c4d39]/35 hover:shadow-[0_0_20px_rgba(108,77,57,0.05)]"
@@ -936,7 +936,7 @@ function BidderDashboardInner() {
                       <div className="space-y-3">
                         {winningSorted.map((b) => (
                           <div key={b.itemId}
-                            className="flex flex-wrap items-center gap-4 bg-white border border-[#5f7a45]/30 rounded-2xl px-4 sm:px-6 py-4">
+                            className="flex flex-wrap items-center gap-4 bg-white border border-[#5f7a45]/30 rounded-2xl px-6 sm:px-8 py-4">
                             <Photo url={b.photo} title={b.itemTitle} />
                             <div className="flex-1 min-w-0">
                               <div className="font-bold truncate">{b.itemTitle}</div>
@@ -972,7 +972,7 @@ function BidderDashboardInner() {
                           const nextBid = b.currentBid > b.myBid ? b.currentBid : null;
                           return (
                             <div key={b.itemId}
-                              className="flex flex-wrap items-center gap-4 bg-white border border-red-500/25 rounded-2xl px-4 sm:px-6 py-4">
+                              className="flex flex-wrap items-center gap-4 bg-white border border-red-500/25 rounded-2xl px-6 sm:px-8 py-4">
                               <Photo url={b.photo} title={b.itemTitle} />
                               <div className="flex-1 min-w-0">
                                 <div className="font-bold truncate">{b.itemTitle}</div>
@@ -1033,7 +1033,7 @@ function BidderDashboardInner() {
               <div className="max-w-3xl space-y-6">
                 {grouped.map((g) => (
                   <section key={g.key} className="bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden">
-                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-[#e3d6bf]/60 bg-[#f1e7d5]/40">
+                    <div className="flex flex-wrap items-center justify-between gap-3 px-6 sm:px-8 py-4 border-b border-[#e3d6bf]/60 bg-[#f1e7d5]/40">
                       <div className="min-w-0">
                         <div className="font-bold truncate text-[#241a12]">{g.auctionTitle}</div>
                         <div className="text-xs text-[#8a7559] mt-0.5 truncate">
@@ -1051,7 +1051,7 @@ function BidderDashboardInner() {
                     </div>
                     <div className="divide-y divide-[#e3d6bf]/50">
                       {g.items.map((b) => (
-                        <div key={b.itemId} className="flex items-center gap-4 px-4 sm:px-6 py-3.5">
+                        <div key={b.itemId} className="flex items-center gap-4 px-6 sm:px-8 py-3.5">
                           <Photo url={b.photo} title={b.itemTitle} />
                           <div className="flex-1 min-w-0">
                             <div className="font-semibold text-sm truncate">{b.itemTitle}</div>

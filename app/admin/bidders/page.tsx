@@ -67,12 +67,12 @@ export default function BiddersPage() {
 
   return (
     <>
-      <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-5">
+      <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-5">
         <h1 className="text-2xl sm:text-3xl font-semibold">Bidders</h1>
         <p className="text-base text-[#6f5b46] mt-1">Find a bidder and block anyone causing problems — blocking stops their bidding and sign-in.</p>
       </header>
 
-      <div className="flex-1 px-4 sm:px-8 py-6 overflow-auto">
+      <div className="flex-1 px-6 sm:px-8 py-6 overflow-auto">
         <input
           type="text"
           value={q}

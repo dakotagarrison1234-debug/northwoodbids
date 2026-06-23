@@ -15,14 +15,14 @@ export default async function SuperAdminPage() {
 
   return (
     <>
-      <header className="border-b border-[#e3d6bf]/60 px-4 sm:px-8 py-4">
+      <header className="border-b border-[#e3d6bf]/60 px-6 sm:px-8 py-4">
         <h1 className="text-lg font-bold">Org Applications</h1>
         <p className="text-[#8a7559] text-sm mt-0.5">
           {pending.length} pending · {reviewed.length} reviewed
         </p>
       </header>
 
-      <div className="px-4 sm:px-8 py-5 max-w-4xl space-y-8">
+      <div className="px-6 sm:px-8 py-5 max-w-4xl space-y-8">
         {pending.length === 0 && (
           <div className="bg-white border border-[#e3d6bf] rounded-2xl p-8 text-center text-[#8a7559] text-sm">
             No pending applications.

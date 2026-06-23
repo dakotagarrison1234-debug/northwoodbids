@@ -674,7 +674,7 @@ function NewItemForm() {
 
   return (
     <>
-      <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-4 flex items-center gap-2 min-w-0">
+      <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-4 flex items-center gap-2 min-w-0">
         {preselectedAuctionId ? (
           <Link href={`/admin/auctions/${preselectedAuctionId}`} className="text-[#6f5b46] hover:text-[#241a12] text-base font-semibold shrink-0">← Auction</Link>
         ) : (
@@ -695,7 +695,7 @@ function NewItemForm() {
         </button>
       </header>
 
-      <div className="flex-1 px-4 sm:px-8 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 overflow-auto">
+      <div className="flex-1 px-6 sm:px-8 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 overflow-auto">
         <div className="lg:col-span-2 space-y-6">
 
           {/* Success banner (Save & Add Another) */}
@@ -850,7 +850,7 @@ function NewItemForm() {
       </div>
 
       {/* ── Bottom action bar ── */}
-      <footer className="bar-safe-bottom safe-x border-t border-[#e3d6bf] bg-[#faf5ea] px-4 sm:px-8 pt-4 flex flex-col sm:flex-row sm:justify-end gap-3">
+      <footer className="bar-safe-bottom safe-x border-t border-[#e3d6bf] bg-[#faf5ea] px-6 sm:px-8 pt-4 flex flex-col sm:flex-row sm:justify-end gap-3">
         <button onClick={() => handleSave(true)} disabled={saving || uploading}
           className="bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] disabled:opacity-50 text-[#241a12] text-base px-6 py-3.5 rounded-xl font-semibold transition-colors">
           {saving ? "Saving..." : "Save & Add Another"}
@@ -868,10 +868,10 @@ export default function NewItemPage() {
   return (
     <Suspense fallback={
       <>
-        <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-4 flex items-center gap-2">
+        <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-4 flex items-center gap-2">
           <Skeleton className="h-8 w-48" />
         </header>
-        <div className="flex-1 px-4 sm:px-8 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+        <div className="flex-1 px-6 sm:px-8 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           <div className="lg:col-span-2 space-y-6">
             <Skeleton className="h-28 w-full rounded-xl" />
             {[0, 1, 2].map((i) => (

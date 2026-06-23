@@ -122,11 +122,11 @@ export default function EditItemPage() {
   if (loading) {
     return (
       <>
-        <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-4 flex items-center justify-between gap-3 flex-wrap">
+        <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-4 flex items-center justify-between gap-3 flex-wrap">
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-12 w-32 rounded-xl" />
         </header>
-        <div className="flex-1 px-4 sm:px-8 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+        <div className="flex-1 px-6 sm:px-8 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           <div className="lg:col-span-2 space-y-6">
             {[0, 1, 2].map((i) => (
               <div key={i} className="bg-white border border-[#e3d6bf] rounded-xl p-6 space-y-4">
@@ -151,7 +151,7 @@ export default function EditItemPage() {
 
   return (
     <>
-      <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-4 flex items-center justify-between gap-3 flex-wrap">
+      <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-4 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 min-w-0">
           <Link
             href={formData.auctionId ? `/admin/auctions/${formData.auctionId}` : "/admin/auctions"}
@@ -168,7 +168,7 @@ export default function EditItemPage() {
         </button>
       </header>
 
-      <div className="flex-1 px-4 sm:px-8 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 overflow-auto">
+      <div className="flex-1 px-6 sm:px-8 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 overflow-auto">
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4">Item Details</h2>

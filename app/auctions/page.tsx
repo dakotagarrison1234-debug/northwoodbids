@@ -93,7 +93,7 @@ export default async function AuctionsPage() {
       {/* Rustic header band */}
       <section className="relative overflow-hidden border-b border-[#e3d6bf]/60 bg-[#efe5d3]/70">
         <MountainRange className="absolute right-0 top-0 h-full w-[420px] opacity-40 pointer-events-none" />
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-10 sm:pt-14 pb-28 sm:pb-32">
+        <div className="relative max-w-6xl mx-auto px-6 sm:px-8 pt-10 sm:pt-14 pb-28 sm:pb-32">
           <div className="flex items-center gap-3">
             <GavelEmblem className="w-12 h-12 shrink-0" />
             <span className="w-2.5 h-2.5 rounded-full bg-[#6c4d39] animate-pulse inline-block shrink-0" />
@@ -109,7 +109,7 @@ export default async function AuctionsPage() {
         <PineRidge className="absolute bottom-0 left-0 w-full h-24 sm:h-28 pointer-events-none" />
       </section>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
+      <div className="max-w-6xl mx-auto px-6 sm:px-8 py-10 sm:py-14">
         {auctions.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {auctions.map((auction) => {

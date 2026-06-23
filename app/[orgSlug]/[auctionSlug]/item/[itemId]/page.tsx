@@ -364,10 +364,10 @@ export default function ItemPage() {
     return (
       <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
         {/* Breadcrumb placeholder */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4">
+        <div className="max-w-6xl mx-auto px-6 sm:px-8 pt-4">
           <Skeleton className="h-4 w-32" />
         </div>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-12">
+        <div className="max-w-6xl mx-auto px-6 sm:px-8 py-6 sm:py-10 grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-12">
           {/* Left: photo */}
           <div>
             <Skeleton className="w-full aspect-square rounded-2xl mb-3" />
@@ -441,7 +441,7 @@ export default function ItemPage() {
   return (
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
       {/* Breadcrumb / back link */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4 flex items-center gap-2 text-sm min-w-0">
+      <div className="max-w-6xl mx-auto px-6 sm:px-8 pt-4 flex items-center gap-2 text-sm min-w-0">
         <Link href={`/${orgSlug}/${auctionSlug}`} className="text-[#8a7559] hover:text-[#241a12] shrink-0 flex items-center gap-1 transition-colors text-sm font-medium">
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><path d="M8 2L4 6l4 4" /></svg>
           Back to auction
@@ -450,7 +450,7 @@ export default function ItemPage() {
         <span className="text-[#4a3a2b] truncate hidden sm:inline">{item.title}</span>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-12">
+      <div className="max-w-6xl mx-auto px-6 sm:px-8 py-6 sm:py-10 grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-12">
         {/* Left: photos */}
         <div>
           {/* Main photo with swipe support */}

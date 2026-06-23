@@ -82,7 +82,7 @@ export default function NewAuctionPage() {
 
   return (
     <>
-      <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-4 flex items-center justify-between gap-3 flex-wrap">
+      <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-4 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 min-w-0">
           <Link href="/admin/auctions" className="text-[#6f5b46] hover:text-[#241a12] text-base font-semibold shrink-0">← Auctions</Link>
           <span className="text-[#8a7559]">/</span>
@@ -94,7 +94,7 @@ export default function NewAuctionPage() {
         </button>
       </header>
 
-      <div className="px-4 sm:px-8 py-6 max-w-2xl">
+      <div className="px-6 sm:px-8 py-6 max-w-2xl">
         <div className="bg-white border border-[#e3d6bf] rounded-xl p-6 sm:p-7 space-y-6">
           <div>
             <label className="text-base text-[#6f5b46] mb-1.5 block">Auction Title *</label>

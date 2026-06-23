@@ -16,7 +16,7 @@ export default async function SearchPage({ searchParams }: Props) {
   if (query.length < 2) {
     return (
       <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-16 text-center">
+        <div className="max-w-2xl mx-auto px-6 sm:px-8 py-16 text-center">
           <div className="flex justify-center mb-6 text-[#b3a085]">
             <svg className="w-12 h-12" fill="none" viewBox="0 0 48 48" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
               <circle cx="22" cy="22" r="14" />
@@ -76,7 +76,7 @@ export default async function SearchPage({ searchParams }: Props) {
 
   return (
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+      <div className="max-w-4xl mx-auto px-6 sm:px-8 py-6 sm:py-10">
         {/* Search bar pre-filled */}
         <div className="mb-6">
           <SearchBar defaultValue={query} size="large" />

@@ -171,7 +171,7 @@ export default async function HomePage() {
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
       <PusherRefresh channel="auctions" event="auction-updated" />
       {/* Hero */}
-      <section className="relative px-4 sm:px-6 pt-3 pb-28 sm:pt-4 sm:pb-32 overflow-hidden">
+      <section className="relative px-6 sm:px-8 pt-3 pb-28 sm:pt-4 sm:pb-32 overflow-hidden">
         <MountainRange className="pointer-events-none absolute bottom-0 left-0 w-full h-[55%] opacity-25" />
         <div className="relative max-w-3xl mx-auto text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -211,7 +211,7 @@ export default async function HomePage() {
       </section>
 
       {/* Live Auctions */}
-      <section id="live-auctions" className="px-4 sm:px-6 pt-4 pb-14 sm:pb-16 max-w-6xl mx-auto">
+      <section id="live-auctions" className="px-6 sm:px-8 pt-4 pb-14 sm:pb-16 max-w-6xl mx-auto">
         <div className="flex items-center gap-3 mb-8">
           <span className="w-2.5 h-2.5 rounded-full bg-[#6c4d39] animate-pulse shrink-0" />
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#241a12]">Live Auctions</h2>
@@ -259,7 +259,7 @@ export default async function HomePage() {
 
       {/* Upcoming Auctions */}
       {upcomingAuctions.length > 0 && (
-        <section className="px-4 sm:px-6 pb-14 sm:pb-16 max-w-6xl mx-auto">
+        <section className="px-6 sm:px-8 pb-14 sm:pb-16 max-w-6xl mx-auto">
           <div className="flex items-center gap-3 mb-8">
             <span className="text-[#8a7559]"><IconClock /></span>
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#241a12]">Coming Soon</h2>
@@ -288,7 +288,7 @@ export default async function HomePage() {
       )}
 
       {/* How it works */}
-      <section className="border-t border-[#e3d6bf]/60 bg-[#efe5d3] px-4 sm:px-6 py-14 sm:py-16">
+      <section className="border-t border-[#e3d6bf]/60 bg-[#efe5d3] px-6 sm:px-8 py-14 sm:py-16">
         <div className="max-w-5xl mx-auto">
           <BranchDivider className="w-44 h-5 mx-auto mb-5 opacity-80" />
           <p className="text-center text-[#8a7559] text-xs font-bold uppercase tracking-[0.18em] mb-10">How it works</p>
@@ -317,7 +317,7 @@ export default async function HomePage() {
       </section>
 
       {/* Game CTA */}
-      <section className="px-4 sm:px-6 pb-14 sm:pb-16 max-w-6xl mx-auto">
+      <section className="px-6 sm:px-8 pb-14 sm:pb-16 max-w-6xl mx-auto">
         <Link href="/play"
           className="group relative block overflow-hidden rounded-2xl border border-[#6c4d39]/30 bg-gradient-to-br from-[#6c4d39] to-[#4a3a2b] text-[#f1e7d5] px-6 sm:px-10 py-8 shadow-sm hover:shadow-[0_8px_30px_rgba(74,58,43,0.35)] transition-shadow">
           <div className="relative flex flex-col sm:flex-row items-center justify-between gap-5">

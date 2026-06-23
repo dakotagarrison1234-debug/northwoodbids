@@ -22,7 +22,7 @@ export default async function AuctionsPage() {
   return (
     <>
       <PusherRefresh channel="auctions" event="auction-updated" />
-      <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-5 flex items-center justify-between gap-3">
+      <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-5 flex items-center justify-between gap-3">
         <h1 className="text-2xl sm:text-3xl font-semibold">Auctions ({auctions.length})</h1>
         <div className="flex items-center gap-2 sm:gap-3">
           <RefreshButton />
@@ -32,7 +32,7 @@ export default async function AuctionsPage() {
         </div>
       </header>
 
-      <div className="px-4 sm:px-8 py-6">
+      <div className="px-6 sm:px-8 py-6">
         {auctions.length === 0 ? (
           <div className="text-center py-20 text-[#8a7559]">
             <p className="text-lg mb-4">No auctions yet</p>

@@ -73,7 +73,7 @@ export default function SuperAdminPaymentsPage() {
   return (
     <>
       {/* Header */}
-      <header className="border-b border-[#e3d6bf]/60 px-4 sm:px-8 py-5 flex items-start justify-between gap-4 flex-wrap">
+      <header className="border-b border-[#e3d6bf]/60 px-6 sm:px-8 py-5 flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-lg font-bold">Revenue</h1>
           <div className="flex items-center gap-2 mt-0.5">
@@ -118,7 +118,7 @@ export default function SuperAdminPaymentsPage() {
       </header>
 
       {/* Stripe-verified stat cards */}
-      <div className="px-4 sm:px-8 pt-5 pb-2 grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="px-6 sm:px-8 pt-5 pb-2 grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white border border-[#e3d6bf] rounded-2xl px-4 py-3.5">
           <div className="text-xs text-[#8a7559] font-medium mb-1">My Revenue</div>
           <div className="text-xl font-extrabold text-[#6c4d39]">
@@ -154,7 +154,7 @@ export default function SuperAdminPaymentsPage() {
         </div>
       </div>
 
-      <div className="px-4 sm:px-8 py-4 max-w-5xl">
+      <div className="px-6 sm:px-8 py-4 max-w-5xl">
         {loading ? (
           <div className="flex items-center justify-center py-16 gap-3">
             <div className="w-5 h-5 rounded-full border-2 border-[#6c4d39]/30 border-t-[#6c4d39] animate-spin" />

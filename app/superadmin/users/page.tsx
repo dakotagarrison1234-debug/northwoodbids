@@ -37,7 +37,7 @@ export default function SuperAdminUsersPage() {
 
   return (
     <>
-      <header className="border-b border-[#e3d6bf]/60 px-4 sm:px-8 py-4 flex items-center justify-between gap-4">
+      <header className="border-b border-[#e3d6bf]/60 px-6 sm:px-8 py-4 flex items-center justify-between gap-4">
         <div>
           <h1 className="text-lg font-bold">Users</h1>
           <p className="text-[#8a7559] text-sm mt-0.5">{users.length} {query ? "results" : "total"}</p>
@@ -61,7 +61,7 @@ export default function SuperAdminUsersPage() {
         </form>
       </header>
 
-      <div className="px-4 sm:px-8 py-5 max-w-5xl">
+      <div className="px-6 sm:px-8 py-5 max-w-5xl">
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <div className="w-6 h-6 rounded-full border-2 border-[#6c4d39]/30 border-t-[#6c4d39] animate-spin" />

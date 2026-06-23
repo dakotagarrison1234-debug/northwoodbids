@@ -61,11 +61,11 @@ export default async function WinnersPage() {
   return (
     <>
       <PusherRefresh channel="auctions" event="auction-updated" />
-      <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-5">
+      <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-5">
         <h1 className="text-2xl sm:text-3xl font-semibold">Winners &amp; Payments</h1>
       </header>
 
-      <div className="px-4 sm:px-8 py-6 space-y-8">
+      <div className="px-6 sm:px-8 py-6 space-y-8">
 
         {/* Who owes money */}
         <div>

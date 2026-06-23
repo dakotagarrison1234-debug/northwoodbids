@@ -90,7 +90,7 @@ export default function UserDetailPage() {
 
   return (
     <>
-      <header className="border-b border-[#e3d6bf]/60 px-4 sm:px-8 py-4 flex items-center justify-between gap-4">
+      <header className="border-b border-[#e3d6bf]/60 px-6 sm:px-8 py-4 flex items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
             <Link href="/superadmin/users" className="text-[#8a7559] hover:text-[#241a12] text-sm">← Users</Link>
@@ -109,7 +109,7 @@ export default function UserDetailPage() {
       </header>
 
       {/* Tabs */}
-      <div className="border-b border-[#e3d6bf] px-4 sm:px-8">
+      <div className="border-b border-[#e3d6bf] px-6 sm:px-8">
         <div className="flex gap-5">
           {(["profile", "bids", "payments", "orgs"] as const).map((t) => (
             <button
@@ -125,7 +125,7 @@ export default function UserDetailPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto px-4 sm:px-8 py-6 max-w-4xl">
+      <div className="flex-1 overflow-auto px-6 sm:px-8 py-6 max-w-4xl">
 
         {/* ── Profile ── */}
         {tab === "profile" && (

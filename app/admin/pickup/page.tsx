@@ -316,7 +316,7 @@ export default function AdminPickupPage() {
 
   return (
     <>
-      <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-4">
+      <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-4">
         <h1 className="text-2xl sm:text-3xl font-semibold">Pickup Scheduling</h1>
         <p className="text-[#8a7559] text-base mt-0.5">Manage appointments and pickup hours</p>
         <div className="flex gap-2 mt-4 flex-wrap">
@@ -355,7 +355,7 @@ export default function AdminPickupPage() {
         </div>
       )}
 
-      <div className="px-4 sm:px-8 py-6">
+      <div className="px-6 sm:px-8 py-6">
         {loading ? (
           <div className="text-center py-20 text-base text-[#8a7559]">Loading…</div>
         ) : tab === "appointments" ? (

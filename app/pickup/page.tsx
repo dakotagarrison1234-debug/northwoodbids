@@ -402,7 +402,7 @@ export default function PickupPage() {
   if (loadError || !data) {
     return (
       <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+        <div className="max-w-2xl mx-auto px-6 sm:px-8 py-8">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-semibold">Pickup</h1>
             <Link href="/dashboard" className="text-base text-[#6c4d39] hover:text-[#563e2c] font-semibold">
@@ -449,7 +449,7 @@ export default function PickupPage() {
 
   return (
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+      <div className="max-w-2xl mx-auto px-6 sm:px-8 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-semibold">Pickup</h1>
           <Link href="/dashboard" className="text-base text-[#6c4d39] hover:text-[#563e2c] font-semibold">

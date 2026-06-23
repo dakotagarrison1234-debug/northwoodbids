@@ -70,7 +70,7 @@ export default async function ManageAuctionPage({ params }: Props) {
   return (
     <>
       <PusherRefresh channel="auctions" event="auction-updated" />
-      <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
+      <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <Link href="/admin/auctions" className="text-[#6f5b46] hover:text-[#241a12] text-base font-semibold shrink-0">← Auctions</Link>
           <span className="text-[#8a7559]">/</span>
@@ -102,7 +102,7 @@ export default async function ManageAuctionPage({ params }: Props) {
         </div>
       </header>
 
-      <div className="px-4 sm:px-8 py-6 space-y-6">
+      <div className="px-6 sm:px-8 py-6 space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {[

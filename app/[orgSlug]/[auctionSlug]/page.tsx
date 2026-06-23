@@ -149,20 +149,20 @@ export default async function AuctionPage({ params }: Props) {
 
       {/* Status banners */}
       {isClosed && (
-        <div className="bg-[#efe3d0]/40 border-b border-[#cdbda3]/50 px-4 sm:px-6 py-3 flex items-center gap-2.5">
+        <div className="bg-[#efe3d0]/40 border-b border-[#cdbda3]/50 px-6 sm:px-8 py-3 flex items-center gap-2.5">
           <IcoLock />
           <span className="text-[#6f5b46] text-sm font-medium">This auction has closed — bidding is no longer available.</span>
         </div>
       )}
       {isClosing && !isClosed && (
-        <div className="bg-amber-500/8 border-b border-amber-500/20 px-4 sm:px-6 py-3 flex items-center gap-2.5">
+        <div className="bg-amber-500/8 border-b border-amber-500/20 px-6 sm:px-8 py-3 flex items-center gap-2.5">
           <span className="text-amber-400"><IcoClock /></span>
           <span className="text-amber-300 text-sm font-semibold">This auction is closing soon — place your final bids now.</span>
         </div>
       )}
 
       {/* Auction hero */}
-      <div className="relative overflow-hidden bg-[#efe5d3]/80 border-b border-[#e3d6bf]/60 px-4 sm:px-6 py-6 sm:py-8">
+      <div className="relative overflow-hidden bg-[#efe5d3]/80 border-b border-[#e3d6bf]/60 px-6 sm:px-8 py-6 sm:py-8">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] bg-[#6c4d39]/4 rounded-full blur-[60px]" />
         </div>
@@ -195,7 +195,7 @@ export default async function AuctionPage({ params }: Props) {
       </div>
 
       {/* Item grid */}
-      <section className="px-4 sm:px-6 py-8 sm:py-10 max-w-6xl mx-auto">
+      <section className="px-6 sm:px-8 py-8 sm:py-10 max-w-6xl mx-auto">
         <div className="flex justify-center mb-6 sm:mb-8">
           <BranchDivider className="w-40 h-5 opacity-80" />
         </div>

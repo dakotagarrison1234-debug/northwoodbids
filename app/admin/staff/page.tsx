@@ -117,11 +117,11 @@ export default function StaffPage() {
 
   return (
     <>
-      <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-5">
+      <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-5">
         <h1 className="text-2xl sm:text-3xl font-semibold">Team Members</h1>
       </header>
 
-      <div className="px-4 sm:px-8 py-6 max-w-2xl space-y-8">
+      <div className="px-6 sm:px-8 py-6 max-w-2xl space-y-8">
         {/* Current Members */}
         <section>
           <h2 className="text-sm font-semibold text-[#8a7559] uppercase tracking-wider mb-4">

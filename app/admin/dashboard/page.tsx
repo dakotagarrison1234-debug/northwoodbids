@@ -92,7 +92,7 @@ export default async function AdminDashboard() {
   return (
     <>
       <PusherRefresh channel="auctions" event="auction-updated" />
-      <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-5 flex items-center justify-between gap-3">
+      <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-5 flex items-center justify-between gap-3">
         <h1 className="text-2xl sm:text-3xl font-semibold">Dashboard</h1>
         <div className="flex items-center gap-2 sm:gap-3">
           <RefreshButton />
@@ -106,7 +106,7 @@ export default async function AdminDashboard() {
       </header>
 
       {/* Stats */}
-      <div className="px-4 sm:px-8 py-6 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      <div className="px-6 sm:px-8 py-6 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {[
           { label: "Total Sales", value: `$${totalRaised.toLocaleString()}` },
           { label: "Items Listed", value: itemCount },
@@ -121,7 +121,7 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Recent bids + active auction */}
-      <div className="px-4 sm:px-8 pb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="px-6 sm:px-8 pb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white border border-[#e3d6bf] rounded-xl p-6 sm:p-7">
           <h2 className="text-lg font-semibold mb-4">Recent Bids</h2>
           {recentBids.length === 0 ? (
@@ -222,7 +222,7 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Quick links */}
-      <div className="px-4 sm:px-8 pb-8">
+      <div className="px-6 sm:px-8 pb-8">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: "Auctions", href: "/admin/auctions", icon: "gavel" },
