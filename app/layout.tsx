@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Bitter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import HomeHeader from "@/app/components/HomeHeader";
+import ReferralClaimer from "@/app/components/ReferralClaimer";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -92,6 +93,7 @@ export default function RootLayout({
         </head>
         <body className="min-h-full flex flex-col">
           <HomeHeader />
+          <ReferralClaimer />
           {children}
         </body>
       </html>

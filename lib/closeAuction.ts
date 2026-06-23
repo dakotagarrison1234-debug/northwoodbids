@@ -4,6 +4,11 @@ import Stripe from "stripe";
 import { triggerAuctionUpdated } from "@/lib/pusherServer";
 import { attachToUpcomingAppointment } from "@/lib/pickup";
 import { notifyPaymentFailed, notifyPaymentReceipt } from "@/lib/paymentNotify";
+import {
+  reserveReferralCredit,
+  releaseReferralCredit,
+  vestReferralForPayer,
+} from "@/lib/referral";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -205,12 +210,37 @@ async function chargeOneWinner(
   // Fee AND tax ADDED ON TOP of the bid — buyer pays bid + fee + tax.
   const chargeAmountCents = Math.round(totalBidAmount * 100) + feeAmountCents + taxAmountCents;
 
+  // ── Bid Bucks: auto-apply one $5 referral credit to bills of $5.00+ ─────────
+  // Reserves (spends) the credit up front; we release it again if the charge
+  // ultimately fails. Keyed to the per-winner idempotency key so a re-charge of
+  // the same bill reuses the same reservation instead of double-spending.
+  const redemptionKey = `autocharge-${auctionId}-${clerkUserId}`;
+  const discountCents = await reserveReferralCredit(clerkUserId, chargeAmountCents, redemptionKey);
+  const netChargeCents = chargeAmountCents - discountCents;
+
+  // Bill fully covered by Bid Bucks — no card charge needed at all.
+  if (discountCents > 0 && netChargeCents <= 0) {
+    await recordWinnerStatus(winner, "PAID", now, {
+      feeAmountCents,
+      taxAmountCents,
+      creditAppliedCents: discountCents,
+      moveItemsToPendingPickup: true,
+    });
+    await attachToUpcomingAppointment(clerkUserId, org.id);
+    // The payer just settled their first bill — vest their inviter's reward.
+    await vestReferralForPayer(clerkUserId);
+    console.log(
+      `Auto-charge: $${(chargeAmountCents / 100).toFixed(2)} fully covered by Bid Bucks for ${clerkUserId}`
+    );
+    return;
+  }
+
   let paymentIntent: Stripe.PaymentIntent;
   try {
     // Direct charge on the platform Stripe account (no Connect, no application fee).
     paymentIntent = await stripe.paymentIntents.create(
       {
-        amount: chargeAmountCents,
+        amount: netChargeCents,
         currency: "usd",
         customer: bidderCustomer.stripeCustomerId,
         payment_method: bidderCustomer.defaultPaymentMethodId,
@@ -221,14 +251,17 @@ async function chargeOneWinner(
           orgId: org.id,
           auctionId,
           itemIds: itemIds.slice(0, 5).join(","), // Stripe metadata 500-char limit
+          creditAppliedCents: String(discountCents),
         },
       },
       {
         // Stable per winner per auction — a winner is only ever charged once.
-        idempotencyKey: `autocharge-${auctionId}-${clerkUserId}`,
+        idempotencyKey: redemptionKey,
       }
     );
   } catch (err: unknown) {
+    // Charge threw — give the reserved Bid Bucks back before recording FAILED.
+    if (discountCents > 0) await releaseReferralCredit(redemptionKey);
     // Charge threw — mark all items FAILED so bidder sees them on dashboard
     let failureReason = "Charge failed";
     if (
@@ -256,27 +289,34 @@ async function chargeOneWinner(
     await recordWinnerStatus(winner, "PAID", now, {
       feeAmountCents,
       taxAmountCents,
+      creditAppliedCents: discountCents,
       stripePaymentIntentId: paymentIntent.id,
       moveItemsToPendingPickup: true,
     });
     // Fold newly-won items into any upcoming pickup appointment.
     await attachToUpcomingAppointment(clerkUserId, org.id);
+    // The payer just settled their first bill — vest their inviter's reward.
+    await vestReferralForPayer(clerkUserId);
     notifyPaymentReceipt({
       clerkUserId,
-      amount: Number((chargeAmountCents / 100).toFixed(2)),
+      amount: Number((netChargeCents / 100).toFixed(2)),
     }).catch((e) => console.error("notifyPaymentReceipt (auto-charge) failed:", e));
     console.log(
-      `Auto-charge: $${(chargeAmountCents / 100).toFixed(2)} charged to ${clerkUserId} (PI: ${paymentIntent.id})`
+      `Auto-charge: $${(netChargeCents / 100).toFixed(2)} charged to ${clerkUserId}` +
+        (discountCents > 0 ? ` ($${(discountCents / 100).toFixed(2)} Bid Bucks applied)` : "") +
+        ` (PI: ${paymentIntent.id})`
     );
     return;
   }
 
   if (status === "processing") {
     // Async settlement in progress — record PENDING, leave items SOLD, let the
-    // webhook (payment_intent.succeeded / .payment_failed) reconcile.
+    // webhook (payment_intent.succeeded / .payment_failed) reconcile. The credit
+    // reservation is held; the webhook releases it if the charge ultimately fails.
     await recordWinnerStatus(winner, "PENDING", now, {
       feeAmountCents,
       taxAmountCents,
+      creditAppliedCents: discountCents,
       stripePaymentIntentId: paymentIntent.id,
     });
     console.log(`Auto-charge: PI ${paymentIntent.id} processing for ${clerkUserId} — pending webhook`);
@@ -284,8 +324,9 @@ async function chargeOneWinner(
   }
 
   // requires_action / requires_payment_method / requires_confirmation / canceled / ...
-  // Not a success — record FAILED with the status as the reason; items stay SOLD.
+  // Not a success — give the reserved Bid Bucks back and record FAILED; items stay SOLD.
   console.warn(`Auto-charge: PI ${paymentIntent.id} status "${status}" for ${clerkUserId} — not charged`);
+  if (discountCents > 0) await releaseReferralCredit(redemptionKey);
   await recordWinnerStatus(winner, "FAILED", now, {
     failureReason: status,
     stripePaymentIntentId: paymentIntent.id,
@@ -313,6 +354,7 @@ async function recordWinnerStatus(
   opts: {
     feeAmountCents?: number;
     taxAmountCents?: number;
+    creditAppliedCents?: number;
     stripePaymentIntentId?: string;
     failureReason?: string;
     moveItemsToPendingPickup?: boolean;
@@ -322,6 +364,9 @@ async function recordWinnerStatus(
   const itemIds = winner.items.map((i) => i.id);
   const feeAmountCents = opts.feeAmountCents ?? 0;
   const taxAmountCents = opts.taxAmountCents ?? 0;
+  // Whole Bid Bucks discount is attributed to the first item's row (like the
+  // fee/tax remainder) so per-item rows still sum back to what was charged.
+  const creditAppliedCents = opts.creditAppliedCents ?? 0;
 
   const n = winner.items.length;
   const baseFeeCents = Math.floor(feeAmountCents / n);
@@ -344,6 +389,7 @@ async function recordWinnerStatus(
 
     const itemFeeCents = baseFeeCents + (idx === 0 ? feeRemainderCents : 0);
     const itemTaxCents = baseTaxCents + (idx === 0 ? taxRemainderCents : 0);
+    const itemCreditCents = idx === 0 ? creditAppliedCents : 0;
 
     ops.push(
       prisma.payment.create({
@@ -353,6 +399,7 @@ async function recordWinnerStatus(
           amount: item.amount,
           applicationFeeAmount: itemFeeCents / 100,
           taxAmount: itemTaxCents / 100,
+          creditApplied: itemCreditCents > 0 ? itemCreditCents / 100 : null,
           stripePaymentIntentId: opts.stripePaymentIntentId,
           status,
           autoChargeAttemptedAt: attemptedAt,

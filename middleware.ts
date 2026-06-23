@@ -7,6 +7,7 @@ const isPublicRoute = createRouteMatcher([
   "/auctions(.*)",        // public live auctions page
   "/api/live-auctions",  // public live auctions API
   "/register(.*)",
+  "/r/(.*)",               // public referral share links (/r/{code})
   "/onboarding(.*)",
   "/apply(.*)",
   "/join(.*)",

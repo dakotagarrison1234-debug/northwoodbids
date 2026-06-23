@@ -275,6 +275,7 @@ model Payment {
   amount                Decimal       @db.Decimal(10, 2)
   applicationFeeAmount  Decimal?      @db.Decimal(10, 2)
   taxAmount             Decimal?      @db.Decimal(10, 2)
+  creditApplied         Decimal?      @db.Decimal(10, 2)
   stripePaymentIntentId String?
   status                PaymentStatus @default(PENDING)
   autoChargeAttemptedAt DateTime?
@@ -377,5 +378,65 @@ model OrgInvite {
 
   @@index([email])
   @@index([token])
+}
+
+// ── Bid Bucks referral program ────────────────────────────────────────────────
+//
+// Each bidder gets ONE permanent share code. When a brand-new bidder signs up
+// through that code, a Referral(PENDING) row is created. The inviter's $5 only
+// becomes real ("EARNED") once the referred bidder PAYS for their first won
+// item — at which point anti-abuse checks run (no self-referral, no shared phone
+// or card) and the per-inviter cap of 5 earned referrals is enforced. Credit is
+// tracked as a ledger and redeemed one $5 per qualifying bill ($5 or more).
+
+/** One permanent share code per bidder. */
+model ReferralCode {
+  id          String   @id @default(cuid())
+  clerkUserId String   @unique
+  code        String   @unique
+  createdAt   DateTime @default(now())
+
+  @@index([code])
+}
+
+enum ReferralStatus {
+  PENDING // signed up via link; referred bidder hasn't paid yet
+  EARNED  // referred bidder paid -> inviter granted $5 Bid Bucks
+  CAPPED  // referred bidder paid, but inviter already had 5 earned -> no credit
+  BLOCKED // failed an anti-abuse check (self / shared phone / shared card)
+}
+
+/** Attribution of a referred bidder to their inviter. One per referred bidder, ever. */
+model Referral {
+  id             String         @id @default(cuid())
+  referrerUserId String         // inviter (clerkUserId)
+  referredUserId String         @unique // the new bidder — locked to one inviter forever
+  code           String         // the code used at signup
+  status         ReferralStatus @default(PENDING)
+  earnedAt       DateTime?      // when it became EARNED/CAPPED (referred bidder's first payment)
+  blockedReason  String?        // why it was BLOCKED, if applicable
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([referrerUserId, status])
+  @@index([code])
+}
+
+/**
+ * Append-only Bid Bucks ledger. Positive = earned, negative = redeemed.
+ * Balance for a user is SUM(amount). Uniqueness on referralId prevents a single
+ * referral from ever granting credit twice; uniqueness on redemptionKey prevents
+ * a single bill from ever redeeming credit twice (idempotent re-charges).
+ */
+model CreditLedger {
+  id            String   @id @default(cuid())
+  clerkUserId   String
+  amount        Decimal  @db.Decimal(10, 2) // +5 earned, -N redeemed
+  reason        String   // "referral_earned" | "referral_redeemed" | "adjustment"
+  referralId    String?  @unique // set on earn rows — guarantees one grant per referral
+  redemptionKey String?  @unique // set on redeem rows — guarantees one redeem per bill
+  createdAt     DateTime @default(now())
+
+  @@index([clerkUserId])
 }
 

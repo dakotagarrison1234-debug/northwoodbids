@@ -114,7 +114,9 @@ export async function GET(
     const subtotal = lines.reduce((s, l) => s + l.bid, 0);
     const premium = lines.reduce((s, l) => s + l.premium, 0);
     const tax = lines.reduce((s, l) => s + l.tax, 0);
-    const grandTotal = subtotal + premium + tax;
+    // Bid Bucks applied across this auction's paid items (stored per-Payment row).
+    const credit = payments.reduce((s, p) => s + num(p.creditApplied), 0);
+    const grandTotal = subtotal + premium + tax - credit;
 
     return NextResponse.json({
       business: { name: businessName },
@@ -128,6 +130,7 @@ export async function GET(
         subtotal: round(subtotal),
         premium: round(premium),
         tax: round(tax),
+        credit: round(credit),
         grandTotal: round(grandTotal),
       },
     });

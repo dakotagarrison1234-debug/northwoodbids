@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { attachToUpcomingAppointment } from "@/lib/pickup";
 import { notifyPaymentFailed, notifyPaymentReceipt } from "@/lib/paymentNotify";
+import { vestReferralForPayer, releaseReferralCredit } from "@/lib/referral";
 import Stripe from "stripe";
 
 // App Router route handlers expose the raw body via request.text(), so no
@@ -69,6 +70,10 @@ export async function POST(request: NextRequest) {
             clerkUserId,
             amount: Number(amount.toFixed(2)),
           }).catch((e) => console.error("notifyPaymentReceipt (webhook) failed:", e));
+          // First successful payment by a referred bidder vests their inviter's reward.
+          vestReferralForPayer(clerkUserId).catch((e) =>
+            console.error("vestReferralForPayer (webhook) failed:", e)
+          );
         }
         break;
       }
@@ -79,6 +84,13 @@ export async function POST(request: NextRequest) {
           pi.last_payment_error?.code ??
           "Payment failed";
         const failedUserIds = await markPaymentsFailed(pi.id, reason);
+        // An async-settling auto-charge ultimately failed — give back any Bid Bucks
+        // that were reserved for this bill (key matches lib/closeAuction).
+        const auctionId = pi.metadata?.auctionId;
+        const payerId = pi.metadata?.clerkUserId;
+        if (auctionId && payerId) {
+          await releaseReferralCredit(`autocharge-${auctionId}-${payerId}`);
+        }
         // Notify each affected winner once (deduped by user).
         for (const clerkUserId of failedUserIds) {
           notifyPaymentFailed({ clerkUserId, reason }).catch((e) =>
