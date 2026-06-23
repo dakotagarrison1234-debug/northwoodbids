@@ -112,6 +112,7 @@ export default function PickupStatusCard() {
           <div className="text-xs text-[#6f5b46] mt-1">
             {appointment.location.name} · {appointment.items.length} item{appointment.items.length !== 1 ? "s" : ""}
           </div>
+          <div className="text-xs text-[#8a7559] mt-1">✓ New items you win are added here automatically.</div>
         </div>
       )}
 

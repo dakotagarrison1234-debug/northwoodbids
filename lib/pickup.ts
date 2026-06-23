@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { notifyPickupAutoAdded } from "@/lib/pickupNotify";
 
 /**
  * Pickup scheduling helpers. All pickup times are interpreted in the business's
@@ -66,14 +67,14 @@ export async function getUnscheduledPickupItemIds(
 export async function attachToUpcomingAppointment(
   clerkUserId: string,
   organizationId: string
-): Promise<void> {
+): Promise<{ attached: number; startsAt: Date | null }> {
   const appt = await prisma.pickupAppointment.findFirst({
     where: { clerkUserId, organizationId, status: "SCHEDULED", startsAt: { gte: new Date() } },
     orderBy: { startsAt: "asc" },
   });
-  if (!appt) return;
+  if (!appt) return { attached: 0, startsAt: null };
   const itemIds = await getUnscheduledPickupItemIds(clerkUserId, organizationId);
-  if (itemIds.length === 0) return;
+  if (itemIds.length === 0) return { attached: 0, startsAt: appt.startsAt };
   // Only fold in items that are actually AT the appointment's location (or have no
   // assigned home location). Items sitting at another location must be transferred
   // first — they get attached after the transfer is marked dropped off.
@@ -84,11 +85,12 @@ export async function attachToUpcomingAppointment(
     },
     select: { id: true },
   });
-  if (matching.length === 0) return;
+  if (matching.length === 0) return { attached: 0, startsAt: appt.startsAt };
   await prisma.item.updateMany({
     where: { id: { in: matching.map((i) => i.id) } },
     data: { pickupAppointmentId: appt.id },
   });
+  return { attached: matching.length, startsAt: appt.startsAt };
 }
 
 /**
@@ -106,14 +108,14 @@ export async function attachToUpcomingAppointment(
 export async function attachToPendingTransfers(
   clerkUserId: string,
   organizationId: string
-): Promise<void> {
+): Promise<{ attached: number; toLocationName: string | null }> {
   // Still-gathering transfers only — never touch LOADED/COMPLETED/CANCELLED ones.
   const transfers = await prisma.transferRequest.findMany({
     where: { clerkUserId, organizationId, status: "REQUESTED" },
     orderBy: { createdAt: "asc" },
-    select: { id: true, toLocationId: true },
+    select: { id: true, toLocationId: true, toLocation: { select: { name: true } } },
   });
-  if (transfers.length === 0) return;
+  if (transfers.length === 0) return { attached: 0, toLocationName: null };
 
   // Prefer the transfer headed to the bidder's upcoming appointment location.
   const appt = await prisma.pickupAppointment.findFirst({
@@ -124,14 +126,14 @@ export async function attachToPendingTransfers(
 
   let target = appt ? transfers.find((t) => t.toLocationId === appt.locationId) ?? null : null;
   if (!target) target = transfers.length === 1 ? transfers[0] : null;
-  if (!target) return; // ambiguous — don't guess
+  if (!target) return { attached: 0, toLocationName: null }; // ambiguous — don't guess
 
   const wonBids = await prisma.bid.findMany({
     where: { clerkUserId, status: "WON", item: { organizationId } },
     select: { itemId: true },
   });
   const ids = [...new Set(wonBids.map((b) => b.itemId))];
-  if (ids.length === 0) return;
+  if (ids.length === 0) return { attached: 0, toLocationName: target.toLocation?.name ?? null };
 
   // Loose paid items not on an appointment or transfer, sitting somewhere OTHER
   // than the destination (destination items are ready and go to the appointment).
@@ -146,26 +148,37 @@ export async function attachToPendingTransfers(
     },
     select: { id: true },
   });
-  if (loose.length === 0) return;
+  if (loose.length === 0) return { attached: 0, toLocationName: target.toLocation?.name ?? null };
 
   await prisma.item.updateMany({
     where: { id: { in: loose.map((i) => i.id) } },
     data: { transferRequestId: target.id },
   });
+  return { attached: loose.length, toLocationName: target.toLocation?.name ?? null };
 }
 
 /**
  * Run after a payment settles: fold the newly-paid items into the bidder's
  * existing pickup appointment (items at its location) AND into any not-yet-loaded
  * transfer (items elsewhere). Appointment attach runs first so destination items
- * are claimed there, and the transfer pass only sweeps up what's left.
+ * are claimed there, and the transfer pass only sweeps up what's left. If anything
+ * was auto-added, fire a (gated) SMS so the bidder knows it happened.
  */
 export async function autoAttachPaidItems(
   clerkUserId: string,
   organizationId: string
 ): Promise<void> {
-  await attachToUpcomingAppointment(clerkUserId, organizationId);
-  await attachToPendingTransfers(clerkUserId, organizationId);
+  const appt = await attachToUpcomingAppointment(clerkUserId, organizationId);
+  const transfer = await attachToPendingTransfers(clerkUserId, organizationId);
+  if (appt.attached > 0 || transfer.attached > 0) {
+    notifyPickupAutoAdded({
+      clerkUserId,
+      apptAdded: appt.attached,
+      apptStartsAt: appt.startsAt,
+      transferAdded: transfer.attached,
+      toLocationName: transfer.toLocationName,
+    }).catch((e) => console.error("notifyPickupAutoAdded failed:", e));
+  }
 }
 
 /** Available bookable slots for a location over the next 4 weeks (capacity-aware, Michigan time). */

@@ -138,10 +138,6 @@ export default async function AuctionPage({ params }: Props) {
     : allVisible;
   const endedCount = allVisible.length - (isLive ? visibleItems.length : 0);
 
-  const totalRaised = allVisible
-    .filter(i => SOLD_STATUSES.includes(i.status))
-    .reduce((sum, item) => sum + Number(item.currentBid), 0);
-
   return (
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
       {/* Live refresh: re-renders this page when bids land or items/auctions close */}
@@ -185,12 +181,6 @@ export default async function AuctionPage({ params }: Props) {
               <LocalDate iso={auction.endAt.toISOString()} />
             </p>
           </div>
-          {totalRaised > 0 && (
-            <div className="text-right shrink-0">
-              <div className="text-2xl sm:text-3xl font-extrabold text-[#6c4d39]">${totalRaised.toLocaleString()}</div>
-              <div className="text-[#8a7559] text-xs mt-0.5">total</div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -222,7 +212,7 @@ export default async function AuctionPage({ params }: Props) {
               const isItemUnsold = item.status === "UNSOLD";
               const isItemClosed = isItemSold || isItemUnsold;
               const winning = isLive && !isItemClosed && isUserWinning(item.bids);
-              const bidLabel = isItemUnsold ? "Ended" : isItemSold ? "Sold" : isClosed ? "Closed" : winning ? "Raise Bid" : "Bid Now";
+              const bidLabel = isItemUnsold ? "Ended" : isItemSold ? "Sold" : isClosed ? "Closed" : winning ? "All Set" : "Bid Now";
               const bidClass = isClosed || isItemClosed
                 ? "bg-[#efe3d0] text-[#8a7559] text-xs px-3 py-1.5 rounded-xl font-medium"
                 : winning

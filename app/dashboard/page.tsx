@@ -640,7 +640,9 @@ function BidderDashboardInner() {
                     </button>
                   </div>
                   <div className="space-y-2">
-                    {winning.slice(0, 3).map((b) => (
+                    {winning.slice(0, 3).map((b) => {
+                      const ended = new Date(b.itemEndAt ?? b.auctionEndAt).getTime() <= Date.now();
+                      return (
                       <Link key={b.itemId} href={`/${b.orgSlug}/${b.auctionSlug}/item/${b.itemId}`}
                         className="flex items-center gap-3 bg-white border border-[#6c4d39]/15 rounded-2xl px-4 py-3 hover:border-[#6c4d39]/35 transition-all hover:shadow-[0_0_20px_rgba(108,77,57,0.05)]">
                         <Photo url={b.photo} title={b.itemTitle} />
@@ -650,10 +652,11 @@ function BidderDashboardInner() {
                         </div>
                         <div className="text-right shrink-0">
                           <div className="text-[#6c4d39] font-bold text-sm">${b.myBid.toLocaleString()}</div>
-                          <div className="text-xs text-[#563e2c] font-semibold mt-0.5">✓ Winning</div>
+                          <div className="text-xs text-[#563e2c] font-semibold mt-0.5">{ended ? "🎉 You won" : "✓ Winning"}</div>
                         </div>
                       </Link>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -888,28 +891,35 @@ function BidderDashboardInner() {
                         <h2 className="font-bold text-[#5f7a45] text-sm uppercase tracking-wider">You&apos;re winning ({winning.length})</h2>
                       </div>
                       <div className="space-y-3">
-                        {winningSorted.map((b) => (
+                        {winningSorted.map((b) => {
+                          const ended = new Date(b.itemEndAt ?? b.auctionEndAt).getTime() <= Date.now();
+                          return (
                           <div key={b.itemId}
                             className="flex flex-wrap items-center gap-4 bg-white border border-[#5f7a45]/30 rounded-2xl px-6 sm:px-8 py-4">
                             <Photo url={b.photo} title={b.itemTitle} />
                             <div className="flex-1 min-w-0">
                               <div className="font-bold truncate">{b.itemTitle}</div>
                               <div className="text-[#8a7559] text-xs sm:text-sm mt-0.5 truncate">{b.auctionTitle} · {b.orgName}</div>
-                              <div className="text-[#8a7559] text-xs mt-1">Ends {formatEnd(b.itemEndAt ?? b.auctionEndAt)}</div>
+                              <div className="text-[#8a7559] text-xs mt-1">
+                                {ended ? "Bidding ended — finalizing your win" : `Ends ${formatEnd(b.itemEndAt ?? b.auctionEndAt)}`}
+                              </div>
                             </div>
                             <div className="text-right shrink-0">
                               <div className="text-[#8a7559] text-xs">your bid · current high</div>
                               <div className="text-[#5f7a45] font-extrabold text-lg">{money(b.myBid)}</div>
-                              <div className="text-xs bg-[#5f7a45]/15 text-[#4a6235] font-bold px-2 py-0.5 rounded-full mt-0.5 inline-block">✓ Winning</div>
+                              <div className="text-xs bg-[#5f7a45]/15 text-[#4a6235] font-bold px-2 py-0.5 rounded-full mt-0.5 inline-block">
+                                {ended ? "🎉 You won" : "✓ Winning — all set"}
+                              </div>
                             </div>
                             <Link
                               href={`/${b.orgSlug}/${b.auctionSlug}/item/${b.itemId}`}
                               className="w-full sm:w-auto shrink-0 text-center bg-[#5f7a45] hover:bg-[#4a6235] text-white font-bold text-sm px-5 py-3 rounded-xl transition-colors"
                             >
-                              Manage bid
+                              {ended ? "View item" : "View / raise max"}
                             </Link>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </section>
                   )}
