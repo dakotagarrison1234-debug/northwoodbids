@@ -5,7 +5,7 @@ import { requireUserOrg } from "@/lib/auth";
 import LocalDate from "@/app/components/LocalDate";
 import RefreshButton from "../RefreshButton";
 import PusherRefresh from "@/app/components/PusherRefresh";
-import { statusStyle } from "@/app/components/StatusPill";
+import { statusStyle } from "@/lib/statusStyles";
 
 const SOLD_STATUSES = ["SOLD", "PENDING_PICKUP", "PICKED_UP"];
 
