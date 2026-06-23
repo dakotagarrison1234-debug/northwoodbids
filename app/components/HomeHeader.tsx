@@ -29,7 +29,7 @@ export default function HomeHeader() {
   };
 
   return (
-    <header className="bar-safe-top safe-x border-b border-[#e3d6bf] px-4 sm:px-6 pb-4 flex items-center justify-between gap-3 bg-white/95 backdrop-blur-md sticky top-0 z-40 shadow-sm">
+    <header className="bar-safe-top safe-x border-b border-[#e3d6bf] px-5 sm:px-8 pb-4 flex items-center justify-between gap-3 bg-white/95 backdrop-blur-md sticky top-0 z-40 shadow-sm">
       <Link href="/" className="flex items-center shrink-0">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
