@@ -1,5 +1,5 @@
 export const dynamic = "force-dynamic";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg } from "@/lib/auth";
 
@@ -27,15 +27,29 @@ const emptyBucket = (): Bucket => ({ net: 0, sales: 0, premium: 0, tax: 0, fees:
  * the business actually pockets. Stripe's 2.9%+$0.30 is charged once per
  * PaymentIntent, so it's allocated across that charge's items by gross share.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   const membership = await getUserOrg();
   if (!membership) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const orgId = membership.organizationId;
 
   const num = (d: unknown) => (d == null ? 0 : Number(d));
 
+  // Time range bounds the query so the report never loads the entire history at
+  // scale. Default to the last 90 days; "all" is available for lifetime totals.
+  const range = req.nextUrl.searchParams.get("range") || "90d";
+  const now = new Date();
+  let from: Date | null = null;
+  if (range === "30d") from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  else if (range === "90d") from = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+  else if (range === "ytd") from = new Date(now.getFullYear(), 0, 1);
+  // range === "all" → no lower bound
+
   const payments = await prisma.payment.findMany({
-    where: { status: "PAID", item: { organizationId: orgId } },
+    where: {
+      status: "PAID",
+      item: { organizationId: orgId },
+      ...(from ? { createdAt: { gte: from } } : {}),
+    },
     select: {
       amount: true,
       applicationFeeAmount: true,
@@ -139,5 +153,5 @@ export async function GET() {
     }))
     .sort((x, y) => y.net - x.net);
 
-  return NextResponse.json({ warehouses: result, grandTotal: round(grand) });
+  return NextResponse.json({ warehouses: result, grandTotal: round(grand), range });
 }

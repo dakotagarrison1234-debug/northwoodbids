@@ -55,25 +55,34 @@ function StatCard({ label, value, sub, accent }: { label: string; value: string;
 export default function ReportsPage() {
   const [data, setData] = useState<ReportData | null>(null);
   const [wh, setWh] = useState<WarehouseReport | null>(null);
+  const [whRange, setWhRange] = useState("90d");
+  const [whLoading, setWhLoading] = useState(false);
+  const [whSearch, setWhSearch] = useState("");
+  const [whExpanded, setWhExpanded] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
     setError(false);
-    Promise.all([
-      fetch("/api/admin/reports").then((r) => r.json()),
-      fetch("/api/admin/reports/by-warehouse").then((r) => r.json()).catch(() => null),
-    ])
-      .then(([d, w]) => {
-        if (d.totals) setData(d); else setError(true);
-        if (w && w.warehouses) setWh(w);
-      })
+    fetch("/api/admin/reports")
+      .then((r) => r.json())
+      .then((d) => { if (d.totals) setData(d); else setError(true); })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
 
+  const loadWarehouse = useCallback((range: string) => {
+    setWhLoading(true);
+    fetch(`/api/admin/reports/by-warehouse?range=${range}`)
+      .then((r) => r.json())
+      .then((w) => setWh(w && w.warehouses ? w : null))
+      .catch(() => setWh(null))
+      .finally(() => setWhLoading(false));
+  }, []);
+
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { loadWarehouse(whRange); }, [whRange, loadWarehouse]);
 
   if (loading) {
     return <div className="flex-1 flex items-center justify-center"><p className="text-lg text-[#8a7559]">Loading reports…</p></div>;
@@ -113,73 +122,121 @@ export default function ReportsPage() {
         </section>
 
         {/* Net take-home by warehouse */}
-        {wh && wh.warehouses.length > 0 && (
-          <section>
-            <div className="flex items-baseline justify-between gap-3 mb-1">
-              <h2 className="text-lg font-bold">Take-home by warehouse</h2>
-              <span className="text-2xl font-extrabold font-display text-[#5f7a45]">{money(wh.grandTotal.net)}</span>
-            </div>
-            <p className="text-sm text-[#6f5b46] mb-4">
-              Paid sales only — what you actually pocket: sale + buyer&apos;s premium − sales tax − Stripe fees{wh.grandTotal.credit > 0 ? " − Bid Bucks" : ""}.
+        <section>
+          <div className="flex items-baseline justify-between gap-3 mb-1">
+            <h2 className="text-lg font-bold">Take-home by warehouse</h2>
+            <span className="text-2xl font-extrabold font-display text-[#5f7a45]">{money(wh?.grandTotal.net ?? 0)}</span>
+          </div>
+          <p className="text-sm text-[#6f5b46] mb-4">
+            Paid sales only — what you actually pocket: sale + buyer&apos;s premium − sales tax − Stripe fees{(wh?.grandTotal.credit ?? 0) > 0 ? " − Bid Bucks" : ""}.
+          </p>
+
+          {/* Controls: time range + auction search (scales past hundreds of auctions) */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            <select
+              value={whRange}
+              onChange={(e) => { setWhRange(e.target.value); setWhExpanded({}); }}
+              className="bg-white border border-[#cdbda3] rounded-xl px-4 py-2.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]"
+            >
+              <option value="30d">Last 30 days</option>
+              <option value="90d">Last 90 days</option>
+              <option value="ytd">Year to date</option>
+              <option value="all">All time</option>
+            </select>
+            <input
+              type="text"
+              value={whSearch}
+              onChange={(e) => setWhSearch(e.target.value)}
+              placeholder="Search an auction…"
+              className="flex-1 sm:max-w-xs bg-white border border-[#cdbda3] rounded-xl px-4 py-2.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]"
+            />
+          </div>
+
+          {whLoading ? (
+            <p className="text-[#8a7559] text-base">Loading…</p>
+          ) : !wh || wh.warehouses.length === 0 ? (
+            <p className="text-[#8a7559] text-base bg-white border border-[#e3d6bf] rounded-2xl px-5 py-8 text-center">
+              No paid sales in this range yet.
             </p>
-
+          ) : (
             <div className="space-y-4">
-              {wh.warehouses.map((w) => (
-                <div key={w.name} className="bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden">
-                  {/* Warehouse header */}
-                  <div className="px-5 sm:px-6 py-4 border-b border-[#e3d6bf] flex flex-wrap items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="text-lg font-bold text-[#241a12]">{w.name}</div>
-                      <div className="text-sm text-[#8a7559]">{w.itemsSold} item{w.itemsSold !== 1 ? "s" : ""} sold</div>
+              {wh.warehouses.map((w) => {
+                const q = whSearch.trim().toLowerCase();
+                const auctions = q ? w.auctions.filter((a) => a.title.toLowerCase().includes(q)) : w.auctions;
+                if (q && auctions.length === 0) return null; // hide non-matching warehouses while searching
+                const expanded = !!whExpanded[w.name];
+                const CAP = 10;
+                const shown = expanded ? auctions : auctions.slice(0, CAP);
+                return (
+                  <div key={w.name} className="bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden">
+                    {/* Warehouse header */}
+                    <div className="px-5 sm:px-6 py-4 border-b border-[#e3d6bf] flex flex-wrap items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-lg font-bold text-[#241a12]">{w.name}</div>
+                        <div className="text-sm text-[#8a7559]">
+                          {w.itemsSold} item{w.itemsSold !== 1 ? "s" : ""} sold · {w.auctions.length} auction{w.auctions.length !== 1 ? "s" : ""}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xl font-extrabold text-[#5f7a45]">{money(w.net)}</div>
+                        <div className="text-xs text-[#8a7559]">net pocketed</div>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-xl font-extrabold text-[#5f7a45]">{money(w.net)}</div>
-                      <div className="text-xs text-[#8a7559]">net pocketed</div>
+
+                    {/* Warehouse breakdown line */}
+                    <div className="px-5 sm:px-6 py-3 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 text-sm border-b border-[#efe3d0] bg-[#faf6ee]">
+                      <Money label="Sales" value={w.sales} />
+                      <Money label="Premium" value={w.premium} />
+                      <Money label="− Sales tax" value={w.tax} dim />
+                      <Money label="− Stripe fees" value={w.fees} dim />
                     </div>
-                  </div>
 
-                  {/* Warehouse breakdown line */}
-                  <div className="px-5 sm:px-6 py-3 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 text-sm border-b border-[#efe3d0] bg-[#faf6ee]">
-                    <Money label="Sales" value={w.sales} />
-                    <Money label="Premium" value={w.premium} />
-                    <Money label="− Sales tax" value={w.tax} dim />
-                    <Money label="− Stripe fees" value={w.fees} dim />
-                  </div>
-
-                  {/* Per-auction rows */}
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[560px] text-sm">
-                      <thead>
-                        <tr className="text-left text-xs font-semibold uppercase tracking-wide text-[#8a7559] border-b border-[#e3d6bf]">
-                          <th className="px-5 sm:px-6 py-2.5">Auction</th>
-                          <th className="px-3 py-2.5 text-right">Sales</th>
-                          <th className="px-3 py-2.5 text-right">Premium</th>
-                          <th className="px-3 py-2.5 text-right">Tax</th>
-                          <th className="px-3 py-2.5 text-right">Fees</th>
-                          {w.credit > 0 && <th className="px-3 py-2.5 text-right">Bid Bucks</th>}
-                          <th className="px-5 sm:px-6 py-2.5 text-right">Net</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {w.auctions.map((a) => (
-                          <tr key={a.title} className="border-b border-[#efe3d0] last:border-0">
-                            <td className="px-5 sm:px-6 py-2.5 font-medium text-[#241a12]">{a.title}</td>
-                            <td className="px-3 py-2.5 text-right">{money(a.sales)}</td>
-                            <td className="px-3 py-2.5 text-right">{money(a.premium)}</td>
-                            <td className="px-3 py-2.5 text-right text-[#8a7559]">−{money(a.tax)}</td>
-                            <td className="px-3 py-2.5 text-right text-[#8a7559]">−{money(a.fees)}</td>
-                            {w.credit > 0 && <td className="px-3 py-2.5 text-right text-[#8a7559]">−{money(a.credit)}</td>}
-                            <td className="px-5 sm:px-6 py-2.5 text-right font-bold text-[#5f7a45]">{money(a.net)}</td>
+                    {/* Per-auction rows (capped + searchable) */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[560px] text-sm">
+                        <thead>
+                          <tr className="text-left text-xs font-semibold uppercase tracking-wide text-[#8a7559] border-b border-[#e3d6bf]">
+                            <th className="px-5 sm:px-6 py-2.5">Auction</th>
+                            <th className="px-3 py-2.5 text-right">Sales</th>
+                            <th className="px-3 py-2.5 text-right">Premium</th>
+                            <th className="px-3 py-2.5 text-right">Tax</th>
+                            <th className="px-3 py-2.5 text-right">Fees</th>
+                            {w.credit > 0 && <th className="px-3 py-2.5 text-right">Bid Bucks</th>}
+                            <th className="px-5 sm:px-6 py-2.5 text-right">Net</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {shown.map((a) => (
+                            <tr key={a.title} className="border-b border-[#efe3d0] last:border-0">
+                              <td className="px-5 sm:px-6 py-2.5 font-medium text-[#241a12]">{a.title}</td>
+                              <td className="px-3 py-2.5 text-right">{money(a.sales)}</td>
+                              <td className="px-3 py-2.5 text-right">{money(a.premium)}</td>
+                              <td className="px-3 py-2.5 text-right text-[#8a7559]">−{money(a.tax)}</td>
+                              <td className="px-3 py-2.5 text-right text-[#8a7559]">−{money(a.fees)}</td>
+                              {w.credit > 0 && <td className="px-3 py-2.5 text-right text-[#8a7559]">−{money(a.credit)}</td>}
+                              <td className="px-5 sm:px-6 py-2.5 text-right font-bold text-[#5f7a45]">{money(a.net)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {auctions.length > CAP && (
+                      <div className="px-5 sm:px-6 py-3 border-t border-[#efe3d0]">
+                        <button
+                          onClick={() => setWhExpanded((s) => ({ ...s, [w.name]: !expanded }))}
+                          className="text-sm font-semibold text-[#6c4d39] hover:text-[#563e2c]"
+                        >
+                          {expanded ? "Show less" : `Show all ${auctions.length} auctions`}
+                        </button>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-          </section>
-        )}
+          )}
+        </section>
 
         {/* Period sales */}
         <section>
