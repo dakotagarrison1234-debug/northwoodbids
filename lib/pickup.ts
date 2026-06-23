@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { notifyPickupAutoAdded } from "@/lib/pickupNotify";
 
 /**
  * Pickup scheduling helpers. All pickup times are interpreted in the business's
@@ -161,24 +160,15 @@ export async function attachToPendingTransfers(
  * Run after a payment settles: fold the newly-paid items into the bidder's
  * existing pickup appointment (items at its location) AND into any not-yet-loaded
  * transfer (items elsewhere). Appointment attach runs first so destination items
- * are claimed there, and the transfer pass only sweeps up what's left. If anything
- * was auto-added, fire a (gated) SMS so the bidder knows it happened.
+ * are claimed there, and the transfer pass only sweeps up what's left. The bidder
+ * sees the result on their dashboard pickup card (no notification needed).
  */
 export async function autoAttachPaidItems(
   clerkUserId: string,
   organizationId: string
 ): Promise<void> {
-  const appt = await attachToUpcomingAppointment(clerkUserId, organizationId);
-  const transfer = await attachToPendingTransfers(clerkUserId, organizationId);
-  if (appt.attached > 0 || transfer.attached > 0) {
-    notifyPickupAutoAdded({
-      clerkUserId,
-      apptAdded: appt.attached,
-      apptStartsAt: appt.startsAt,
-      transferAdded: transfer.attached,
-      toLocationName: transfer.toLocationName,
-    }).catch((e) => console.error("notifyPickupAutoAdded failed:", e));
-  }
+  await attachToUpcomingAppointment(clerkUserId, organizationId);
+  await attachToPendingTransfers(clerkUserId, organizationId);
 }
 
 /** Available bookable slots for a location over the next 4 weeks (capacity-aware, Michigan time). */
