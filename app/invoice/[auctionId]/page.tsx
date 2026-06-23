@@ -111,7 +111,7 @@ function InvoiceInner() {
           )}
         </div>
 
-        <div className="bg-white border border-[#e3d6bf] rounded-2xl shadow-sm print:border-0 print:shadow-none print:rounded-none p-6 sm:p-10 text-black">
+        <div className="bg-white border border-[#e3d6bf] rounded-2xl shadow-sm print:border-0 print:shadow-none print:rounded-none p-5 sm:p-10 text-black">
           {loading ? (
             <p className="text-[#8a7559] text-sm py-12 text-center">Loading receipt…</p>
           ) : error ? (
@@ -145,20 +145,18 @@ function InvoiceInner() {
           ) : data ? (
             <>
               {/* Header */}
-              <div className="flex items-start justify-between gap-4 border-b border-[#e3d6bf] pb-5 mb-5">
-                <div className="flex items-center gap-3">
+              <div className="flex items-start justify-between gap-3 border-b border-[#e3d6bf] pb-5 mb-5">
+                <div className="flex items-center gap-2.5 min-w-0">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={LOGO_URL} alt={data.business.name} className="w-12 h-12 object-contain" />
-                  <div>
-                    <div className="font-display text-xl font-bold">{data.business.name}</div>
-                  </div>
+                  <img src={LOGO_URL} alt={data.business.name} className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0" />
+                  <div className="font-display text-base sm:text-xl font-bold leading-tight truncate">{data.business.name}</div>
                 </div>
-                <div className="text-right">
-                  <div className="font-display text-2xl font-bold">Receipt</div>
-                  <div className="text-sm text-[#6f5b46] mt-0.5">
+                <div className="text-right shrink-0">
+                  <div className="font-display text-xl sm:text-2xl font-bold leading-none">Receipt</div>
+                  <div className="text-xs sm:text-sm text-[#6f5b46] mt-1">
                     {new Date(data.date).toLocaleDateString("en-US", {
                       year: "numeric",
-                      month: "long",
+                      month: "short",
                       day: "numeric",
                     })}
                   </div>
@@ -166,68 +164,101 @@ function InvoiceInner() {
               </div>
 
               {/* Meta */}
-              <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
-                <div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6 text-sm">
+                <div className="min-w-0">
                   <div className="text-[#8a7559] uppercase tracking-wide text-xs font-semibold mb-1">
                     Auction
                   </div>
-                  <div className="font-semibold">{data.auction.title}</div>
+                  <div className="font-semibold break-words">{data.auction.title}</div>
                 </div>
-                <div className="text-right sm:text-left">
+                <div className="min-w-0 sm:text-left">
                   <div className="text-[#8a7559] uppercase tracking-wide text-xs font-semibold mb-1">
                     Buyer
                   </div>
-                  <div className="font-semibold">{data.buyer.name || "Bidder"}</div>
+                  <div className="font-semibold break-words">{data.buyer.name || "Bidder"}</div>
                   {data.buyer.email && (
-                    <div className="text-[#6f5b46]">{data.buyer.email}</div>
+                    <div className="text-[#6f5b46] break-words">{data.buyer.email}</div>
                   )}
                 </div>
               </div>
 
-              {/* Line items */}
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="border-b-2 border-[#e3d6bf] text-[#8a7559]">
-                    <th className="text-left py-2 font-semibold">Item</th>
-                    <th className="text-right py-2 font-semibold whitespace-nowrap">Bid</th>
-                    <th className="text-right py-2 font-semibold whitespace-nowrap">Premium ({data.feePercent ?? 15}%)</th>
-                    <th className="text-right py-2 font-semibold whitespace-nowrap">Tax</th>
-                    <th className="text-right py-2 font-semibold whitespace-nowrap">Line total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.lines.map((l, i) => (
-                    <tr key={i} className="border-b border-[#e3d6bf]">
-                      <td className="py-2.5 pr-3">
-                        <div className="flex items-center gap-2.5">
-                          {l.photo ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={l.photo}
-                              alt=""
-                              className="invoice-thumb w-9 h-9 rounded object-cover shrink-0"
-                            />
-                          ) : (
-                            <div className="invoice-thumb w-9 h-9 rounded bg-[#efe3d0] shrink-0" />
-                          )}
-                          <span className="font-medium">
-                            {l.itemCode && (
-                              <span className="font-mono font-bold text-[#6c4d39] mr-1.5">#{l.itemCode}</span>
-                            )}
-                            {l.title}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="text-right py-2.5 whitespace-nowrap">{money(l.bid)}</td>
-                      <td className="text-right py-2.5 whitespace-nowrap">{money(l.premium)}</td>
-                      <td className="text-right py-2.5 whitespace-nowrap">{money(l.tax)}</td>
-                      <td className="text-right py-2.5 whitespace-nowrap font-semibold">
-                        {money(l.total)}
-                      </td>
+              {/* Line items — stacked cards on mobile, table on larger screens/print */}
+              <div className="invoice-cards sm:hidden space-y-3">
+                {data.lines.map((l, i) => (
+                  <div key={i} className="border border-[#e3d6bf] rounded-xl p-3">
+                    <div className="flex items-center gap-3">
+                      {l.photo ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={l.photo} alt="" className="invoice-thumb w-12 h-12 rounded-lg object-cover shrink-0" />
+                      ) : (
+                        <div className="invoice-thumb w-12 h-12 rounded-lg bg-[#efe3d0] shrink-0" />
+                      )}
+                      <div className="min-w-0 text-sm font-medium break-words">
+                        {l.itemCode && (
+                          <span className="font-mono font-bold text-[#6c4d39] mr-1.5">#{l.itemCode}</span>
+                        )}
+                        {l.title}
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-[#efe3d0] grid grid-cols-2 gap-y-1.5 text-sm">
+                      <span className="text-[#6f5b46]">Bid</span>
+                      <span className="text-right">{money(l.bid)}</span>
+                      <span className="text-[#6f5b46]">Premium ({data.feePercent ?? 15}%)</span>
+                      <span className="text-right">{money(l.premium)}</span>
+                      <span className="text-[#6f5b46]">Tax</span>
+                      <span className="text-right">{money(l.tax)}</span>
+                      <span className="font-semibold text-[#241a12] pt-1.5 border-t border-[#efe3d0]">Line total</span>
+                      <span className="text-right font-semibold pt-1.5 border-t border-[#efe3d0]">{money(l.total)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="invoice-table hidden sm:block">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="border-b-2 border-[#e3d6bf] text-[#8a7559]">
+                      <th className="text-left py-2 font-semibold">Item</th>
+                      <th className="text-right py-2 font-semibold whitespace-nowrap">Bid</th>
+                      <th className="text-right py-2 font-semibold whitespace-nowrap">Premium ({data.feePercent ?? 15}%)</th>
+                      <th className="text-right py-2 font-semibold whitespace-nowrap">Tax</th>
+                      <th className="text-right py-2 font-semibold whitespace-nowrap">Line total</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {data.lines.map((l, i) => (
+                      <tr key={i} className="border-b border-[#e3d6bf]">
+                        <td className="py-2.5 pr-3">
+                          <div className="flex items-center gap-2.5">
+                            {l.photo ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={l.photo}
+                                alt=""
+                                className="invoice-thumb w-9 h-9 rounded object-cover shrink-0"
+                              />
+                            ) : (
+                              <div className="invoice-thumb w-9 h-9 rounded bg-[#efe3d0] shrink-0" />
+                            )}
+                            <span className="font-medium">
+                              {l.itemCode && (
+                                <span className="font-mono font-bold text-[#6c4d39] mr-1.5">#{l.itemCode}</span>
+                              )}
+                              {l.title}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="text-right py-2.5 whitespace-nowrap">{money(l.bid)}</td>
+                        <td className="text-right py-2.5 whitespace-nowrap">{money(l.premium)}</td>
+                        <td className="text-right py-2.5 whitespace-nowrap">{money(l.tax)}</td>
+                        <td className="text-right py-2.5 whitespace-nowrap font-semibold">
+                          {money(l.total)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
               {/* Totals */}
               <div className="flex justify-end mt-6">
