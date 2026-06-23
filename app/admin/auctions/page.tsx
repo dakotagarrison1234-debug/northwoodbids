@@ -5,6 +5,7 @@ import { requireUserOrg } from "@/lib/auth";
 import LocalDate from "@/app/components/LocalDate";
 import RefreshButton from "../RefreshButton";
 import PusherRefresh from "@/app/components/PusherRefresh";
+import { statusStyle } from "@/app/components/StatusPill";
 
 const SOLD_STATUSES = ["SOLD", "PENDING_PICKUP", "PICKED_UP"];
 
@@ -60,12 +61,8 @@ export default async function AuctionsPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-semibold text-xl truncate">{auction.title}</h3>
-                        <span className={`text-sm px-2.5 py-0.5 rounded-full shrink-0 ${
-                          auction.status === "OPEN" ? "bg-[#6c4d39]/20 text-[#6c4d39]"
-                          : auction.status === "CLOSING" ? "bg-yellow-500/20 text-amber-600"
-                          : isScheduled ? "bg-blue-500/20 text-blue-600"
-                          : auction.status === "DRAFT" ? "bg-[#e7dcc6] text-[#6f5b46]"
-                          : "bg-red-500/20 text-red-600"
+                        <span className={`text-sm px-2.5 py-0.5 rounded-full shrink-0 font-medium ${
+                          isScheduled ? "bg-[#6c4d39]/12 text-[#6c4d39]" : statusStyle(auction.status)
                         }`}>
                           {isScheduled ? "scheduled" : auction.status.toLowerCase()}
                         </span>

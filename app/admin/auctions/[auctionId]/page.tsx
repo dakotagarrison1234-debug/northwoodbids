@@ -4,7 +4,7 @@ import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import AuctionStatusButtons from "@/app/components/AuctionStatusButtons";
 import LocalDate from "@/app/components/LocalDate";
-import StatusPill from "@/app/components/StatusPill";
+import StatusPill, { statusStyle } from "@/app/components/StatusPill";
 import { money } from "@/lib/format";
 import DeleteAuctionButton from "./DeleteAuctionButton";
 import EditEndTime from "./EditEndTime";
@@ -77,11 +77,7 @@ export default async function ManageAuctionPage({ params }: Props) {
           <span className="text-[#8a7559]">/</span>
           <h1 className="text-2xl sm:text-3xl font-semibold truncate">{auction.title}</h1>
           <span className={`text-sm font-semibold px-2.5 py-1 rounded-full shrink-0 ${
-            auction.status === "OPEN" ? "bg-[#6c4d39]/20 text-[#563e2c]"
-            : auction.status === "CLOSING" ? "bg-amber-100 text-amber-700"
-            : auction.status === "CLOSED" || auction.status === "SETTLED" ? "bg-red-50 text-red-600"
-            : isScheduled ? "bg-[#6c4d39]/15 text-[#563e2c]"
-            : "bg-[#e7dcc6] text-[#4a3a2b]"
+            isScheduled ? "bg-[#6c4d39]/12 text-[#6c4d39]" : statusStyle(auction.status)
           }`}>
             {isScheduled ? "scheduled" : auction.status.toLowerCase()}
           </span>

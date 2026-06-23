@@ -27,6 +27,16 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
+    // Already terminal — refuse so a double-click / stale tab can't re-run the
+    // relocation or re-send the "items arrived" SMS.
+    if (transfer.status === "COMPLETED" || transfer.status === "CANCELLED") {
+      return NextResponse.json({ error: `This transfer is already ${transfer.status.toLowerCase()}.` }, { status: 409 });
+    }
+    // No-op guard for repeated LOADED.
+    if (status === "LOADED" && transfer.status === "LOADED") {
+      return NextResponse.json({ success: true });
+    }
+
     if (status === "LOADED") {
       // Items have been loaded and are in transit.
       await prisma.transferRequest.update({

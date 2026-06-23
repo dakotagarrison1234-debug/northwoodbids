@@ -47,14 +47,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ needed: false });
     }
 
-    // If there's already an active transfer to the SAME destination, append to it;
-    // otherwise create a fresh REQUESTED transfer.
+    // If there's already a STILL-GATHERING (REQUESTED) transfer to the SAME
+    // destination, append to it; otherwise create a fresh one. Never append to a
+    // LOADED transfer — that truck is packed, so new items would ride a trip they
+    // were never actually loaded onto.
     const existing = await prisma.transferRequest.findFirst({
       where: {
         clerkUserId: userId,
         organizationId: org.id,
         toLocationId,
-        status: { in: ["REQUESTED", "LOADED"] },
+        status: "REQUESTED",
       },
       orderBy: { createdAt: "asc" },
     });

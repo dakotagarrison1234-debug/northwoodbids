@@ -206,6 +206,16 @@ export default function ItemPage() {
       setHasActiveProxy(data.hasActiveProxy);
     });
 
+    // Item closed server-side — flip the UI to "ended" instantly and pull fresh
+    // status (sold/unsold, current price) instead of waiting for the local timer.
+    channel.bind("item-closed", () => {
+      setBiddingEnded(true);
+      fetch(`/api/items/${itemId}`)
+        .then((r) => r.json())
+        .then((d) => { if (d.item) setItem(d.item); })
+        .catch(() => {});
+    });
+
     return () => {
       channel.unbind_all();
       pusher.unsubscribe(`item-${itemId}`);

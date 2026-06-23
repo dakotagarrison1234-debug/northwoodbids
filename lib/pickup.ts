@@ -52,7 +52,8 @@ export async function getUnscheduledPickupItemIds(
   const ids = [...new Set(wonBids.map((b) => b.itemId))];
   if (ids.length === 0) return [];
   const items = await prisma.item.findMany({
-    where: { id: { in: ids }, status: "PENDING_PICKUP", pickupAppointmentId: null },
+    // Not on an appointment AND not riding a transfer — those are handled elsewhere.
+    where: { id: { in: ids }, status: "PENDING_PICKUP", pickupAppointmentId: null, transferRequestId: null },
     select: { id: true },
   });
   return items.map((i) => i.id);
@@ -171,17 +172,30 @@ export async function autoAttachPaidItems(
   await attachToPendingTransfers(clerkUserId, organizationId);
 }
 
-/** Available bookable slots for a location over the next 4 weeks (capacity-aware, Michigan time). */
-export async function getAvailableSlots(locationId: string): Promise<Slot[]> {
+/**
+ * Available bookable slots for a location over the next 4 weeks (capacity-aware,
+ * Michigan time). Pass `excludeAppointmentId` when validating a RESCHEDULE so the
+ * appointment being moved doesn't count against its own destination capacity.
+ */
+export async function getAvailableSlots(
+  locationId: string,
+  excludeAppointmentId?: string
+): Promise<Slot[]> {
   const windows = await prisma.pickupWindow.findMany({ where: { locationId, isActive: true } });
   if (windows.length === 0) return [];
 
   const now = new Date();
   const horizon = new Date(now.getTime() + DAYS_AHEAD * 24 * 60 * 60 * 1000);
 
+  // Enumerate each Detroit CALENDAR day exactly once. Anchor on noon UTC of
+  // today's Detroit date and step +24h: noon ±1h stays on the same calendar day,
+  // so DST transition days are never skipped or double-counted.
+  const today = zonedYMD(now);
+  const noonAnchor = Date.UTC(today.y, today.mo - 1, today.d, 12, 0, 0);
+
   const candidates: Date[] = [];
   for (let dayOffset = 0; dayOffset <= DAYS_AHEAD; dayOffset++) {
-    const dayInstant = new Date(now.getTime() + dayOffset * 24 * 60 * 60 * 1000);
+    const dayInstant = new Date(noonAnchor + dayOffset * 24 * 60 * 60 * 1000);
     const { y, mo, d, weekday } = zonedYMD(dayInstant);
     for (const w of windows) {
       if (w.weekday !== weekday) continue;
@@ -194,7 +208,12 @@ export async function getAvailableSlots(locationId: string): Promise<Slot[]> {
   if (candidates.length === 0) return [];
 
   const existing = await prisma.pickupAppointment.findMany({
-    where: { locationId, status: "SCHEDULED", startsAt: { gte: now, lte: horizon } },
+    where: {
+      locationId,
+      status: "SCHEDULED",
+      startsAt: { gte: now, lte: horizon },
+      ...(excludeAppointmentId ? { id: { not: excludeAppointmentId } } : {}),
+    },
     select: { startsAt: true },
   });
   const usedByTime = new Map<number, number>();
@@ -222,4 +241,18 @@ export async function getAvailableSlots(locationId: string): Promise<Slot[]> {
   }
   slots.sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   return slots;
+}
+
+/** Capacity (max appointments) of the window covering a given slot instant, 0 if none. */
+export async function getSlotCapacity(locationId: string, startsAtIso: string): Promise<number> {
+  const windows = await prisma.pickupWindow.findMany({ where: { locationId, isActive: true } });
+  if (windows.length === 0) return 0;
+  const c = new Date(startsAtIso);
+  const { weekday } = zonedYMD(c);
+  const p = new Intl.DateTimeFormat("en-US", { timeZone: PICKUP_TZ, hour12: false, hour: "2-digit", minute: "2-digit" }).formatToParts(c);
+  const m: Record<string, string> = {};
+  for (const x of p) m[x.type] = x.value;
+  const mins = (+m.hour === 24 ? 0 : +m.hour) * 60 + +m.minute;
+  const win = windows.find((w) => w.weekday === weekday && mins >= w.startMinutes && mins < w.endMinutes);
+  return win?.capacityPerSlot ?? 0;
 }

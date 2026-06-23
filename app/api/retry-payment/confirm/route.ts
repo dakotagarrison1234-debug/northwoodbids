@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { autoAttachPaidItems } from "@/lib/pickup";
 import { notifyPaymentReceipt } from "@/lib/paymentNotify";
-import { vestReferralForPayer } from "@/lib/referral";
+import { vestReferralForPayer, releaseReferralCredit } from "@/lib/referral";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -69,6 +69,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (paymentIntent.status !== "succeeded" && paymentIntent.status !== "processing") {
+      // Authentication abandoned / failed — give back any reserved Bid Bucks.
+      if (paymentIntent.metadata?.redemptionKey) {
+        await releaseReferralCredit(paymentIntent.metadata.redemptionKey);
+      }
       return NextResponse.json(
         { error: "Payment has not completed. Please try again." },
         { status: 422 }
@@ -81,6 +85,9 @@ export async function POST(request: NextRequest) {
     const feeAmount = Math.round(bidAmount * Number(org.platformFeePercent) / 100 * 100); // cents
     const taxAmount = Math.round((bidAmount * 100 + feeAmount) * taxRate / 100); // cents (bid + premium)
     const chargeAmount = Math.round(bidAmount * 100) + feeAmount + taxAmount; // total cents
+    // Bid Bucks applied at retry-time, carried on the PI metadata.
+    const creditAppliedCents = Number(paymentIntent.metadata?.creditAppliedCents ?? 0);
+    const creditApplied = creditAppliedCents > 0 ? creditAppliedCents / 100 : null;
 
     if (paymentIntent.status === "processing") {
       // Async settlement in progress — record PENDING and DON'T release the item.
@@ -94,6 +101,7 @@ export async function POST(request: NextRequest) {
           autoChargeAttemptedAt: new Date(),
           applicationFeeAmount: feeAmount / 100,
           taxAmount: taxAmount / 100,
+          creditApplied,
         },
         create: {
           clerkUserId: userId,
@@ -101,6 +109,7 @@ export async function POST(request: NextRequest) {
           amount: bidAmount,
           applicationFeeAmount: feeAmount / 100,
           taxAmount: taxAmount / 100,
+          creditApplied,
           stripePaymentIntentId: paymentIntent.id,
           status: "PENDING",
           autoChargeAttemptedAt: new Date(),
@@ -120,6 +129,7 @@ export async function POST(request: NextRequest) {
         autoChargeAttemptedAt: new Date(),
         applicationFeeAmount: feeAmount / 100,
         taxAmount: taxAmount / 100,
+        creditApplied,
       },
       create: {
         clerkUserId: userId,
@@ -127,6 +137,7 @@ export async function POST(request: NextRequest) {
         amount: bidAmount,
         applicationFeeAmount: feeAmount / 100,
         taxAmount: taxAmount / 100,
+        creditApplied,
         stripePaymentIntentId: paymentIntent.id,
         status: "PAID",
         autoChargeAttemptedAt: new Date(),
@@ -145,7 +156,7 @@ export async function POST(request: NextRequest) {
 
     notifyPaymentReceipt({
       clerkUserId: userId,
-      amount: Number((chargeAmount / 100).toFixed(2)),
+      amount: Number(((chargeAmount - creditAppliedCents) / 100).toFixed(2)),
     }).catch((e) => console.error("notifyPaymentReceipt (retry-confirm) failed:", e));
 
     return NextResponse.json({ success: true });

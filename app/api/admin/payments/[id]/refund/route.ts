@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { OrgRole } from "@prisma/client";
+import { Prisma, type OrgRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg, requireRole } from "@/lib/auth";
 import Stripe from "stripe";
@@ -23,7 +23,7 @@ export async function POST(
 
   const payment = await prisma.payment.findUnique({
     where: { id },
-    include: { item: { select: { id: true, organizationId: true } } },
+    include: { item: { select: { id: true, organizationId: true, status: true } } },
   });
   if (!payment) {
     return NextResponse.json({ error: "Payment not found" }, { status: 404 });
@@ -51,10 +51,35 @@ export async function POST(
     );
   }
 
-  await prisma.$transaction([
+  const ops: Prisma.PrismaPromise<unknown>[] = [
     prisma.payment.update({ where: { id: payment.id }, data: { status: "REFUNDED" } }),
-    prisma.item.update({ where: { id: payment.item.id }, data: { status: "UNSOLD" } }),
-  ]);
+  ];
+
+  // Return any Bid Bucks coupon that was redeemed on this payment.
+  if (Number(payment.creditApplied ?? 0) > 0) {
+    ops.push(
+      prisma.creditLedger.create({
+        data: {
+          clerkUserId: payment.clerkUserId,
+          amount: Number(payment.creditApplied),
+          reason: "referral_refund_return",
+        },
+      })
+    );
+  }
+
+  // Free the item for re-listing, but don't disturb one already collected, and
+  // detach it from any pickup appointment / transfer it was riding on.
+  if (payment.item.status === "SOLD" || payment.item.status === "PENDING_PICKUP") {
+    ops.push(
+      prisma.item.update({
+        where: { id: payment.item.id },
+        data: { status: "UNSOLD", pickupAppointmentId: null, transferRequestId: null },
+      })
+    );
+  }
+
+  await prisma.$transaction(ops);
 
   return NextResponse.json({ success: true });
 }

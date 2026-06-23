@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 
 interface Ower { name: string; email: string; phone: string; amountDue: number; items: string[]; }
@@ -32,20 +32,32 @@ function StatCard({ label, value, sub, accent }: { label: string; value: string;
 export default function ReportsPage() {
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(false);
     fetch("/api/admin/reports")
       .then((r) => r.json())
-      .then((d) => { if (d.totals) setData(d); })
-      .catch(() => {})
+      .then((d) => { if (d.totals) setData(d); else setError(true); })
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   if (loading) {
     return <div className="flex-1 flex items-center justify-center"><p className="text-lg text-[#8a7559]">Loading reports…</p></div>;
   }
-  if (!data) {
-    return <div className="flex-1 flex items-center justify-center"><p className="text-lg text-[#8a7559]">Could not load reports.</p></div>;
+  if (error || !data) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg text-[#6f5b46]">Couldn&apos;t load reports.</p>
+          <button onClick={load} className="mt-3 bg-[#6c4d39] hover:bg-[#563e2c] text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors">Try again</button>
+        </div>
+      </div>
+    );
   }
 
   const { totals, periods, outstanding } = data;

@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import {
   getAvailableSlots,
+  getSlotCapacity,
   getUnscheduledPickupItemIds,
 } from "@/lib/pickup";
 
@@ -200,23 +201,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "That time is no longer available. Please pick another." }, { status: 409 });
     }
 
-    const appointment = await prisma.pickupAppointment.create({
-      data: {
-        organizationId: org.id,
-        clerkUserId: userId,
-        locationId,
-        startsAt: new Date(wantedIso),
-        status: "SCHEDULED",
-      },
-    });
+    const capacity = await getSlotCapacity(locationId, wantedIso);
 
-    // Attach only the ready items at this location to the new appointment.
-    await prisma.item.updateMany({
-      where: { id: { in: readyIds } },
-      data: { pickupAppointmentId: appointment.id },
-    });
+    // Atomic capacity guard: serialize bookings for THIS slot and re-count inside
+    // the lock so two bidders can't both grab the last seat.
+    let appointmentId: string;
+    try {
+      appointmentId = await prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`slot:${locationId}:${wantedIso}`}))`;
+        const used = await tx.pickupAppointment.count({
+          where: { locationId, status: "SCHEDULED", startsAt: new Date(wantedIso) },
+        });
+        if (used >= capacity) throw new Error("SLOT_FULL");
+        const appt = await tx.pickupAppointment.create({
+          data: { organizationId: org.id, clerkUserId: userId, locationId, startsAt: new Date(wantedIso), status: "SCHEDULED" },
+        });
+        // Attach only the ready items at this location to the new appointment.
+        await tx.item.updateMany({ where: { id: { in: readyIds } }, data: { pickupAppointmentId: appt.id } });
+        return appt.id;
+      });
+    } catch (e) {
+      if (e instanceof Error && e.message === "SLOT_FULL") {
+        return NextResponse.json({ error: "That time just filled up. Please pick another." }, { status: 409 });
+      }
+      throw e;
+    }
 
-    return NextResponse.json({ success: true, appointmentId: appointment.id });
+    return NextResponse.json({ success: true, appointmentId });
   } catch (err) {
     console.error("[pickup POST]:", err);
     return NextResponse.json(

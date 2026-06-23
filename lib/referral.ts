@@ -298,13 +298,20 @@ export async function reserveReferralCredit(
       const balanceCents = Math.round(Number(agg._sum.amount ?? 0) * 100);
       if (balanceCents < CREDIT_PER_REFERRAL * 100) return 0; // need a full $5 to redeem
 
-      // One $5 per bill, but never exceed the bill or strand a sub-minimum residual.
-      let discount = Math.min(CREDIT_PER_REFERRAL * 100, billCents);
-      const net = billCents - discount;
-      if (net > 0 && net < STRIPE_MIN_CENTS) {
-        discount = billCents - STRIPE_MIN_CENTS; // leave exactly the Stripe minimum
+      // One $5 per bill. Never strand coupon value: cover the bill fully when it's
+      // ≤ $5 (net $0, no card charge), apply the full $5 when the remainder clears
+      // the Stripe minimum, and otherwise DON'T redeem on this bill (a bill in the
+      // $5.01–$5.49 window would force a partial, value-losing redemption — skip it
+      // so the whole $5 coupon stays intact for a future bill).
+      const full = CREDIT_PER_REFERRAL * 100;
+      let discount: number;
+      if (billCents <= full) {
+        discount = billCents; // fully covered — net $0, no Stripe charge
+      } else if (billCents - full >= STRIPE_MIN_CENTS) {
+        discount = full; // normal $5 off, residual ≥ Stripe minimum
+      } else {
+        return 0; // (full, full+min) window — skip rather than strand value
       }
-      if (discount <= 0) return 0;
 
       await tx.creditLedger.create({
         data: {

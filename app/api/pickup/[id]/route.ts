@@ -33,11 +33,13 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Invalid location" }, { status: 400 });
     }
 
-    // Validate the new slot is available (unless unchanged)
+    // Validate the new slot is available (unless unchanged). Exclude THIS
+    // appointment from the capacity count so a move isn't blocked by itself.
     const wantedIso = new Date(newStartsAt).toISOString();
-    const changed = newLocationId !== appt.locationId || wantedIso !== appt.startsAt.toISOString();
+    const locationChanged = newLocationId !== appt.locationId;
+    const changed = locationChanged || wantedIso !== appt.startsAt.toISOString();
     if (changed) {
-      const slots = await getAvailableSlots(newLocationId);
+      const slots = await getAvailableSlots(newLocationId, id);
       if (!slots.find((s) => s.startsAt === wantedIso)) {
         return NextResponse.json({ error: "That time is no longer available. Please pick another." }, { status: 409 });
       }
@@ -47,6 +49,16 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       where: { id },
       data: { locationId: newLocationId, startsAt: new Date(wantedIso) },
     });
+
+    // Moving to a DIFFERENT location: items physically at the OLD location can't be
+    // picked up at the new one — detach them so they go back to unscheduled (where
+    // the bidder can transfer them) rather than appearing wrongly on this pickup.
+    if (locationChanged) {
+      await prisma.item.updateMany({
+        where: { pickupAppointmentId: id, NOT: { locationId: newLocationId } },
+        data: { pickupAppointmentId: null },
+      });
+    }
 
     return NextResponse.json({ success: true, appointment: updated });
   } catch (err) {

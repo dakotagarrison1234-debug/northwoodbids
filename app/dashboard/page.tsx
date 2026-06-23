@@ -538,7 +538,7 @@ function BidderDashboardInner() {
                       disabled={retrying}
                       className="shrink-0 bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white font-semibold text-sm px-4 py-2 rounded-xl transition-colors"
                     >
-                      {retrying ? "Processing…" : "Retry payment"}
+                      {retrying ? "Processing…" : "Try card on file again"}
                     </button>
                   </div>
                 );
@@ -554,7 +554,7 @@ function BidderDashboardInner() {
               <span className="text-orange-300 font-bold">{pendingWins.length} win{pendingWins.length !== 1 ? "s" : ""} pending payment</span>
               <span className="text-[#6f5b46]"> · {money(pendingWins.reduce((s, i) => s + (i.totalDue ?? i.amountOwed), 0))} total{pendingWins.some((i) => (i.feeAmount ?? 0) + (i.taxAmount ?? 0) > 0) ? " (incl. fee & tax)" : ""}</span>
             </div>
-            <p className="text-xs text-[#8a7559] mt-1">Your auction organizer will process payment.</p>
+            <p className="text-xs text-[#8a7559] mt-1">Nothing to do — your card on file is charged automatically, usually within a few minutes of the auction closing.</p>
           </div>
         )}
 
@@ -1026,7 +1026,7 @@ function BidderDashboardInner() {
                                 {b.paid ? "Paid" : "Awaiting payment"}
                               </span>
                               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                b.pickedUp ? "bg-[#6c4d39]/12 text-[#6c4d39]" : "bg-[#efe3d0] text-[#8a7559]"
+                                b.pickedUp ? "bg-[#5f7a45]/18 text-[#3f5226]" : "bg-[#c47b3e]/20 text-[#8a4f1c]"
                               }`}>
                                 {b.pickedUp ? "Picked up" : "Ready for pickup"}
                               </span>

@@ -77,21 +77,24 @@ export async function POST(request: NextRequest) {
         }
         break;
       }
-      case "payment_intent.payment_failed": {
+      case "payment_intent.payment_failed":
+      case "payment_intent.canceled": {
         const pi = event.data.object as Stripe.PaymentIntent;
         const reason =
           pi.last_payment_error?.message ??
           pi.last_payment_error?.code ??
-          "Payment failed";
+          (event.type === "payment_intent.canceled" ? "Payment canceled" : "Payment failed");
         const failedUserIds = await markPaymentsFailed(pi.id, reason);
-        // An async-settling auto-charge ultimately failed — give back any Bid Bucks
-        // that were reserved for this bill (key matches lib/closeAuction).
-        const auctionId = pi.metadata?.auctionId;
-        const payerId = pi.metadata?.clerkUserId;
-        if (auctionId && payerId) {
-          await releaseReferralCredit(`autocharge-${auctionId}-${payerId}`);
-        }
-        // Notify each affected winner once (deduped by user).
+        // Async-settling / abandoned-3DS charge ultimately failed — give back any
+        // Bid Bucks reserved for this bill. The exact key is on the PI metadata
+        // (covers both auto-charge and retry); fall back to the legacy key shape.
+        const key =
+          pi.metadata?.redemptionKey ||
+          (pi.metadata?.auctionId && pi.metadata?.clerkUserId
+            ? `autocharge-${pi.metadata.auctionId}-${pi.metadata.clerkUserId}`
+            : null);
+        if (key) await releaseReferralCredit(key);
+        // Notify each affected winner once (only rows this call transitioned).
         for (const clerkUserId of failedUserIds) {
           notifyPaymentFailed({ clerkUserId, reason }).catch((e) =>
             console.error("notifyPaymentFailed (webhook) failed:", e)
@@ -165,11 +168,13 @@ async function markPaymentsPaid(
       }),
     ]);
     await autoAttachPaidItems(payment.clerkUserId, await orgIdForItem(payment.itemId));
-    // Charged total for this row = bid + buyer's premium + tax (nulls => 0).
+    // Amount actually charged for this row = bid + premium + tax − any Bid Bucks
+    // applied, so the receipt matches what hit the card.
     const rowTotal =
       Number(payment.amount) +
       Number(payment.applicationFeeAmount ?? 0) +
-      Number(payment.taxAmount ?? 0);
+      Number(payment.taxAmount ?? 0) -
+      Number(payment.creditApplied ?? 0);
     transitioned.push({ clerkUserId: payment.clerkUserId, total: rowTotal });
   }
 
@@ -184,23 +189,43 @@ async function markPaymentsPaid(
  * notify each affected winner once.
  */
 async function markPaymentsFailed(paymentIntentId: string, reason: string): Promise<string[]> {
+  // Only transition rows that aren't already terminal — so an inline-recorded
+  // FAILED row doesn't get "re-failed" here and trigger a SECOND failure SMS.
   const affected = await prisma.payment.findMany({
-    where: { stripePaymentIntentId: paymentIntentId, status: { not: "PAID" } },
+    where: { stripePaymentIntentId: paymentIntentId, status: { notIn: ["PAID", "FAILED", "REFUNDED"] } },
     select: { clerkUserId: true },
   });
+  if (affected.length === 0) return [];
   await prisma.payment.updateMany({
-    where: { stripePaymentIntentId: paymentIntentId, status: { not: "PAID" } },
+    where: { stripePaymentIntentId: paymentIntentId, status: { notIn: ["PAID", "FAILED", "REFUNDED"] } },
     data: { status: "FAILED", failureReason: reason },
   });
   return [...new Set(affected.map((p) => p.clerkUserId))];
 }
 
-/** Marks all Payment rows for a PaymentIntent REFUNDED. */
+/**
+ * Marks all Payment rows for a PaymentIntent REFUNDED. Returns any redeemed Bid
+ * Bucks to the bidder and returns the item to UNSOLD (only if it's not already
+ * picked up) — covers refunds initiated from the Stripe dashboard, not just our UI.
+ */
 async function markPaymentsRefunded(paymentIntentId: string): Promise<void> {
-  await prisma.payment.updateMany({
-    where: { stripePaymentIntentId: paymentIntentId },
-    data: { status: "REFUNDED" },
+  const rows = await prisma.payment.findMany({
+    where: { stripePaymentIntentId: paymentIntentId, status: { not: "REFUNDED" } },
   });
+  for (const p of rows) {
+    await prisma.payment.update({ where: { id: p.id }, data: { status: "REFUNDED" } });
+    // Restore a spent coupon.
+    if (Number(p.creditApplied ?? 0) > 0) {
+      await prisma.creditLedger.create({
+        data: { clerkUserId: p.clerkUserId, amount: Number(p.creditApplied), reason: "referral_refund_return" },
+      });
+    }
+    // Free the item for re-listing unless it's already been collected/staged.
+    await prisma.item.updateMany({
+      where: { id: p.itemId, status: { in: ["SOLD", "PENDING_PICKUP"] } },
+      data: { status: "UNSOLD", pickupAppointmentId: null, transferRequestId: null },
+    });
+  }
 }
 
 /** Flags Payment rows as disputed without changing their status. */

@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { autoAttachPaidItems } from "@/lib/pickup";
 import { notifyPaymentReceipt } from "@/lib/paymentNotify";
-import { vestReferralForPayer } from "@/lib/referral";
+import { vestReferralForPayer, reserveReferralCredit, releaseReferralCredit } from "@/lib/referral";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -79,24 +79,65 @@ export async function POST(request: NextRequest) {
     const taxAmount = Math.round((bidAmount * 100 + feeAmount) * taxRate / 100); // cents
     const chargeAmount = Math.round(bidAmount * 100) + feeAmount + taxAmount; // total cents
 
+    // ── Bid Bucks: apply one $5 coupon to this retry too (same rules as auto-charge).
+    // Reserved up front; released on every failure path. Keyed to the retry's
+    // idempotency key so a double-click reuses the reservation and the webhook can
+    // release it on async failure/cancel.
+    const redemptionKey = `retry-${itemId}-${userId}-${bidderCustomer.defaultPaymentMethodId}`;
+    const discountCents = await reserveReferralCredit(userId, chargeAmount, redemptionKey);
+    const netAmount = chargeAmount - discountCents;
+    const creditApplied = discountCents > 0 ? discountCents / 100 : null;
+
+    // Fully covered by Bid Bucks — no card charge needed.
+    if (discountCents > 0 && netAmount <= 0) {
+      await prisma.payment.upsert({
+        where: { itemId_clerkUserId: { itemId, clerkUserId: userId } },
+        update: { status: "PAID", failureReason: null, autoChargeAttemptedAt: new Date(), applicationFeeAmount: feeAmount / 100, taxAmount: taxAmount / 100, creditApplied },
+        create: { clerkUserId: userId, itemId, amount: bidAmount, applicationFeeAmount: feeAmount / 100, taxAmount: taxAmount / 100, creditApplied, status: "PAID", autoChargeAttemptedAt: new Date() },
+      });
+      await prisma.item.update({ where: { id: itemId }, data: { status: "PENDING_PICKUP" } });
+      await autoAttachPaidItems(userId, org.id);
+      await vestReferralForPayer(userId);
+      return NextResponse.json({ success: true });
+    }
+
     // Create fresh PaymentIntent directly on the platform account
-    const paymentIntent = await stripe.paymentIntents.create(
-      {
-        amount: chargeAmount,
-        currency: "usd",
-        customer: bidderCustomer.stripeCustomerId,
-        payment_method: bidderCustomer.defaultPaymentMethodId,
-        off_session: true,
-        confirm: true,
-        metadata: { clerkUserId: userId, orgId: org.id, itemId, isRetry: "true" },
-      },
-      {
-        // PM id is part of the key on purpose: a double-click with the SAME card
-        // is idempotent (no double charge), but a genuine retry with an UPDATED
-        // card produces a new key so the new card is actually attempted.
-        idempotencyKey: `retry-${itemId}-${userId}-${bidderCustomer.defaultPaymentMethodId}`,
+    let paymentIntent: Stripe.PaymentIntent;
+    try {
+      paymentIntent = await stripe.paymentIntents.create(
+        {
+          amount: netAmount,
+          currency: "usd",
+          customer: bidderCustomer.stripeCustomerId,
+          payment_method: bidderCustomer.defaultPaymentMethodId,
+          off_session: true,
+          confirm: true,
+          metadata: { clerkUserId: userId, orgId: org.id, itemId, isRetry: "true", redemptionKey, creditAppliedCents: String(discountCents) },
+        },
+        {
+          // PM id is part of the key on purpose: a double-click with the SAME card
+          // is idempotent (no double charge), but a genuine retry with an UPDATED
+          // card produces a new key so the new card is actually attempted.
+          idempotencyKey: redemptionKey,
+        }
+      );
+    } catch (err: unknown) {
+      // 3DS authentication required off-session — keep the reservation and hand the
+      // client secret back so the dashboard can authenticate, then call /confirm.
+      if (
+        typeof err === "object" && err !== null && "code" in err &&
+        (err as { code?: string }).code === "authentication_required"
+      ) {
+        const pi = (err as { payment_intent?: { client_secret?: string } }).payment_intent;
+        if (pi?.client_secret) {
+          return NextResponse.json({ requiresAction: true, clientSecret: pi.client_secret });
+        }
       }
-    );
+      // Any other create failure (decline, etc.) — give the coupon back, then let
+      // the outer handler format the user-facing message.
+      if (discountCents > 0) await releaseReferralCredit(redemptionKey);
+      throw err;
+    }
 
     if (paymentIntent.status === "succeeded") {
       // Mark payment PAID — upsert on the DB-unique compound key (itemId + clerkUserId)
@@ -109,6 +150,7 @@ export async function POST(request: NextRequest) {
           autoChargeAttemptedAt: new Date(),
           applicationFeeAmount: feeAmount / 100,
           taxAmount: taxAmount / 100,
+          creditApplied,
         },
         create: {
           clerkUserId: userId,
@@ -116,6 +158,7 @@ export async function POST(request: NextRequest) {
           amount: bidAmount,
           applicationFeeAmount: feeAmount / 100,
           taxAmount: taxAmount / 100,
+          creditApplied,
           stripePaymentIntentId: paymentIntent.id,
           status: "PAID",
           autoChargeAttemptedAt: new Date(),
@@ -132,7 +175,7 @@ export async function POST(request: NextRequest) {
 
       notifyPaymentReceipt({
         clerkUserId: userId,
-        amount: Number((chargeAmount / 100).toFixed(2)),
+        amount: Number((netAmount / 100).toFixed(2)),
       }).catch((e) => console.error("notifyPaymentReceipt (retry) failed:", e));
 
       return NextResponse.json({ success: true });
@@ -148,6 +191,7 @@ export async function POST(request: NextRequest) {
           autoChargeAttemptedAt: new Date(),
           applicationFeeAmount: feeAmount / 100,
           taxAmount: taxAmount / 100,
+          creditApplied,
         },
         create: {
           clerkUserId: userId,
@@ -155,6 +199,7 @@ export async function POST(request: NextRequest) {
           amount: bidAmount,
           applicationFeeAmount: feeAmount / 100,
           taxAmount: taxAmount / 100,
+          creditApplied,
           stripePaymentIntentId: paymentIntent.id,
           status: "PENDING",
           autoChargeAttemptedAt: new Date(),
@@ -168,11 +213,13 @@ export async function POST(request: NextRequest) {
     ) {
       // Card requires 3DS — hand the client secret back so the dashboard
       // can complete authentication on-session, then hit /api/retry-payment/confirm.
+      // Keep the credit reservation; confirm finalizes it (or webhook releases on cancel).
       return NextResponse.json({
         requiresAction: true,
         clientSecret: paymentIntent.client_secret,
       });
     } else {
+      if (discountCents > 0) await releaseReferralCredit(redemptionKey);
       return NextResponse.json(
         { error: "Payment did not complete. Please try a different card." },
         { status: 422 }

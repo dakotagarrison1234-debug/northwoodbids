@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import Stripe from "stripe";
-import { triggerAuctionUpdated } from "@/lib/pusherServer";
+import { triggerAuctionUpdated, triggerItemClosed } from "@/lib/pusherServer";
 import { autoAttachPaidItems } from "@/lib/pickup";
 import { notifyPaymentFailed, notifyPaymentReceipt } from "@/lib/paymentNotify";
 import {
@@ -11,6 +11,20 @@ import {
 } from "@/lib/referral";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
+/**
+ * Deterministic charge / credit-redemption key for a winner's specific item set.
+ * Same auction+user+items → same key (so cron double-ticks reuse one PaymentIntent
+ * and one credit reservation); a different item set (e.g. a resumable partial
+ * charge after some items were paid via retry) → a different key, so it never
+ * clashes with the original attempt's Stripe idempotency key.
+ */
+function chargeKeyFor(auctionId: string, clerkUserId: string, itemIds: string[]): string {
+  const sig = itemIds.slice().sort().join(",");
+  let h = 5381;
+  for (let i = 0; i < sig.length; i++) h = ((h << 5) + h + sig.charCodeAt(i)) >>> 0;
+  return `autocharge-${auctionId}-${clerkUserId}-${h.toString(36)}`;
+}
 
 type ItemWithBidsAndOrg = {
   id: string;
@@ -87,6 +101,7 @@ async function closeItem(
     console.log(
       `closeItem: reserve not met for "${item.title}" (${item.id}) — top bid $${Number(winningBid.amount)} < reserve $${Number(item.reservePrice)}`
     );
+    triggerItemClosed(item.id).catch(() => {});
     return null;
   }
 
@@ -101,12 +116,14 @@ async function closeItem(
       prisma.item.update({ where: { id: item.id }, data: { status: "SOLD" } }),
       prisma.proxyBid.updateMany({ where: { itemId: item.id, isActive: true }, data: { isActive: false } }),
     ]);
+    triggerItemClosed(item.id).catch(() => {});
     return { clerkUserId: winningBid.clerkUserId, amount: Number(winningBid.amount) };
   } else {
     await prisma.$transaction([
       prisma.item.update({ where: { id: item.id }, data: { status: "UNSOLD" } }),
       prisma.proxyBid.updateMany({ where: { itemId: item.id, isActive: true }, data: { isActive: false } }),
     ]);
+    triggerItemClosed(item.id).catch(() => {});
     return null;
   }
 }
@@ -165,7 +182,6 @@ async function chargeOneWinner(
   const taxPercent = org.taxExempt ? 0 : Number(org.taxPercent);
 
   const clerkUserId = winner.clerkUserId;
-  const itemIds = winner.items.map((i) => i.id);
 
   // Look up the bidder's saved card on the platform account
   const bidderCustomer = await prisma.bidderStripeCustomer.findUnique({
@@ -177,22 +193,31 @@ async function chargeOneWinner(
     },
   });
 
-  // H7: Idempotency guard — skip if every item already has a non-FAILED payment
-  // (PAID or PENDING). FAILED rows should be re-attempted, so they don't count.
-  const settledCount = await prisma.payment.count({
-    where: { itemId: { in: itemIds }, clerkUserId, status: { in: ["PAID", "PENDING"] } },
+  // Only charge items that don't already have a non-FAILED payment (PAID/PENDING).
+  // This makes the function safe to call from the resumable pass with the FULL
+  // winner set: anything already paid (e.g. via a manual retry) is dropped, so we
+  // never double-charge it, and the charge amount + idempotency key reflect exactly
+  // the set we're billing now.
+  const allItemIds = winner.items.map((i) => i.id);
+  const settledRows = await prisma.payment.findMany({
+    where: { itemId: { in: allItemIds }, clerkUserId, status: { in: ["PAID", "PENDING"] } },
+    select: { itemId: true },
   });
-  if (settledCount >= itemIds.length) {
-    console.log(`Auto-charge: payment already settled for items ${itemIds.join(",")} — skipping`);
+  const settledIds = new Set(settledRows.map((p) => p.itemId));
+  const chargeItems = winner.items.filter((i) => !settledIds.has(i.id));
+  if (chargeItems.length === 0) {
+    console.log(`Auto-charge: already settled for ${clerkUserId} — skipping`);
     return;
   }
+  const chargingWinner: WinnerEntry = { ...winner, items: chargeItems };
+  const itemIds = chargeItems.map((i) => i.id);
 
   const now = new Date();
 
   if (!bidderCustomer?.defaultPaymentMethodId) {
     // No card on file — mark all items as FAILED so bidder sees them on dashboard
     console.warn(`Auto-charge: no card on file for ${clerkUserId} in org ${org.id}`);
-    await recordWinnerStatus(winner, "FAILED", now, { failureReason: "No payment card on file" });
+    await recordWinnerStatus(chargingWinner, "FAILED", now, { failureReason: "No payment card on file" });
     notifyPaymentFailed({
       clerkUserId,
       itemCount: itemIds.length,
@@ -202,7 +227,7 @@ async function chargeOneWinner(
   }
 
   // Calculate totals (all in cents for Stripe)
-  const totalBidAmount = winner.items.reduce((s, i) => s + i.amount, 0);
+  const totalBidAmount = chargeItems.reduce((s, i) => s + i.amount, 0);
   // Buyer's premium added on top of the bid.
   const feeAmountCents = Math.round(totalBidAmount * platformFeePercent / 100 * 100);
   // Tax applies to the full purchase (bid + buyer's premium). Zero if exempt.
@@ -212,15 +237,16 @@ async function chargeOneWinner(
 
   // ── Bid Bucks: auto-apply one $5 referral credit to bills of $5.00+ ─────────
   // Reserves (spends) the credit up front; we release it again if the charge
-  // ultimately fails. Keyed to the per-winner idempotency key so a re-charge of
-  // the same bill reuses the same reservation instead of double-spending.
-  const redemptionKey = `autocharge-${auctionId}-${clerkUserId}`;
+  // ultimately fails. The key is derived from the exact item set being charged so
+  // (a) cron double-ticks reuse the same reservation/PI, and (b) a resumable
+  // partial charge gets its OWN key instead of clashing with the original attempt.
+  const redemptionKey = chargeKeyFor(auctionId, clerkUserId, itemIds);
   const discountCents = await reserveReferralCredit(clerkUserId, chargeAmountCents, redemptionKey);
   const netChargeCents = chargeAmountCents - discountCents;
 
   // Bill fully covered by Bid Bucks — no card charge needed at all.
   if (discountCents > 0 && netChargeCents <= 0) {
-    await recordWinnerStatus(winner, "PAID", now, {
+    await recordWinnerStatus(chargingWinner, "PAID", now, {
       feeAmountCents,
       taxAmountCents,
       creditAppliedCents: discountCents,
@@ -253,10 +279,11 @@ async function chargeOneWinner(
           auctionId,
           itemIds: itemIds.slice(0, 5).join(","), // Stripe metadata 500-char limit
           creditAppliedCents: String(discountCents),
+          redemptionKey, // so the webhook can release the exact reservation on async failure
         },
       },
       {
-        // Stable per winner per auction — a winner is only ever charged once.
+        // Stable per (winner, item-set) — a winner is only ever charged once.
         idempotencyKey: redemptionKey,
       }
     );
@@ -274,7 +301,7 @@ async function chargeOneWinner(
       failureReason = (err as { message: string }).message;
     }
     console.error(`Auto-charge FAILED for ${clerkUserId}:`, failureReason);
-    await recordWinnerStatus(winner, "FAILED", now, { failureReason });
+    await recordWinnerStatus(chargingWinner, "FAILED", now, { failureReason });
     notifyPaymentFailed({
       clerkUserId,
       itemCount: itemIds.length,
@@ -287,7 +314,7 @@ async function chargeOneWinner(
   const status = paymentIntent.status;
 
   if (status === "succeeded") {
-    await recordWinnerStatus(winner, "PAID", now, {
+    await recordWinnerStatus(chargingWinner, "PAID", now, {
       feeAmountCents,
       taxAmountCents,
       creditAppliedCents: discountCents,
@@ -314,7 +341,7 @@ async function chargeOneWinner(
     // Async settlement in progress — record PENDING, leave items SOLD, let the
     // webhook (payment_intent.succeeded / .payment_failed) reconcile. The credit
     // reservation is held; the webhook releases it if the charge ultimately fails.
-    await recordWinnerStatus(winner, "PENDING", now, {
+    await recordWinnerStatus(chargingWinner, "PENDING", now, {
       feeAmountCents,
       taxAmountCents,
       creditAppliedCents: discountCents,
@@ -328,7 +355,7 @@ async function chargeOneWinner(
   // Not a success — give the reserved Bid Bucks back and record FAILED; items stay SOLD.
   console.warn(`Auto-charge: PI ${paymentIntent.id} status "${status}" for ${clerkUserId} — not charged`);
   if (discountCents > 0) await releaseReferralCredit(redemptionKey);
-  await recordWinnerStatus(winner, "FAILED", now, {
+  await recordWinnerStatus(chargingWinner, "FAILED", now, {
     failureReason: status,
     stripePaymentIntentId: paymentIntent.id,
   });
@@ -384,13 +411,19 @@ async function recordWinnerStatus(
   const existingItemIds = new Set(existing.map((p) => p.itemId));
 
   const ops: Prisma.PrismaPromise<unknown>[] = [];
+  // Attach the rounding remainder + the whole Bid Bucks credit to the FIRST row we
+  // actually write this pass — never to a skipped (already-recorded) item, or the
+  // remainder/credit would be silently lost across a two-pass settlement.
+  let extrasAssigned = false;
   for (let idx = 0; idx < winner.items.length; idx++) {
     const item = winner.items[idx];
     if (existingItemIds.has(item.id)) continue; // already recorded — skip (idempotent)
 
-    const itemFeeCents = baseFeeCents + (idx === 0 ? feeRemainderCents : 0);
-    const itemTaxCents = baseTaxCents + (idx === 0 ? taxRemainderCents : 0);
-    const itemCreditCents = idx === 0 ? creditAppliedCents : 0;
+    const isFirstNew = !extrasAssigned;
+    extrasAssigned = true;
+    const itemFeeCents = baseFeeCents + (isFirstNew ? feeRemainderCents : 0);
+    const itemTaxCents = baseTaxCents + (isFirstNew ? taxRemainderCents : 0);
+    const itemCreditCents = isFirstNew ? creditAppliedCents : 0;
 
     ops.push(
       prisma.payment.create({
@@ -450,51 +483,73 @@ export async function chargeUnchargedWinners(): Promise<{ chargedWinners: number
     },
     include: {
       item: {
-        select: { id: true, title: true, auctionId: true, organizationId: true },
+        select: {
+          id: true,
+          title: true,
+          auctionId: true,
+          organizationId: true,
+          auction: { select: { title: true, organization: { select: { name: true } } } },
+        },
       },
     },
   });
   if (wonBids.length === 0) return { chargedWinners: 0 };
 
-  // Drop any whose item already has a PAID/PENDING payment (only re-charge truly uncharged)
   const candidateItemIds = wonBids.map((b) => b.item.id);
-  const settled = await prisma.payment.findMany({
-    where: { itemId: { in: candidateItemIds }, status: { in: ["PAID", "PENDING"] } },
-    select: { itemId: true, clerkUserId: true },
+  const payments = await prisma.payment.findMany({
+    where: { itemId: { in: candidateItemIds } },
+    select: { itemId: true, clerkUserId: true, status: true },
   });
-  const settledKey = new Set(settled.map((p) => `${p.itemId}:${p.clerkUserId}`));
+  // Items already settled (PAID/PENDING) — those winners don't need re-charging.
+  const settledKey = new Set(
+    payments.filter((p) => p.status === "PAID" || p.status === "PENDING").map((p) => `${p.itemId}:${p.clerkUserId}`)
+  );
+  // Items that have ANY payment row — used to tell "close recorded this winner"
+  // (and thus already sent their 'you won') from "close never got to them".
+  const itemsWithPayment = new Set(payments.map((p) => p.itemId));
 
-  // Group by (auctionId, clerkUserId) — one PI per winner per auction, matching the
-  // idempotency key used at close time.
-  type Group = { auctionId: string; orgId: string; winner: WinnerEntry };
+  // Group by (auctionId, clerkUserId). Build the FULL won-item set per winner;
+  // chargeOneWinner drops anything already paid and keys the charge by the exact
+  // remaining set, so passing the full set is safe and key-consistent.
+  type Group = {
+    auctionId: string;
+    orgId: string;
+    winner: WinnerEntry;
+    hasUnsettled: boolean;
+    everProcessed: boolean;
+  };
   const groups = new Map<string, Group>();
   for (const bid of wonBids) {
-    if (settledKey.has(`${bid.item.id}:${bid.clerkUserId}`)) continue;
     const auctionId = bid.item.auctionId;
     if (!auctionId) continue;
     const key = `${auctionId}:${bid.clerkUserId}`;
-    if (!groups.has(key)) {
-      groups.set(key, {
+    let g = groups.get(key);
+    if (!g) {
+      g = {
         auctionId,
         orgId: bid.item.organizationId,
+        hasUnsettled: false,
+        everProcessed: false,
         winner: {
           clerkUserId: bid.clerkUserId,
-          auctionName: "",
-          orgName: "",
+          auctionName: bid.item.auction?.title ?? "",
+          orgName: bid.item.auction?.organization?.name ?? "",
           items: [],
         },
-      });
+      };
+      groups.set(key, g);
     }
-    groups.get(key)!.winner.items.push({
-      id: bid.item.id,
-      title: bid.item.title,
-      amount: Number(bid.amount),
-    });
+    g.winner.items.push({ id: bid.item.id, title: bid.item.title, amount: Number(bid.amount) });
+    if (!settledKey.has(`${bid.item.id}:${bid.clerkUserId}`)) g.hasUnsettled = true;
+    if (itemsWithPayment.has(bid.item.id)) g.everProcessed = true;
   }
-  if (groups.size === 0) return { chargedWinners: 0 };
+
+  // Only act on winners with at least one item still needing a charge.
+  const groupList = [...groups.values()].filter((g) => g.hasUnsettled);
+  if (groupList.length === 0) return { chargedWinners: 0 };
 
   // Load org charging config once per org
-  const orgIds = [...new Set([...groups.values()].map((g) => g.orgId))];
+  const orgIds = [...new Set(groupList.map((g) => g.orgId))];
   const orgs = await prisma.organization.findMany({
     where: { id: { in: orgIds } },
     select: {
@@ -507,8 +562,8 @@ export async function chargeUnchargedWinners(): Promise<{ chargedWinners: number
   });
   const orgMap = new Map(orgs.map((o) => [o.id, o]));
 
-  const groupList = [...groups.values()];
   let chargedWinners = 0;
+  const toNotify = new Map<string, WinnerEntry>();
   await runPooled(
     groupList,
     async (g) => {
@@ -516,9 +571,22 @@ export async function chargeUnchargedWinners(): Promise<{ chargedWinners: number
       if (!org) return;
       await chargeOneWinner(g.winner, org, g.auctionId);
       chargedWinners++;
+      // Vest the inviter's reward for anyone who now has a real PAID payment.
+      await vestReferralForPayer(g.winner.clerkUserId);
+      // If the close pass never recorded this winner (likely crashed before its
+      // notifyWinners), send their "you won" now — winners who failed+were notified
+      // at close already have a payment row, so this won't double-notify them.
+      if (!g.everProcessed) {
+        const paid = await prisma.payment.count({
+          where: { clerkUserId: g.winner.clerkUserId, itemId: { in: g.winner.items.map((i) => i.id) }, status: "PAID" },
+        });
+        if (paid > 0) toNotify.set(g.winner.clerkUserId, g.winner);
+      }
     },
     5
   );
+
+  if (toNotify.size > 0) await notifyWinners(toNotify);
 
   if (chargedWinners > 0) {
     console.log(`[resumable] Attempted charge for ${chargedWinners} uncharged winner(s)`);
@@ -650,6 +718,10 @@ export async function notifyAuctionEndingSoon(): Promise<{ notifiedAuctions: num
 
   const now = new Date();
   const inOneHour = new Date(now.getTime() + 60 * 60 * 1000);
+  // Lower bound: don't fire "ending soon — last chance to bid" if the auction is
+  // about to close THIS cron tick (within ~3 min). Otherwise bidders get the
+  // last-chance text moments before (or with) the "you won" text.
+  const soonestToWarn = new Date(now.getTime() + 3 * 60 * 1000);
 
   // Popcorn extensions only push out item.itemEndAt, never auction.endAt, so the
   // 60-minute window must be gated on each auction's LATEST effective item end —
@@ -677,8 +749,9 @@ export async function notifyAuctionEndingSoon(): Promise<{ notifiedAuctions: num
       auction.endAt
     );
 
-    // Only alert (and stamp) once items are genuinely within the 60-minute window.
-    if (!(effectiveEnd >= now && effectiveEnd <= inOneHour)) continue;
+    // Only alert (and stamp) when the end is inside the window AND not about to
+    // close this very tick (>= ~3 min out) — avoids a contradictory last-chance text.
+    if (!(effectiveEnd >= soonestToWarn && effectiveEnd <= inOneHour)) continue;
 
     // Find all unique bidders currently winning items in this auction
     const activeBids = await prisma.bid.findMany({

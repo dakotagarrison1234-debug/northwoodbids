@@ -29,3 +29,16 @@ export async function triggerAuctionUpdated(orgSlug?: string): Promise<void> {
     console.warn("Pusher trigger failed:", e);
   }
 }
+
+/**
+ * Broadcast that a single item has closed (sold or unsold). Subscribed by the
+ * item detail page + item cards so the UI flips to "ended" immediately instead
+ * of waiting for a client-side timeout.
+ */
+export async function triggerItemClosed(itemId: string): Promise<void> {
+  try {
+    await getPusherServer().trigger(`item-${itemId}`, "item-closed", {});
+  } catch (e) {
+    console.warn("Pusher item-closed trigger failed:", e);
+  }
+}

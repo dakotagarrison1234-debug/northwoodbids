@@ -9,30 +9,30 @@
 /** Tailwind class pairs (bg + text) for every status we render. */
 export const STATUS_STYLES: Record<string, string> = {
   // ── Auction statuses ──
-  DRAFT: "bg-[#e7dcc6] text-[#6f5b46]", // muted brown
-  OPEN: "bg-[#5f7a45]/15 text-[#47592f]", // moss
-  CLOSING: "bg-[#efe0c9] text-[#8a5a2b]", // amber-brown
-  CLOSED: "bg-[#e7dcc6] text-[#6f5b46]",
-  SETTLED: "bg-[#6c4d39]/15 text-[#563e2c]", // brown
+  DRAFT: "bg-[#e7dcc6] text-[#6f5b46]", // muted tan — not started
+  OPEN: "bg-[#5f7a45]/18 text-[#3f5226]", // green — live
+  CLOSING: "bg-[#efe0c9] text-[#8a5a2b]", // amber — wrapping up
+  CLOSED: "bg-[#dcd3c4] text-[#5a4a38]", // neutral slate — done (distinct from DRAFT)
+  SETTLED: "bg-[#6c4d39]/15 text-[#563e2c]", // brown — finalized
 
   // ── Item statuses ──
-  ACTIVE: "bg-[#5f7a45]/15 text-[#47592f]", // moss
-  SOLD: "bg-[#6c4d39]/15 text-[#563e2c]", // brown
-  UNSOLD: "bg-red-50 text-red-600", // muted red
-  PENDING_PICKUP: "bg-[#efe0c9] text-[#8a5a2b]", // amber-brown
-  PICKED_UP: "bg-[#efe3d0] text-[#4a3a2b]",
+  ACTIVE: "bg-[#5f7a45]/18 text-[#3f5226]", // green — live
+  SOLD: "bg-[#6c4d39]/15 text-[#563e2c]", // brown — sold
+  UNSOLD: "bg-red-50 text-red-600", // muted red — no sale
+  PENDING_PICKUP: "bg-[#c47b3e]/20 text-[#8a4f1c]", // burnt orange — NEEDS ACTION
+  PICKED_UP: "bg-[#5f7a45]/18 text-[#3f5226]", // green — DONE (clearly ≠ pending)
 
   // ── Bid statuses ──
   // ACTIVE shared with item statuses above
   OUTBID: "bg-red-50 text-red-600",
   WON: "bg-[#6c4d39]/15 text-[#563e2c]", // brown
-  CANCELLED: "bg-red-50 text-red-600", // muted red
+  CANCELLED: "bg-[#dcd3c4] text-[#7a6a55]", // neutral — not an error, just void
 
   // ── Payment statuses (used in admin/superadmin tables) ──
-  PAID: "bg-[#6c4d39]/15 text-[#563e2c]",
-  FAILED: "bg-red-50 text-red-600",
-  PENDING: "bg-[#efe0c9] text-[#8a5a2b]",
-  REFUNDED: "bg-[#e7dcc6] text-[#6f5b46]",
+  PAID: "bg-[#5f7a45]/18 text-[#3f5226]", // green — money in (≠ SOLD's brown)
+  FAILED: "bg-red-100 text-red-700", // deep red — needs attention (≠ UNSOLD)
+  PENDING: "bg-[#efe0c9] text-[#8a5a2b]", // amber — awaiting
+  REFUNDED: "bg-[#dcd3c4] text-[#5a4a38]", // neutral slate
 };
 
 /** Fallback style for any unknown status. */

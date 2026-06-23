@@ -51,6 +51,22 @@ export async function DELETE(_request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
+    // Deleting cascades appointments AND transfers headed here, which would
+    // silently strand bidders' scheduled/in-transit items. Block it while any are
+    // active — the admin can "Hide" the location instead (isActive: false).
+    const [activeAppts, activeTransfers] = await Promise.all([
+      prisma.pickupAppointment.count({ where: { locationId: id, status: "SCHEDULED" } }),
+      prisma.transferRequest.count({ where: { toLocationId: id, status: { in: ["REQUESTED", "LOADED"] } } }),
+    ]);
+    if (activeAppts > 0 || activeTransfers > 0) {
+      return NextResponse.json(
+        {
+          error: `This location still has ${activeAppts} scheduled pickup(s) and ${activeTransfers} incoming transfer(s). Hide it instead, or clear those first.`,
+        },
+        { status: 409 }
+      );
+    }
+
     await prisma.pickupLocation.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (err) {

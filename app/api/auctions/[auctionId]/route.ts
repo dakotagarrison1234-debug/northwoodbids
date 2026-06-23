@@ -101,23 +101,32 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       }
     }
 
-    const updated = await prisma.auction.update({
-      where: { id: auctionId },
-      data: { status },
-    });
-
-    // When opening an auction, activate all DRAFT items and fire the started webhook
+    // Opening is special-cased with an ATOMIC claim so two admins (or an admin +
+    // the cron) can't both open it and double-fire the "auction is live" SMS.
     if (status === "OPEN") {
+      const claimed = await prisma.auction.updateMany({
+        where: { id: auctionId, status: "DRAFT" },
+        data: { status: "OPEN" },
+      });
+      if (claimed.count === 0) {
+        return NextResponse.json({ error: "This auction has already been opened." }, { status: 409 });
+      }
       await prisma.item.updateMany({
         where: { auctionId, status: "DRAFT" },
         data: { status: "ACTIVE" },
       });
-
       notifyAuctionStartedToFollowers(
         { title: auction.title, slug: auction.slug },
         { id: auction.organization.id, name: auction.organization.name, slug: auction.organization.slug }
       ).catch((e) => console.error("GHL auction-started webhook failed:", e));
+      triggerAuctionUpdated(auction.organization.slug).catch(() => {});
+      return NextResponse.json({ success: true });
     }
+
+    const updated = await prisma.auction.update({
+      where: { id: auctionId },
+      data: { status },
+    });
 
     // Notify live-watching pages that auction list has changed
     triggerAuctionUpdated(auction.organization.slug).catch(() => {});

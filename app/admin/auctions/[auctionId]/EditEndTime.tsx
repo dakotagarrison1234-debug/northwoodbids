@@ -55,6 +55,10 @@ export default function EditEndTime({ auctionId, endAtISO, status }: Props) {
   };
 
   const quickSet = (minutesFromNow: number) => {
+    // The "end now" shortcut closes the auction and charges winners — confirm it.
+    if (minutesFromNow <= 0 && !confirm("End this auction now? Within ~1 minute it will close and winners' cards will be charged. This can't be undone.")) {
+      return;
+    }
     const d = new Date(Date.now() + minutesFromNow * 60_000);
     setValue(toLocalInput(d));
     save(d.toISOString());

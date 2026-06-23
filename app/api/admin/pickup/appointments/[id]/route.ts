@@ -33,6 +33,15 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
+    // Guard terminal states — don't re-collect an already-collected/cancelled appt
+    // (would re-stamp pickedUpAt and re-fire item transitions).
+    if (status !== undefined && status !== appt.status && appt.status !== "SCHEDULED") {
+      return NextResponse.json(
+        { error: `This appointment is already ${appt.status.toLowerCase()}.` },
+        { status: 409 }
+      );
+    }
+
     const updated = await prisma.pickupAppointment.update({
       where: { id },
       data: {
@@ -42,6 +51,15 @@ export async function PATCH(request: NextRequest, { params }: Props) {
         ...(notes !== undefined && { notes: notes ? String(notes) : null }),
       },
     });
+
+    // Relocating to a different location: detach items physically at the old place
+    // so they aren't wrongly listed (and later marked picked up) at the new one.
+    if (locationId !== undefined && locationId !== appt.locationId) {
+      await prisma.item.updateMany({
+        where: { pickupAppointmentId: id, NOT: { locationId } },
+        data: { pickupAppointmentId: null },
+      });
+    }
 
     // When marked COLLECTED, mark all attached items as picked up.
     if (status === "COLLECTED") {
