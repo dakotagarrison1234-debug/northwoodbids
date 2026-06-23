@@ -79,6 +79,28 @@ export default async function WinnersPage() {
     }))
     .sort((a, b) => b.total - a.total);
 
+  // Confirmed winners, grouped per winner — one card each, with a swipeable strip
+  // of the items they won (and their per-item pay/pickup actions).
+  type WonEntry = (typeof wonBids)[number];
+  const winnerMap = new Map<string, WonEntry[]>();
+  for (const bid of wonBids) {
+    const arr = winnerMap.get(bid.clerkUserId) ?? [];
+    arr.push(bid);
+    winnerMap.set(bid.clerkUserId, arr);
+  }
+  const winnerGroups = [...winnerMap.entries()]
+    .map(([clerkUserId, bids]) => {
+      const sorted = [...bids].sort((a, b) => Number(b.amount) - Number(a.amount));
+      const total = sorted.reduce((s, b) => s + Number(b.amount), 0);
+      const unpaid = sorted.filter((b) => paymentMap.get(b.itemId)?.status !== "PAID").length;
+      return { clerkUserId, bids: sorted, total, unpaid };
+    })
+    .sort((a, b) => {
+      // Owers first (so staff see who still needs to pay), then by total desc.
+      if ((a.unpaid > 0) !== (b.unpaid > 0)) return a.unpaid > 0 ? -1 : 1;
+      return b.total - a.total;
+    });
+
   return (
     <>
       <PusherRefresh channel="auctions" event="auction-updated" />
@@ -139,74 +161,101 @@ export default async function WinnersPage() {
           )}
         </div>
 
-        {/* Confirmed Winners */}
+        {/* Confirmed Winners — grouped per winner with a swipeable item strip */}
         <div>
           <h2 className="text-lg font-semibold mb-4">Confirmed Winners</h2>
-          {wonBids.length === 0 ? (
+          {winnerGroups.length === 0 ? (
             <p className="text-base text-[#8a7559]">No confirmed winners yet — winners are set when an auction closes.</p>
           ) : (
-            <div className="bg-white border border-[#e3d6bf] rounded-xl overflow-hidden">
-              <div className="overflow-x-auto">
-              <table className="w-full min-w-[600px]">
-                <thead>
-                  <tr className="border-b border-[#e3d6bf]">
-                    <th className="text-left px-6 py-4 text-[#8a7559] text-sm font-medium">Item</th>
-                    <th className="text-left px-6 py-4 text-[#8a7559] text-sm font-medium">Winning Bid</th>
-                    <th className="text-left px-6 py-4 text-[#8a7559] text-sm font-medium">Winner</th>
-                    <th className="text-left px-6 py-4 text-[#8a7559] text-sm font-medium">Payment</th>
-                    <th className="text-left px-6 py-4 text-[#8a7559] text-sm font-medium">Item Status</th>
-                    <th className="text-left px-6 py-4 text-[#8a7559] text-sm font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {wonBids.map((bid) => {
-                    const payment = paymentMap.get(bid.itemId);
-                    return (
-                      <tr key={bid.id} className="border-b border-[#e3d6bf] last:border-0 hover:bg-[#efe3d0]/50">
-                        <td className="px-6 py-4 font-medium text-base">{bid.item.title}</td>
-                        <td className="px-6 py-4 text-[#6c4d39] font-bold text-base">{money(Number(bid.amount))}</td>
-                        <td className="px-6 py-4 text-[#4a3a2b] text-base">
-                          {displayName(bid.clerkUserId)}
-                        </td>
-                        <td className="px-6 py-4">
-                          {payment?.status === "PAID" ? (
-                            <StatusPill status="PAID" label="Paid" />
+            <div className="space-y-4">
+              {winnerGroups.map((g) => {
+                const email = emailOf(g.clerkUserId);
+                const phone = phoneOf(g.clerkUserId);
+                return (
+                  <div key={g.clerkUserId} className="bg-white border border-[#e3d6bf] rounded-xl p-5 sm:p-6">
+                    {/* Winner header */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-base font-semibold text-[#241a12] truncate">
+                          {displayName(g.clerkUserId)}
+                        </div>
+                        <div className="text-sm text-[#8a7559] truncate">{email || phone || "—"}</div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-lg font-bold text-[#6c4d39] leading-none">{money(g.total)}</div>
+                        <div className="mt-1">
+                          {g.unpaid > 0 ? (
+                            <span className="text-xs font-bold uppercase tracking-wide bg-amber-100 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">
+                              {g.unpaid} unpaid
+                            </span>
                           ) : (
-                            <StatusPill status="PENDING" label="Unpaid" />
+                            <span className="text-xs font-bold uppercase tracking-wide bg-green-100 text-green-700 border border-green-200 px-2 py-0.5 rounded-full">
+                              All paid
+                            </span>
                           )}
-                        </td>
-                        <td className="px-6 py-4">
-                          <StatusPill status={bid.item.status} />
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col gap-2">
-                            <ItemStatusButton
-                              itemId={bid.item.id}
-                              currentStatus={bid.item.status}
-                            />
-                            {payment?.status === "PAID" && bid.item.auctionId && (
-                              <Link
-                                href={`/invoice/${bid.item.auctionId}?user=${encodeURIComponent(bid.clerkUserId)}`}
-                                className="text-xs text-[#6c4d39] hover:text-[#c47b3e] font-medium underline whitespace-nowrap"
-                              >
-                                Receipt
-                              </Link>
-                            )}
-                            {payment?.status === "PAID" && (
-                              <RefundButton
-                                paymentId={payment.id}
-                                amount={Number(bid.amount)}
-                                winnerName={displayName(bid.clerkUserId)}
-                              />
-                            )}
+                        </div>
+                        <div className="text-xs text-[#8a7559] mt-1">
+                          {g.bids.length} item{g.bids.length !== 1 ? "s" : ""}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Swipeable item strip */}
+                    <div className="mt-4 flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory">
+                      {g.bids.map((bid) => {
+                        const payment = paymentMap.get(bid.itemId);
+                        const paid = payment?.status === "PAID";
+                        const photo =
+                          bid.item.photos.find((p) => p.isPrimary)?.url ?? bid.item.photos[0]?.url ?? null;
+                        return (
+                          <div
+                            key={bid.id}
+                            className="snap-start shrink-0 w-48 border border-[#e3d6bf] rounded-xl overflow-hidden bg-[#faf6ee] flex flex-col"
+                          >
+                            <Link href={`/admin/items/${bid.item.id}`} className="block relative aspect-square bg-[#efe3d0]">
+                              {photo ? (
+                                <Image src={photo} alt={bid.item.title} fill sizes="192px" className="object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-[#b3a085] text-xs">No photo</div>
+                              )}
+                              <span className={`absolute top-1.5 right-1.5 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full border ${
+                                paid ? "bg-green-100 text-green-700 border-green-200" : "bg-amber-100 text-amber-700 border-amber-200"
+                              }`}>
+                                {paid ? "Paid" : "Unpaid"}
+                              </span>
+                            </Link>
+                            <div className="p-3 flex flex-col gap-2 flex-1">
+                              <div className="text-sm font-medium text-[#241a12] line-clamp-2 leading-snug">{bid.item.title}</div>
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-[#6c4d39] font-bold text-sm">{money(Number(bid.amount))}</span>
+                                <StatusPill status={bid.item.status} />
+                              </div>
+                              <div className="mt-auto flex flex-col gap-1.5 pt-1">
+                                <ItemStatusButton itemId={bid.item.id} currentStatus={bid.item.status} />
+                                {paid && bid.item.auctionId && (
+                                  <Link
+                                    href={`/invoice/${bid.item.auctionId}?user=${encodeURIComponent(g.clerkUserId)}`}
+                                    className="text-xs text-[#6c4d39] hover:text-[#c47b3e] font-medium underline"
+                                  >
+                                    Receipt
+                                  </Link>
+                                )}
+                                {paid && payment && (
+                                  <RefundButton
+                                    paymentId={payment.id}
+                                    amount={Number(bid.amount)}
+                                    winnerName={displayName(g.clerkUserId)}
+                                  />
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
