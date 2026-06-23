@@ -25,15 +25,19 @@ export async function GET() {
     const org = await prisma.organization.findFirst();
     if (!org) return NextResponse.json({ error: "No organization" }, { status: 404 });
 
-    // Soonest upcoming SCHEDULED appointment for this user
-    const appt = await prisma.pickupAppointment.findFirst({
+    // The bidder's active SCHEDULED appointment. Show the soonest UPCOMING one;
+    // if they only have past-dated SCHEDULED appointments (e.g. they missed the
+    // time and it was never marked collected), still surface the most recent so
+    // they can always find/reschedule it — never leave the page blank while the
+    // admin still sees the appointment.
+    const scheduledAppts = await prisma.pickupAppointment.findMany({
       where: {
         clerkUserId: userId,
         organizationId: org.id,
         status: "SCHEDULED",
-        startsAt: { gte: new Date() },
       },
       orderBy: { startsAt: "asc" },
+      take: 20,
       include: {
         location: true,
         items: {
@@ -44,6 +48,11 @@ export async function GET() {
         },
       },
     });
+    const nowTs = new Date();
+    const appt =
+      scheduledAppts.find((a) => a.startsAt >= nowTs) ??
+      scheduledAppts[scheduledAppts.length - 1] ??
+      null;
 
     const appointment = appt
       ? {

@@ -505,6 +505,9 @@ export default function PickupPage() {
 
   const { appointment, unscheduledItems, locations, pendingTransfers } = data;
 
+  // Whether the scheduled appointment's time has already passed (missed slot).
+  const apptPassed = !!appointment && new Date(appointment.startsAt).getTime() < Date.now();
+
   // Items already moving in a transfer — exclude them from the scheduling area.
   const itemsInTransitIds = new Set(
     pendingTransfers.flatMap((t) => t.items.map((it) => it.id))
@@ -546,10 +549,17 @@ export default function PickupPage() {
         {/* ── Has an upcoming appointment ── */}
         {appointment && !rescheduling && (
           <div className="space-y-6">
-            <div className="bg-white border-2 border-green-200 rounded-2xl overflow-hidden">
-              <div className="bg-green-50 border-b border-green-200 px-6 py-5">
-                <div className="text-base font-semibold text-green-700">Your pickup is scheduled for</div>
-                <div className="text-2xl font-extrabold mt-1 text-green-700">{fmtDateTime(appointment.startsAt)}</div>
+            <div className={`bg-white border-2 rounded-2xl overflow-hidden ${apptPassed ? "border-amber-300" : "border-green-200"}`}>
+              <div className={`border-b px-6 py-5 ${apptPassed ? "bg-amber-50 border-amber-200" : "bg-green-50 border-green-200"}`}>
+                <div className={`text-base font-semibold ${apptPassed ? "text-amber-700" : "text-green-700"}`}>
+                  {apptPassed ? "Your pickup time has passed" : "Your pickup is scheduled for"}
+                </div>
+                <div className={`text-2xl font-extrabold mt-1 ${apptPassed ? "text-amber-700" : "text-green-700"}`}>{fmtDateTime(appointment.startsAt)}</div>
+                {apptPassed && (
+                  <div className="text-sm text-[#6f5b46] mt-2">
+                    Looks like this time has passed. Please reschedule below, or contact us if you already picked up.
+                  </div>
+                )}
               </div>
               <div className="px-6 py-5">
                 <LocationBadge name={appointment.location.name} />
