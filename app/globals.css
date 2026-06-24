@@ -42,7 +42,20 @@ html, body {
    content clear of the notch, status bar, and home indicator. */
 .pt-safe { padding-top: env(safe-area-inset-top); }
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
-.safe-x { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+/* Horizontal gutter for edge-to-edge layouts. NOTE: this class is unlayered, so
+   it overrides Tailwind's px-* utilities — it must therefore carry the full
+   gutter itself (a comfortable base) AND clear the notch on landscape/notched
+   phones. max() keeps whichever is larger. */
+.safe-x {
+  padding-left: max(1.5rem, env(safe-area-inset-left));
+  padding-right: max(1.5rem, env(safe-area-inset-right));
+}
+@media (min-width: 640px) {
+  .safe-x {
+    padding-left: max(2rem, env(safe-area-inset-left));
+    padding-right: max(2rem, env(safe-area-inset-right));
+  }
+}
 /* Paint perf: skip layout/paint for off-screen cards in long grids until they
    scroll near the viewport. contain-intrinsic-size reserves space so the
    scrollbar doesn't jump. Apply to repeated grid items, not whole pages. */
