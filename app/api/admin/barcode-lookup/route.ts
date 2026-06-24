@@ -27,7 +27,8 @@ export async function GET(req: NextRequest) {
       headers: {
         "Accept": "application/json",
         "User-Agent": "Northwood Bids/1.0",
-        ...(key ? { user_key: key } : {}),
+        // UPCitemdb's keyed (v1) endpoint requires BOTH headers — user_key alone 401s.
+        ...(key ? { user_key: key, key_type: "3scale" } : {}),
       },
       next: { revalidate: 86400 }, // cache 24h — same product won't change
     });

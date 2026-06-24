@@ -203,16 +203,18 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
           setResult(data.product);
         }
       } else {
-        // Numeric UPC/EAN → existing UPCitemdb lookup (unchanged)
+        // Numeric UPC/EAN → UPCitemdb lookup first…
         const clean = code.replace(/\D/g, "");
         if (!clean || clean.length < 6) { setError("Enter a valid barcode (6+ digits), FNSKU, or ASIN."); return; }
         const res = await fetch(`/api/admin/barcode-lookup?upc=${clean}`);
         const data = await res.json();
-        if (!res.ok || !data.found) {
-          setError(data.message || data.error || "No product found. Try a name search below.");
-          setShowSearch(true);
-        } else {
+        if (res.ok && data.found) {
           setResult(data.product);
+        } else {
+          // …UPCitemdb missed or is rate-limited — fall back to an Amazon search
+          // on the barcode number so a normal barcode still pulls something up.
+          setShowSearch(true);
+          await doSearch(clean);
         }
       }
     } catch {
