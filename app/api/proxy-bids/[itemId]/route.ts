@@ -83,7 +83,8 @@ export async function DELETE(
     // Broadcast updated badge state to all viewers
     await broadcastProxyUpdate(itemId, remainingProxies > 0);
 
-    return NextResponse.json({ success: true });
+    // Return the remaining state so the canceller's UI clears immediately + accurately.
+    return NextResponse.json({ success: true, hasActiveProxy: remainingProxies > 0 });
   } catch (error) {
     console.error("DELETE proxy-bids error:", error);
     return NextResponse.json({ error: "Failed to cancel proxy" }, { status: 500 });

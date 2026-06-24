@@ -357,9 +357,14 @@ export default function ItemPage() {
       const res = await fetch(`/api/proxy-bids/${itemId}`, { method: "DELETE" });
       const data = await res.json();
       if (data.success) {
+        // Clear OUR proxy and sync the badge from the server's remaining-proxy count
+        // (don't call refreshProxyStatus here — it would misread the cleared proxy
+        // as "your max bid was beaten").
         setUserProxy(null);
+        setHasActiveProxy(data.hasActiveProxy ?? false);
         setProxyWasBeaten(false);
-        setProxyMessage({ text: "Max bid cancelled. Your existing bids remain active.", type: "success" });
+        setProxyAmount("");
+        setProxyMessage({ text: "Max bid cancelled. Any bids already placed for you still stand.", type: "success" });
       } else {
         setProxyMessage({ text: data.error || "Failed to cancel proxy", type: "error" });
       }
@@ -647,7 +652,7 @@ export default function ItemPage() {
                 {/* ═══════════════════════════════════════════════════════════
                     MAX BID — PRIMARY option
                 ═══════════════════════════════════════════════════════════ */}
-                <div className="bg-[#f6ecda] border border-[#6c4d39]/25 rounded-xl p-3 mb-4">
+                <div className="bg-[#f6ecda] border-2 border-[#6c4d39]/30 rounded-2xl p-4 mb-5">
                   {/* section header */}
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-1.5">
@@ -771,16 +776,17 @@ export default function ItemPage() {
                 {/* ═══════════════════════════════════════════════════════════
                     Divider
                 ═══════════════════════════════════════════════════════════ */}
-                <div className="flex items-center gap-3 mb-4">
+                <div className="flex items-center gap-3 mb-5">
                   <div className="flex-1 h-px bg-[#e3d6bf]" />
                   <span className="text-xs text-[#b3a085]">or bid a specific amount</span>
                   <div className="flex-1 h-px bg-[#e3d6bf]" />
                 </div>
 
                 {/* ═══════════════════════════════════════════════════════════
-                    MANUAL BID — secondary option
+                    MANUAL BID — secondary option (its own card for separation)
                 ═══════════════════════════════════════════════════════════ */}
-                <div>
+                <div className="bg-white border border-[#e3d6bf] rounded-2xl p-4">
+                  <h3 className="font-bold text-sm text-[#241a12] mb-1">Bid a specific amount</h3>
                   <div className="text-[#8a7559] text-xs mb-3">{item.currentBid > 0 ? `Minimum next bid: $${minBid.toLocaleString()}` : `Be the first bidder — start at $${minBid.toLocaleString()}`}</div>
                   {message && (
                     <div className={`text-sm mb-3 px-3 py-2 rounded-lg ${
