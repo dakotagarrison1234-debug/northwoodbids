@@ -88,6 +88,8 @@ export default function ItemPage() {
   const [biddingEnded, setBiddingEnded] = useState(false);
   const userProxyRef = useRef<{ maxAmount: number } | null>(null);
   userProxyRef.current = userProxy;
+  const wasWinningRef = useRef(false);
+  const [outbidFlash, setOutbidFlash] = useState(false);
 
   // Photo carousel
   const [selectedPhotoIdx, setSelectedPhotoIdx] = useState(0);
@@ -132,6 +134,14 @@ export default function ItemPage() {
         if (hadProxy && !d.userProxy) {
           setProxyWasBeaten(true);
         }
+        // Transient "you've been outbid" flash — fires when the user's max bid was
+        // just beaten, OR they were the leader and just lost the lead.
+        const lostLead = wasWinningRef.current && d.isWinning === false;
+        if ((hadProxy && !d.userProxy) || lostLead) {
+          setOutbidFlash(true);
+          setTimeout(() => setOutbidFlash(false), 3000);
+        }
+        wasWinningRef.current = !!d.isWinning;
         setUserProxy(d.userProxy ?? null);
         setHasActiveProxy(d.hasActiveProxy ?? false);
         // Fix #4: update winning state
@@ -455,6 +465,16 @@ export default function ItemPage() {
 
   return (
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
+      {/* Transient "you've been outbid" flash */}
+      {outbidFlash && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] nb-toast">
+          <div className="flex items-center gap-2 bg-red-600 text-white px-4 py-2.5 rounded-xl shadow-lg text-sm font-semibold">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+            You&apos;ve been outbid by a higher max bid
+          </div>
+        </div>
+      )}
+
       {/* Breadcrumb / back link */}
       <div className="max-w-6xl mx-auto px-6 sm:px-8 pt-4 flex items-center gap-2 text-sm min-w-0">
         <Link href={`/${orgSlug}/${auctionSlug}`} className="text-[#8a7559] hover:text-[#241a12] shrink-0 flex items-center gap-1 transition-colors text-sm font-medium">

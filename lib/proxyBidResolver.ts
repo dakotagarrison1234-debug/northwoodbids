@@ -289,13 +289,16 @@ export async function resolveNewProxy(
   const winnerMax = Number(winner.maxAmount);
   const loserMax = loser ? Number(loser.maxAmount) : null;
 
-  // Don't auto-raise the current leader against a LOWER (or equal) competing proxy:
-  // if the winner already holds the lead and their max is at least the loser's max,
-  // they already lead — just deactivate the loser proxy so users don't bid against
-  // themselves and overpay.
+  // Skip raising the leader ONLY when there's no real competition pushing the price:
+  // i.e. no competing proxy, or the competing proxy's max is already at/below the
+  // current price (so it's already beaten). If the competing (loser) proxy is willing
+  // to pay ABOVE the current price, standard proxy-auction behavior says push the
+  // leader up to one increment over the loser's max — even though the leader stays
+  // winning. (Otherwise the price stays artificially low and the under-bidder is
+  // never actually cleared at a real price.)
   if (
     winner.clerkUserId === currentBidder &&
-    (!loser || winnerMax >= (loserMax as number))
+    (loserMax === null || loserMax <= currentBid)
   ) {
     if (loser) {
       await prisma.proxyBid.update({

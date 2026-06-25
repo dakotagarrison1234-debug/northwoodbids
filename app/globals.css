@@ -61,6 +61,15 @@ html, body {
    scrollbar doesn't jump. Apply to repeated grid items, not whole pages. */
 .cv-card { content-visibility: auto; contain-intrinsic-size: 0 320px; }
 
+/* Transient toast (e.g. "you've been outbid") — quick pop-in, fades on its own. */
+@keyframes nb-toast-in {
+  0%   { opacity: 0; transform: translate(-50%, -10px); }
+  12%  { opacity: 1; transform: translate(-50%, 0); }
+  85%  { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -6px); }
+}
+.nb-toast { animation: nb-toast-in 3s ease-in-out forwards; }
+
 /* sticky top bars: add the status-bar inset on top of their own padding */
 .bar-safe-top { padding-top: calc(env(safe-area-inset-top) + 0.5rem); }
 /* bottom nav bars: lift above the home indicator */
