@@ -70,9 +70,9 @@ function NavLink({
   label: string;
   sublabel?: string;
   onClick: () => void;
-  accent?: "brown";
+  accent?: "brown" | "red";
 }) {
-  const accentColor = accent === "brown" ? "#6c4d39" : undefined;
+  const accentColor = accent === "red" ? "#dc2626" : accent === "brown" ? "#6c4d39" : undefined;
   return (
     <Link
       href={href}
@@ -233,7 +233,7 @@ export default function UserMenu() {
           <NavLink href="/search" iconEl={<IcoSearch />} label="Search Items" onClick={close} />
 
           <SectionLabel>My Bids</SectionLabel>
-          <NavLink href="/dashboard" iconEl={<IcoGavel />} label="My Bids" sublabel="Active, past wins & invoices" onClick={close} />
+          <NavLink href="/dashboard" iconEl={<IcoGavel />} label="My Bids" sublabel="Active, past wins & invoices" onClick={close} accent="red" />
           <NavLink href="/pickup" iconEl={<IcoPickup />} label="Pickup" sublabel="Schedule item collection" onClick={close} />
           <NavLink href="/refer" iconEl={<IcoGift />} label="Bid Bucks" sublabel="Invite friends, get $5 off" onClick={close} accent="brown" />
 
