@@ -171,6 +171,23 @@ function BidderDashboardInner() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loadingPMs, setLoadingPMs] = useState(false);
   const [liveAuctions, setLiveAuctions] = useState<LiveAuction[]>([]);
+  // Outbid items the bidder dismissed ("not interested") — hidden from active lists.
+  // Persisted per-device so the choice sticks across reloads.
+  const [dismissedLosing, setDismissedLosing] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("nb_dismissed_losing");
+      if (raw) setDismissedLosing(new Set(JSON.parse(raw) as string[]));
+    } catch { /* ignore */ }
+  }, []);
+  const dismissLosing = (itemId: string) => {
+    setDismissedLosing((prev) => {
+      const next = new Set(prev);
+      next.add(itemId);
+      try { localStorage.setItem("nb_dismissed_losing", JSON.stringify([...next])); } catch { /* ignore */ }
+      return next;
+    });
+  };
   const [loadingAuctions, setLoadingAuctions] = useState(false);
 
   const load = useCallback(() => {
@@ -399,16 +416,18 @@ function BidderDashboardInner() {
   }
 
   const { winning, losing, past, unpaidWins } = data;
+  // Outbid items the bidder dismissed are hidden from the active "outbid" lists.
+  const visibleLosing = losing.filter((b) => !dismissedLosing.has(b.itemId));
   // Active bids ordered by soonest end first, so the most urgent are up top.
   const endMs = (b: { itemEndAt: string | null; auctionEndAt: string }) =>
     new Date(b.itemEndAt ?? b.auctionEndAt).getTime();
   const winningSorted = [...winning].sort((a, b) => endMs(a) - endMs(b));
-  const losingSorted = [...losing].sort((a, b) => endMs(a) - endMs(b));
+  const losingSorted = [...visibleLosing].sort((a, b) => endMs(a) - endMs(b));
   const totalOwed = unpaidWins.reduce((s, i) => s + (i.totalDue ?? i.amountOwed), 0);
   const failedWins = unpaidWins.filter((w) => w.paymentFailed);
   const pendingWins = unpaidWins.filter((w) => !w.paymentFailed);
   const pastWins = past.filter((b) => b.outcome === "won");
-  const activeCount = winning.length + losing.length;
+  const activeCount = winning.length + visibleLosing.length;
 
   const myBidsTabs: Tab[] = ["overview", "active", "history"];
   const inMyBids = myBidsTabs.includes(tab);
@@ -625,9 +644,9 @@ function BidderDashboardInner() {
                   <div className="text-[#8a7559] text-xs sm:text-sm mb-1">Winning</div>
                   <div className={`text-xl sm:text-2xl font-extrabold ${winning.length > 0 ? "text-[#6c4d39]" : "text-[#6f5b46]"}`}>{winning.length}</div>
                 </div>
-                <div className={`bg-white border rounded-2xl p-3 sm:p-5 transition-all ${losing.length > 0 ? "border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.05)]" : "border-[#e3d6bf]"}`}>
+                <div className={`bg-white border rounded-2xl p-3 sm:p-5 transition-all ${visibleLosing.length > 0 ? "border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.05)]" : "border-[#e3d6bf]"}`}>
                   <div className="text-[#8a7559] text-xs sm:text-sm mb-1">Outbid</div>
-                  <div className={`text-xl sm:text-2xl font-extrabold ${losing.length > 0 ? "text-red-600" : "text-[#6f5b46]"}`}>{losing.length}</div>
+                  <div className={`text-xl sm:text-2xl font-extrabold ${visibleLosing.length > 0 ? "text-red-600" : "text-[#6f5b46]"}`}>{visibleLosing.length}</div>
                 </div>
                 <div className={`bg-white border rounded-2xl p-3 sm:p-5 transition-all ${totalOwed > 0 ? "border-orange-500/20 shadow-[0_0_20px_rgba(249,115,22,0.05)]" : "border-[#e3d6bf]"}`}>
                   <div className="text-[#8a7559] text-xs sm:text-sm mb-1">Owed</div>
@@ -665,7 +684,7 @@ function BidderDashboardInner() {
                 </div>
               )}
 
-              {losing.length > 0 && (
+              {visibleLosing.length > 0 && (
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <h2 className="font-bold text-[#4a3a2b] text-xs uppercase tracking-wider">You&apos;ve Been Outbid</h2>
@@ -674,73 +693,34 @@ function BidderDashboardInner() {
                     </button>
                   </div>
                   <div className="space-y-2">
-                    {losing.slice(0, 3).map((b) => (
-                      <Link key={b.itemId} href={`/${b.orgSlug}/${b.auctionSlug}/item/${b.itemId}`}
-                        className="flex items-center gap-3 bg-white border border-red-500/15 rounded-2xl px-4 py-3 hover:border-red-200 transition-all">
-                        <Photo url={b.photo} title={b.itemTitle} />
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-sm truncate">{b.itemTitle}</div>
-                          <div className="text-[#8a7559] text-xs truncate">{b.auctionTitle}</div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <div className="text-[#6f5b46] font-semibold text-sm">${b.myBid.toLocaleString()}</div>
-                          <div className="text-red-600 text-xs mt-0.5">High: ${b.currentBid.toLocaleString()}</div>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Recent Bids */}
-              {past.length > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="font-bold text-[#4a3a2b] text-xs uppercase tracking-wider">Recent Bids</h2>
-                    {pastWins.length > 0 && (
-                      <button onClick={() => setTab("history")} className="text-[#6c4d39] text-sm hover:text-[#c47b3e] transition-colors flex items-center gap-1">
-                        Bid history <IcoArrow />
-                      </button>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    {past.slice(0, 5).map((b, i) => (
-                      <div key={i}
-                        className={`flex items-center gap-3 bg-white border rounded-2xl px-4 py-3 ${b.outcome === "won" ? "border-[#6c4d39]/15" : "border-[#e3d6bf]/60"}`}>
-                        <Photo url={b.photo} title={b.itemTitle} />
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-sm truncate">{b.itemTitle}</div>
-                          <div className="text-[#8a7559] text-xs truncate">{b.auctionTitle}</div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <div className={`font-bold text-sm ${b.outcome === "won" ? "text-[#6c4d39]" : "text-[#8a7559]"}`}>
-                            ${b.myBid.toLocaleString()}
+                    {losingSorted.slice(0, 3).map((b) => (
+                      <div key={b.itemId} className="flex items-center gap-2 bg-white border border-red-500/15 rounded-2xl pl-4 pr-2 py-3 hover:border-red-200 transition-all">
+                        <Link href={`/${b.orgSlug}/${b.auctionSlug}/item/${b.itemId}`} className="flex items-center gap-3 flex-1 min-w-0">
+                          <Photo url={b.photo} title={b.itemTitle} />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-sm truncate">{b.itemTitle}</div>
+                            <div className="text-[#8a7559] text-xs truncate">{b.auctionTitle}</div>
                           </div>
-                          <div className={`text-xs mt-0.5 ${
-                            b.outcome === "won"
-                              ? b.pickedUp ? "text-[#8a7559]" : "text-[#5f7a45] font-medium"
-                              : "text-[#8a7559]"
-                          }`}>
-                            {b.outcome === "won"
-                              ? b.pickedUp ? "Picked up" : "Won"
-                              : b.outcome === "unsold" ? "Unsold" : "Lost"}
+                          <div className="text-right shrink-0">
+                            <div className="text-[#6f5b46] font-semibold text-sm">${b.myBid.toLocaleString()}</div>
+                            <div className="text-red-600 text-xs mt-0.5">High: ${b.currentBid.toLocaleString()}</div>
                           </div>
-                          {b.outcome === "won" && b.paid && b.auctionId && (
-                            <Link
-                              href={`/invoice/${b.auctionId}`}
-                              className="text-xs text-[#6c4d39] hover:text-[#c47b3e] underline mt-0.5 inline-block"
-                            >
-                              View / print receipt
-                            </Link>
-                          )}
-                        </div>
+                        </Link>
+                        <button
+                          onClick={() => dismissLosing(b.itemId)}
+                          aria-label="Remove — not interested"
+                          title="Not interested — remove from this list"
+                          className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[#b3a085] hover:text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <svg width="15" height="15" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 3l8 8M11 3l-8 8" /></svg>
+                        </button>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {winning.length === 0 && losing.length === 0 && unpaidWins.length === 0 && past.length === 0 && (
+              {winning.length === 0 && visibleLosing.length === 0 && unpaidWins.length === 0 && past.length === 0 && (
                 <div className="bg-white border border-[#e3d6bf] rounded-2xl p-12 text-center">
                   <div className="mb-4 flex justify-center">
                     <WoodenCrate className="w-28 h-24" />
@@ -872,7 +852,7 @@ function BidderDashboardInner() {
           {/* ── Active Bids (winning + outbid combined) ── */}
           {tab === "active" && (
             <div className="max-w-3xl space-y-8">
-              {winning.length === 0 && losing.length === 0 ? (
+              {winning.length === 0 && visibleLosing.length === 0 ? (
                 <div className="bg-white border border-[#e3d6bf] rounded-2xl p-12 text-center">
                   <div className="mb-4 flex justify-center">
                     <WoodenCrate className="w-28 h-24" />
@@ -929,11 +909,11 @@ function BidderDashboardInner() {
                   )}
 
                   {/* You've been outbid */}
-                  {losing.length > 0 && (
+                  {visibleLosing.length > 0 && (
                     <section>
                       <div className="flex items-center gap-2 mb-3">
                         <span className="w-2 h-2 rounded-full bg-red-600 inline-block" />
-                        <h2 className="font-bold text-red-600 text-sm uppercase tracking-wider">You&apos;ve been outbid ({losing.length})</h2>
+                        <h2 className="font-bold text-red-600 text-sm uppercase tracking-wider">You&apos;ve been outbid ({visibleLosing.length})</h2>
                       </div>
                       <div className="space-y-3">
                         {losingSorted.map((b) => {
@@ -953,12 +933,20 @@ function BidderDashboardInner() {
                                 <div className="text-[#8a7559] text-xs mt-1">current high bid</div>
                                 <div className="text-red-600 font-extrabold text-lg">{money(b.currentBid)}</div>
                               </div>
-                              <Link
-                                href={`/${b.orgSlug}/${b.auctionSlug}/item/${b.itemId}`}
-                                className="w-full sm:w-auto shrink-0 text-center bg-red-600 hover:bg-red-700 text-white font-bold text-sm px-5 py-3 rounded-xl transition-colors"
-                              >
-                                Bid again{nextBid !== null ? ` (top ${money(nextBid)})` : ""}
-                              </Link>
+                              <div className="flex flex-col gap-2 w-full sm:w-auto shrink-0">
+                                <Link
+                                  href={`/${b.orgSlug}/${b.auctionSlug}/item/${b.itemId}`}
+                                  className="text-center bg-red-600 hover:bg-red-700 text-white font-bold text-sm px-5 py-3 rounded-xl transition-colors"
+                                >
+                                  Bid again{nextBid !== null ? ` (top ${money(nextBid)})` : ""}
+                                </Link>
+                                <button
+                                  onClick={() => dismissLosing(b.itemId)}
+                                  className="text-center text-[#8a7559] hover:text-red-600 text-xs font-semibold transition-colors"
+                                >
+                                  Not interested — remove
+                                </button>
+                              </div>
                             </div>
                           );
                         })}
