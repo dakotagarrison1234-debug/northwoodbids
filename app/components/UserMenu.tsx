@@ -238,8 +238,7 @@ export default function UserMenu() {
           <NavLink href="/refer" iconEl={<IcoGift />} label="Bid Bucks" sublabel="Invite friends, get $5 off" onClick={close} accent="brown" />
 
           <SectionLabel>Account</SectionLabel>
-          <NavLink href="/account" iconEl={<IcoUser />} label="Profile" sublabel="Name, email, phone" onClick={close} />
-          <NavLink href="/account" iconEl={<IcoCard />} label="Payment Method" sublabel="Cards on file" onClick={close} />
+          <NavLink href="/account" iconEl={<IcoUser />} label="My Profile" sublabel="Name, email, phone & payment cards" onClick={close} />
           <NavLink href="/help" iconEl={<IcoHelp />} label="Info & Help" sublabel="Bidding tips, increments, FAQ" onClick={close} />
 
           {(me?.orgId || me?.isSuperAdmin) && (

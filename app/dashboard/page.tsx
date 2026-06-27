@@ -413,13 +413,14 @@ function BidderDashboardInner() {
   const myBidsTabs: Tab[] = ["overview", "active", "history"];
   const inMyBids = myBidsTabs.includes(tab);
 
-  const navItems: { key: string; label: string; shortLabel: string; count?: number; icon: React.ReactNode; active: boolean; onClick: () => void }[] = [
+  const navItems: { key: string; label: string; shortLabel: string; count?: number; icon: React.ReactNode; active: boolean; accent?: "red"; onClick: () => void }[] = [
     {
       key: "myBids",
       label: "My Bids",
       shortLabel: "Bids",
       icon: <IcoGrid />,
       active: inMyBids,
+      accent: "red", // primary destination — highlighted
       onClick: () => setTab(activeCount > 0 ? "active" : "overview"),
       count: activeCount,
     },
@@ -432,12 +433,12 @@ function BidderDashboardInner() {
       onClick: () => setTab("auctions"),
     },
     {
-      key: "profile",
-      label: "Account",
-      shortLabel: "Account",
-      icon: <IcoUser />,
-      active: tab === "profile",
-      onClick: () => setTab("profile"),
+      key: "pickup",
+      label: "Pickup",
+      shortLabel: "Pickup",
+      icon: <IcoPackage />,
+      active: false, // lives on its own page
+      onClick: () => router.push("/pickup"),
     },
   ];
 
@@ -453,27 +454,30 @@ function BidderDashboardInner() {
           </p>
         </div>
         <nav className="flex-1 px-3 py-3 space-y-0.5">
-          {navItems.map((item) => (
+          {navItems.map((item) => {
+            const isRed = item.accent === "red";
+            return (
             <button
               key={item.key}
               onClick={item.onClick}
               className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${
                 item.active
-                  ? "bg-[#efe3d0] text-[#241a12]"
-                  : "text-[#8a7559] hover:text-[#241a12] hover:bg-[#efe3d0]/50"
+                  ? isRed ? "bg-red-50 text-red-700 font-semibold" : "bg-[#efe3d0] text-[#241a12]"
+                  : isRed ? "text-red-600 hover:bg-red-50 font-semibold" : "text-[#8a7559] hover:text-[#241a12] hover:bg-[#efe3d0]/50"
               }`}
             >
               <div className="flex items-center gap-3">
-                <span className={item.active ? "text-[#6c4d39]" : ""}>{item.icon}</span>
+                <span className={isRed ? "text-red-600" : item.active ? "text-[#6c4d39]" : ""}>{item.icon}</span>
                 <span className="text-sm font-medium">{item.label}</span>
               </div>
               {item.count !== undefined && item.count > 0 && (
-                <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-[#6c4d39]/15 text-[#6c4d39]">
+                <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${isRed ? "bg-red-600/15 text-red-700" : "bg-[#6c4d39]/15 text-[#6c4d39]"}`}>
                   {item.count}
                 </span>
               )}
             </button>
-          ))}
+            );
+          })}
         </nav>
       </aside>
 
@@ -1171,23 +1175,27 @@ function BidderDashboardInner() {
 
       {/* ── Mobile bottom tab bar ── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-[#e3d6bf]/60 flex z-50 bar-safe-bottom safe-x">
-        {navItems.map((item) => (
+        {navItems.map((item) => {
+          const isRed = item.accent === "red";
+          const color = isRed
+            ? "text-red-600"
+            : item.active ? "text-[#6c4d39]" : "text-[#8a7559] hover:text-[#6f5b46]";
+          return (
           <button
             key={item.key}
             onClick={item.onClick}
-            className={`flex-1 flex flex-col items-center justify-center py-2.5 gap-1 relative transition-colors ${
-              item.active ? "text-[#6c4d39]" : "text-[#8a7559] hover:text-[#6f5b46]"
-            }`}
+            className={`flex-1 flex flex-col items-center justify-center py-2.5 gap-1 relative transition-colors ${color}`}
           >
             {item.icon}
             <span className="text-[9px] font-semibold leading-none tracking-wide uppercase">{item.shortLabel}</span>
             {item.count !== undefined && item.count > 0 && (
-              <span className="absolute top-1.5 right-[10%] text-[9px] w-3.5 h-3.5 rounded-full flex items-center justify-center font-bold bg-[#6c4d39] text-white">
+              <span className={`absolute top-1.5 right-[10%] text-[9px] w-3.5 h-3.5 rounded-full flex items-center justify-center font-bold text-white ${isRed ? "bg-red-600" : "bg-[#6c4d39]"}`}>
                 {item.count}
               </span>
             )}
           </button>
-        ))}
+          );
+        })}
       </nav>
 
     </div>
