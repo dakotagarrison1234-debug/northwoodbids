@@ -26,6 +26,13 @@ export async function GET() {
     const org = await prisma.organization.findFirst();
     if (!org) return NextResponse.json({ error: "No organization" }, { status: 404 });
 
+    // The bidder's chosen preferred pickup location (drives ready-vs-transfer).
+    const profile = await prisma.bidderProfile.findUnique({
+      where: { clerkUserId: userId },
+      select: { preferredPickupLocationId: true },
+    });
+    const preferredLocationId = profile?.preferredPickupLocationId ?? null;
+
     // The bidder's active SCHEDULED appointment. Show the soonest UPCOMING one;
     // if they only have past-dated SCHEDULED appointments (e.g. they missed the
     // time and it was never marked collected), still surface the most recent so
@@ -138,7 +145,7 @@ export async function GET() {
       }))
     );
 
-    return NextResponse.json({ appointment, unscheduledItems, locations, pendingTransfers });
+    return NextResponse.json({ appointment, unscheduledItems, locations, pendingTransfers, preferredLocationId });
   } catch (err) {
     console.error("[pickup GET]:", err);
     return NextResponse.json(

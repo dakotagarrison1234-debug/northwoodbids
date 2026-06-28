@@ -318,6 +318,9 @@ model BidderProfile {
   avatarKey      String?
   preferredOrgId String?
   preferredOrg   Organization? @relation(fields: [preferredOrgId], references: [id])
+  // The bidder's chosen pickup location. Items won here are "ready"; items won
+  // elsewhere are auto-transferred here. Cleared/changed via "switch location".
+  preferredPickupLocationId String?
   blocked        Boolean       @default(false)
   blockedAt      DateTime?
   blockedReason  String?

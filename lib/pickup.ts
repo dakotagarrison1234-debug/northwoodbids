@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { notifyTransferRequested } from "@/lib/transferNotify";
 
 /**
  * Pickup scheduling helpers. All pickup times are interpreted in the business's
@@ -158,11 +159,84 @@ export async function attachToPendingTransfers(
 }
 
 /**
+ * If the bidder has chosen a PREFERRED pickup location, automatically transfer
+ * any unscheduled won items sitting at OTHER locations to that preferred location
+ * (one REQUESTED transfer per bidder, appended to). This realizes "pick up here,
+ * everything else gets moved here." Returns the count newly added. Fires the
+ * team transfer-requested SMS when a transfer is created or grows.
+ */
+export async function autoTransferToPreferred(
+  clerkUserId: string,
+  organizationId: string
+): Promise<{ added: number; toLocationName: string | null }> {
+  const profile = await prisma.bidderProfile.findUnique({
+    where: { clerkUserId },
+    select: { preferredPickupLocationId: true },
+  });
+  const preferredId = profile?.preferredPickupLocationId;
+  if (!preferredId) return { added: 0, toLocationName: null };
+
+  const preferred = await prisma.pickupLocation.findFirst({
+    where: { id: preferredId, organizationId, isActive: true },
+    select: { id: true, name: true },
+  });
+  if (!preferred) return { added: 0, toLocationName: null }; // stale/inactive — skip
+
+  const wonBids = await prisma.bid.findMany({
+    where: { clerkUserId, status: "WON", item: { organizationId } },
+    select: { itemId: true },
+  });
+  const ids = [...new Set(wonBids.map((b) => b.itemId))];
+  if (ids.length === 0) return { added: 0, toLocationName: preferred.name };
+
+  // Unscheduled paid items NOT at the preferred location and not already moving.
+  const elsewhere = await prisma.item.findMany({
+    where: {
+      id: { in: ids },
+      status: "PENDING_PICKUP",
+      pickupAppointmentId: null,
+      transferRequestId: null,
+      locationId: { not: null },
+      NOT: { locationId: preferred.id },
+    },
+    select: { id: true },
+  });
+  if (elsewhere.length === 0) return { added: 0, toLocationName: preferred.name };
+
+  // One still-gathering (REQUESTED) transfer per bidder to the preferred location.
+  let transfer = await prisma.transferRequest.findFirst({
+    where: { clerkUserId, organizationId, toLocationId: preferred.id, status: "REQUESTED" },
+    select: { id: true },
+  });
+  let created = false;
+  if (!transfer) {
+    transfer = await prisma.transferRequest.create({
+      data: { organizationId, clerkUserId, toLocationId: preferred.id, status: "REQUESTED" },
+      select: { id: true },
+    });
+    created = true;
+  }
+  await prisma.item.updateMany({
+    where: { id: { in: elsewhere.map((i) => i.id) } },
+    data: { transferRequestId: transfer.id },
+  });
+
+  // Team alert (fire-and-forget) — only worth pinging when it's a fresh transfer
+  // or items were added.
+  if (created || elsewhere.length > 0) {
+    notifyTransferRequested(transfer.id).catch((e) =>
+      console.error("notifyTransferRequested (auto) failed:", e)
+    );
+  }
+
+  return { added: elsewhere.length, toLocationName: preferred.name };
+}
+
+/**
  * Run after a payment settles: fold the newly-paid items into the bidder's
- * existing pickup appointment (items at its location) AND into any not-yet-loaded
- * transfer (items elsewhere). Appointment attach runs first so destination items
- * are claimed there, and the transfer pass only sweeps up what's left. The bidder
- * sees the result on their dashboard pickup card (no notification needed).
+ * existing pickup appointment (items at its location), into any not-yet-loaded
+ * transfer (items elsewhere), AND — if a preferred pickup location is set —
+ * auto-transfer anything still elsewhere to that preferred location.
  */
 export async function autoAttachPaidItems(
   clerkUserId: string,
@@ -170,6 +244,11 @@ export async function autoAttachPaidItems(
 ): Promise<void> {
   await attachToUpcomingAppointment(clerkUserId, organizationId);
   await attachToPendingTransfers(clerkUserId, organizationId);
+  try {
+    await autoTransferToPreferred(clerkUserId, organizationId);
+  } catch (e) {
+    console.error("autoTransferToPreferred failed:", e);
+  }
 }
 
 /**
