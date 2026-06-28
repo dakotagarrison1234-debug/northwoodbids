@@ -622,6 +622,17 @@ export default function PickupPage() {
               </button>
             </div>
 
+            {/* Chosen location is no longer open for scheduling — guide them to switch */}
+            {!preferredSched && (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3.5 text-base text-amber-800">
+                Your pickup location isn&apos;t available for scheduling right now.{" "}
+                <button onClick={() => { setSwitching(true); setRescheduling(false); }} className="font-semibold underline underline-offset-2">
+                  Choose another location
+                </button>{" "}
+                to schedule a time.
+              </div>
+            )}
+
             {/* Nothing waiting yet — but the location is set for future wins */}
             {!appointment && ready.length === 0 && transferCount === 0 && (
               <div className="bg-white border border-[#e3d6bf] rounded-2xl px-6 py-10 text-center">
@@ -696,20 +707,26 @@ export default function PickupPage() {
               </>
             )}
 
-            {/* Rescheduling (time only — location stays the preferred one) */}
-            {appointment && rescheduling && (
-              <div className="space-y-5">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold">Pick a new time</h2>
-                  <button onClick={() => setRescheduling(false)} className="text-base text-[#6c4d39] hover:text-[#563e2c] font-semibold">Cancel</button>
+            {/* Rescheduling (time only — at the appointment's own location). Use that
+                location's live slots so what's shown is exactly what gets booked. */}
+            {appointment && rescheduling && (() => {
+              const apptSched = locations.find((l) => l.id === appointment.location.id);
+              return (
+                <div className="space-y-5">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold">Pick a new time</h2>
+                    <button onClick={() => setRescheduling(false)} className="text-base text-[#6c4d39] hover:text-[#563e2c] font-semibold">Cancel</button>
+                  </div>
+                  {apptSched ? (
+                    <SlotPicker location={apptSched} onBook={(_loc, startsAt) => reschedule(appointment.location.id, startsAt)} busy={busy} submitLabel="Update pickup" />
+                  ) : (
+                    <div className="rounded-xl border border-[#e3d6bf] bg-white px-4 py-6 text-base text-[#8a7559]">
+                      This location isn&apos;t open for scheduling right now. You can cancel this pickup, or contact us for help.
+                    </div>
+                  )}
                 </div>
-                {preferredSched ? (
-                  <SlotPicker location={preferredSched} onBook={(_loc, startsAt) => reschedule(appointment.location.id, startsAt)} busy={busy} submitLabel="Update pickup" />
-                ) : (
-                  <div className="rounded-xl border border-[#e3d6bf] bg-white px-4 py-6 text-base text-[#8a7559]">No times are available right now.</div>
-                )}
-              </div>
-            )}
+              );
+            })()}
 
             {/* No appointment yet: schedule the ready items */}
             {!appointment && (

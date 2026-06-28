@@ -118,6 +118,16 @@ export async function attachToPendingTransfers(
   });
   if (transfers.length === 0) return { attached: 0, toLocationName: null };
 
+  // If the bidder has a preferred pickup location, everything elsewhere belongs on
+  // a transfer to THAT location — never fold items into a stray transfer headed
+  // somewhere else. Let autoTransferToPreferred own this case unless a preferred-
+  // bound transfer already exists.
+  const prof = await prisma.bidderProfile.findUnique({
+    where: { clerkUserId },
+    select: { preferredPickupLocationId: true },
+  });
+  const preferredId = prof?.preferredPickupLocationId ?? null;
+
   // Prefer the transfer headed to the bidder's upcoming appointment location.
   const appt = await prisma.pickupAppointment.findFirst({
     where: { clerkUserId, organizationId, status: "SCHEDULED", startsAt: { gte: new Date() } },
@@ -125,8 +135,14 @@ export async function attachToPendingTransfers(
     select: { locationId: true },
   });
 
-  let target = appt ? transfers.find((t) => t.toLocationId === appt.locationId) ?? null : null;
-  if (!target) target = transfers.length === 1 ? transfers[0] : null;
+  let target: (typeof transfers)[number] | null = null;
+  if (preferredId) {
+    // Only ever target the preferred-bound transfer; otherwise defer to autoTransfer.
+    target = transfers.find((t) => t.toLocationId === preferredId) ?? null;
+  } else {
+    target = appt ? transfers.find((t) => t.toLocationId === appt.locationId) ?? null : null;
+    if (!target) target = transfers.length === 1 ? transfers[0] : null;
+  }
   if (!target) return { attached: 0, toLocationName: null }; // ambiguous — don't guess
 
   const wonBids = await prisma.bid.findMany({

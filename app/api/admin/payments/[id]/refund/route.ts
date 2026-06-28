@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma, type OrgRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg, requireRole } from "@/lib/auth";
+import { releaseReferralCredit } from "@/lib/referral";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -76,12 +77,31 @@ export async function POST(
   // refundCents === 0 → the item was fully covered by Bid Bucks (no card charge);
   // nothing to send back to Stripe, just restore the coupon + free the item below.
 
+  // Return any Bid Bucks coupon that was redeemed on this payment. Prefer DELETING
+  // the original "referral_redeemed" row (via its redemptionKey, stored in the PI
+  // metadata) — that both restores the balance AND removes the spend record, so the
+  // coupon book count stays accurate and the key can never be reused for a free
+  // re-redemption. If we can't resolve the key (e.g. fully covered, no PI), fall
+  // back to writing a compensating credit row.
+  let creditReleased = false;
+  if (Number(payment.creditApplied ?? 0) > 0 && payment.stripePaymentIntentId) {
+    try {
+      const pi = await stripe.paymentIntents.retrieve(payment.stripePaymentIntentId);
+      const key = pi.metadata?.redemptionKey;
+      if (key) {
+        await releaseReferralCredit(key);
+        creditReleased = true;
+      }
+    } catch (e) {
+      console.error("[admin refund] credit key lookup failed:", e);
+    }
+  }
+
   const ops: Prisma.PrismaPromise<unknown>[] = [
     prisma.payment.update({ where: { id: payment.id }, data: { status: "REFUNDED" } }),
   ];
 
-  // Return any Bid Bucks coupon that was redeemed on this payment.
-  if (Number(payment.creditApplied ?? 0) > 0) {
+  if (Number(payment.creditApplied ?? 0) > 0 && !creditReleased) {
     ops.push(
       prisma.creditLedger.create({
         data: {

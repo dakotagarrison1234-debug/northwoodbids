@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { getNextValidBid } from "@/lib/bidIncrements";
 import { resolveProxiesAfterBid } from "@/lib/proxyBidResolver";
 import { getPusherServer, triggerAuctionUpdated } from "@/lib/pusherServer";
@@ -48,7 +49,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Enforce per-item end time (popcorn-aware)
-    const effectiveEndAt = item.itemEndAt ?? item.auction.endAt;
+    const auctionEndAt = item.auction.endAt;
+    const effectiveEndAt = item.itemEndAt ?? auctionEndAt;
     if (new Date() > effectiveEndAt) {
       return NextResponse.json({ error: "Bidding for this item has ended" }, { status: 400 });
     }
@@ -110,12 +112,22 @@ export async function POST(request: NextRequest) {
     // Guard on status ACTIVE so a bid can't land on an item the cron is concurrently
     // closing, and guard on itemEndAt so an expired item rejects the bid.
     const bid = await prisma.$transaction(async (tx) => {
+      // End-time guard. An item with a per-item end (popcorn) must have it in the
+      // future. An item with NO per-item end falls back to the auction's end — so
+      // only allow the itemEndAt:null branch while the auction itself is still open.
+      // (updateMany can't filter on the related auction, so we use the auction.endAt
+      // we already loaded, re-checked against "now" at write time.)
+      const nowTx = new Date();
+      const endGuard: Prisma.ItemWhereInput["OR"] =
+        auctionEndAt > nowTx
+          ? [{ itemEndAt: null }, { itemEndAt: { gt: nowTx } }]
+          : [{ itemEndAt: { gt: nowTx } }];
       const guard = await tx.item.updateMany({
         where: {
           id: itemId,
           status: "ACTIVE",
           currentBid: { lt: amount },
-          OR: [{ itemEndAt: null }, { itemEndAt: { gt: new Date() } }],
+          OR: endGuard,
         },
         data: {
           currentBid: amount,

@@ -80,14 +80,21 @@ async function placeProxyBid(
     prisma.bidderProfile.findUnique({ where: { clerkUserId: proxy.clerkUserId } }),
   ]);
 
-  // Atomic: optimistic-lock guard + mark existing ACTIVE bid OUTBID + create proxy auto-bid
+  // Atomic: optimistic-lock guard + mark existing ACTIVE bid OUTBID + create proxy auto-bid.
+  // End-time guard: an item with no per-item end falls back to the auction end, so
+  // only allow the itemEndAt:null branch while the auction itself is still open.
+  const nowTx = new Date();
+  const auctionOpen = item.auction ? item.auction.endAt > nowTx : true;
+  const endGuard: Prisma.ItemWhereInput["OR"] = auctionOpen
+    ? [{ itemEndAt: null }, { itemEndAt: { gt: nowTx } }]
+    : [{ itemEndAt: { gt: nowTx } }];
   const newBid = await prisma.$transaction(async (tx) => {
     const guard = await tx.item.updateMany({
       where: {
         id: item.id,
         status: "ACTIVE",
         currentBid: allowEqual ? { lte: amount } : { lt: amount },
-        OR: [{ itemEndAt: null }, { itemEndAt: { gt: new Date() } }],
+        OR: endGuard,
       },
       data: {
         currentBid: amount,

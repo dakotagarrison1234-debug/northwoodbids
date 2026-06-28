@@ -13,6 +13,10 @@ const isPublicRoute = createRouteMatcher([
   "/join(.*)",
   "/search(.*)",
   "/api/search(.*)",
+  "/help(.*)",             // public help / FAQ
+  "/play(.*)",             // public mini-game
+  "/terms(.*)",            // public legal
+  "/privacy(.*)",          // public legal
   "/:orgSlug",
   "/:orgSlug/:auctionSlug(.*)",
 ]);

@@ -20,7 +20,7 @@ export const STATUS_STYLES: Record<string, string> = {
   SOLD: "bg-[#6c4d39]/15 text-[#563e2c]", // brown — sold
   UNSOLD: "bg-red-50 text-red-600", // muted red — no sale
   PENDING_PICKUP: "bg-[#c47b3e]/20 text-[#8a4f1c]", // burnt orange — NEEDS ACTION
-  PICKED_UP: "bg-[#5f7a45]/18 text-[#3f5226]", // green — DONE (clearly ≠ pending)
+  PICKED_UP: "bg-[#3f5226] text-[#eef3e4]", // solid forest — DONE (≠ pending AND ≠ live/paid green tint)
 
   // ── Bid statuses ──
   // ACTIVE shared with item statuses above
@@ -35,8 +35,8 @@ export const STATUS_STYLES: Record<string, string> = {
   REFUNDED: "bg-[#dcd3c4] text-[#5a4a38]", // neutral slate
 };
 
-/** Fallback style for any unknown status. */
-const FALLBACK_STYLE = "bg-[#e7dcc6] text-[#6f5b46]";
+/** Fallback style for any unknown/unexpected status (distinct from DRAFT's tan). */
+const FALLBACK_STYLE = "bg-[#ece8e1] text-[#9a8a76]";
 
 export function statusStyle(status: string): string {
   return STATUS_STYLES[status] ?? FALLBACK_STYLE;

@@ -824,12 +824,21 @@ function NewItemForm() {
 
             <div className="mt-4">
               <label className="text-base text-[#6f5b46] mb-1.5 block">Warehouse *</label>
-              <select name="locationId" value={formData.locationId} onChange={handleChange}
-                className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]">
-                <option value="">Choose a warehouse…</option>
-                {pickupLocations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-              </select>
-              <p className="text-[#8a7559] text-sm mt-2">Which warehouse this item is in (Owosso, Gladwin, …)</p>
+              {pickupLocations.length === 0 ? (
+                <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3.5 text-base text-amber-800">
+                  You don&apos;t have any warehouses yet. Items need a warehouse before they can be saved.{" "}
+                  <a href="/admin/pickup" className="font-semibold underline underline-offset-2">Set up a warehouse first →</a>
+                </div>
+              ) : (
+                <>
+                  <select name="locationId" value={formData.locationId} onChange={handleChange}
+                    className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]">
+                    <option value="">Choose a warehouse…</option>
+                    {pickupLocations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                  </select>
+                  <p className="text-[#8a7559] text-sm mt-2">Which warehouse this item is in (Owosso, Gladwin, …)</p>
+                </>
+              )}
             </div>
           </div>
 

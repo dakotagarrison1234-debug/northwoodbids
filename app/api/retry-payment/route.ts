@@ -80,10 +80,13 @@ export async function POST(request: NextRequest) {
     const chargeAmount = Math.round(bidAmount * 100) + feeAmount + taxAmount; // total cents
 
     // ── Bid Bucks: apply one $5 coupon to this retry too (same rules as auto-charge).
-    // Reserved up front; released on every failure path. Keyed to the retry's
-    // idempotency key so a double-click reuses the reservation and the webhook can
-    // release it on async failure/cancel.
-    const redemptionKey = `retry-${itemId}-${userId}-${bidderCustomer.defaultPaymentMethodId}`;
+    // Reserved up front; released on every failure path. The CREDIT key is keyed to
+    // item+user ONLY (not the card) so that retrying with a different card reuses the
+    // same reservation instead of reserving a second $5 and stranding the first.
+    // The Stripe IDEMPOTENCY key keeps the card id so a genuine new-card retry still
+    // produces a fresh PaymentIntent while a double-click with the same card is safe.
+    const redemptionKey = `retry-${itemId}-${userId}`;
+    const idempotencyKey = `retry-${itemId}-${userId}-${bidderCustomer.defaultPaymentMethodId}`;
     const discountCents = await reserveReferralCredit(userId, chargeAmount, redemptionKey);
     const netAmount = chargeAmount - discountCents;
     const creditApplied = discountCents > 0 ? discountCents / 100 : null;
@@ -118,7 +121,7 @@ export async function POST(request: NextRequest) {
           // PM id is part of the key on purpose: a double-click with the SAME card
           // is idempotent (no double charge), but a genuine retry with an UPDATED
           // card produces a new key so the new card is actually attempted.
-          idempotencyKey: redemptionKey,
+          idempotencyKey,
         }
       );
     } catch (err: unknown) {

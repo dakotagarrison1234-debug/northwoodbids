@@ -854,7 +854,7 @@ export default function ItemPage() {
                         </div>
                         {feePct > 0 && (
                           <div className="flex justify-between text-[#6f5b46]">
-                            <span>Buyer premium ({feePct}%)</span>
+                            <span>Buyer&apos;s premium ({feePct}%)</span>
                             <span className="tabular-nums">${fmt(feeCents)}</span>
                           </div>
                         )}

@@ -384,7 +384,7 @@ function maskName(name: string | null): string {
 
 /** Everything the /refer page needs in one shot. */
 export async function getReferralSummary(clerkUserId: string): Promise<ReferralSummary> {
-  const [code, balance, referrals, redemptionRows] = await Promise.all([
+  const [code, balance, referrals, redemptionRows, refundReturnCount] = await Promise.all([
     getOrCreateReferralCode(clerkUserId),
     getCreditBalance(clerkUserId),
     prisma.referral.findMany({
@@ -399,9 +399,17 @@ export async function getReferralSummary(clerkUserId: string): Promise<ReferralS
       orderBy: { createdAt: "desc" },
       select: { amount: true, createdAt: true, redemptionKey: true },
     }),
+    // Refunds that gave a coupon back via a compensating row (older path / fully-
+    // covered items). Each one reverses a spend, so net them out of the count.
+    prisma.creditLedger.count({
+      where: { clerkUserId, reason: "referral_refund_return" },
+    }),
   ]);
 
-  const redeemedCount = redemptionRows.length;
+  // Net spend = redemptions minus any that were refunded back, so the coupon book
+  // never shows a coupon as permanently spent after it was returned.
+  const netRedeemedCount = Math.max(0, redemptionRows.length - refundReturnCount);
+  const redeemedCount = netRedeemedCount;
 
   // Resolve the auction title for each redemption from its key.
   const redemptionAuctionIds = redemptionRows
@@ -418,15 +426,19 @@ export async function getReferralSummary(clerkUserId: string): Promise<ReferralS
     : [];
   const auctionTitleById = new Map(auctions.map((a) => [a.id, a.title]));
 
-  const redemptions = redemptionRows.map((r) => {
-    const m = r.redemptionKey?.match(/^autocharge-([^-]+)-/);
-    const auctionId = m ? m[1] : null;
-    return {
-      amount: Math.abs(Number(r.amount)),
-      date: r.createdAt.toISOString(),
-      auctionTitle: (auctionId && auctionTitleById.get(auctionId)) || "an auction",
-    };
-  });
+  const redemptions = redemptionRows
+    // Show only the net-remaining redemptions (drop the most recent ones that were
+    // refunded back via a compensating row).
+    .slice(0, netRedeemedCount)
+    .map((r) => {
+      const m = r.redemptionKey?.match(/^autocharge-([^-]+)-/);
+      const auctionId = m ? m[1] : null;
+      return {
+        amount: Math.abs(Number(r.amount)),
+        date: r.createdAt.toISOString(),
+        auctionTitle: (auctionId && auctionTitleById.get(auctionId)) || "an auction",
+      };
+    });
 
   const referredIds = referrals.map((r) => r.referredUserId);
   const profiles = referredIds.length
