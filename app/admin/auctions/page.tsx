@@ -2,10 +2,9 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireUserOrg } from "@/lib/auth";
-import LocalDate from "@/app/components/LocalDate";
 import RefreshButton from "../RefreshButton";
 import PusherRefresh from "@/app/components/PusherRefresh";
-import { statusStyle } from "@/lib/statusStyles";
+import AuctionsList, { type AuctionSummary } from "./AuctionsList";
 
 const SOLD_STATUSES = ["SOLD", "PENDING_PICKUP", "PICKED_UP"];
 
@@ -20,6 +19,38 @@ export default async function AuctionsPage() {
       items: { select: { status: true, currentBid: true, _count: { select: { bids: true } } } },
     },
   });
+
+  const now = new Date();
+  const summaries: AuctionSummary[] = auctions.map((auction) => {
+    const raised = auction.items
+      .filter((i) => SOLD_STATUSES.includes(i.status))
+      .reduce((sum, i) => sum + Number(i.currentBid), 0);
+    const totalBids = auction.items.reduce((sum, i) => sum + i._count.bids, 0);
+    const isScheduled = auction.status === "DRAFT" && auction.startAt > now;
+    return {
+      id: auction.id,
+      title: auction.title,
+      status: auction.status,
+      isScheduled,
+      itemsCount: auction.items.length,
+      raised,
+      totalBids,
+      startAtIso: auction.startAt.toISOString(),
+      endAtIso: auction.endAt.toISOString(),
+    };
+  });
+
+  // Live = OPEN/CLOSING (soonest to close first); Upcoming = not-yet-open DRAFTs
+  // (soonest to open first); Closed = everything else (most recent first).
+  const live = summaries
+    .filter((a) => a.status === "OPEN" || a.status === "CLOSING")
+    .sort((a, b) => a.endAtIso.localeCompare(b.endAtIso));
+  const upcoming = summaries
+    .filter((a) => a.status === "DRAFT")
+    .sort((a, b) => a.startAtIso.localeCompare(b.startAtIso));
+  const closed = summaries
+    .filter((a) => a.status !== "OPEN" && a.status !== "CLOSING" && a.status !== "DRAFT")
+    .sort((a, b) => b.endAtIso.localeCompare(a.endAtIso));
 
   return (
     <>
@@ -43,47 +74,7 @@ export default async function AuctionsPage() {
             </Link>
           </div>
         ) : (
-          <div className="space-y-4">
-            {auctions.map((auction) => {
-              const raised = auction.items
-                .filter(i => SOLD_STATUSES.includes(i.status))
-                .reduce((sum, i) => sum + Number(i.currentBid), 0);
-              const totalBids = auction.items.reduce((sum, i) => sum + i._count.bids, 0);
-              const isScheduled = auction.status === "DRAFT" && auction.startAt > new Date();
-
-              return (
-                <Link
-                  key={auction.id}
-                  href={`/admin/auctions/${auction.id}`}
-                  className="block bg-white border border-[#e3d6bf] hover:border-[#b9a98c] rounded-xl p-6 transition-colors"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-semibold text-xl truncate">{auction.title}</h3>
-                        <span className={`text-sm px-2.5 py-0.5 rounded-full shrink-0 font-medium ${
-                          isScheduled ? "bg-[#6c4d39]/12 text-[#6c4d39]" : statusStyle(auction.status)
-                        }`}>
-                          {isScheduled ? "scheduled" : auction.status.toLowerCase()}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-base text-[#8a7559]">
-                        <span>{auction.items.length} items</span>
-                        <span className="text-[#6c4d39] font-medium">${raised.toLocaleString()} total</span>
-                        {totalBids > 0 && <span>{totalBids} bids</span>}
-                        <span>
-                          <LocalDate iso={auction.startAt.toISOString()} format="date" /> → <LocalDate iso={auction.endAt.toISOString()} format="date" />
-                        </span>
-                      </div>
-                    </div>
-                    <span className="text-[#8a7559] hover:text-[#241a12] text-base font-semibold whitespace-nowrap shrink-0 self-end sm:self-auto">
-                      Manage →
-                    </span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+          <AuctionsList live={live} upcoming={upcoming} closed={closed} />
         )}
       </div>
     </>
