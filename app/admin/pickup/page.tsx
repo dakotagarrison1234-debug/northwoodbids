@@ -129,6 +129,8 @@ function localInputToIso(local: string) {
 export default function AdminPickupPage() {
   const [tab, setTab] = useState<"appointments" | "locations" | "transfers">("appointments");
   const [selectedApptId, setSelectedApptId] = useState<string | null>(null);
+  const [showCollected, setShowCollected] = useState(false);
+  const [showCompletedTransfers, setShowCompletedTransfers] = useState(false);
   const [apptSearch, setApptSearch] = useState("");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -334,8 +336,6 @@ export default function AdminPickupPage() {
     (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()
   );
   const filteredScheduled = sortedScheduled.filter((a) => apptMatches(a, apptSearch));
-  const activeAppt =
-    filteredScheduled.find((a) => a.id === selectedApptId) ?? filteredScheduled[0] ?? null;
   const activeTransfers = transfers.filter(
     (t) => t.status === "REQUESTED" || t.status === "LOADED"
   );
@@ -397,170 +397,158 @@ export default function AdminPickupPage() {
                   No upcoming appointments yet.
                 </div>
               ) : (
-                <div className="grid lg:grid-cols-[340px_1fr] gap-6 items-start">
-                  {/* List of customers */}
-                  <div className="space-y-3">
-                    <input
-                      type="text"
-                      value={apptSearch}
-                      onChange={(e) => setApptSearch(e.target.value)}
-                      placeholder="Search customer or item…"
-                      className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-base focus:outline-none focus:border-[#6c4d39]"
-                    />
-                    {filteredScheduled.length === 0 ? (
-                      <p className="text-base text-[#8a7559] px-1 py-3">No matches.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {filteredScheduled.map((a) => {
-                          const isActive = activeAppt?.id === a.id;
-                          return (
+                <div className="space-y-3 max-w-3xl">
+                  <input
+                    type="text"
+                    value={apptSearch}
+                    onChange={(e) => setApptSearch(e.target.value)}
+                    placeholder="Search customer or item…"
+                    className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-base focus:outline-none focus:border-[#6c4d39]"
+                  />
+                  {filteredScheduled.length === 0 ? (
+                    <p className="text-base text-[#8a7559] px-1 py-3">No matches.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {filteredScheduled.map((a) => {
+                        const expanded = selectedApptId === a.id;
+                        return (
+                          <div key={a.id} className="bg-white border border-[#e3d6bf] rounded-xl overflow-hidden">
+                            {/* Compact row — name, time, location, item count. Click to expand. */}
                             <button
-                              key={a.id}
-                              onClick={() => setSelectedApptId(a.id)}
-                              className={`w-full text-left rounded-xl border px-4 py-3 transition-colors ${
-                                isActive
-                                  ? "border-[#6c4d39] bg-[#efe3d0]"
-                                  : "border-[#e3d6bf] bg-white hover:bg-[#efe3d0]/60"
-                              }`}
+                              onClick={() => setSelectedApptId(expanded ? null : a.id)}
+                              className="w-full text-left px-5 py-3.5 flex items-center justify-between gap-3 hover:bg-[#efe3d0]/50 transition-colors"
                             >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="min-w-0">
-                                  <div className="font-semibold text-[#241a12] truncate">
-                                    {a.bidder.name || "Unknown Bidder"}
-                                  </div>
-                                  <div className="text-sm text-[#6f5b46] mt-0.5">{fmtDateTime(a.startsAt)}</div>
-                                  <div className="mt-1"><LocationBadge name={a.location.name} size="sm" /></div>
+                              <div className="min-w-0">
+                                <div className="font-semibold text-[#241a12] truncate">
+                                  {a.bidder.name || "Unknown Bidder"}
                                 </div>
-                                <span className="shrink-0 inline-flex items-center justify-center min-w-[1.75rem] h-7 px-2 rounded-full bg-[#6c4d39]/10 text-[#6c4d39] text-sm font-bold">
+                                <div className="text-sm text-[#6f5b46] mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                                  <span className="font-semibold text-[#241a12]">{fmtDateTime(a.startsAt)}</span>
+                                  <LocationBadge name={a.location.name} size="sm" />
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3 shrink-0">
+                                <span className="inline-flex items-center justify-center min-w-[1.75rem] h-7 px-2 rounded-full bg-[#6c4d39]/10 text-[#6c4d39] text-sm font-bold">
                                   {a.items.length}
+                                </span>
+                                <span className={`text-[#8a7559] transition-transform ${expanded ? "rotate-180" : ""}`}>
+                                  <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4" /></svg>
                                 </span>
                               </div>
                             </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Detail: selected customer's items + actions */}
-                  <div className="lg:sticky lg:top-4">
-                    {!activeAppt ? (
-                      <div className="text-base text-[#8a7559] bg-white border border-[#e3d6bf] rounded-xl px-5 py-10 text-center">
-                        Select a customer to see their items.
-                      </div>
-                    ) : (
-                      <div className="bg-white border border-[#cdbda3] rounded-xl overflow-hidden">
-                        <div className="px-5 py-4">
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="text-lg font-semibold text-[#241a12]">
-                                {activeAppt.bidder.name || "Unknown Bidder"}
+                            {/* Expanded detail — items + actions */}
+                            {expanded && (
+                              <div className="px-5 pb-5 pt-1 border-t border-[#efe3d0]">
+                                {(a.bidder.email || a.bidder.phone) && (
+                                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-3 text-base text-[#6f5b46]">
+                                    {a.bidder.email && <span>{a.bidder.email}</span>}
+                                    {a.bidder.phone && <span>{a.bidder.phone}</span>}
+                                  </div>
+                                )}
+
+                                <div className="mt-4">
+                                  <div className="text-sm font-semibold text-[#8a7559] uppercase tracking-wide mb-2">
+                                    {a.items.length} item{a.items.length !== 1 ? "s" : ""} to gather
+                                  </div>
+                                  <ul className="text-base text-[#241a12] space-y-2">
+                                    {a.items.map((it) => (
+                                      <li key={it.id} className="flex items-start gap-2 bg-[#f1e7d5] rounded-xl px-4 py-2.5">
+                                        {it.itemCode && (
+                                          <span className="font-mono font-bold text-[#6c4d39] bg-[#6c4d39]/10 border border-[#6c4d39]/20 rounded px-1.5 py-0.5 text-sm shrink-0">{it.itemCode}</span>
+                                        )}
+                                        <span>{it.title}{it.storageLocation ? <span className="text-[#8a7559] text-sm"> · {it.storageLocation}</span> : null}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+
+                                {/* Reschedule editor */}
+                                {editingApptId === a.id ? (
+                                  <div className="mt-4 bg-[#f1e7d5] rounded-xl p-4 space-y-3">
+                                    <div>
+                                      <label className="block text-base font-semibold mb-1">Date & time (Michigan)</label>
+                                      <input
+                                        type="datetime-local"
+                                        value={editStartsAt}
+                                        onChange={(e) => setEditStartsAt(e.target.value)}
+                                        className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-base"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-base font-semibold mb-1">Location</label>
+                                      <select
+                                        value={editLocationId}
+                                        onChange={(e) => setEditLocationId(e.target.value)}
+                                        className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-base"
+                                      >
+                                        {locations.map((l) => (
+                                          <option key={l.id} value={l.id}>{l.name}</option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() => saveReschedule(a.id)}
+                                        className="flex-1 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold text-base py-3 rounded-xl"
+                                      >
+                                        Save
+                                      </button>
+                                      <button
+                                        onClick={() => setEditingApptId(null)}
+                                        className="flex-1 bg-white border border-[#cdbda3] text-[#6f5b46] font-semibold text-base py-3 rounded-xl"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="mt-4 flex flex-wrap gap-2">
+                                    <button
+                                      onClick={() => startEdit(a)}
+                                      className="bg-white border border-[#cdbda3] text-[#6f5b46] hover:bg-[#efe3d0] font-semibold text-base px-4 py-2.5 rounded-xl"
+                                    >
+                                      Reschedule
+                                    </button>
+                                    <button
+                                      onClick={() => markCollected(a.id)}
+                                      className="bg-[#5f7a45] hover:bg-[#4f6639] text-white font-semibold text-base px-4 py-2.5 rounded-xl"
+                                    >
+                                      Mark Collected
+                                    </button>
+                                    <button
+                                      onClick={() => cancelAppt(a.id)}
+                                      className="bg-white border border-red-500/30 text-red-600 hover:bg-red-50 font-semibold text-base px-4 py-2.5 rounded-xl"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                )}
                               </div>
-                              <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-0.5 text-base text-[#6f5b46]">
-                                {activeAppt.bidder.email && <span>{activeAppt.bidder.email}</span>}
-                                {activeAppt.bidder.phone && <span>{activeAppt.bidder.phone}</span>}
-                              </div>
-                            </div>
-                            <span className="text-sm bg-green-50 text-green-700 border border-green-200 px-3 py-1 rounded-full font-bold shrink-0">
-                              Scheduled
-                            </span>
+                            )}
                           </div>
-
-                          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-base">
-                            <span className="font-extrabold text-[#241a12]">{fmtDateTime(activeAppt.startsAt)}</span>
-                            <LocationBadge name={activeAppt.location.name} />
-                          </div>
-
-                          <div className="mt-4">
-                            <div className="text-sm font-semibold text-[#8a7559] uppercase tracking-wide mb-2">
-                              {activeAppt.items.length} item{activeAppt.items.length !== 1 ? "s" : ""} to gather
-                            </div>
-                            <ul className="text-base text-[#241a12] space-y-2">
-                              {activeAppt.items.map((it) => (
-                                <li key={it.id} className="flex items-start gap-2 bg-[#f1e7d5] rounded-xl px-4 py-2.5">
-                                  {it.itemCode && (
-                                    <span className="font-mono font-bold text-[#6c4d39] bg-[#6c4d39]/10 border border-[#6c4d39]/20 rounded px-1.5 py-0.5 text-sm shrink-0">{it.itemCode}</span>
-                                  )}
-                                  <span>{it.title}{it.storageLocation ? <span className="text-[#8a7559] text-sm"> · {it.storageLocation}</span> : null}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-
-                          {/* Reschedule editor */}
-                          {editingApptId === activeAppt.id ? (
-                            <div className="mt-4 bg-[#f1e7d5] rounded-xl p-4 space-y-3">
-                              <div>
-                                <label className="block text-base font-semibold mb-1">Date & time (Michigan)</label>
-                                <input
-                                  type="datetime-local"
-                                  value={editStartsAt}
-                                  onChange={(e) => setEditStartsAt(e.target.value)}
-                                  className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-base"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-base font-semibold mb-1">Location</label>
-                                <select
-                                  value={editLocationId}
-                                  onChange={(e) => setEditLocationId(e.target.value)}
-                                  className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-base"
-                                >
-                                  {locations.map((l) => (
-                                    <option key={l.id} value={l.id}>{l.name}</option>
-                                  ))}
-                                </select>
-                              </div>
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => saveReschedule(activeAppt.id)}
-                                  className="flex-1 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold text-base py-3 rounded-xl"
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  onClick={() => setEditingApptId(null)}
-                                  className="flex-1 bg-white border border-[#cdbda3] text-[#6f5b46] font-semibold text-base py-3 rounded-xl"
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="mt-4 flex flex-wrap gap-2">
-                              <button
-                                onClick={() => startEdit(activeAppt)}
-                                className="bg-white border border-[#cdbda3] text-[#6f5b46] hover:bg-[#efe3d0] font-semibold text-base px-4 py-2.5 rounded-xl"
-                              >
-                                Reschedule
-                              </button>
-                              <button
-                                onClick={() => markCollected(activeAppt.id)}
-                                className="bg-[#5f7a45] hover:bg-[#4f6639] text-white font-semibold text-base px-4 py-2.5 rounded-xl"
-                              >
-                                Mark Collected
-                              </button>
-                              <button
-                                onClick={() => cancelAppt(activeAppt.id)}
-                                className="bg-white border border-red-500/30 text-red-600 hover:bg-red-50 font-semibold text-base px-4 py-2.5 rounded-xl"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Collected */}
+            {/* Collected — collapsed by default, reveal with the arrow */}
             {collected.length > 0 && (
               <div>
-                <h2 className="text-xl font-semibold mb-4">Collected ({collected.length})</h2>
-                <div className="space-y-3">
+                <button
+                  onClick={() => setShowCollected((v) => !v)}
+                  className="w-full flex items-center justify-between gap-3 max-w-3xl mb-4 group"
+                >
+                  <h2 className="text-xl font-semibold">Collected ({collected.length})</h2>
+                  <span className={`text-[#8a7559] transition-transform ${showCollected ? "rotate-180" : ""}`}>
+                    <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4" /></svg>
+                  </span>
+                </button>
+                {showCollected && (
+                <div className="space-y-3 max-w-3xl">
                   {collected.map((a) => (
                     <div key={a.id} className="bg-white/60 border border-[#e3d6bf] rounded-xl px-5 py-4 opacity-75">
                       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -579,6 +567,7 @@ export default function AdminPickupPage() {
                     </div>
                   ))}
                 </div>
+                )}
               </div>
             )}
           </div>
@@ -660,10 +649,19 @@ export default function AdminPickupPage() {
               ))
             )}
 
-            {/* Recently completed */}
+            {/* Recently completed — collapsed by default, reveal with the arrow */}
             {completedTransfers.length > 0 && (
               <div className="pt-4">
-                <h3 className="text-lg font-semibold mb-3">Recently completed</h3>
+                <button
+                  onClick={() => setShowCompletedTransfers((v) => !v)}
+                  className="w-full flex items-center justify-between gap-3 mb-3"
+                >
+                  <h3 className="text-lg font-semibold">Recently completed ({completedTransfers.length})</h3>
+                  <span className={`text-[#8a7559] transition-transform ${showCompletedTransfers ? "rotate-180" : ""}`}>
+                    <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4" /></svg>
+                  </span>
+                </button>
+                {showCompletedTransfers && (
                 <div className="space-y-3">
                   {completedTransfers.map((t) => (
                     <div key={t.id} className="bg-white/60 border border-[#e3d6bf] rounded-xl px-5 py-4 opacity-75">
@@ -684,6 +682,7 @@ export default function AdminPickupPage() {
                     </div>
                   ))}
                 </div>
+                )}
               </div>
             )}
           </div>
