@@ -524,7 +524,6 @@ export default function PickupPage() {
     (it) => !inTransitIds.has(it.id) && (it.locationId === preferredId || it.locationId == null)
   );
   const transferCount = pendingTransfers.reduce((s, t) => s + t.items.length, 0);
-  const hasAnything = unscheduledItems.length > 0 || pendingTransfers.length > 0 || !!appointment;
 
   const banner = msg && (
     <div
@@ -553,7 +552,7 @@ export default function PickupPage() {
         <p className="text-base text-[#6f5b46] mt-2">
           {switching
             ? "This moves all of your items to the new location and clears any scheduled time, so you'll pick a new one. Items already loaded on a truck keep heading to their current destination."
-            : "Choose where you'll collect your items. Anything you win at another location is automatically transferred here — usually 5–6 days, and we'll text you the moment it arrives. You can switch later."}
+            : "Pick where you'll collect your wins. Everything you win is sent here automatically — items won at another location are transferred (usually 5–6 days), and we'll text you the moment they arrive. You can switch anytime."}
         </p>
       </div>
       {locations.length === 0 ? (
@@ -596,33 +595,43 @@ export default function PickupPage() {
         {header}
         {banner}
 
-        {/* ── Empty ── */}
-        {!hasAnything && (
-          <div className="bg-white border border-[#e3d6bf] rounded-2xl px-6 py-16 text-center">
-            <p className="text-lg text-[#6f5b46]">No items waiting for pickup yet.</p>
-            <p className="text-base text-[#8a7559] mt-2">When you win and pay for an item, you&apos;ll schedule a pickup here.</p>
-            <Link href="/auctions" className="inline-block mt-6 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold text-base px-6 py-3.5 rounded-xl transition-colors">
-              Browse auctions
-            </Link>
+        {/* No pickup locations configured by the business yet */}
+        {locations.length === 0 && (
+          <div className="bg-white border border-[#e3d6bf] rounded-2xl px-6 py-12 text-center text-base text-[#8a7559]">
+            Pickup isn&apos;t available yet. Please check back soon.
           </div>
         )}
 
-        {/* ── First-run / switching: choose location ── */}
-        {hasAnything && (switching || !preferredId) && LocationChooser}
+        {/* ── Choose / switch location — available ANYTIME, even with no items yet ── */}
+        {locations.length > 0 && (switching || !preferredId) && LocationChooser}
 
-        {/* ── Main view: have a preferred location ── */}
-        {hasAnything && preferredId && !switching && (
+        {/* ── Have a preferred location → minimized pill + items ── */}
+        {locations.length > 0 && preferredId && !switching && (
           <div className="space-y-6">
-            {/* Preferred location banner */}
-            <div className="flex items-center justify-between gap-3 bg-white border border-[#e3d6bf] rounded-2xl px-5 py-4">
-              <div className="min-w-0">
-                <div className="text-xs uppercase tracking-wide text-[#8a7559] font-semibold">Picking up at</div>
-                <div className="mt-1"><LocationBadge name={preferredName} /></div>
+            {/* Minimized pickup-location pill — small but clearly tappable to switch */}
+            <div className="flex items-center justify-between gap-3 bg-white border border-[#e3d6bf] rounded-xl px-4 py-2.5">
+              <div className="flex items-center gap-2 min-w-0 text-sm">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#6c4d39" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                  <path d="M8 1.5c-2.5 0-4.5 2-4.5 4.5C3.5 9.5 8 14.5 8 14.5s4.5-5 4.5-8.5C12.5 3.5 10.5 1.5 8 1.5z" /><circle cx="8" cy="6" r="1.6" />
+                </svg>
+                <span className="text-[#8a7559]">Pickup at</span>
+                <span className="font-semibold text-[#241a12] truncate">{preferredName}</span>
               </div>
               <button onClick={() => { setSwitching(true); setRescheduling(false); }} className="text-sm text-[#6c4d39] hover:text-[#563e2c] font-semibold shrink-0">
-                Switch location
+                Switch
               </button>
             </div>
+
+            {/* Nothing waiting yet — but the location is set for future wins */}
+            {!appointment && ready.length === 0 && transferCount === 0 && (
+              <div className="bg-white border border-[#e3d6bf] rounded-2xl px-6 py-10 text-center">
+                <p className="text-base text-[#6f5b46]">Nothing waiting for pickup yet.</p>
+                <p className="text-sm text-[#8a7559] mt-1">Anything you win will be sent to <span className="font-semibold">{preferredName}</span> automatically — you&apos;ll schedule a time here once it&apos;s ready.</p>
+                <Link href="/auctions" className="inline-block mt-5 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold text-base px-6 py-3 rounded-xl transition-colors">
+                  Browse auctions
+                </Link>
+              </div>
+            )}
 
             {/* Scheduled appointment */}
             {appointment && !rescheduling && (
