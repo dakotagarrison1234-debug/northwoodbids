@@ -41,13 +41,6 @@ export default function NewAuctionPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Quick duration chips: set the end date relative to the current start.
-  const setDuration = (days: number) => {
-    const base = formData.startAt ? new Date(formData.startAt) : defaultStart();
-    const end = new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
-    setFormData((prev) => ({ ...prev, endAt: toLocalInput(end) }));
-  };
-
   const handleSave = async () => {
     if (!formData.title || !formData.startAt || !formData.endAt) {
       alert("Please fill in title, start date, and end date");
@@ -118,23 +111,6 @@ export default function NewAuctionPage() {
               <label className="text-base text-[#6f5b46] mb-1.5 block">End Date & Time *</label>
               <input name="endAt" value={formData.endAt} onChange={handleChange} type="datetime-local"
                 className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]" />
-              <div className="flex flex-wrap gap-2 mt-3">
-                <span className="text-sm text-[#8a7559] self-center mr-1">Run for:</span>
-                {[
-                  { label: "3 days", days: 3 },
-                  { label: "1 week", days: 7 },
-                  { label: "2 weeks", days: 14 },
-                ].map((opt) => (
-                  <button
-                    key={opt.days}
-                    type="button"
-                    onClick={() => setDuration(opt.days)}
-                    className="text-base font-semibold bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] text-[#241a12] px-4 py-2.5 rounded-xl transition-colors"
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
               <p className="text-[#8a7559] text-sm mt-2">
                 These dates are set for you — change them any time. The auction goes live automatically at its start time.
               </p>
