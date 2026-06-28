@@ -481,8 +481,6 @@ export default function ItemPage() {
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><path d="M8 2L4 6l4 4" /></svg>
           Back to auction
         </Link>
-        <span className="text-[#b3a085] hidden sm:inline">/</span>
-        <span className="text-[#4a3a2b] truncate hidden sm:inline">{item.title}</span>
       </div>
 
       <div className="max-w-6xl mx-auto px-6 sm:px-8 py-6 sm:py-10 grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-12">
