@@ -93,7 +93,6 @@ export default function AccountPage() {
     } catch { /* non-critical; UI already updated */ }
   };
   const selectAvatar = (key: string) => { persistAvatar(key); setSwitchingAvatar(false); };
-  const removeAvatar = () => { persistAvatar(null); setSwitchingAvatar(false); };
 
   const loadPaymentMethods = useCallback(() => {
     setLoadingPMs(true);
@@ -188,23 +187,14 @@ export default function AccountPage() {
                   <p className="text-lg font-bold text-[#241a12] mb-1">
                     {AVATARS.find((a) => a.key === avatarKey)?.label ?? "Your avatar"} selected
                   </p>
-                  <p className="text-base text-[#6f5b46] mb-3">This shows next to your name around the site.</p>
-                  <div className="flex flex-wrap gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setSwitchingAvatar(true)}
-                      className="bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold px-6 py-3 rounded-xl text-base transition-colors"
-                    >
-                      Switch
-                    </button>
-                    <button
-                      type="button"
-                      onClick={removeAvatar}
-                      className="bg-white hover:bg-[#efe3d0] border border-[#cdbda3] text-[#4a3a2b] font-semibold px-6 py-3 rounded-xl text-base transition-colors"
-                    >
-                      Remove
-                    </button>
-                  </div>
+                  <p className="text-base text-[#6f5b46] mb-2">This shows next to your name around the site.</p>
+                  <button
+                    type="button"
+                    onClick={() => setSwitchingAvatar(true)}
+                    className="text-sm text-[#8a7559] hover:text-[#241a12] font-medium underline underline-offset-2 transition-colors"
+                  >
+                    Switch avatar
+                  </button>
                 </div>
               </div>
             ) : (

@@ -1,7 +1,8 @@
 "use client";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { AVATARS, Avatar } from "@/app/components/Avatars";
 
 function RegisterForm() {
   const { user, isLoaded } = useUser();
@@ -9,11 +10,13 @@ function RegisterForm() {
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect_url") || "/dashboard";
 
+  const [step, setStep] = useState<"phone" | "avatar">("phone");
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(true);
   const [orgSlug, setOrgSlug] = useState<string | null>(null);
+  const [savingAvatar, setSavingAvatar] = useState(false);
 
   // Read the org reference cookie set when user visited an org landing page
   useEffect(() => {
@@ -21,29 +24,34 @@ function RegisterForm() {
     if (match?.[1]) setOrgSlug(match[1]);
   }, []);
 
+  // Final hop: attach the org (if any) and route them on.
+  const finish = useCallback(() => {
+    document.cookie = "northwoodbids_org_ref=; max-age=0; path=/";
+    if (orgSlug) {
+      fetch("/api/profile/attach-org", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orgSlug }),
+      }).finally(() => router.push(`/${orgSlug}`));
+    } else {
+      router.push(redirectUrl);
+    }
+  }, [orgSlug, redirectUrl, router]);
+
   useEffect(() => {
     if (!isLoaded) return;
-
-    const finish = () => {
-      document.cookie = "northwoodbids_org_ref=; max-age=0; path=/";
-      if (orgSlug) {
-        fetch("/api/profile/attach-org", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orgSlug }),
-        }).finally(() => router.push(`/${orgSlug}`));
-      } else {
-        router.push(redirectUrl);
-      }
-    };
 
     (async () => {
       try {
         const data = await fetch("/api/profile").then(r => r.json());
-        if (data.profile?.phone) { finish(); return; }
+        // Returning user who already has a phone AND an avatar — nothing to ask.
+        if (data.profile?.phone && data.profile?.avatarKey) { finish(); return; }
+        // Has a phone but never picked an avatar — jump straight to the avatar step.
+        if (data.profile?.phone) { setStep("avatar"); setChecking(false); return; }
 
         // No saved phone yet. If Clerk already captured one at sign-up, save it
-        // automatically so we never ask the same person for it twice.
+        // automatically so we never ask the same person for it twice — then move
+        // on to picking an avatar.
         const clerkPhone =
           user?.primaryPhoneNumber?.phoneNumber ||
           user?.phoneNumbers?.[0]?.phoneNumber ||
@@ -60,7 +68,7 @@ function RegisterForm() {
               ...(orgSlug ? { orgSlug } : {}),
             }),
           }).then(r => r.json()).catch(() => null);
-          if (save?.success) { finish(); return; }
+          if (save?.success) { setStep("avatar"); setChecking(false); return; }
           // Couldn't auto-save — fall through and show the form, prefilled.
           setPhone(clerkPhone);
         }
@@ -69,7 +77,7 @@ function RegisterForm() {
         setChecking(false);
       }
     })();
-  }, [isLoaded, user, router, redirectUrl, orgSlug]);
+  }, [isLoaded, user, orgSlug, finish]);
 
   const handleSubmit = async () => {
     const digits = phone.replace(/\D/g, "");
@@ -92,10 +100,7 @@ function RegisterForm() {
       });
       const data = await res.json();
       if (data.success) {
-        // Clear the org cookie now that it's been saved
-        document.cookie = "northwoodbids_org_ref=; max-age=0; path=/";
-        // Send them to their org's page, or the default redirect
-        router.push(orgSlug ? `/${orgSlug}` : redirectUrl);
+        setStep("avatar"); // pick an avatar before heading in
       } else {
         setPhoneError(data.error || "Couldn't save your number. Please try again.");
       }
@@ -106,15 +111,61 @@ function RegisterForm() {
     }
   };
 
-  const handleSkip = () => {
-    document.cookie = "northwoodbids_org_ref=; max-age=0; path=/";
-    router.push(orgSlug ? `/${orgSlug}` : redirectUrl);
+  // Phone is optional → skipping still takes them to the avatar step.
+  const handleSkipPhone = () => setStep("avatar");
+
+  // Lock in the chosen avatar, then finish.
+  const chooseAvatar = async (key: string) => {
+    setSavingAvatar(true);
+    try {
+      await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatarKey: key }),
+      });
+    } catch { /* non-critical — keep moving */ }
+    finish();
   };
 
   if (checking) {
     return (
       <main className="flex-1 flex items-center justify-center">
         <p className="text-[#6f5b46]">Loading...</p>
+      </main>
+    );
+  }
+
+  if (step === "avatar") {
+    return (
+      <main className="flex-1 flex items-center justify-center">
+        <div className="bg-white border border-[#e3d6bf] rounded-2xl p-8 max-w-md w-full mx-4">
+          <h1 className="text-2xl font-bold mb-2">Pick your avatar</h1>
+          <p className="text-[#6f5b46] mb-6">
+            Choose a critter — it shows next to your name around the site. You can change it later in your profile.
+          </p>
+          <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
+            {AVATARS.map((a) => (
+              <button
+                key={a.key}
+                type="button"
+                disabled={savingAvatar}
+                onClick={() => chooseAvatar(a.key)}
+                title={a.label}
+                aria-label={a.label}
+                className="aspect-square rounded-2xl p-1.5 border-2 border-[#e3d6bf] hover:border-[#6c4d39] bg-white transition-colors disabled:opacity-50"
+              >
+                <Avatar avatarKey={a.key} className="w-full h-full" />
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={finish}
+            disabled={savingAvatar}
+            className="w-full text-[#8a7559] hover:text-[#4a3a2b] text-sm py-2 mt-5 disabled:opacity-50"
+          >
+            Skip for now
+          </button>
+        </div>
       </main>
     );
   }
@@ -168,7 +219,7 @@ function RegisterForm() {
             {saving ? "Saving..." : "Save & Continue"}
           </button>
           <button
-            onClick={handleSkip}
+            onClick={handleSkipPhone}
             className="w-full text-[#8a7559] hover:text-[#4a3a2b] text-sm py-2"
           >
             Skip for now — you won&apos;t get outbid or win text alerts
