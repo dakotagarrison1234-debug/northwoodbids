@@ -34,7 +34,15 @@ interface SearchResult {
   brand: string;
 }
 
-function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
+function BarcodeScanner({
+  onFill,
+  collapsed = false,
+  onCollapsedChange,
+}: {
+  onFill: (r: BarcodeResult) => void;
+  collapsed?: boolean;
+  onCollapsedChange?: (v: boolean) => void;
+}) {
   const [barcode, setBarcode] = useState("");
   const [scanning, setScanning] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -289,6 +297,10 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => () => releaseCamera(), []);
 
+  // When the card is minimized, make sure the camera is fully off.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (collapsed) releaseCamera(); }, [collapsed]);
+
   const applyResult = (imgOverride?: string) => {
     if (!result) return;
     onFill({ ...result, images: imgOverride ? [imgOverride] : result.images });
@@ -296,15 +308,48 @@ function BarcodeScanner({ onFill }: { onFill: (r: BarcodeResult) => void }) {
     setBarcode("");
   };
 
+  const BarcodeIcon = (
+    <svg className="w-5 h-5 text-[#6c4d39] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
+      <path d="M3 9V5a2 2 0 0 1 2-2h4M3 15v4a2 2 0 0 0 2 2h4M21 9V5a2 2 0 0 0-2-2h-4M21 15v4a2 2 0 0 1-2 2h-4"/>
+      <line x1="7" y1="12" x2="7" y2="12.01"/><line x1="10" y1="9" x2="10" y2="15"/><line x1="13" y1="12" x2="13" y2="12.01"/><line x1="16" y1="9" x2="16" y2="15"/>
+    </svg>
+  );
+
+  // Minimized: a compact strip so the card isn't large after an item is saved.
+  if (collapsed) {
+    return (
+      <button
+        type="button"
+        onClick={() => onCollapsedChange?.(false)}
+        className="w-full flex items-center justify-between gap-2 bg-gradient-to-br from-[#6c4d39]/8 to-[#f6ecda] border border-[#6c4d39]/25 rounded-xl px-4 py-3 mb-6 hover:border-[#6c4d39]/50 transition-colors"
+      >
+        <span className="flex items-center gap-2 font-bold text-[#241a12] text-base">
+          {BarcodeIcon} Barcode Auto-Fill
+        </span>
+        <span className="flex items-center gap-1 text-sm font-semibold text-[#6c4d39]">
+          Scan
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4" /></svg>
+        </span>
+      </button>
+    );
+  }
+
   return (
     <div className="bg-gradient-to-br from-[#6c4d39]/8 to-[#f6ecda] border border-[#6c4d39]/25 rounded-xl p-5 mb-6">
       <div className="flex items-center gap-2 mb-3">
-        <svg className="w-5 h-5 text-[#6c4d39] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
-          <path d="M3 9V5a2 2 0 0 1 2-2h4M3 15v4a2 2 0 0 0 2 2h4M21 9V5a2 2 0 0 0-2-2h-4M21 15v4a2 2 0 0 1-2 2h-4"/>
-          <line x1="7" y1="12" x2="7" y2="12.01"/><line x1="10" y1="9" x2="10" y2="15"/><line x1="13" y1="12" x2="13" y2="12.01"/><line x1="16" y1="9" x2="16" y2="15"/>
-        </svg>
+        {BarcodeIcon}
         <span className="font-bold text-[#241a12] text-base">Barcode Auto-Fill</span>
         <span className="text-[10px] text-[#6c4d39] bg-[#6c4d39]/10 border border-[#6c4d39]/20 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide ml-1">New</span>
+        {onCollapsedChange && (
+          <button
+            type="button"
+            onClick={() => onCollapsedChange(true)}
+            title="Minimize"
+            className="ml-auto shrink-0 text-[#8a7559] hover:text-[#241a12] p-1 rounded-lg hover:bg-[#6c4d39]/10 transition-colors"
+          >
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 10L8 6l-4 4" /></svg>
+          </button>
+        )}
       </div>
       <p className="text-sm text-[#6f5b46] mb-3">Scan or type a barcode, Amazon <strong>FNSKU</strong>, or <strong>ASIN</strong> to auto-fill the item. No match? Search by name.</p>
 
@@ -499,6 +544,8 @@ function NewItemForm() {
   // Bumping this remounts the BarcodeScanner, clearing its internal state
   // (barcode, result, error, search results) — used by "Start fresh".
   const [scannerKey, setScannerKey] = useState(0);
+  // Minimize the scan card after an item is saved so the form stays compact.
+  const [scannerCollapsed, setScannerCollapsed] = useState(false);
   const [formData, setFormData] = useState({
     title: searchParams.get("title") || "",
     description: searchParams.get("description") || "",
@@ -646,6 +693,7 @@ function NewItemForm() {
     setNextCode(null);
     genCode();
     setScannerKey((k) => k + 1);
+    setScannerCollapsed(false); // fresh item — show the full scanner again
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -682,8 +730,10 @@ function NewItemForm() {
           setPhotos([]);
           // Mint a fresh code for the next item.
           genCode();
-          // Remount the scanner so its barcode/result/search state is cleared too.
+          // Remount the scanner so its barcode/result/search state is cleared too,
+          // and minimize it so the form stays compact for the next entry.
           setScannerKey((k) => k + 1);
+          setScannerCollapsed(true);
           setBanner("Item saved. Ready for the next one.");
           if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
         } else {
@@ -731,7 +781,7 @@ function NewItemForm() {
           )}
 
           {/* ── Barcode scanner ── (keyed so "Start fresh" / "Save & Add Another" remount it clean) */}
-          <BarcodeScanner key={scannerKey} onFill={handleBarcodeFill} />
+          <BarcodeScanner key={scannerKey} onFill={handleBarcodeFill} collapsed={scannerCollapsed} onCollapsedChange={setScannerCollapsed} />
 
           {/* ── Item details ── */}
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
