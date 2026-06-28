@@ -28,7 +28,6 @@ export default async function AdminDashboard() {
     itemCount,
     bidCount,
     uniqueBidderRows,
-    recentBids,
   ] = await Promise.all([
     prisma.item.aggregate({
       where: { organizationId: orgId, status: { in: soldStatuses } },
@@ -40,12 +39,6 @@ export default async function AdminDashboard() {
       where: bidsWhere,
       distinct: ["clerkUserId"],
       select: { clerkUserId: true },
-    }),
-    prisma.bid.findMany({
-      where: bidsWhere,
-      include: { item: { select: { title: true } } },
-      orderBy: { placedAt: "desc" },
-      take: 6,
     }),
   ]);
 
@@ -82,13 +75,6 @@ export default async function AdminDashboard() {
     : [];
   const raisedByAuction = new Map(raisedRows.map((r) => [r.auctionId, Number(r._sum.currentBid ?? 0)]));
 
-  // Resolve bidder display names for recent bids
-  const recentIds = [...new Set(recentBids.map((b) => b.clerkUserId))];
-  const profiles = recentIds.length
-    ? await prisma.bidderProfile.findMany({ where: { clerkUserId: { in: recentIds } } })
-    : [];
-  const profileMap = new Map(profiles.map((p) => [p.clerkUserId, p]));
-
   return (
     <>
       <PusherRefresh channel="auctions" event="auction-updated" />
@@ -120,42 +106,27 @@ export default async function AdminDashboard() {
         ))}
       </div>
 
-      {/* Recent bids + active auction */}
-      <div className="px-6 sm:px-8 pb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white border border-[#e3d6bf] rounded-xl p-6 sm:p-7">
-          <h2 className="text-lg font-semibold mb-4">Recent Bids</h2>
-          {recentBids.length === 0 ? (
-            <p className="text-[#8a7559] text-base">No bids yet.</p>
-          ) : (
-            <div>
-              {recentBids.map((bid) => {
-                const p = profileMap.get(bid.clerkUserId);
-                const name = p?.name || p?.email || `${bid.clerkUserId.substring(0, 8)}…`;
-                return (
-                  <div
-                    key={bid.id}
-                    className="flex items-center justify-between py-3 border-b border-[#e3d6bf] last:border-0"
-                  >
-                    <div className="min-w-0 pr-3">
-                      <div className="text-base font-medium truncate">{bid.item.title}</div>
-                      <div className="text-sm text-[#8a7559] truncate">
-                        {name} ·{" "}
-                        {new Date(bid.placedAt).toLocaleTimeString([], {
-                          hour: "numeric",
-                          minute: "2-digit",
-                        })}
-                      </div>
-                    </div>
-                    <span className="text-[#6c4d39] font-semibold text-base shrink-0">
-                      ${Number(bid.amount).toLocaleString()}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+      {/* Quick links — kept near the top for fast access */}
+      <div className="px-6 sm:px-8 pb-6">
+        <div className="grid grid-cols-2 gap-3 max-w-md">
+          {[
+            { label: "Auctions", href: "/admin/auctions", icon: "gavel" },
+            { label: "Pickup", href: "/admin/pickup", icon: "package" },
+          ].map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="bg-white border border-[#e3d6bf] hover:border-[#cdbda3] rounded-xl p-5 flex items-center gap-3 transition-colors"
+            >
+              <span className="text-[#6f5b46]"><QuickIcon name={link.icon} /></span>
+              <span className="text-base font-semibold text-[#4a3a2b]">{link.label}</span>
+            </Link>
+          ))}
         </div>
+      </div>
 
+      {/* Active auctions */}
+      <div className="px-6 sm:px-8 pb-8">
         <div className="bg-white border border-[#e3d6bf] rounded-xl p-6 sm:p-7">
           <h2 className="text-lg font-semibold mb-4">
             {liveAuctions.length > 0
@@ -218,26 +189,6 @@ export default async function AdminDashboard() {
               })}
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Quick links */}
-      <div className="px-6 sm:px-8 pb-8">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: "Auctions", href: "/admin/auctions", icon: "gavel" },
-            { label: "Pickup", href: "/admin/pickup", icon: "package" },
-            { label: "Team", href: "/admin/staff", icon: "users" },
-          ].map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="bg-white border border-[#e3d6bf] hover:border-[#cdbda3] rounded-xl p-5 flex items-center gap-3 transition-colors"
-            >
-              <span className="text-[#6f5b46]"><QuickIcon name={link.icon} /></span>
-              <span className="text-base font-semibold text-[#4a3a2b]">{link.label}</span>
-            </Link>
-          ))}
         </div>
       </div>
     </>
