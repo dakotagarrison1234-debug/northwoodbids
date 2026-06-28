@@ -1,18 +1,18 @@
 /**
  * Bid increment table — slow growth matching live auction conventions:
- *   $0    – $9.99   → $1  increment
- *   $10   – $29.99  → $2  increment
- *   $30   – $99.99  → $5  increment
- *   $100  – $499.99 → $10 increment
- *   $500  – $999.99 → $25 increment
- *   $1000+           → $50 increment
+ *   $0    – $11    → $1  increment
+ *   $12   – $99    → $2  increment
+ *   $100  – $499   → $5  increment
+ *   $500  – $999   → $10 increment
+ *   $1000 – $4999  → $25 increment
+ *   $5000+         → $50 increment
  */
 export function getIncrement(currentBid: number): number {
-  if (currentBid < 10) return 1;
-  if (currentBid < 30) return 2;
-  if (currentBid < 100) return 5;
-  if (currentBid < 500) return 10;
-  if (currentBid < 1000) return 25;
+  if (currentBid < 12) return 1;
+  if (currentBid < 100) return 2;
+  if (currentBid < 500) return 5;
+  if (currentBid < 1000) return 10;
+  if (currentBid < 5000) return 25;
   return 50;
 }
 
