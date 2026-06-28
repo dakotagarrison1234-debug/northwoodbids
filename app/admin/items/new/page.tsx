@@ -14,6 +14,18 @@ interface BarcodeResult {
   images: string[];
 }
 
+/** Trim an imported description down to the first N sentences (default 3). */
+function shortenDescription(text: string, maxSentences = 3): string {
+  const clean = (text || "").replace(/\s+/g, " ").trim();
+  if (!clean) return "";
+  const parts = clean.match(/[^.!?]+[.!?]+/g);
+  if (!parts || parts.length === 0) {
+    // No sentence punctuation — hard-cap the length so it can't be a wall of text.
+    return clean.length > 300 ? clean.slice(0, 300).trim() + "…" : clean;
+  }
+  return parts.slice(0, maxSentences).join(" ").replace(/\s+/g, " ").trim();
+}
+
 interface SearchResult {
   asin: string;
   title: string;
@@ -501,6 +513,14 @@ function NewItemForm() {
     auctionId: preselectedAuctionId,
   });
 
+  // Auto-grow the title field so the WHOLE title is always visible (long titles
+  // are where naming issues hide — never truncate them behind a scroll).
+  const titleRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = titleRef.current;
+    if (el) { el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; }
+  }, [formData.title]);
+
   useEffect(() => {
     fetch("/api/me").then(r => r.json()).then(d => { if (d.orgId) setOrgId(d.orgId); }).catch(() => {});
     fetch("/api/auctions").then(r => r.json()).then(d => {
@@ -541,7 +561,9 @@ function NewItemForm() {
     setFormData(prev => ({
       ...prev,
       title: result.title || prev.title,
-      description: result.description || prev.description,
+      // Pulled-in descriptions can be paragraphs of marketing copy — keep it to
+      // 2-3 sentences so the listing stays tight and scannable.
+      description: result.description ? shortenDescription(result.description, 3) : prev.description,
       retailValue: result.retailValue != null ? String(result.retailValue) : prev.retailValue,
     }));
     // Import all images (up to 3)
@@ -717,8 +739,9 @@ function NewItemForm() {
             <div className="space-y-4">
               <div>
                 <label className="text-base text-[#6f5b46] mb-1.5 block">Item Title *</label>
-                <input name="title" value={formData.title} onChange={handleChange} placeholder='e.g. Apple iPad Pro 12.9"'
-                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]" />
+                <textarea ref={titleRef} name="title" value={formData.title} onChange={handleChange} rows={1}
+                  placeholder='e.g. Apple iPad Pro 12.9"'
+                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] resize-none overflow-hidden leading-snug" />
               </div>
               <div>
                 <label className="text-base text-[#6f5b46] mb-1.5 block">Description</label>
@@ -728,14 +751,28 @@ function NewItemForm() {
               </div>
               <div>
                 <label className="text-base text-[#6f5b46] mb-1.5 block">Condition *</label>
-                <select name="condition" value={formData.condition} onChange={handleChange}
-                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]">
-                  <option value="NEW">New</option>
-                  <option value="LIKE_NEW">Like New</option>
-                  <option value="GOOD">Good</option>
-                  <option value="FAIR">Fair</option>
-                  <option value="POOR">Poor</option>
-                </select>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: "NEW", label: "New" },
+                    { value: "LIKE_NEW", label: "Like New" },
+                    { value: "GOOD", label: "Good" },
+                    { value: "FAIR", label: "Fair" },
+                    { value: "POOR", label: "Poor" },
+                  ].map((c) => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, condition: c.value }))}
+                      className={`px-4 py-2.5 rounded-xl text-base font-semibold border transition-colors ${
+                        formData.condition === c.value
+                          ? "bg-[#6c4d39] text-white border-[#6c4d39]"
+                          : "bg-[#efe3d0] text-[#4a3a2b] border-[#cdbda3] hover:bg-[#e7dcc6]"
+                      }`}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -805,14 +842,7 @@ function NewItemForm() {
         <div className="space-y-6">
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-1">Item Location</h2>
-            <p className="text-[#8a7559] text-sm mb-4">Each item gets a unique random code — write it on the tag.</p>
-
-            {nextCode && (
-              <div className="mb-4 rounded-xl bg-[#6c4d39]/10 border border-[#6c4d39]/30 px-4 py-3 flex items-center justify-between gap-3">
-                <span className="text-sm font-semibold text-[#6f5b46] leading-tight">Write this on the item tag</span>
-                <span className="font-mono text-3xl font-extrabold text-[#6c4d39] tracking-wider whitespace-nowrap">#{nextCode}</span>
-              </div>
-            )}
+            <p className="text-[#8a7559] text-sm mb-4">Where this item is stored. Its tag # is shown next to the Save buttons.</p>
 
             <div>
               <label className="text-base text-[#6f5b46] mb-1.5 block">Location</label>
@@ -842,34 +872,39 @@ function NewItemForm() {
             </div>
           </div>
 
-          <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">Assign to Auction</h2>
-            {preselectedAuctionId ? (
-              <div className="w-full bg-[#efe3d0]/50 border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] flex items-center justify-between">
-                <span>{auctions.find(a => a.id === preselectedAuctionId)?.title ?? "Loading..."}</span>
-                <span className="text-xs text-[#6c4d39] bg-[#6c4d39]/10 px-2 py-1 rounded-full">Pre-assigned</span>
-              </div>
-            ) : (
+          {/* Auction picker only when NOT created inside an auction (it's pre-assigned otherwise). */}
+          {!preselectedAuctionId && (
+            <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
+              <h2 className="text-lg font-semibold mb-4">Assign to Auction</h2>
               <select name="auctionId" value={formData.auctionId} onChange={handleChange}
                 className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]">
                 <option value="">Save as draft</option>
                 {auctions.map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}
               </select>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* ── Bottom action bar ── */}
-      <footer className="bar-safe-bottom safe-x border-t border-[#e3d6bf] bg-[#faf5ea] px-6 sm:px-8 pt-4 flex flex-col sm:flex-row sm:justify-end gap-3">
-        <button onClick={() => handleSave(true)} disabled={saving || uploading}
-          className="bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] disabled:opacity-50 text-[#241a12] text-base px-6 py-3.5 rounded-xl font-semibold transition-colors">
-          {saving ? "Saving..." : "Save & Add Another"}
-        </button>
-        <button onClick={() => handleSave(false)} disabled={saving || uploading}
-          className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white text-base px-6 py-3.5 rounded-xl font-semibold transition-colors">
-          {saving ? "Saving..." : uploading ? "Uploading..." : "Save Item"}
-        </button>
+      <footer className="bar-safe-bottom safe-x border-t border-[#e3d6bf] bg-[#faf5ea] px-6 sm:px-8 pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        {/* Tag # right by the Save buttons — write it on the item before saving. */}
+        {nextCode ? (
+          <div className="flex items-center gap-2.5 rounded-xl bg-[#6c4d39]/10 border border-[#6c4d39]/30 px-4 py-2.5">
+            <span className="text-sm font-semibold text-[#6f5b46] leading-tight">Write on tag</span>
+            <span className="font-mono text-2xl font-extrabold text-[#6c4d39] tracking-wider whitespace-nowrap">#{nextCode}</span>
+          </div>
+        ) : <span className="hidden sm:block" />}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button onClick={() => handleSave(true)} disabled={saving || uploading}
+            className="bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] disabled:opacity-50 text-[#241a12] text-base px-6 py-3.5 rounded-xl font-semibold transition-colors">
+            {saving ? "Saving..." : "Save & Add Another"}
+          </button>
+          <button onClick={() => handleSave(false)} disabled={saving || uploading}
+            className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white text-base px-6 py-3.5 rounded-xl font-semibold transition-colors">
+            {saving ? "Saving..." : uploading ? "Uploading..." : "Save Item"}
+          </button>
+        </div>
       </footer>
     </>
   );
