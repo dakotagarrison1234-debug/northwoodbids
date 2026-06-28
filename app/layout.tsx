@@ -3,7 +3,6 @@ import { Geist, Geist_Mono, Bitter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import HomeHeader from "@/app/components/HomeHeader";
 import ReferralClaimer from "@/app/components/ReferralClaimer";
-import BidderBottomNav from "@/app/components/BidderBottomNav";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -96,7 +95,6 @@ export default function RootLayout({
           <HomeHeader />
           <ReferralClaimer />
           {children}
-          <BidderBottomNav />
         </body>
       </html>
     </ClerkProvider>
