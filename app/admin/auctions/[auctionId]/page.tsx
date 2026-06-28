@@ -8,7 +8,7 @@ import StatusPill from "@/app/components/StatusPill";
 import { statusStyle } from "@/lib/statusStyles";
 import { money } from "@/lib/format";
 import DeleteAuctionButton from "./DeleteAuctionButton";
-import EditEndTime from "./EditEndTime";
+import EditAuction from "./EditAuction";
 import PusherRefresh from "@/app/components/PusherRefresh";
 
 function IcoWarning() {
@@ -149,9 +149,15 @@ export default async function ManageAuctionPage({ params }: Props) {
           )}
         </div>
 
-        {/* Edit end time — available until the auction has closed */}
+        {/* Edit auction (name + times) — available until the auction has closed */}
         {!isEnded && (
-          <EditEndTime auctionId={auction.id} endAtISO={auction.endAt.toISOString()} status={auction.status} />
+          <EditAuction
+            auctionId={auction.id}
+            title={auction.title}
+            startAtISO={auction.startAt.toISOString()}
+            endAtISO={auction.endAt.toISOString()}
+            status={auction.status}
+          />
         )}
 
         {/* Items */}

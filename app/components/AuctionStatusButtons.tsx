@@ -46,26 +46,6 @@ export default function AuctionStatusButtons({ auctionId, status }: Props) {
     }
   };
 
-  const closeAuction = async () => {
-    if (!confirm("Close this auction now? Winners will be set and notified. This can't be undone.")) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/auctions/${auctionId}/close`, { method: "POST" });
-      const data = await res.json();
-      if (data.success) {
-        setError(null);
-        router.refresh();
-      } else {
-        setError(data.error || "Could not close the auction. Please try again.");
-      }
-    } catch {
-      setError("Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   if (loading) {
     return <span className="text-[#6f5b46] text-base font-semibold">Working…</span>;
   }
@@ -83,27 +63,11 @@ export default function AuctionStatusButtons({ auctionId, status }: Props) {
           </button>
         )}
         {status === "OPEN" && (
-          <>
-            <button
-              onClick={() => updateStatus("CLOSING")}
-              className={`${BTN_BASE} bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] text-[#241a12]`}
-            >
-              Mark Closing Soon
-            </button>
-            <button
-              onClick={closeAuction}
-              className={`${BTN_BASE} bg-[#4a3a2b] hover:bg-[#241a12] text-white`}
-            >
-              Close Auction
-            </button>
-          </>
-        )}
-        {status === "CLOSING" && (
           <button
-            onClick={closeAuction}
-            className={`${BTN_BASE} bg-[#4a3a2b] hover:bg-[#241a12] text-white`}
+            onClick={() => updateStatus("CLOSING")}
+            className={`${BTN_BASE} bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] text-[#241a12]`}
           >
-            Close Auction
+            Mark Closing Soon
           </button>
         )}
         {status === "CLOSED" && (

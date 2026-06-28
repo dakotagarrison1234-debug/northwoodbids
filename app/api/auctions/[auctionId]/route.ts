@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { triggerAuctionUpdated } from "@/lib/pusherServer";
@@ -17,7 +18,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     }
 
     const { auctionId } = await params;
-    const { status, endAt } = await request.json();
+    const { status, endAt, startAt, title } = await request.json();
 
     // Verify the user belongs to the org that owns this auction
     const auction = await prisma.auction.findUnique({
@@ -35,11 +36,35 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       );
     }
 
-    // ── Edit end time ─────────────────────────────────────────────────────────
-    // Reschedules when the auction closes. Snaps every item back to the auction
-    // end (clears any per-item "popcorn" extension) and re-arms the "ending soon"
-    // warning so it can fire again for the new end time. Allowed any time before
-    // the auction has closed.
+    // ── Edit auction fields (name / start / end) ───────────────────────────────
+    // One save handles the auction's name, start time (DRAFT only), and end time.
+    // Changing the end time snaps every item back to the auction end (clears any
+    // per-item "popcorn" extension) and re-arms the "ending soon" warning.
+    const editData: Prisma.AuctionUpdateInput = {};
+    let endChanged = false;
+
+    if (title !== undefined) {
+      const t = String(title).trim();
+      if (!t) {
+        return NextResponse.json({ error: "Auction name can't be empty." }, { status: 400 });
+      }
+      editData.title = t;
+    }
+
+    if (startAt !== undefined) {
+      const newStart = new Date(startAt);
+      if (isNaN(newStart.getTime())) {
+        return NextResponse.json({ error: "Invalid start time" }, { status: 400 });
+      }
+      if (auction.status !== "DRAFT") {
+        return NextResponse.json(
+          { error: "The start time can only be changed before the auction opens." },
+          { status: 422 }
+        );
+      }
+      editData.startAt = newStart;
+    }
+
     if (endAt !== undefined) {
       const newEnd = new Date(endAt);
       if (isNaN(newEnd.getTime())) {
@@ -51,21 +76,33 @@ export async function PATCH(request: NextRequest, { params }: Props) {
           { status: 422 }
         );
       }
+      editData.endAt = newEnd;
+      editData.endingSoonNotifiedAt = null;
+      endChanged = true;
+    }
+
+    if (Object.keys(editData).length > 0) {
+      // End must be after start (whichever of the two we end up with).
+      const finalStart = (editData.startAt as Date | undefined) ?? auction.startAt;
+      const finalEnd = (editData.endAt as Date | undefined) ?? auction.endAt;
+      if (finalEnd <= finalStart) {
+        return NextResponse.json(
+          { error: "The end time must be after the start time." },
+          { status: 422 }
+        );
+      }
 
       await prisma.$transaction([
-        prisma.auction.update({
-          where: { id: auctionId },
-          data: { endAt: newEnd, endingSoonNotifiedAt: null },
-        }),
+        prisma.auction.update({ where: { id: auctionId }, data: editData }),
         // Snap all items to the auction's end (null = "ends with the auction").
-        prisma.item.updateMany({ where: { auctionId }, data: { itemEndAt: null } }),
+        ...(endChanged ? [prisma.item.updateMany({ where: { auctionId }, data: { itemEndAt: null } })] : []),
       ]);
 
       triggerAuctionUpdated(auction.organization.slug).catch(() => {});
 
-      // If only the end time was sent, we're done.
+      // If no status change was requested, we're done.
       if (status === undefined) {
-        return NextResponse.json({ success: true, endAt: newEnd.toISOString() });
+        return NextResponse.json({ success: true });
       }
     }
 
