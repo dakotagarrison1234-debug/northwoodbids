@@ -56,7 +56,11 @@ async function placeProxyBid(
   item: ItemContext,
   proxy: ProxyRecord,
   amount: number,
-  displacedBidderId: string | null
+  displacedBidderId: string | null,
+  // Tie handling: when an earlier proxy ties an incoming bid at the SAME price,
+  // the proxy must be able to take the lead at that equal amount (the earlier
+  // bidder wins ties). Normally a proxy bid must strictly exceed the current price.
+  allowEqual = false
 ): Promise<{ newAmount: number; newEndAt: string | null }> {
   // Popcorn: extend end time if bid lands inside last 2:00
   const effectiveEndAt = item.itemEndAt ?? item.auction?.endAt;
@@ -82,7 +86,7 @@ async function placeProxyBid(
       where: {
         id: item.id,
         status: "ACTIVE",
-        currentBid: { lt: amount },
+        currentBid: allowEqual ? { lte: amount } : { lt: amount },
         OR: [{ itemEndAt: null }, { itemEndAt: { gt: new Date() } }],
       },
       data: {
@@ -196,7 +200,9 @@ export async function resolveProxiesAfterBid(
   newEndAt?: string | null;
   hasActiveProxy: boolean;
 }> {
-  // Get all active proxies for this item, excluding the manual bidder's own proxy
+  // Get all active proxies for this item, excluding the manual bidder's own proxy.
+  // Ordered highest-max first, then earliest — so proxies[0] is the rightful winner
+  // and EARLIER bidders win ties.
   const proxies = await prisma.proxyBid.findMany({
     where: { itemId, isActive: true, clerkUserId: { not: manualBidderId } },
     orderBy: [{ maxAmount: "desc" }, { createdAt: "asc" }],
@@ -206,25 +212,35 @@ export async function resolveProxiesAfterBid(
     return { proxyFired: false, hasActiveProxy: false };
   }
 
-  const nextBid = getNextValidBid(manualBidAmount);
+  const best = proxies[0];
+  const bestMax = Number(best.maxAmount);
 
-  // Deactivate proxies that are beaten and can't make a valid next bid
-  const beaten = proxies.filter((p: ProxyRecord) => Number(p.maxAmount) < nextBid);
-  const counters = proxies.filter((p: ProxyRecord) => Number(p.maxAmount) >= nextBid);
-
-  if (beaten.length > 0) {
+  // If the manual bid beats EVERY proxy outright, the manual bidder wins —
+  // deactivate all the now-beaten proxies.
+  if (bestMax < manualBidAmount) {
     await prisma.proxyBid.updateMany({
-      where: { id: { in: beaten.map((p: ProxyRecord) => p.id) } },
+      where: { id: { in: proxies.map((p) => p.id) } },
       data: { isActive: false },
     });
-  }
-
-  if (counters.length === 0) {
-    // No proxy can counter — all beaten/cleared
     return { proxyFired: false, hasActiveProxy: false };
   }
 
-  const bestProxy = counters[0];
+  // Otherwise the top proxy keeps/takes the lead. Price = one increment above the
+  // manual bid, capped at the proxy's max, but never below the manual bid. When the
+  // proxy's max EQUALS the manual bid (a tie) the price is exactly that amount and
+  // the earlier proxy wins — the manual bidder is treated as outbid.
+  const nextBid = getNextValidBid(manualBidAmount);
+  const proxyBidAmount = Math.min(bestMax, Math.max(manualBidAmount, nextBid));
+  const isTie = proxyBidAmount === manualBidAmount;
+
+  // Deactivate other competing proxies that can't beat the new lead price.
+  const losers = proxies.slice(1).filter((p) => Number(p.maxAmount) < proxyBidAmount);
+  if (losers.length > 0) {
+    await prisma.proxyBid.updateMany({
+      where: { id: { in: losers.map((p) => p.id) } },
+      data: { isActive: false },
+    });
+  }
 
   // Fetch item context for placeProxyBid
   const item = await prisma.item.findUnique({
@@ -234,13 +250,11 @@ export async function resolveProxiesAfterBid(
       organization: { select: { id: true, name: true, slug: true } },
     },
   });
-  if (!item) return { proxyFired: false, hasActiveProxy: counters.length > 0 };
-
-  // Proxy fires: bids exactly 1 increment above the manual bid (capped at proxy max)
-  const proxyBidAmount = Math.min(Number(bestProxy.maxAmount), nextBid);
+  if (!item) return { proxyFired: false, hasActiveProxy: true };
 
   try {
-    const result = await placeProxyBid(item, bestProxy, proxyBidAmount, manualBidderId);
+    // allowEqual on a tie so the earlier proxy takes the lead at the same price.
+    const result = await placeProxyBid(item, best, proxyBidAmount, manualBidderId, isTie);
     return { proxyFired: true, hasActiveProxy: true, ...result };
   } catch (e) {
     if ((e as Error).message === "STALE_BID") {
