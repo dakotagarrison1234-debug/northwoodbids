@@ -137,6 +137,15 @@ export default function AdminPickupPage() {
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  // In-app confirmation (native confirm() is blocked in some installed/PWA webviews).
+  const [confirmDialog, setConfirmDialog] = useState<
+    { text: string; confirmLabel: string; danger?: boolean; onConfirm: () => void } | null
+  >(null);
+  const askConfirm = (
+    text: string,
+    onConfirm: () => void,
+    opts?: { confirmLabel?: string; danger?: boolean }
+  ) => setConfirmDialog({ text, onConfirm, confirmLabel: opts?.confirmLabel ?? "Confirm", danger: opts?.danger });
 
   const loadAppointments = useCallback(() => {
     return fetch("/api/admin/pickup/appointments")
@@ -199,7 +208,6 @@ export default function AdminPickupPage() {
   };
 
   const markCollected = async (id: string) => {
-    if (!confirm("Mark this appointment as collected? All its items will be marked picked up.")) return;
     try {
       const res = await fetch(`/api/admin/pickup/appointments/${id}`, {
         method: "PATCH",
@@ -217,7 +225,6 @@ export default function AdminPickupPage() {
   };
 
   const cancelAppt = async (id: string) => {
-    if (!confirm("Cancel this appointment? Its items will return to the unscheduled list.")) return;
     try {
       const res = await fetch(`/api/admin/pickup/appointments/${id}`, { method: "DELETE" });
       const d = await res.json();
@@ -231,10 +238,7 @@ export default function AdminPickupPage() {
   };
 
   // ── Transfer actions ─────────────────────────────────────────────────────
-  const setTransferStatus = async (id: string, status: "LOADED" | "COMPLETED", toLocationName: string) => {
-    if (status === "COMPLETED") {
-      if (!confirm(`This moves the items to ${toLocationName} and lets the bidder schedule — continue?`)) return;
-    }
+  const setTransferStatus = async (id: string, status: "LOADED" | "COMPLETED", _toLocationName: string) => {
     try {
       const res = await fetch(`/api/admin/pickup/transfers/${id}`, {
         method: "PATCH",
@@ -286,7 +290,6 @@ export default function AdminPickupPage() {
   };
 
   const deleteLocation = async (id: string) => {
-    if (!confirm("Delete this location and all its hours? Existing appointments here will be removed.")) return;
     try {
       const res = await fetch(`/api/admin/pickup/locations/${id}`, { method: "DELETE" });
       const d = await res.json();
@@ -511,13 +514,21 @@ export default function AdminPickupPage() {
                                       Reschedule
                                     </button>
                                     <button
-                                      onClick={() => markCollected(a.id)}
+                                      onClick={() => askConfirm(
+                                        "Mark this appointment as collected? All its items will be marked picked up.",
+                                        () => markCollected(a.id),
+                                        { confirmLabel: "Mark Collected" }
+                                      )}
                                       className="bg-[#5f7a45] hover:bg-[#4f6639] text-white font-semibold text-base px-4 py-2.5 rounded-xl"
                                     >
                                       Mark Collected
                                     </button>
                                     <button
-                                      onClick={() => cancelAppt(a.id)}
+                                      onClick={() => askConfirm(
+                                        "Cancel this appointment? Its items will return to the unscheduled list.",
+                                        () => cancelAppt(a.id),
+                                        { confirmLabel: "Cancel appointment", danger: true }
+                                      )}
                                       className="bg-white border border-red-500/30 text-red-600 hover:bg-red-50 font-semibold text-base px-4 py-2.5 rounded-xl"
                                     >
                                       Cancel
@@ -639,7 +650,11 @@ export default function AdminPickupPage() {
                       </button>
                     )}
                     <button
-                      onClick={() => setTransferStatus(t.id, "COMPLETED", t.toLocation.name)}
+                      onClick={() => askConfirm(
+                        `This moves the items to ${t.toLocation.name} and lets the bidder schedule — continue?`,
+                        () => setTransferStatus(t.id, "COMPLETED", t.toLocation.name),
+                        { confirmLabel: "Mark Dropped Off" }
+                      )}
                       className="flex-1 bg-[#5f7a45] hover:bg-[#4f6639] text-white font-semibold text-base py-3.5 rounded-xl transition-colors"
                     >
                       Mark Dropped Off
@@ -732,7 +747,11 @@ export default function AdminPickupPage() {
                   key={loc.id}
                   loc={loc}
                   onToggle={() => toggleLocation(loc)}
-                  onDelete={() => deleteLocation(loc.id)}
+                  onDelete={() => askConfirm(
+                    "Delete this location and all its hours? You can only delete a location with no scheduled pickups or incoming transfers.",
+                    () => deleteLocation(loc.id),
+                    { confirmLabel: "Delete location", danger: true }
+                  )}
                   onDeleteWindow={deleteWindow}
                   onWindowAdded={loadLocations}
                   flash={flash}
@@ -742,6 +761,37 @@ export default function AdminPickupPage() {
           </div>
         )}
       </div>
+
+      {/* In-app confirmation dialog (replaces native confirm, which some webviews block) */}
+      {confirmDialog && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          onClick={() => setConfirmDialog(null)}
+        >
+          <div
+            className="bg-white rounded-2xl border border-[#cdbda3] max-w-sm w-full p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-base text-[#241a12]">{confirmDialog.text}</p>
+            <div className="mt-5 flex gap-3">
+              <button
+                onClick={() => setConfirmDialog(null)}
+                className="flex-1 bg-white border border-[#cdbda3] text-[#6f5b46] hover:bg-[#efe3d0] font-semibold text-base py-3 rounded-xl"
+              >
+                Back
+              </button>
+              <button
+                onClick={() => { const fn = confirmDialog.onConfirm; setConfirmDialog(null); fn(); }}
+                className={`flex-1 text-white font-semibold text-base py-3 rounded-xl ${
+                  confirmDialog.danger ? "bg-red-600 hover:bg-red-700" : "bg-[#6c4d39] hover:bg-[#563e2c]"
+                }`}
+              >
+                {confirmDialog.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -148,7 +148,7 @@ export default function HelpPage() {
                 <div className="bg-[#efe3d0] rounded-xl p-4 space-y-3">
                   <p className="font-semibold text-[#241a12] text-xs uppercase tracking-wider">Example</p>
                   <p>Current bid is <strong>$50</strong>. You set a Max Bid of <strong>$200</strong>.</p>
-                  <p>The system immediately bids <strong>$55</strong> (the next valid increment) to put you in the lead. Another bidder comes in at $100 — the system auto-bids <strong>$110</strong> for you. Another bidder sets their max at $250 — they beat your $200 limit and you're notified to decide if you want to raise your max.</p>
+                  <p>The system immediately bids <strong>$52</strong> (the next valid increment) to put you in the lead. Another bidder comes in at $100 — the system auto-bids <strong>$105</strong> for you. Another bidder sets their max at $250 — they beat your $200 limit and you're notified to decide if you want to raise your max.</p>
                   <p>If no one exceeds your max, <strong>you win at the lowest price needed</strong> to beat the competition.</p>
                 </div>
 
@@ -181,34 +181,34 @@ export default function HelpPage() {
                   </thead>
                   <tbody className="divide-y divide-[#e3d6bf]">
                     <tr className="hover:bg-[#f6efe1] transition-colors">
-                      <td className="px-6 py-3.5 font-medium text-[#241a12]">$0 – $9.99</td>
+                      <td className="px-6 py-3.5 font-medium text-[#241a12]">$0 – $11</td>
                       <td className="px-6 py-3.5"><span className="bg-[#6c4d39]/10 text-[#6c4d39] font-bold px-2 py-0.5 rounded-lg">$1</span></td>
                       <td className="px-6 py-3.5 text-[#6f5b46]">$5 → next min. $6</td>
                     </tr>
                     <tr className="hover:bg-[#f6efe1] transition-colors">
-                      <td className="px-6 py-3.5 font-medium text-[#241a12]">$10 – $29.99</td>
+                      <td className="px-6 py-3.5 font-medium text-[#241a12]">$12 – $99</td>
                       <td className="px-6 py-3.5"><span className="bg-[#6c4d39]/10 text-[#6c4d39] font-bold px-2 py-0.5 rounded-lg">$2</span></td>
                       <td className="px-6 py-3.5 text-[#6f5b46]">$20 → next min. $22</td>
                     </tr>
                     <tr className="hover:bg-[#f6efe1] transition-colors">
-                      <td className="px-6 py-3.5 font-medium text-[#241a12]">$30 – $99.99</td>
+                      <td className="px-6 py-3.5 font-medium text-[#241a12]">$100 – $499</td>
                       <td className="px-6 py-3.5"><span className="bg-[#6c4d39]/10 text-[#6c4d39] font-bold px-2 py-0.5 rounded-lg">$5</span></td>
-                      <td className="px-6 py-3.5 text-[#6f5b46]">$75 → next min. $80</td>
+                      <td className="px-6 py-3.5 text-[#6f5b46]">$250 → next min. $255</td>
                     </tr>
                     <tr className="hover:bg-[#f6efe1] transition-colors">
-                      <td className="px-6 py-3.5 font-medium text-[#241a12]">$100 – $499.99</td>
+                      <td className="px-6 py-3.5 font-medium text-[#241a12]">$500 – $999</td>
                       <td className="px-6 py-3.5"><span className="bg-[#6c4d39]/10 text-[#6c4d39] font-bold px-2 py-0.5 rounded-lg">$10</span></td>
-                      <td className="px-6 py-3.5 text-[#6f5b46]">$250 → next min. $260</td>
+                      <td className="px-6 py-3.5 text-[#6f5b46]">$600 → next min. $610</td>
                     </tr>
                     <tr className="hover:bg-[#f6efe1] transition-colors">
-                      <td className="px-6 py-3.5 font-medium text-[#241a12]">$500 – $999.99</td>
+                      <td className="px-6 py-3.5 font-medium text-[#241a12]">$1,000 – $4,999</td>
                       <td className="px-6 py-3.5"><span className="bg-[#6c4d39]/10 text-[#6c4d39] font-bold px-2 py-0.5 rounded-lg">$25</span></td>
-                      <td className="px-6 py-3.5 text-[#6f5b46]">$600 → next min. $625</td>
+                      <td className="px-6 py-3.5 text-[#6f5b46]">$1,500 → next min. $1,525</td>
                     </tr>
                     <tr className="hover:bg-[#f6efe1] transition-colors">
-                      <td className="px-6 py-3.5 font-medium text-[#241a12]">$1,000+</td>
+                      <td className="px-6 py-3.5 font-medium text-[#241a12]">$5,000+</td>
                       <td className="px-6 py-3.5"><span className="bg-[#6c4d39]/10 text-[#6c4d39] font-bold px-2 py-0.5 rounded-lg">$50</span></td>
-                      <td className="px-6 py-3.5 text-[#6f5b46]">$1,500 → next min. $1,550</td>
+                      <td className="px-6 py-3.5 text-[#6f5b46]">$6,000 → next min. $6,050</td>
                     </tr>
                   </tbody>
                 </table>

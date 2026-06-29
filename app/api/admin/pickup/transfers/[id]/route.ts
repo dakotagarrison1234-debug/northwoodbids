@@ -45,8 +45,13 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       });
     } else if (status === "COMPLETED") {
       // Notify the bidder BEFORE detaching items — the webhook reads the transfer's
-      // items, which get cleared by the relocation mutation below.
-      await notifyTransferArrived(id);
+      // items, which get cleared by the relocation mutation below. A notify failure
+      // must NOT block the drop-off, so it's best-effort.
+      try {
+        await notifyTransferArrived(id);
+      } catch (e) {
+        console.error("notifyTransferArrived failed (continuing):", e);
+      }
 
       // Items have arrived: set their home location to the destination, detach transfer.
       await prisma.item.updateMany({
