@@ -195,64 +195,45 @@ export default async function ManageAuctionPage({ params }: Props) {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[580px]">
-                <thead>
-                  <tr className="border-b border-[#e3d6bf]">
-                    <th className="w-14 px-4 py-3"></th>
-                    <th className="text-left px-4 py-3 text-[#4a3a2b] text-xs font-semibold uppercase tracking-wide">Item</th>
-                    <th className="text-left px-4 py-3 text-[#4a3a2b] text-xs font-semibold uppercase tracking-wide">Start</th>
-                    <th className="text-left px-4 py-3 text-[#4a3a2b] text-xs font-semibold uppercase tracking-wide">Current</th>
-                    <th className="text-left px-4 py-3 text-[#4a3a2b] text-xs font-semibold uppercase tracking-wide">Bids</th>
-                    <th className="text-left px-4 py-3 text-[#4a3a2b] text-xs font-semibold uppercase tracking-wide">Status</th>
-                    <th className="px-4 py-3"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {auction.items.map((item) => {
-                    const photo = item.photos.find(p => p.isPrimary) ?? item.photos[0];
-                    return (
-                      <tr key={item.id} className="border-b border-[#e3d6bf] last:border-0 hover:bg-[#efe3d0]/40 transition-colors">
-                        <td className="px-4 py-3 w-14">
-                          {photo ? (
-                            <div className="relative w-10 h-10 rounded-lg overflow-hidden">
-                              <Image src={photo.url} alt={item.title} fill sizes="40px" className="object-cover" />
-                            </div>
-                          ) : (
-                            <div className="w-10 h-10 bg-[#efe3d0] rounded-lg flex items-center justify-center text-[#8a7559] text-xs">
-                              ?
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="font-medium text-base">{item.title}</div>
-                          {item.category && <div className="text-sm text-[#8a7559]">{item.category}</div>}
+            // Dense, tappable list — one truncated line per item so 7–10 fit at a
+            // glance. Tap a row to edit it.
+            <ul className="divide-y divide-[#e3d6bf]">
+              {auction.items.map((item) => {
+                const photo = item.photos.find(p => p.isPrimary) ?? item.photos[0];
+                return (
+                  <li key={item.id}>
+                    <Link
+                      href={`/admin/items/${item.id}`}
+                      className="flex items-center gap-3 px-4 sm:px-5 py-2.5 hover:bg-[#efe3d0]/50 transition-colors"
+                    >
+                      {photo ? (
+                        <div className="relative w-9 h-9 rounded-lg overflow-hidden shrink-0">
+                          <Image src={photo.url} alt="" fill sizes="36px" className="object-cover" />
+                        </div>
+                      ) : (
+                        <div className="w-9 h-9 bg-[#efe3d0] rounded-lg flex items-center justify-center text-[#8a7559] text-xs shrink-0">?</div>
+                      )}
+
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-sm text-[#241a12] truncate">{item.title}</div>
+                        <div className="text-xs text-[#8a7559] truncate flex items-center gap-2">
                           {item.storageLocation && (
-                            <div className="text-sm font-mono text-[#6c4d39] mt-0.5 flex items-center gap-0.5"><IcoPin />{item.storageLocation}</div>
+                            <span className="font-mono text-[#6c4d39] inline-flex items-center gap-0.5 shrink-0"><IcoPin />{item.storageLocation}</span>
                           )}
-                        </td>
-                        <td className="px-4 py-3 text-[#6f5b46] text-base">{money(Number(item.startingBid))}</td>
-                        <td className="px-4 py-3 text-green-700 font-bold text-base">{money(Number(item.currentBid))}</td>
-                        <td className="px-4 py-3 text-[#6f5b46] text-base">{item._count.bids}</td>
-                        <td className="px-4 py-3">
-                          <StatusPill status={item.status} />
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2 justify-end">
-                            <Link
-                              href={`/admin/items/${item.id}`}
-                              className="text-base font-semibold bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] text-[#241a12] px-5 py-3 rounded-xl whitespace-nowrap transition-colors"
-                            >
-                              Edit
-                            </Link>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          <span className="shrink-0">{item._count.bids} bid{item._count.bids !== 1 ? "s" : ""}</span>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <div className="text-green-700 font-bold text-sm tabular-nums">{money(Number(item.currentBid))}</div>
+                      </div>
+                      <div className="shrink-0"><StatusPill status={item.status} /></div>
+                      <svg className="w-4 h-4 text-[#b3a085] shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4l4 4-4 4" /></svg>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
 
