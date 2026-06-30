@@ -116,7 +116,10 @@ export default async function AuctionPage({ params }: Props) {
 
   const isClosed = auction.status === "CLOSED" || auction.status === "SETTLED";
   const isClosing = auction.status === "CLOSING";
-  const isLive = !isClosed;
+  // Upcoming = scheduled but not yet opened. Bidders can preview the lots, but
+  // nothing is biddable until it opens.
+  const isUpcoming = auction.status === "DRAFT";
+  const isLive = auction.status === "OPEN" || auction.status === "CLOSING";
 
   // Helper: is the current user the top bidder on this item?
   // `bids` now holds at most the single highest ACTIVE bid (fetched with take: 1),
@@ -133,7 +136,9 @@ export default async function AuctionPage({ params }: Props) {
   // bidders only see what's still biddable (popcorn stragglers included).
   // Once the whole auction has closed, show everything as the historical view.
   const allVisible = auction.items.filter(i => i.status !== "DRAFT");
-  const visibleItems = isLive
+  const visibleItems = isUpcoming
+    ? auction.items // preview every lot before it opens
+    : isLive
     ? allVisible.filter(i => i.status === "ACTIVE")
     : allVisible;
   const endedCount = allVisible.length - (isLive ? visibleItems.length : 0);
@@ -154,6 +159,14 @@ export default async function AuctionPage({ params }: Props) {
         <div className="bg-amber-500/8 border-b border-amber-500/20 px-6 sm:px-8 py-3 flex items-center gap-2.5">
           <span className="text-amber-400"><IcoClock /></span>
           <span className="text-amber-300 text-sm font-semibold">This auction is closing soon — place your final bids now.</span>
+        </div>
+      )}
+      {isUpcoming && (
+        <div className="bg-[#6c4d39]/8 border-b border-[#6c4d39]/20 px-6 sm:px-8 py-3 flex items-center gap-2.5">
+          <span className="text-[#6c4d39]"><IcoClock /></span>
+          <span className="text-[#6c4d39] text-sm font-semibold">
+            This auction hasn&apos;t opened yet — preview the lots now. Bidding starts <LocalDate iso={auction.startAt.toISOString()} />.
+          </span>
         </div>
       )}
 
@@ -177,8 +190,11 @@ export default async function AuctionPage({ params }: Props) {
               {isLive
                 ? `${visibleItems.length} live item${visibleItems.length !== 1 ? "s" : ""}${endedCount > 0 ? ` · ${endedCount} ended` : ""}`
                 : `${visibleItems.length} item${visibleItems.length !== 1 ? "s" : ""}`} ·{" "}
-              {isClosed ? "Closed" : isClosing ? "Closing" : "Closes"}{" "}
-              <LocalDate iso={auction.endAt.toISOString()} />
+              {isUpcoming ? (
+                <>Opens <LocalDate iso={auction.startAt.toISOString()} /></>
+              ) : (
+                <>{isClosed ? "Closed" : isClosing ? "Closing" : "Closes"}{" "}<LocalDate iso={auction.endAt.toISOString()} /></>
+              )}
             </p>
           </div>
         </div>
@@ -212,8 +228,10 @@ export default async function AuctionPage({ params }: Props) {
               const isItemUnsold = item.status === "UNSOLD";
               const isItemClosed = isItemSold || isItemUnsold;
               const winning = isLive && !isItemClosed && isUserWinning(item.bids);
-              const bidLabel = isItemUnsold ? "Ended" : isItemSold ? "Sold" : isClosed ? "Closed" : winning ? "All Set" : "Bid Now";
-              const bidClass = isClosed || isItemClosed
+              const bidLabel = isUpcoming ? "Preview" : isItemUnsold ? "Ended" : isItemSold ? "Sold" : isClosed ? "Closed" : winning ? "All Set" : "Bid Now";
+              const bidClass = isUpcoming
+                ? "bg-[#efe3d0] text-[#6c4d39] text-xs px-3 py-1.5 rounded-xl font-bold border border-[#6c4d39]/20"
+                : isClosed || isItemClosed
                 ? "bg-[#efe3d0] text-[#8a7559] text-xs px-3 py-1.5 rounded-xl font-medium"
                 : winning
                 ? "bg-[#efe0c9] text-[#563e2c] text-xs px-3 py-1.5 rounded-xl font-bold border border-[#6c4d39]/30"
@@ -288,7 +306,7 @@ export default async function AuctionPage({ params }: Props) {
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="text-[10px] text-[#8a7559] uppercase tracking-wide">
-                          {isItemSold ? "Sold" : isItemUnsold ? "Final" : "Bid"}
+                          {isUpcoming ? "Start" : isItemSold ? "Sold" : isItemUnsold ? "Final" : "Bid"}
                         </div>
                         <div className={`font-extrabold text-base ${isItemUnsold ? "text-[#8a7559]" : "text-[#6c4d39]"}`}>
                           ${(Number(item.currentBid) || Number(item.startingBid)).toLocaleString()}

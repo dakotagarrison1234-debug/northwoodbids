@@ -267,7 +267,7 @@ export default async function HomePage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {upcomingAuctions.map((auction) => (
-              <Link key={auction.id} href={`/${auction.organization.slug}`}
+              <Link key={auction.id} href={`/${auction.organization.slug}/${auction.slug}`}
                 className="cv-card bg-white border border-[#e3d6bf] hover:border-[#cdbda3] rounded-2xl p-6 transition-all group shadow-sm">
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div className="min-w-0">
