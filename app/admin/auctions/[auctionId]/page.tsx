@@ -2,7 +2,9 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
+import { getUserOrg } from "@/lib/auth";
 import AuctionStatusButtons from "@/app/components/AuctionStatusButtons";
+import ProxyBidsPanel, { type ActiveProxy } from "./ProxyBidsPanel";
 import LocalDate from "@/app/components/LocalDate";
 import StatusPill from "@/app/components/StatusPill";
 import { statusStyle } from "@/lib/statusStyles";
@@ -68,6 +70,35 @@ export default async function ManageAuctionPage({ params }: Props) {
   const isScheduled = auction.status === "DRAFT" && auction.startAt > now;
   const isPastStart = auction.status === "DRAFT" && auction.startAt <= now;
   const isEnded = auction.status === "CLOSED" || auction.status === "SETTLED";
+
+  // Owner/admin only: the active Max Bids (proxy bids) on this auction's items.
+  // Max amounts are competitive info, so staff below admin don't see them.
+  const membership = await getUserOrg();
+  const isOwnerOrAdmin = membership?.role === "OWNER" || membership?.role === "ADMIN";
+  let activeProxies: ActiveProxy[] = [];
+  if (isOwnerOrAdmin) {
+    const rows = await prisma.proxyBid.findMany({
+      where: { isActive: true, item: { auctionId } },
+      orderBy: { maxAmount: "desc" },
+      include: { item: { select: { id: true, title: true, currentBid: true } } },
+    });
+    const ids = [...new Set(rows.map((r) => r.clerkUserId))];
+    const profiles = ids.length
+      ? await prisma.bidderProfile.findMany({
+          where: { clerkUserId: { in: ids } },
+          select: { clerkUserId: true, name: true, email: true },
+        })
+      : [];
+    const nameById = new Map(profiles.map((p) => [p.clerkUserId, p.name || p.email || "Bidder"]));
+    activeProxies = rows.map((r) => ({
+      id: r.id,
+      itemId: r.item.id,
+      itemTitle: r.item.title,
+      currentBid: Number(r.item.currentBid),
+      bidderName: nameById.get(r.clerkUserId) || "Bidder",
+      maxAmount: Number(r.maxAmount),
+    }));
+  }
 
   return (
     <>
@@ -159,6 +190,9 @@ export default async function ManageAuctionPage({ params }: Props) {
             status={auction.status}
           />
         )}
+
+        {/* Active Max Bids (proxy bids) — owner/admin only */}
+        {isOwnerOrAdmin && <ProxyBidsPanel proxies={activeProxies} />}
 
         {/* Items */}
         <div className="bg-white border border-[#e3d6bf] rounded-xl overflow-hidden">
