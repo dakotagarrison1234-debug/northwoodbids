@@ -147,6 +147,9 @@ export default async function AuctionPage({ params }: Props) {
     : allVisible;
   const endedCount = allVisible.length - (isLive ? visibleItems.length : 0);
 
+  // Premium items float to the top of the grid (order among them doesn't matter).
+  const premiumFirst = [...visibleItems].sort((a, b) => (b.isPremium ? 1 : 0) - (a.isPremium ? 1 : 0));
+
   return (
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
       {/* Live refresh: re-renders this page when bids land or items/auctions close */}
@@ -227,7 +230,7 @@ export default async function AuctionPage({ params }: Props) {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {visibleItems.map((item) => {
+            {premiumFirst.map((item) => {
               const isItemSold = SOLD_STATUSES.includes(item.status);
               const isItemUnsold = item.status === "UNSOLD";
               const isItemClosed = isItemSold || isItemUnsold;
@@ -264,7 +267,9 @@ export default async function AuctionPage({ params }: Props) {
                 <Link
                   href={`/${orgSlug}/${auctionSlug}/item/${item.id}`}
                   className={`cv-card block bg-white border rounded-2xl overflow-hidden transition-all group ${
-                    winning
+                    item.isPremium
+                      ? "nb-premium border-2"
+                      : winning
                       ? "border-[#6c4d39]/50 shadow-[0_0_0_1px_rgba(108,77,57,0.15),0_0_20px_rgba(108,77,57,0.08)]"
                       : isClosed || isItemClosed
                       ? "border-[#e3d6bf]/60 opacity-80 hover:border-[#cdbda3]"
@@ -292,6 +297,12 @@ export default async function AuctionPage({ params }: Props) {
                       </div>
                     )}
                     {isItemLive && <ItemCardTimer itemId={item.id} endAt={itemEndAtIso} />}
+                    {item.isPremium && !winning && (
+                      <div className="absolute top-2.5 left-2.5 bg-[#c47b3e] text-white text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1 shadow-sm">
+                        <svg className="w-3 h-3" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5l1.8 3.9 4.2.5-3.1 2.9.8 4.2L8 11.4 4.3 13l.8-4.2L2 5.9l4.2-.5L8 1.5z" /></svg>
+                        Premium
+                      </div>
+                    )}
                     {winning && (
                       <div className="absolute top-2.5 left-2.5 bg-[#6c4d39] text-white text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1 shadow-sm">
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

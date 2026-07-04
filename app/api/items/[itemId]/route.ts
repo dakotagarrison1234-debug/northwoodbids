@@ -185,6 +185,7 @@ export async function PATCH(
       ...(body.storageLocation !== undefined && { storageLocation: body.storageLocation || null }),
       ...(body.locationId !== undefined && { locationId: body.locationId || null }),
       ...(body.notes !== undefined && { notes: body.notes || null }),
+      ...(body.isPremium !== undefined && { isPremium: !!body.isPremium }),
       ...(autoActivate ? { status: "ACTIVE" } : {}),
     };
 

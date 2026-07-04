@@ -558,6 +558,7 @@ function NewItemForm() {
     storageLocation: searchParams.get("storageLocation") || "",
     locationId: searchParams.get("locationId") || "",
     auctionId: preselectedAuctionId,
+    isPremium: false,
   });
 
   // Auto-grow the title field so the WHOLE title is always visible (long titles
@@ -689,6 +690,7 @@ function NewItemForm() {
       storageLocation: "",
       locationId: "",
       auctionId: preselectedAuctionId,
+      isPremium: false,
     });
     setPhotos([]);
     setBanner(null);
@@ -727,6 +729,7 @@ function NewItemForm() {
             startingBid: "2",
             reservePrice: "",
             taxDeductible: false,
+            isPremium: false,
             // preserved: condition, storageLocation (spot), locationId (warehouse), auctionId
           }));
           setPhotos([]);
@@ -825,6 +828,22 @@ function NewItemForm() {
                     </button>
                   ))}
                 </div>
+              </div>
+              <div>
+                <label className="text-base text-[#6f5b46] mb-1.5 block">Featured</label>
+                <button
+                  type="button"
+                  onClick={() => setFormData((prev) => ({ ...prev, isPremium: !prev.isPremium }))}
+                  className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-base font-semibold border-2 transition-colors ${
+                    formData.isPremium
+                      ? "bg-[#c47b3e] text-white border-[#c47b3e]"
+                      : "bg-white text-[#6c4d39] border-[#cdbda3] hover:bg-[#efe3d0]"
+                  }`}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill={formData.isPremium ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M8 1.5l1.8 3.9 4.2.5-3.1 2.9.8 4.2L8 11.4 4.3 13l.8-4.2L2 5.9l4.2-.5L8 1.5z" /></svg>
+                  {formData.isPremium ? "Premium item" : "Mark as Premium"}
+                </button>
+                <p className="text-[#8a7559] text-sm mt-2">Premium items jump to the top of the auction and get a glowing, pulsing border.</p>
               </div>
             </div>
           </div>

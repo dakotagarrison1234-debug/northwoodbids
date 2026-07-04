@@ -70,6 +70,19 @@ html, body {
 }
 .nb-toast { animation: nb-toast-in 3s ease-in-out forwards; }
 
+/* Premium item cards — a glowing, pulsing burnt-orange border to draw the eye. */
+@keyframes nb-premium-pulse {
+  0%, 100% { border-color: #c47b3e; box-shadow: 0 0 0 1px rgba(196,123,62,0.55), 0 0 6px 0 rgba(196,123,62,0.25); }
+  50%      { border-color: #e0954f; box-shadow: 0 0 0 2px rgba(196,123,62,0.95), 0 0 18px 3px rgba(196,123,62,0.55); }
+}
+.nb-premium {
+  border-color: #c47b3e;
+  animation: nb-premium-pulse 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nb-premium { animation: none; box-shadow: 0 0 0 2px rgba(196,123,62,0.8); }
+}
+
 /* sticky top bars: add the status-bar inset on top of their own padding */
 .bar-safe-top { padding-top: calc(env(safe-area-inset-top) + 0.5rem); }
 /* bottom nav bars: lift above the home indicator */
