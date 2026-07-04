@@ -615,6 +615,8 @@ function NewItemForm() {
     }));
     // Import all images (up to 3)
     result.images.forEach(url => importImageFromUrl(url));
+    // Scan applied — collapse the scanner so the filled-in form is front and center.
+    setScannerCollapsed(true);
   };
 
   const importImageFromUrl = async (url: string) => {
@@ -731,9 +733,9 @@ function NewItemForm() {
           // Mint a fresh code for the next item.
           genCode();
           // Remount the scanner so its barcode/result/search state is cleared too,
-          // and minimize it so the form stays compact for the next entry.
+          // and re-open it so the next item is ready to scan without a click.
           setScannerKey((k) => k + 1);
-          setScannerCollapsed(true);
+          setScannerCollapsed(false);
           setBanner("Item saved. Ready for the next one.");
           if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
         } else {
