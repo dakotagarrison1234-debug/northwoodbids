@@ -91,6 +91,12 @@ export default function ItemPage() {
   const wasWinningRef = useRef(false);
   const [outbidFlash, setOutbidFlash] = useState(false);
 
+  // Staff/admin viewing get an inline "Edit listing" link.
+  const [me, setMe] = useState<{ orgId: string | null; isSuperAdmin: boolean } | null>(null);
+  useEffect(() => {
+    fetch("/api/me").then(r => r.json()).then(d => setMe({ orgId: d.orgId ?? null, isSuperAdmin: !!d.isSuperAdmin })).catch(() => {});
+  }, []);
+
   // Photo carousel
   const [selectedPhotoIdx, setSelectedPhotoIdx] = useState(0);
   const touchStartXRef = useRef<number | null>(null);
@@ -481,6 +487,15 @@ export default function ItemPage() {
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><path d="M8 2L4 6l4 4" /></svg>
           Back to auction
         </Link>
+        {me && (me.isSuperAdmin || (!!item.org && me.orgId === item.org.id)) && (
+          <Link
+            href={`/admin/items/${item.id}`}
+            className="ml-auto shrink-0 inline-flex items-center gap-1.5 bg-white hover:bg-[#efe3d0] border border-[#cdbda3] text-[#6c4d39] font-semibold px-3 py-1.5 rounded-lg transition-colors"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11.5 2.5l2 2L6 12l-2.5.5L4 10l7.5-7.5z" /></svg>
+            Edit listing
+          </Link>
+        )}
       </div>
 
       <div className="max-w-6xl mx-auto px-6 sm:px-8 py-6 sm:py-10 grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-12">

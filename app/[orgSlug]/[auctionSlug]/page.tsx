@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
+import { canAccessOrg } from "@/lib/auth";
 import LocalDate from "@/app/components/LocalDate";
 import ItemCardTimer from "@/app/components/ItemCardTimer";
 import PusherRefresh from "@/app/components/PusherRefresh";
@@ -113,6 +114,9 @@ export default async function AuctionPage({ params }: Props) {
       />
     );
   }
+
+  // Staff/admin viewing the public page get inline "edit listing" pencils.
+  const isStaff = await canAccessOrg(auction.organizationId);
 
   const isClosed = auction.status === "CLOSED" || auction.status === "SETTLED";
   const isClosing = auction.status === "CLOSING";
@@ -246,10 +250,20 @@ export default async function AuctionPage({ params }: Props) {
               const itemEndAtIso = (item.itemEndAt ?? auction.endAt).toISOString();
 
               return (
+                <div key={item.id} className="relative">
+                {isStaff && (
+                  <Link
+                    href={`/admin/items/${item.id}`}
+                    className="absolute top-2 right-2 z-20 bg-white/95 hover:bg-white border border-[#cdbda3] text-[#6c4d39] rounded-full w-8 h-8 flex items-center justify-center shadow-sm transition-colors"
+                    title="Edit listing"
+                    aria-label="Edit listing"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11.5 2.5l2 2L6 12l-2.5.5L4 10l7.5-7.5z" /></svg>
+                  </Link>
+                )}
                 <Link
-                  key={item.id}
                   href={`/${orgSlug}/${auctionSlug}/item/${item.id}`}
-                  className={`cv-card bg-white border rounded-2xl overflow-hidden transition-all group ${
+                  className={`cv-card block bg-white border rounded-2xl overflow-hidden transition-all group ${
                     winning
                       ? "border-[#6c4d39]/50 shadow-[0_0_0_1px_rgba(108,77,57,0.15),0_0_20px_rgba(108,77,57,0.08)]"
                       : isClosed || isItemClosed
@@ -316,6 +330,7 @@ export default async function AuctionPage({ params }: Props) {
                     </div>
                   </div>
                 </Link>
+                </div>
               );
             })}
           </div>
