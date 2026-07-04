@@ -37,7 +37,13 @@ export default function EditItemPage() {
           notes: item.notes || "",
           auctionId: item.auctionId || "",
         });
-        if (item.photos) setPhotos(item.photos.map((p: { url: string }) => p.url));
+        if (item.photos) {
+          // Show the current main photo first so it's displayed as main and preserved.
+          const sorted = [...item.photos].sort(
+            (a: { isPrimary?: boolean }, b: { isPrimary?: boolean }) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0)
+          );
+          setPhotos(sorted.map((p: { url: string }) => p.url));
+        }
       }
     }).catch(() => {}).finally(() => setLoading(false));
     fetch("/api/auctions").then(r => r.json()).then(d => {
@@ -98,6 +104,18 @@ export default function EditItemPage() {
     e.target.value = "";
     setUploading(false);
     if (failed.length) alert(`Failed to upload: ${failed.join(", ")}\n\nCheck that files are under 10MB and a supported format (JPG, PNG, WebP, HEIC).`);
+  };
+
+  // Make the chosen photo the main one by moving it to the front (index 0 = primary
+  // on save). Bidders see index 0 first.
+  const setMainPhoto = (i: number) => {
+    setPhotos((prev) => {
+      if (i <= 0 || i >= prev.length) return prev;
+      const next = [...prev];
+      const [chosen] = next.splice(i, 1);
+      next.unshift(chosen);
+      return next;
+    });
   };
 
   const handleSave = async () => {
@@ -221,15 +239,26 @@ export default function EditItemPage() {
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4">Photos <span className="text-[#8a7559] text-base font-normal">(up to 10)</span></h2>
             {photos.length > 0 && (
-              <div className="grid grid-cols-4 gap-2 mb-4">
-                {photos.map((url, i) => (
-                  <div key={i} className="relative aspect-square bg-[#efe3d0] rounded-lg overflow-hidden">
-                    <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-contain" />
-                    <button onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))}
-                      className="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">×</button>
-                  </div>
-                ))}
-              </div>
+              <>
+                <p className="text-[#8a7559] text-sm mb-2">The <strong className="text-[#6c4d39]">Main photo</strong> is what bidders see first. Tap &ldquo;Set as main&rdquo; on any photo to change it.</p>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-4">
+                  {photos.map((url, i) => (
+                    <div key={i} className={`relative aspect-square bg-[#efe3d0] rounded-lg overflow-hidden border-2 ${i === 0 ? "border-[#6c4d39]" : "border-transparent"}`}>
+                      <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-contain" />
+                      {i === 0 ? (
+                        <span className="absolute top-1.5 left-1.5 bg-[#6c4d39] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow">Main photo</span>
+                      ) : (
+                        <button type="button" onClick={() => setMainPhoto(i)}
+                          className="absolute bottom-1.5 left-1.5 bg-white/95 hover:bg-white text-[#6c4d39] text-[11px] font-semibold px-2 py-0.5 rounded-lg border border-[#cdbda3] shadow-sm transition-colors">
+                          Set as main
+                        </button>
+                      )}
+                      <button type="button" onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))}
+                        className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center shadow">×</button>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
             <input type="file" accept="image/*" multiple id="photo-upload" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
             <label htmlFor="photo-upload"
