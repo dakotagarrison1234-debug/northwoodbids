@@ -47,24 +47,34 @@ function matches(q: string, name: string, email: string | null, phone: string | 
 }
 
 // Tiny preview strip — small on purpose so hundreds of rows stay light.
-function Thumbs({ items }: { items: { id: string; title: string; photo: string | null }[] }) {
+// `linkItems` controls whether thumbs deep-link to the item editor: on for active
+// (leading-bid) items, OFF for sold/won items (you don't edit a sold item).
+function Thumbs({ items, linkItems = true }: { items: { id: string; title: string; photo: string | null }[]; linkItems?: boolean }) {
   const shown = items.slice(0, THUMBS);
   const extra = items.length - shown.length;
   return (
     <div className="flex items-center gap-1.5 mt-2">
-      {shown.map((it) => (
-        <Link
-          key={it.id}
-          href={`/admin/items/${it.id}`}
-          onClick={(e) => e.stopPropagation()}
-          className="relative w-8 h-8 rounded-md overflow-hidden bg-[#efe3d0] border border-[#e3d6bf] shrink-0"
-          title={it.title}
-        >
-          {it.photo ? (
-            <Image src={it.photo} alt="" fill sizes="32px" className="object-cover" />
-          ) : null}
-        </Link>
-      ))}
+      {shown.map((it) =>
+        linkItems ? (
+          <Link
+            key={it.id}
+            href={`/admin/items/${it.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-8 h-8 rounded-md overflow-hidden bg-[#efe3d0] border border-[#e3d6bf] shrink-0"
+            title={it.title}
+          >
+            {it.photo ? <Image src={it.photo} alt="" fill sizes="32px" className="object-cover" /> : null}
+          </Link>
+        ) : (
+          <span
+            key={it.id}
+            className="relative w-8 h-8 rounded-md overflow-hidden bg-[#efe3d0] border border-[#e3d6bf] shrink-0 block"
+            title={it.title}
+          >
+            {it.photo ? <Image src={it.photo} alt="" fill sizes="32px" className="object-cover" /> : null}
+          </span>
+        )
+      )}
       {extra > 0 && (
         <span className="text-xs text-[#8a7559] font-semibold ml-0.5">+{extra}</span>
       )}
@@ -160,14 +170,28 @@ function auctionsOf(w: Winner): AuctionGroup[] {
   return [...map.values()].sort((a, b) => b.total - a.total);
 }
 
-function ItemRow({ it, winnerName }: { it: WinItem; winnerName: string }) {
+function ItemRow({ it, winnerName, winnerClerkUserId }: { it: WinItem; winnerName: string; winnerClerkUserId: string }) {
+  // Clicking a sold item opens THIS winner's receipt/invoice for that auction —
+  // not the item editor (you don't edit a sold item, and from here you want the
+  // win + payment details).
+  const invoiceHref = it.auctionId
+    ? `/invoice/${it.auctionId}?user=${encodeURIComponent(winnerClerkUserId)}`
+    : null;
+  const thumbInner = it.photo ? <Image src={it.photo} alt="" fill sizes="48px" className="object-cover" /> : null;
+  const thumbCls = "relative w-12 h-12 rounded-lg overflow-hidden bg-[#efe3d0] border border-[#e3d6bf] shrink-0 block";
   return (
     <div className="px-4 py-3 flex items-center gap-3">
-      <Link href={`/admin/items/${it.id}`} className="relative w-12 h-12 rounded-lg overflow-hidden bg-[#efe3d0] border border-[#e3d6bf] shrink-0">
-        {it.photo ? <Image src={it.photo} alt="" fill sizes="48px" className="object-cover" /> : null}
-      </Link>
+      {invoiceHref ? (
+        <Link href={invoiceHref} className={thumbCls}>{thumbInner}</Link>
+      ) : (
+        <div className={thumbCls}>{thumbInner}</div>
+      )}
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium text-[#241a12] truncate">{it.title}</div>
+        {invoiceHref ? (
+          <Link href={invoiceHref} className="text-sm font-medium text-[#241a12] truncate block hover:text-[#6c4d39] transition-colors">{it.title}</Link>
+        ) : (
+          <div className="text-sm font-medium text-[#241a12] truncate">{it.title}</div>
+        )}
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-[#6c4d39] font-bold text-sm">{money(it.amount)}</span>
           <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full border ${it.paid ? "bg-green-100 text-green-700 border-green-200" : "bg-amber-100 text-amber-700 border-amber-200"}`}>
@@ -230,7 +254,7 @@ function ConfirmedWinners({ winners }: { winners: Winner[] }) {
                     <div className="min-w-0">
                       <div className="font-semibold text-[#241a12] truncate">{w.name}</div>
                       <div className="text-xs text-[#8a7559] truncate">{w.email || w.phone || "—"}</div>
-                      <Thumbs items={w.items} />
+                      <Thumbs items={w.items} linkItems={false} />
                     </div>
                     <div className="text-right shrink-0">
                       <div className="font-bold text-[#6c4d39] leading-none">{money(w.total)}</div>
@@ -287,7 +311,7 @@ function ConfirmedWinners({ winners }: { winners: Winner[] }) {
                                 )}
                                 <div className="divide-y divide-[#efe3d0]">
                                   {g.items.map((it) => (
-                                    <ItemRow key={it.id} it={it} winnerName={w.name} />
+                                    <ItemRow key={it.id} it={it} winnerName={w.name} winnerClerkUserId={w.clerkUserId} />
                                   ))}
                                 </div>
                               </div>
