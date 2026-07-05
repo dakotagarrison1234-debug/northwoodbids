@@ -572,9 +572,9 @@ function BidderDashboardInner() {
 
         {/* Pending wins banner */}
         {pendingWins.length > 0 && (
-          <div className="bg-orange-500/8 border-b border-orange-500/20 px-6 sm:px-8 py-3">
+          <div className="bg-[#efe0c9] border-b border-[#e3c9a3] px-6 sm:px-8 py-3">
             <div className="text-sm">
-              <span className="text-orange-300 font-bold">{pendingWins.length} win{pendingWins.length !== 1 ? "s" : ""} pending payment</span>
+              <span className="text-[#8a5a2b] font-bold">{pendingWins.length} win{pendingWins.length !== 1 ? "s" : ""} pending payment</span>
               <span className="text-[#6f5b46]"> · {money(pendingWins.reduce((s, i) => s + (i.totalDue ?? i.amountOwed), 0))} total{pendingWins.some((i) => (i.feeAmount ?? 0) + (i.taxAmount ?? 0) > 0) ? " (incl. fee & tax)" : ""}</span>
             </div>
             <p className="text-xs text-[#8a7559] mt-1">Nothing to do — your card on file is charged automatically, usually within a few minutes of the auction closing.</p>
@@ -648,9 +648,9 @@ function BidderDashboardInner() {
                   <div className="text-[#8a7559] text-xs sm:text-sm mb-1">Outbid</div>
                   <div className={`text-xl sm:text-2xl font-extrabold ${visibleLosing.length > 0 ? "text-red-600" : "text-[#6f5b46]"}`}>{visibleLosing.length}</div>
                 </div>
-                <div className={`bg-white border rounded-2xl p-3 sm:p-5 transition-all ${totalOwed > 0 ? "border-orange-500/20 shadow-[0_0_20px_rgba(249,115,22,0.05)]" : "border-[#e3d6bf]"}`}>
+                <div className={`bg-white border rounded-2xl p-3 sm:p-5 transition-all ${totalOwed > 0 ? "border-[#c47b3e]/30 shadow-[0_0_20px_rgba(196,123,62,0.06)]" : "border-[#e3d6bf]"}`}>
                   <div className="text-[#8a7559] text-xs sm:text-sm mb-1">Owed</div>
-                  <div className={`text-xl sm:text-2xl font-extrabold ${totalOwed > 0 ? "text-orange-400" : "text-[#6f5b46]"}`}>{money(totalOwed)}</div>
+                  <div className={`text-xl sm:text-2xl font-extrabold ${totalOwed > 0 ? "text-[#c47b3e]" : "text-[#6f5b46]"}`}>{money(totalOwed)}</div>
                 </div>
               </div>
 
@@ -889,7 +889,7 @@ function BidderDashboardInner() {
                               </div>
                             </div>
                             <div className="text-right shrink-0">
-                              <div className="text-[#8a7559] text-xs">your bid · current high</div>
+                              <div className="text-[#8a7559] text-xs">your winning bid</div>
                               <div className="text-[#5f7a45] font-extrabold text-lg">{money(b.myBid)}</div>
                               <div className="text-xs bg-[#5f7a45]/15 text-[#4a6235] font-bold px-2 py-0.5 rounded-full mt-0.5 inline-block">
                                 {ended ? "🎉 You won" : "✓ Winning — all set"}
@@ -1118,7 +1118,7 @@ function BidderDashboardInner() {
                                 )}
                               </div>
                             ) : (
-                              <div className="text-xs text-yellow-500 mt-0.5">No card saved</div>
+                              <div className="text-xs text-[#8a4f1c] mt-0.5">No card saved</div>
                             )}
                           </div>
                           {pm.stripeChargesEnabled && (

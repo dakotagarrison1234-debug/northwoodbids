@@ -37,6 +37,20 @@ export async function POST(
     },
   });
 
+  // Blocking must also stop any max bids they've already set from auto-firing.
+  // Deactivate their active proxies on THIS org's items so a standing proxy can't
+  // keep bidding for a blocked account.
+  if (blocked) {
+    try {
+      await prisma.proxyBid.updateMany({
+        where: { clerkUserId, isActive: true, item: { organizationId: membership.organizationId } },
+        data: { isActive: false },
+      });
+    } catch (err) {
+      console.error("[bidder block] deactivate proxies failed:", err);
+    }
+  }
+
   // Ban/unban in Clerk so they can't log in. Best-effort — never fail the request
   // just because Clerk didn't recognize the id.
   try {

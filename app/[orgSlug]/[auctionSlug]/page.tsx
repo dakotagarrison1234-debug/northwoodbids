@@ -163,9 +163,9 @@ export default async function AuctionPage({ params }: Props) {
         </div>
       )}
       {isClosing && !isClosed && (
-        <div className="bg-amber-500/8 border-b border-amber-500/20 px-6 sm:px-8 py-3 flex items-center gap-2.5">
-          <span className="text-amber-400"><IcoClock /></span>
-          <span className="text-amber-300 text-sm font-semibold">This auction is closing soon — place your final bids now.</span>
+        <div className="bg-[#efe0c9] border-b border-[#e3c9a3] px-6 sm:px-8 py-3 flex items-center gap-2.5">
+          <span className="text-[#8a5a2b]"><IcoClock /></span>
+          <span className="text-[#8a5a2b] text-sm font-semibold">This auction is closing soon — place your final bids now.</span>
         </div>
       )}
       {isUpcoming && (

@@ -71,7 +71,7 @@ function JoinPageInner() {
           <>
             <div className="flex justify-center mb-5">
               <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
-                <circle cx="28" cy="28" r="26" stroke="#374151" strokeWidth="1.5"/>
+                <circle cx="28" cy="28" r="26" stroke="#563e2c" strokeWidth="1.5"/>
                 <circle cx="28" cy="28" r="18" stroke="#6c4d39" strokeWidth="1.2" strokeOpacity="0.4"/>
                 <circle cx="28" cy="28" r="12" fill="rgba(108, 77, 57,0.12)" stroke="#6c4d39" strokeWidth="1.5"/>
                 <path d="M21 28l5 5 9-9" stroke="#6c4d39" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>

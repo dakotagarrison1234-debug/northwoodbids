@@ -608,7 +608,7 @@ export default function AdminPickupPage() {
                     <span
                       className={`text-sm px-3 py-1 rounded-full font-bold shrink-0 border ${
                         t.status === "LOADED"
-                          ? "bg-blue-50 text-blue-700 border-blue-200"
+                          ? "bg-[#efe0c9] text-[#8a5a2b] border-[#e3c9a3]"
                           : "bg-amber-50 text-amber-600 border-amber-200"
                       }`}
                     >

@@ -33,7 +33,7 @@ function AuctionCard({ a }: { a: AuctionSummary }) {
             </span>
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-base text-[#8a7559]">
-            <span>{a.itemsCount} items</span>
+            <span>{a.itemsCount} item{a.itemsCount !== 1 ? "s" : ""}</span>
             <span className="text-[#6c4d39] font-medium">${a.raised.toLocaleString()} total</span>
             {a.totalBids > 0 && <span>{a.totalBids} bids</span>}
             <span>

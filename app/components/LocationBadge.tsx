@@ -1,5 +1,6 @@
-// High-visibility location/warehouse badge. Bold blue + pin so the WHERE of an
-// item or pickup pops off the rustic brown theme and is impossible to miss.
+// High-visibility location/warehouse badge. Warm burnt-orange + pin so the WHERE
+// of an item or pickup pops off the rustic theme and is impossible to miss
+// (on-palette — the app avoids teal/blue).
 export default function LocationBadge({
   name,
   size = "md",
@@ -13,7 +14,7 @@ export default function LocationBadge({
   const icon = size === "sm" ? 12 : 14;
   return (
     <span
-      className={`inline-flex items-center ${pad} rounded-full font-bold bg-blue-50 text-blue-700 border border-blue-300 ${className}`}
+      className={`inline-flex items-center ${pad} rounded-full font-bold bg-[#c47b3e]/15 text-[#8a4f1c] border border-[#c47b3e]/40 ${className}`}
     >
       <svg width={icon} height={icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 21s-7-6.3-7-11a7 7 0 1 1 14 0c0 4.7-7 11-7 11z" />

@@ -636,7 +636,7 @@ export default function ItemPage() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <div className="text-[#8a7559] text-sm">{item.currentBid > 0 ? "Current Bid" : "Starting Bid"}</div>
-                <div className="text-green-700 font-extrabold text-3xl sm:text-4xl">${currentBid.toLocaleString()}</div>
+                <div className="text-[#6c4d39] font-extrabold text-3xl sm:text-4xl">${currentBid.toLocaleString()}</div>
                 {showWinning && (
                   <div className="mt-1.5">
                     <span className="inline-flex items-center gap-1.5 text-xs bg-[#6c4d39]/20 text-[#c47b3e] border border-[#6c4d39]/30 px-2.5 py-0.5 rounded-full font-semibold">
@@ -651,7 +651,7 @@ export default function ItemPage() {
               <div className="text-right flex flex-col items-end gap-2">
                 <div>
                   <div className="text-[#8a7559] text-sm">Bids</div>
-                  <div className="text-[#241a12] font-bold text-xl">{liveBids.length}</div>
+                  <div className="text-[#241a12] font-bold text-xl">{item.bids?.length ?? liveBids.length}</div>
                 </div>
                 {hasActiveProxy && (
                   <span className="text-xs bg-[#6c4d39]/15 text-[#563e2c] px-2 py-0.5 rounded-full font-medium">

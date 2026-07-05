@@ -53,7 +53,7 @@ function TocLink({ href, children }: { href: string; children: React.ReactNode }
 
 export default function HelpPage() {
   return (
-    <div className="min-h-screen bg-[#f6efe1]">
+    <div className="min-h-screen bg-[#f1e7d5]">
       <div className="max-w-4xl mx-auto px-6 sm:px-8 py-10">
 
         {/* Hero */}
@@ -233,7 +233,7 @@ export default function HelpPage() {
                   <li className="flex gap-2"><span className="text-[#6c4d39] font-bold">→</span><span><strong className="text-[#241a12]">Automatic charge:</strong> Your saved card is charged for your winning amount automatically when the auction closes.</span></li>
                   <li className="flex gap-2"><span className="text-[#6c4d39] font-bold">→</span><span><strong className="text-[#241a12]">Email notification:</strong> You'll receive an email confirming your win and the items you've won.</span></li>
                   <li className="flex gap-2"><span className="text-[#6c4d39] font-bold">→</span><span><strong className="text-[#241a12]">My Bids dashboard:</strong> Head to your dashboard to see all your wins, payment status, and pickup details.</span></li>
-                  <li className="flex gap-2"><span className="text-[#6c4d39] font-bold">→</span><span><strong className="text-[#241a12]">Schedule your own pickup:</strong> Once payment is confirmed, head to <Link href="/pickup" className="text-[#6c4d39] hover:underline font-medium">Pickup</Link> to choose a location and a time that works for you — no waiting for a call. If your items are at a different location, you can request a transfer there first (transfers usually take about 5–6 days).</span></li>
+                  <li className="flex gap-2"><span className="text-[#6c4d39] font-bold">→</span><span><strong className="text-[#241a12]">Schedule your own pickup:</strong> Head to <Link href="/pickup" className="text-[#6c4d39] hover:underline font-medium">Pickup</Link> and choose the location where you'd like to collect — no waiting for a call. Anything you win at another location is transferred there for you automatically (usually about 5–6 days), and we'll text you the moment it arrives so you can pick a time.</span></li>
                 </ul>
                 <Warn>If your card payment fails, you'll receive a notification and can retry payment from your dashboard. Items may be released to the next bidder if payment isn't completed promptly.</Warn>
               </div>
@@ -259,7 +259,7 @@ export default function HelpPage() {
                   <p className="font-semibold text-[#241a12] mb-2">When am I charged?</p>
                   <p>You are only charged when you <strong className="text-[#241a12]">win an item</strong> and the auction closes. Placing a bid does not charge your card. Losing a bid does not charge your card.</p>
                 </div>
-                <Tip>You can also pay manually from the <Link href="/dashboard" className="text-[#6c4d39] hover:underline font-medium">My Bids</Link> dashboard if auto-charge didn't go through — just tap "Pay Now" next to your won items.</Tip>
+                <Tip>If a charge doesn't go through, your <Link href="/dashboard" className="text-[#6c4d39] hover:underline font-medium">My Bids</Link> dashboard shows a &ldquo;payment failed&rdquo; note with a button to retry the card on file (or add a new card and try again).</Tip>
               </div>
             </Section>
 

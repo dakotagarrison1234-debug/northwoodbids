@@ -312,7 +312,7 @@ export default function AccountPage() {
                           }
                         </div>
                       ) : (
-                        <div className="text-xs text-yellow-600 mt-0.5 font-medium">No card saved</div>
+                        <div className="text-xs text-[#8a4f1c] mt-0.5 font-medium">No card saved</div>
                       )}
                     </div>
                     {pm.stripeChargesEnabled && (

@@ -17,6 +17,10 @@ const isPublicRoute = createRouteMatcher([
   "/play(.*)",             // public mini-game
   "/terms(.*)",            // public legal
   "/privacy(.*)",          // public legal
+  // Machine-to-machine endpoints — they authenticate themselves (Stripe/GHL
+  // signature, CRON_SECRET), so Clerk must NOT gate them or it 401s every call.
+  "/api/webhooks(.*)",     // Stripe + GoHighLevel webhooks
+  "/api/cron(.*)",         // Vercel cron (checks CRON_SECRET internally)
   "/:orgSlug",
   "/:orgSlug/:auctionSlug(.*)",
 ]);
