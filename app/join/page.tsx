@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
@@ -20,7 +20,7 @@ function JoinPageInner() {
     }
   }, [isLoaded, isSignedIn, router, token]);
 
-  const handleAccept = async () => {
+  const handleAccept = useCallback(async () => {
     if (!token) return;
     setStatus("joining");
     try {
@@ -41,7 +41,16 @@ function JoinPageInner() {
       setStatus("error");
       setMessage("Request failed. Please try again.");
     }
-  };
+  }, [token, router]);
+
+  // Auto-accept as soon as they land here signed in — no button hunt required.
+  const triedRef = useRef(false);
+  useEffect(() => {
+    if (isLoaded && isSignedIn && token && !triedRef.current) {
+      triedRef.current = true;
+      handleAccept();
+    }
+  }, [isLoaded, isSignedIn, token, handleAccept]);
 
   if (!isLoaded) {
     return (
