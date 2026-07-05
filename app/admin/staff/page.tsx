@@ -102,7 +102,7 @@ export default function StaffPage() {
   };
 
   const roleColor = (role: string) => {
-    if (role === "OWNER") return "text-orange-400";
+    if (role === "OWNER") return "text-[#c47b3e]";
     if (role === "ADMIN") return "text-[#6c4d39]";
     return "text-[#6f5b46]";
   };
