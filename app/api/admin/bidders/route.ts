@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
       }
     : {};
 
-  const bidders = await prisma.bidderProfile.findMany({
+  const rows = await prisma.bidderProfile.findMany({
     where,
     orderBy: [{ blocked: "desc" }, { createdAt: "desc" }],
     take: 200,
@@ -33,6 +33,18 @@ export async function GET(req: NextRequest) {
       createdAt: true,
     },
   });
+
+  // Tag each bidder with their staff role in THIS org (if any), so the UI can show
+  // "Staff"/"Admin"/"Owner" and offer promote/remove.
+  const ids = rows.map((b) => b.clerkUserId);
+  const members = ids.length
+    ? await prisma.orgMember.findMany({
+        where: { organizationId: membership.organizationId, clerkUserId: { in: ids } },
+        select: { clerkUserId: true, role: true },
+      })
+    : [];
+  const roleById = new Map(members.map((m) => [m.clerkUserId, m.role]));
+  const bidders = rows.map((b) => ({ ...b, role: roleById.get(b.clerkUserId) ?? null }));
 
   return NextResponse.json({ bidders });
 }
