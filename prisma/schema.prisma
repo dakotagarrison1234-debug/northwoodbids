@@ -139,11 +139,26 @@ model PickupLocation {
   createdAt      DateTime        @default(now())
   organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   windows        PickupWindow[]
+  blackouts      PickupBlackout[]
   appointments   PickupAppointment[]
   items          Item[]             @relation("ItemLocation")
   transfersTo    TransferRequest[]  @relation("TransferTo")
 
   @@index([organizationId])
+}
+
+// Block-off dates (vacations, holidays) — no pickup slots are offered on any day
+// within [startDate, endDate] (inclusive), regardless of the weekly hours.
+model PickupBlackout {
+  id         String         @id @default(cuid())
+  locationId String
+  startDate  DateTime       @db.Date
+  endDate    DateTime       @db.Date
+  reason     String?
+  createdAt  DateTime       @default(now())
+  location   PickupLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([locationId])
 }
 
 model PickupWindow {

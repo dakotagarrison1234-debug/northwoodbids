@@ -13,6 +13,7 @@ export async function GET() {
       where: { organizationId: membership.organizationId },
       include: {
         windows: { orderBy: [{ weekday: "asc" }, { startMinutes: "asc" }] },
+        blackouts: { orderBy: { startDate: "asc" } },
       },
       orderBy: { createdAt: "asc" },
     });

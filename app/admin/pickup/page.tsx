@@ -11,6 +11,12 @@ interface Window {
   slotMinutes: number;
   capacityPerSlot: number;
 }
+interface Blackout {
+  id: string;
+  startDate: string;
+  endDate: string;
+  reason: string | null;
+}
 interface Location {
   id: string;
   name: string;
@@ -18,6 +24,7 @@ interface Location {
   instructions: string | null;
   isActive: boolean;
   windows: Window[];
+  blackouts: Blackout[];
 }
 interface ApptItem {
   id: string;
@@ -843,6 +850,31 @@ function LocationCard({
     }
   };
 
+  // ── Block-off dates (vacations / holidays) ──
+  const [bo, setBo] = useState({ start: "", end: "", reason: "" });
+  const addBlackout = async () => {
+    if (!bo.start) { flash("Pick a start date.", false); return; }
+    try {
+      const res = await fetch(`/api/admin/pickup/locations/${loc.id}/blackouts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ startDate: bo.start, endDate: bo.end || bo.start, reason: bo.reason }),
+      });
+      const d = await res.json();
+      if (d.success) { flash("Dates blocked off.", true); setBo({ start: "", end: "", reason: "" }); onWindowAdded(); }
+      else flash(d.error || "Could not block off dates.", false);
+    } catch { flash("Something went wrong.", false); }
+  };
+  const removeBlackout = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/pickup/blackouts/${id}`, { method: "DELETE" });
+      const d = await res.json();
+      if (d.success) onWindowAdded(); else flash(d.error || "Could not remove.", false);
+    } catch { flash("Something went wrong.", false); }
+  };
+  const fmtDay = (iso: string) =>
+    new Date(iso).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
+
   return (
     <div className={`bg-white border rounded-xl overflow-hidden ${loc.isActive ? "border-[#cdbda3]" : "border-[#e3d6bf] opacity-70"}`}>
       <div className="px-5 py-4 border-b border-[#e3d6bf] flex flex-wrap items-start justify-between gap-3">
@@ -956,6 +988,46 @@ function LocationCard({
                 Add
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Block-off dates (vacations & holidays) */}
+        <div className="mt-6">
+          <div className="text-sm font-semibold text-[#8a7559] uppercase tracking-wide mb-2">Block off dates (vacations &amp; holidays)</div>
+          {loc.blackouts.length > 0 && (
+            <div className="space-y-2 mb-3">
+              {loc.blackouts.map((b) => (
+                <div key={b.id} className="flex items-center justify-between gap-3 bg-[#efe0c9] border border-[#e3c9a3] rounded-xl px-4 py-2.5">
+                  <span className="text-base text-[#5a3a1c]">
+                    <span className="font-semibold">
+                      {fmtDay(b.startDate)}{b.endDate !== b.startDate ? ` – ${fmtDay(b.endDate)}` : ""}
+                    </span>
+                    {b.reason ? <span className="text-[#8a5a2b]"> · {b.reason}</span> : null}
+                  </span>
+                  <button onClick={() => removeBlackout(b.id)} className="text-red-600 hover:text-red-700 font-semibold text-sm shrink-0">Remove</button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="bg-[#f1e7d5] rounded-xl p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-semibold text-[#6f5b46] mb-1">From</label>
+                <input type="date" value={bo.start} onChange={(e) => setBo({ ...bo, start: e.target.value })} className="w-full bg-white border border-[#cdbda3] rounded-xl px-3 py-2.5 text-base" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-[#6f5b46] mb-1">To <span className="font-normal text-[#8a7559]">(optional)</span></label>
+                <input type="date" value={bo.end} onChange={(e) => setBo({ ...bo, end: e.target.value })} className="w-full bg-white border border-[#cdbda3] rounded-xl px-3 py-2.5 text-base" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-semibold text-[#6f5b46] mb-1">Reason <span className="font-normal text-[#8a7559]">(optional)</span></label>
+                <input type="text" value={bo.reason} onChange={(e) => setBo({ ...bo, reason: e.target.value })} placeholder="e.g. Vacation, Holiday" className="w-full bg-white border border-[#cdbda3] rounded-xl px-3 py-2.5 text-base" />
+              </div>
+              <div className="sm:col-span-2">
+                <button onClick={addBlackout} className="w-full sm:w-auto bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold text-base px-5 py-2.5 rounded-xl">Block off these dates</button>
+              </div>
+            </div>
+            <p className="text-sm text-[#8a7559] mt-2">Bidders can&apos;t schedule pickups on blocked days. Leave &ldquo;To&rdquo; empty to block a single day.</p>
           </div>
         </div>
       </div>

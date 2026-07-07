@@ -279,6 +279,20 @@ export async function getAvailableSlots(
   const windows = await prisma.pickupWindow.findMany({ where: { locationId, isActive: true } });
   if (windows.length === 0) return [];
 
+  // Block-off dates (vacations/holidays): any Detroit calendar day within a
+  // blackout range offers no slots. @db.Date comes back as UTC midnight, so read
+  // its calendar parts with UTC getters and compare as YYYY-MM-DD strings.
+  const blackouts = await prisma.pickupBlackout.findMany({ where: { locationId } });
+  const pad2 = (n: number) => String(n).padStart(2, "0");
+  const blackoutRanges = blackouts.map((b) => ({
+    start: `${b.startDate.getUTCFullYear()}-${pad2(b.startDate.getUTCMonth() + 1)}-${pad2(b.startDate.getUTCDate())}`,
+    end: `${b.endDate.getUTCFullYear()}-${pad2(b.endDate.getUTCMonth() + 1)}-${pad2(b.endDate.getUTCDate())}`,
+  }));
+  const isBlackedOut = (y: number, mo: number, d: number) => {
+    const s = `${y}-${pad2(mo)}-${pad2(d)}`;
+    return blackoutRanges.some((r) => s >= r.start && s <= r.end);
+  };
+
   const now = new Date();
   const horizon = new Date(now.getTime() + DAYS_AHEAD * 24 * 60 * 60 * 1000);
 
@@ -292,6 +306,7 @@ export async function getAvailableSlots(
   for (let dayOffset = 0; dayOffset <= DAYS_AHEAD; dayOffset++) {
     const dayInstant = new Date(noonAnchor + dayOffset * 24 * 60 * 60 * 1000);
     const { y, mo, d, weekday } = zonedYMD(dayInstant);
+    if (isBlackedOut(y, mo, d)) continue; // vacation/holiday — no slots this day
     for (const w of windows) {
       if (w.weekday !== weekday) continue;
       for (let m = w.startMinutes; m + w.slotMinutes <= w.endMinutes; m += w.slotMinutes) {
@@ -343,7 +358,17 @@ export async function getSlotCapacity(locationId: string, startsAtIso: string): 
   const windows = await prisma.pickupWindow.findMany({ where: { locationId, isActive: true } });
   if (windows.length === 0) return 0;
   const c = new Date(startsAtIso);
-  const { weekday } = zonedYMD(c);
+  const { y, mo, d, weekday } = zonedYMD(c);
+  // Blocked-off day (vacation/holiday) → no capacity.
+  const pad2 = (n: number) => String(n).padStart(2, "0");
+  const s = `${y}-${pad2(mo)}-${pad2(d)}`;
+  const blackouts = await prisma.pickupBlackout.findMany({ where: { locationId } });
+  const blocked = blackouts.some((b) => {
+    const start = `${b.startDate.getUTCFullYear()}-${pad2(b.startDate.getUTCMonth() + 1)}-${pad2(b.startDate.getUTCDate())}`;
+    const end = `${b.endDate.getUTCFullYear()}-${pad2(b.endDate.getUTCMonth() + 1)}-${pad2(b.endDate.getUTCDate())}`;
+    return s >= start && s <= end;
+  });
+  if (blocked) return 0;
   const p = new Intl.DateTimeFormat("en-US", { timeZone: PICKUP_TZ, hour12: false, hour: "2-digit", minute: "2-digit" }).formatToParts(c);
   const m: Record<string, string> = {};
   for (const x of p) m[x.type] = x.value;
