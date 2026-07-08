@@ -136,6 +136,7 @@ export default function EditItemPage() {
 
   const handleSave = async () => {
     if (uploading || saving) return;
+    if (!formData.locationId) { alert("Please choose a warehouse for this item."); return; }
     setSaving(true);
     try {
       const res = await fetch(`/api/items/${itemId}`, {
@@ -227,6 +228,38 @@ export default function EditItemPage() {
       <div className="flex-1 px-6 sm:px-8 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 overflow-auto">
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
+            <h2 className="text-lg font-semibold mb-4">Photos <span className="text-[#8a7559] text-base font-normal">(up to 10)</span></h2>
+            {photos.length > 0 && (
+              <>
+                <p className="text-[#8a7559] text-sm mb-2">The <strong className="text-[#6c4d39]">Main photo</strong> is what bidders see first. Tap &ldquo;Set as main&rdquo; on any photo to change it.</p>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-4">
+                  {photos.map((url, i) => (
+                    <div key={i} className={`relative aspect-square bg-[#efe3d0] rounded-lg overflow-hidden border-2 ${i === 0 ? "border-[#6c4d39]" : "border-transparent"}`}>
+                      <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-contain" />
+                      {i === 0 ? (
+                        <span className="absolute top-1.5 left-1.5 bg-[#6c4d39] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow">Main photo</span>
+                      ) : (
+                        <button type="button" onClick={() => setMainPhoto(i)}
+                          className="absolute bottom-1.5 left-1.5 bg-white/95 hover:bg-white text-[#6c4d39] text-[11px] font-semibold px-2 py-0.5 rounded-lg border border-[#cdbda3] shadow-sm transition-colors">
+                          Set as main
+                        </button>
+                      )}
+                      <button type="button" onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))}
+                        className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center shadow">×</button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            <input type="file" accept="image/*" multiple id="photo-upload" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
+            <label htmlFor="photo-upload"
+              className="border-2 border-dashed border-[#cdbda3] rounded-xl p-6 text-center hover:border-[#6c4d39] transition-colors cursor-pointer block">
+              <div className="text-[#8a7559] mb-1 flex justify-center"><svg width="22" height="22" fill="none" viewBox="0 0 22 22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="18" height="14" rx="2"/><circle cx="11" cy="12" r="3.5"/><path d="M8 5l1.5-2.5h3L14 5"/></svg></div>
+              <div className="text-[#6f5b46] text-base">{uploading ? "Uploading..." : "Click to add photos"}</div>
+            </label>
+          </div>
+
+          <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4">Item Details</h2>
             <div className="space-y-4">
               <div>
@@ -264,7 +297,6 @@ export default function EditItemPage() {
                   <svg width="16" height="16" viewBox="0 0 16 16" fill={formData.isPremium ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M8 1.5l1.8 3.9 4.2.5-3.1 2.9.8 4.2L8 11.4 4.3 13l.8-4.2L2 5.9l4.2-.5L8 1.5z" /></svg>
                   {formData.isPremium ? "Premium item" : "Mark as Premium"}
                 </button>
-                <p className="text-[#8a7559] text-sm mt-2">Premium items jump to the top of the auction with a glowing, pulsing border.</p>
               </div>
             </div>
           </div>
@@ -290,37 +322,6 @@ export default function EditItemPage() {
             </div>
           </div>
 
-          <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">Photos <span className="text-[#8a7559] text-base font-normal">(up to 10)</span></h2>
-            {photos.length > 0 && (
-              <>
-                <p className="text-[#8a7559] text-sm mb-2">The <strong className="text-[#6c4d39]">Main photo</strong> is what bidders see first. Tap &ldquo;Set as main&rdquo; on any photo to change it.</p>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-4">
-                  {photos.map((url, i) => (
-                    <div key={i} className={`relative aspect-square bg-[#efe3d0] rounded-lg overflow-hidden border-2 ${i === 0 ? "border-[#6c4d39]" : "border-transparent"}`}>
-                      <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-contain" />
-                      {i === 0 ? (
-                        <span className="absolute top-1.5 left-1.5 bg-[#6c4d39] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow">Main photo</span>
-                      ) : (
-                        <button type="button" onClick={() => setMainPhoto(i)}
-                          className="absolute bottom-1.5 left-1.5 bg-white/95 hover:bg-white text-[#6c4d39] text-[11px] font-semibold px-2 py-0.5 rounded-lg border border-[#cdbda3] shadow-sm transition-colors">
-                          Set as main
-                        </button>
-                      )}
-                      <button type="button" onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))}
-                        className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center shadow">×</button>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-            <input type="file" accept="image/*" multiple id="photo-upload" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
-            <label htmlFor="photo-upload"
-              className="border-2 border-dashed border-[#cdbda3] rounded-xl p-6 text-center hover:border-[#6c4d39] transition-colors cursor-pointer block">
-              <div className="text-[#8a7559] mb-1 flex justify-center"><svg width="22" height="22" fill="none" viewBox="0 0 22 22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="18" height="14" rx="2"/><circle cx="11" cy="12" r="3.5"/><path d="M8 5l1.5-2.5h3L14 5"/></svg></div>
-              <div className="text-[#6f5b46] text-base">{uploading ? "Uploading..." : "Click to add photos"}</div>
-            </label>
-          </div>
         </div>
 
         <div className="space-y-6">
@@ -332,14 +333,12 @@ export default function EditItemPage() {
               <span>{formData.itemCode || "—"}</span>
               <span className="text-xs font-sans font-normal text-[#8a7559]">auto-assigned</span>
             </div>
-            <p className="text-[#8a7559] text-sm mt-2">Unique code, assigned automatically</p>
 
             <div className="mt-4">
-              <label className="text-base text-[#6f5b46] mb-1.5 block">Location</label>
+              <label className="text-base text-[#6f5b46] mb-1.5 block">Shelf / spot</label>
               <input name="storageLocation" value={formData.storageLocation} onChange={handleChange}
                 placeholder="e.g. Shelf 2 / Bin 4 / Row C"
                 className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]" />
-              <p className="text-[#8a7559] text-sm mt-2">Where it sits inside the warehouse</p>
             </div>
 
             <div className="mt-4">
@@ -349,7 +348,6 @@ export default function EditItemPage() {
                 <option value="">Choose a warehouse…</option>
                 {pickupLocations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
               </select>
-              <p className="text-[#8a7559] text-sm mt-2">Which warehouse this item is in (Owosso, Gladwin, …)</p>
             </div>
           </div>
 

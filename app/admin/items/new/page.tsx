@@ -357,7 +357,6 @@ function BarcodeScanner({
           </button>
         )}
       </div>
-      <p className="text-sm text-[#6f5b46] mb-3">Scan or type a barcode, Amazon <strong>FNSKU</strong>, or <strong>ASIN</strong> to auto-fill the item. No match? Search by name.</p>
 
       {/* Input row */}
       <div className="flex gap-2">
@@ -568,7 +567,7 @@ function NewItemForm() {
   const [formData, setFormData] = useState({
     title: searchParams.get("title") || "",
     description: searchParams.get("description") || "",
-    condition: searchParams.get("condition") || "GOOD",
+    condition: searchParams.get("condition") || "NEW",
     retailValue: searchParams.get("retailValue") || "",
     startingBid: searchParams.get("startingBid") || "2",
     reservePrice: searchParams.get("reservePrice") || "",
@@ -712,7 +711,7 @@ function NewItemForm() {
     setFormData({
       title: "",
       description: "",
-      condition: "GOOD",
+      condition: "NEW",
       retailValue: "",
       startingBid: "2",
       reservePrice: "",
@@ -872,6 +871,43 @@ function NewItemForm() {
             onAddComboPhoto={importImageFromUrl}
           />
 
+          {/* ── Photos (kept near the top so it's editable without scrolling) ── */}
+          <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
+            <h2 className="text-lg font-semibold mb-4">Photos <span className="text-[#8a7559] text-base font-normal">(up to 10)</span></h2>
+            <input type="file" accept="image/*" multiple id="photo-upload" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
+            <label htmlFor="photo-upload"
+              className="border-2 border-dashed border-[#cdbda3] rounded-xl p-8 text-center hover:border-[#6c4d39] transition-colors cursor-pointer block">
+              <div className="text-[#8a7559] mb-2 flex justify-center">
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="6" width="20" height="15" rx="2"/><circle cx="12" cy="13.5" r="4"/><path d="M9 6l1.5-3h3L15 6"/>
+                </svg>
+              </div>
+              <div className="text-[#6f5b46] text-base">{uploading ? "Uploading..." : "Click to upload photos"}</div>
+            </label>
+            {photos.length > 0 && (
+              <>
+                <p className="text-[#8a7559] text-sm mt-4 mb-2">The <strong className="text-[#6c4d39]">Main photo</strong> is what bidders see first. Tap &ldquo;Set as main&rdquo; on any photo to change it.</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {photos.map((url, i) => (
+                    <div key={i} className={`relative aspect-square bg-[#efe3d0] rounded-xl overflow-hidden border-2 ${i === 0 ? "border-[#6c4d39]" : "border-[#e3d6bf]"}`}>
+                      <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-contain" />
+                      {i === 0 ? (
+                        <span className="absolute top-2 left-2 bg-[#6c4d39] text-white text-[11px] font-bold px-2 py-0.5 rounded-full shadow">Main photo</span>
+                      ) : (
+                        <button type="button" onClick={() => setMainPhoto(i)}
+                          className="absolute bottom-2 left-2 bg-white/95 hover:bg-white text-[#6c4d39] text-xs font-semibold px-2.5 py-1 rounded-lg border border-[#cdbda3] shadow-sm transition-colors">
+                          Set as main
+                        </button>
+                      )}
+                      <button type="button" onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))}
+                        className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white text-base rounded-full w-7 h-7 flex items-center justify-center shadow">×</button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
           {/* ── Item details ── */}
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4">Item Details</h2>
@@ -927,7 +963,6 @@ function NewItemForm() {
                   <svg width="16" height="16" viewBox="0 0 16 16" fill={formData.isPremium ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M8 1.5l1.8 3.9 4.2.5-3.1 2.9.8 4.2L8 11.4 4.3 13l.8-4.2L2 5.9l4.2-.5L8 1.5z" /></svg>
                   {formData.isPremium ? "Premium item" : "Mark as Premium"}
                 </button>
-                <p className="text-[#8a7559] text-sm mt-2">Premium items jump to the top of the auction and get a glowing, pulsing border.</p>
               </div>
             </div>
           </div>
@@ -954,57 +989,18 @@ function NewItemForm() {
             </div>
           </div>
 
-          {/* ── Photos ── */}
-          <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">Photos <span className="text-[#8a7559] text-base font-normal">(up to 10)</span></h2>
-            <input type="file" accept="image/*" multiple id="photo-upload" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
-            <label htmlFor="photo-upload"
-              className="border-2 border-dashed border-[#cdbda3] rounded-xl p-8 text-center hover:border-[#6c4d39] transition-colors cursor-pointer block">
-              <div className="text-[#8a7559] mb-2 flex justify-center">
-                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="2" y="6" width="20" height="15" rx="2"/><circle cx="12" cy="13.5" r="4"/><path d="M9 6l1.5-3h3L15 6"/>
-                </svg>
-              </div>
-              <div className="text-[#6f5b46] text-base">{uploading ? "Uploading..." : "Click to upload photos"}</div>
-              <div className="text-[#8a7559] text-sm mt-1">PNG, JPG up to 10MB each</div>
-            </label>
-            {photos.length > 0 && (
-              <>
-                <p className="text-[#8a7559] text-sm mt-4 mb-2">The <strong className="text-[#6c4d39]">Main photo</strong> is what bidders see first. Tap “Set as main” on any photo to change it.</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {photos.map((url, i) => (
-                    <div key={i} className={`relative aspect-square bg-[#efe3d0] rounded-xl overflow-hidden border-2 ${i === 0 ? "border-[#6c4d39]" : "border-[#e3d6bf]"}`}>
-                      <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-contain" />
-                      {i === 0 ? (
-                        <span className="absolute top-2 left-2 bg-[#6c4d39] text-white text-[11px] font-bold px-2 py-0.5 rounded-full shadow">Main photo</span>
-                      ) : (
-                        <button type="button" onClick={() => setMainPhoto(i)}
-                          className="absolute bottom-2 left-2 bg-white/95 hover:bg-white text-[#6c4d39] text-xs font-semibold px-2.5 py-1 rounded-lg border border-[#cdbda3] shadow-sm transition-colors">
-                          Set as main
-                        </button>
-                      )}
-                      <button type="button" onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))}
-                        className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white text-base rounded-full w-7 h-7 flex items-center justify-center shadow">×</button>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
         </div>
 
         {/* ── Sidebar ── */}
         <div className="space-y-6">
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="text-lg font-semibold mb-1">Item Location</h2>
-            <p className="text-[#8a7559] text-sm mb-4">Where this item is stored. Its tag # is shown next to the Save buttons.</p>
+            <h2 className="text-lg font-semibold mb-4">Item Location</h2>
 
             <div>
-              <label className="text-base text-[#6f5b46] mb-1.5 block">Location</label>
+              <label className="text-base text-[#6f5b46] mb-1.5 block">Shelf / spot</label>
               <input name="storageLocation" value={formData.storageLocation} onChange={handleChange}
                 placeholder="e.g. Shelf 2 / Bin 4 / Row C"
                 className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]" />
-              <p className="text-[#8a7559] text-sm mt-2">Where it sits inside the warehouse</p>
             </div>
 
             <div className="mt-4">
@@ -1021,7 +1017,6 @@ function NewItemForm() {
                     <option value="">Choose a warehouse…</option>
                     {pickupLocations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
                   </select>
-                  <p className="text-[#8a7559] text-sm mt-2">Which warehouse this item is in (Owosso, Gladwin, …)</p>
                 </>
               )}
             </div>
