@@ -287,9 +287,9 @@ export default async function AuctionPage({ params }: Props) {
                   {/* Photo */}
                   <div className="w-full aspect-square bg-[#efe3d0] flex items-center justify-center text-[#8a7559] overflow-hidden relative">
                     {isCombo && collage.length > 1 ? (
-                      <div className={`absolute inset-0 grid gap-0.5 ${collage.length <= 2 ? "grid-cols-2 grid-rows-1" : "grid-cols-2 grid-rows-2"}`}>
+                      <div className={`absolute inset-0 grid gap-0.5 ${collage.length === 2 ? "grid-cols-2 grid-rows-1" : "grid-cols-2 grid-rows-2"}`}>
                         {collage.map((url, i) => (
-                          <div key={i} className="relative bg-[#efe3d0] overflow-hidden">
+                          <div key={i} className={`relative bg-[#efe3d0] overflow-hidden ${collage.length === 3 && i === 0 ? "row-span-2" : ""}`}>
                             <Image src={url} alt="" fill sizes="(max-width:640px) 25vw, 12vw" className="object-cover" />
                           </div>
                         ))}

@@ -235,3 +235,50 @@ export async function PATCH(
     return NextResponse.json({ error: "Failed to update item" }, { status: 500 });
   }
 }
+
+// DELETE /api/items/[itemId] — permanently delete an item. Only allowed when it's
+// clean: no bids, no payments, and not sold/collected (those carry money/history).
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ itemId: string }> }
+) {
+  try {
+    const { userId } = await auth();
+    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { itemId } = await params;
+    const item = await prisma.item.findUnique({
+      where: { id: itemId },
+      select: {
+        organizationId: true,
+        status: true,
+        _count: { select: { bids: true, payments: true } },
+      },
+    });
+    if (!item) return NextResponse.json({ error: "Item not found" }, { status: 404 });
+    if (!(await canAccessOrg(item.organizationId))) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const sold = item.status === "SOLD" || item.status === "PENDING_PICKUP" || item.status === "PICKED_UP";
+    if (sold || item._count.payments > 0) {
+      return NextResponse.json(
+        { error: "This item has been sold or paid — it can't be deleted. Refund it first if needed." },
+        { status: 422 }
+      );
+    }
+    if (item._count.bids > 0) {
+      return NextResponse.json(
+        { error: "This item has bids, so it can't be deleted. Use “Remove from auction” instead." },
+        { status: 422 }
+      );
+    }
+
+    // Photos + proxy bids cascade; no bids/payments remain to block the delete.
+    await prisma.item.delete({ where: { id: itemId } });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting item:", error);
+    return NextResponse.json({ error: "Failed to delete item" }, { status: 500 });
+  }
+}

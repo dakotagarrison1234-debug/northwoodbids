@@ -21,6 +21,12 @@ export default function EditItemPage() {
     taxDeductible: false, itemCode: "", storageLocation: "", locationId: "", notes: "", auctionId: "",
     isPremium: false, packSize: 0,
   });
+  // Meta used by the danger zone (delete / remove-from-auction gating).
+  const [meta, setMeta] = useState<{ status: string; inAuction: boolean; hasBids: boolean; sold: boolean } | null>(null);
+  const [dangerBusy, setDangerBusy] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<
+    { text: string; confirmLabel: string; onConfirm: () => void } | null
+  >(null);
 
   useEffect(() => {
     fetch(`/api/items/${itemId}`).then(r => r.json()).then(d => {
@@ -47,6 +53,13 @@ export default function EditItemPage() {
           );
           setPhotos(sorted.map((p: { url: string }) => p.url));
         }
+        const sold = ["SOLD", "PENDING_PICKUP", "PICKED_UP"].includes(item.status);
+        setMeta({
+          status: item.status,
+          inAuction: !!item.auctionId,
+          hasBids: Array.isArray(item.bids) && item.bids.length > 0,
+          sold,
+        });
       }
     }).catch(() => {}).finally(() => setLoading(false));
     fetch("/api/auctions").then(r => r.json()).then(d => {
@@ -138,6 +151,28 @@ export default function EditItemPage() {
       }
     } catch { alert("Something went wrong."); }
     finally { setSaving(false); }
+  };
+
+  const removeFromAuction = async () => {
+    setDangerBusy(true);
+    try {
+      const res = await fetch(`/api/items/${itemId}/remove-from-auction`, { method: "POST" });
+      const data = await res.json();
+      if (data.success) router.push("/admin/items");
+      else alert("Error: " + (data.error || "Could not remove."));
+    } catch { alert("Something went wrong."); }
+    finally { setDangerBusy(false); }
+  };
+
+  const deleteItem = async () => {
+    setDangerBusy(true);
+    try {
+      const res = await fetch(`/api/items/${itemId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) router.push("/admin/items");
+      else alert("Error: " + (data.error || "Could not delete."));
+    } catch { alert("Something went wrong."); }
+    finally { setDangerBusy(false); }
   };
 
   if (loading) {
@@ -332,8 +367,70 @@ export default function EditItemPage() {
             <textarea name="notes" value={formData.notes} onChange={handleChange} rows={3}
               className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39] resize-none" />
           </div>
+
+          {/* Danger zone — remove from auction / delete */}
+          {meta && (
+            <div className="bg-white border border-red-200 rounded-xl p-6">
+              <h2 className="text-lg font-semibold text-red-600 mb-3">Danger zone</h2>
+              {meta.sold ? (
+                <p className="text-base text-[#6f5b46]">This item has been sold. To reverse it, refund it from Winners &amp; Payments.</p>
+              ) : (
+                <div className="space-y-4">
+                  {meta.inAuction && (
+                    <div>
+                      <button
+                        type="button"
+                        disabled={dangerBusy}
+                        onClick={() => setConfirmDialog({
+                          text: "Remove this item from its auction? It goes back to Drafts and any bids on it are cancelled — nothing is deleted.",
+                          confirmLabel: "Remove from auction",
+                          onConfirm: removeFromAuction,
+                        })}
+                        className="bg-white border-2 border-[#c47b3e]/50 text-[#8a4f1c] hover:bg-[#efe0c9] font-semibold text-base px-5 py-3 rounded-xl transition-colors disabled:opacity-50"
+                      >
+                        Remove from auction
+                      </button>
+                      <p className="text-sm text-[#8a7559] mt-1.5">Pulls it out of the auction and back to Drafts. Bids are cancelled. Nothing is deleted.</p>
+                    </div>
+                  )}
+                  <div>
+                    <button
+                      type="button"
+                      disabled={dangerBusy || meta.hasBids}
+                      onClick={() => setConfirmDialog({
+                        text: "Permanently delete this item? This can't be undone.",
+                        confirmLabel: "Delete item",
+                        onConfirm: deleteItem,
+                      })}
+                      className="bg-red-600 hover:bg-red-700 text-white font-semibold text-base px-5 py-3 rounded-xl transition-colors disabled:opacity-50"
+                    >
+                      Delete item permanently
+                    </button>
+                    <p className="text-sm text-[#8a7559] mt-1.5">
+                      {meta.hasBids
+                        ? "This item has bids, so it can't be deleted — use “Remove from auction” instead."
+                        : "Only possible when the item has no bids and isn't sold."}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* In-app confirmation (native confirm() is blocked in some installed/PWA webviews) */}
+      {confirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setConfirmDialog(null)}>
+          <div className="bg-white rounded-2xl border border-[#cdbda3] max-w-sm w-full p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <p className="text-base text-[#241a12]">{confirmDialog.text}</p>
+            <div className="mt-5 flex gap-3">
+              <button onClick={() => setConfirmDialog(null)} className="flex-1 bg-white border border-[#cdbda3] text-[#6f5b46] hover:bg-[#efe3d0] font-semibold text-base py-3 rounded-xl">Back</button>
+              <button onClick={() => { const fn = confirmDialog.onConfirm; setConfirmDialog(null); fn(); }} className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold text-base py-3 rounded-xl">{confirmDialog.confirmLabel}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
