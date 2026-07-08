@@ -57,29 +57,37 @@ export async function GET() {
       },
     });
     const nowTs = new Date();
-    const appt =
-      scheduledAppts.find((a) => a.startsAt >= nowTs) ??
-      scheduledAppts[scheduledAppts.length - 1] ??
-      null;
+    const mapAppt = (a: (typeof scheduledAppts)[number]) => ({
+      id: a.id,
+      startsAt: a.startsAt.toISOString(),
+      location: {
+        id: a.location.id,
+        name: a.location.name,
+        address: a.location.address,
+        instructions: a.location.instructions,
+      },
+      items: a.items.map<ItemCard>((it) => ({
+        id: it.id,
+        title: it.title,
+        photo: it.photos[0]?.url ?? null,
+        auctionTitle: it.auction?.title ?? null,
+      })),
+    });
 
-    const appointment = appt
-      ? {
-          id: appt.id,
-          startsAt: appt.startsAt.toISOString(),
-          location: {
-            id: appt.location.id,
-            name: appt.location.name,
-            address: appt.location.address,
-            instructions: appt.location.instructions,
-          },
-          items: appt.items.map<ItemCard>((it) => ({
-            id: it.id,
-            title: it.title,
-            photo: it.photos[0]?.url ?? null,
-            auctionTitle: it.auction?.title ?? null,
-          })),
-        }
-      : null;
+    // The "main" appointment is the one at the preferred location (soonest upcoming,
+    // else most recent). Everything else — non-transferable items scheduled at their
+    // own warehouse — comes back as otherAppointments.
+    const preferredAppts = preferredLocationId
+      ? scheduledAppts.filter((a) => a.locationId === preferredLocationId)
+      : scheduledAppts;
+    const mainRaw =
+      preferredAppts.find((a) => a.startsAt >= nowTs) ??
+      preferredAppts[preferredAppts.length - 1] ??
+      null;
+    const appointment = mainRaw ? mapAppt(mainRaw) : null;
+    const otherAppointments = scheduledAppts
+      .filter((a) => a.id !== mainRaw?.id)
+      .map(mapAppt);
 
     // Unscheduled pickup items (PENDING_PICKUP, no appointment)
     const unscheduledIds = await getUnscheduledPickupItemIds(userId, org.id);
@@ -145,7 +153,7 @@ export async function GET() {
       }))
     );
 
-    return NextResponse.json({ appointment, unscheduledItems, locations, pendingTransfers, preferredLocationId });
+    return NextResponse.json({ appointment, otherAppointments, unscheduledItems, locations, pendingTransfers, preferredLocationId });
   } catch (err) {
     console.error("[pickup GET]:", err);
     return NextResponse.json(

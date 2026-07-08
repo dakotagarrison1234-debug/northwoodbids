@@ -19,7 +19,7 @@ export default function EditItemPage() {
     title: "", description: "", condition: "GOOD", category: "",
     retailValue: "", startingBid: "", reservePrice: "", donorName: "",
     taxDeductible: false, itemCode: "", storageLocation: "", locationId: "", notes: "", auctionId: "",
-    isPremium: false, packSize: 0,
+    isPremium: false, packSize: 0, transferable: true,
   });
   // Meta used by the danger zone (delete / remove-from-auction gating).
   const [meta, setMeta] = useState<{ status: string; inAuction: boolean; hasBids: boolean; sold: boolean } | null>(null);
@@ -45,6 +45,7 @@ export default function EditItemPage() {
           auctionId: item.auctionId || "",
           isPremium: item.isPremium || false,
           packSize: item.packSize || 0,
+          transferable: item.transferable !== false,
         });
         if (item.photos) {
           // Show the current main photo first so it's displayed as main and preserved.
@@ -348,6 +349,24 @@ export default function EditItemPage() {
                 <option value="">Choose a warehouse…</option>
                 {pickupLocations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
               </select>
+            </div>
+
+            <div className="mt-4">
+              <label className="text-base text-[#6f5b46] mb-1.5 block">Transfer</label>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => setFormData((prev) => ({ ...prev, transferable: true }))}
+                  className={`px-4 py-2.5 rounded-xl text-base font-semibold border transition-colors ${
+                    formData.transferable ? "bg-[#6c4d39] text-white border-[#6c4d39]" : "bg-white text-[#4a3a2b] border-[#cdbda3] hover:bg-[#efe3d0]"
+                  }`}>
+                  Transferable
+                </button>
+                <button type="button" onClick={() => setFormData((prev) => ({ ...prev, transferable: false }))}
+                  className={`px-4 py-2.5 rounded-xl text-base font-semibold border transition-colors ${
+                    !formData.transferable ? "bg-[#8a4f1c] text-white border-[#8a4f1c]" : "bg-white text-[#4a3a2b] border-[#cdbda3] hover:bg-[#efe3d0]"
+                  }`}>
+                  Pickup at warehouse only
+                </button>
+              </div>
             </div>
           </div>
 

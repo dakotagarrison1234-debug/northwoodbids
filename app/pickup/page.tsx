@@ -47,6 +47,7 @@ interface SchedLocation {
 }
 interface PickupData {
   appointment: Appointment | null;
+  otherAppointments: Appointment[];
   unscheduledItems: ItemCard[];
   locations: SchedLocation[];
   pendingTransfers: PendingTransfer[];
@@ -446,13 +447,12 @@ export default function PickupPage() {
     }
   };
 
-  const cancel = async () => {
-    if (!data?.appointment) return;
+  const cancelById = async (id: string) => {
     if (!confirm("Cancel this pickup appointment? Your items will go back to the waiting list.")) return;
     setBusy(true);
     setMsg(null);
     try {
-      const res = await fetch(`/api/pickup/${data.appointment.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/pickup/${id}`, { method: "DELETE" });
       const d = await res.json();
       if (d.success) {
         setMsg({ text: "Your pickup was cancelled.", ok: true });
@@ -467,6 +467,7 @@ export default function PickupPage() {
       setBusy(false);
     }
   };
+  const cancel = () => { if (data?.appointment) cancelById(data.appointment.id); };
 
   if (!isLoaded || loading) {
     return (
@@ -508,7 +509,7 @@ export default function PickupPage() {
     );
   }
 
-  const { appointment, unscheduledItems, locations, pendingTransfers, preferredLocationId } = data;
+  const { appointment, otherAppointments, unscheduledItems, locations, pendingTransfers, preferredLocationId } = data;
 
   const apptPassed = !!appointment && new Date(appointment.startsAt).getTime() < Date.now();
   const inTransitIds = new Set(pendingTransfers.flatMap((t) => t.items.map((it) => it.id)));
@@ -524,6 +525,18 @@ export default function PickupPage() {
     (it) => !inTransitIds.has(it.id) && (it.locationId === preferredId || it.locationId == null)
   );
   const transferCount = pendingTransfers.reduce((s, t) => s + t.items.length, 0);
+
+  // Non-transferable items won at OTHER warehouses — must be collected there, grouped
+  // by warehouse so the bidder can schedule each. (Transferable items elsewhere are
+  // in transit; these are the ones that can't be moved.)
+  const otherLocationGroups = Object.entries(
+    unscheduledItems
+      .filter((it) => !inTransitIds.has(it.id) && it.locationId != null && it.locationId !== preferredId)
+      .reduce<Record<string, ItemCard[]>>((acc, it) => {
+        (acc[it.locationId as string] ??= []).push(it);
+        return acc;
+      }, {})
+  );
 
   const banner = msg && (
     <div
@@ -775,6 +788,58 @@ export default function PickupPage() {
                       </ul>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Pick up at other locations — non-transferable items at their own warehouse */}
+            {(otherAppointments.length > 0 || otherLocationGroups.length > 0) && (
+              <div className="pt-2">
+                <h2 className="text-base font-bold text-[#8a5a2b] uppercase tracking-wider mb-1">Pick up at other locations</h2>
+                <p className="text-sm text-[#8a7559] mb-3">Some items can&apos;t be transferred — collect them at the warehouse they&apos;re at.</p>
+                <div className="space-y-4">
+                  {otherAppointments.map((a) => (
+                    <div key={a.id} className="bg-white border-2 border-green-200 rounded-2xl overflow-hidden">
+                      <div className="bg-green-50 border-b border-green-200 px-5 py-4">
+                        <div className="text-base font-semibold text-green-700">Scheduled for</div>
+                        <div className="text-xl font-extrabold text-green-700 mt-0.5">{fmtDateTime(a.startsAt)}</div>
+                      </div>
+                      <div className="px-5 py-4">
+                        <LocationBadge name={a.location.name} />
+                        {a.location.address && <div className="text-base text-[#6f5b46] mt-0.5">{a.location.address}</div>}
+                        <ul className="mt-3 space-y-1 text-base text-[#241a12]">
+                          {a.items.map((it) => (<li key={it.id}>• {it.title}</li>))}
+                        </ul>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <button type="button" onClick={() => downloadAppointmentIcs(a)} className="inline-flex items-center gap-2 bg-[#efe3d0] hover:bg-[#e3d6bf] border border-[#cdbda3] text-[#6c4d39] font-semibold text-sm px-4 py-2 rounded-xl transition-colors">Add to calendar</button>
+                          <button type="button" onClick={() => cancelById(a.id)} disabled={busy} className="bg-white border border-red-500/30 text-red-600 hover:bg-red-50 disabled:opacity-50 font-semibold text-sm px-4 py-2 rounded-xl transition-colors">Cancel</button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {otherLocationGroups.map(([locId, items]) => {
+                    const sched = locations.find((l) => l.id === locId);
+                    const name = items[0]?.locationName ?? sched?.name ?? "this location";
+                    return (
+                      <div key={locId} className="bg-white border-2 border-[#8a5a2b]/25 rounded-2xl px-6 py-5 space-y-4">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <LocationBadge name={name} />
+                            <span className="text-xs text-[#8a5a2b] font-semibold">Not transferable</span>
+                          </div>
+                          <p className="text-sm text-[#8a7559]">Collect {items.length === 1 ? "this item" : "these items"} at {name} — pick a time below.</p>
+                          <ul className="mt-2 space-y-1 text-base text-[#241a12]">
+                            {items.map((it) => (<li key={it.id}>• {it.title}</li>))}
+                          </ul>
+                        </div>
+                        {sched ? (
+                          <SlotPicker location={sched} onBook={book} busy={busy} submitLabel={`Schedule at ${name}`} />
+                        ) : (
+                          <div className="rounded-xl border border-[#e3d6bf] bg-white px-4 py-6 text-base text-[#8a7559]">No times are available at {name} right now.</div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

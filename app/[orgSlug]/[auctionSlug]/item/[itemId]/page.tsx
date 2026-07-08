@@ -28,6 +28,8 @@ interface Item {
   status: string;
   itemEndAt: string | null;
   packSize?: number | null;
+  transferable?: boolean;
+  locationName?: string | null;
   photos: { url: string; isPrimary: boolean }[];
   bids: { id: string; amount: number; clerkUserId?: string; bidder?: string; placedAt: string; isProxy?: boolean }[];
   auction: { title: string; endAt: string; status: string } | null;
@@ -640,6 +642,25 @@ export default function ItemPage() {
 
           <h1 className="font-display text-2xl sm:text-3xl font-bold mb-2">{item.title}</h1>
           {item.description && <ExpandableDescription text={item.description} />}
+
+          {/* Pickup location + transferable — so bidders know where it is and how they get it */}
+          {(item.locationName || item.transferable === false) && (
+            <div className="flex flex-wrap items-center gap-2 mt-3 mb-1">
+              {item.locationName && (
+                <span className="inline-flex items-center gap-1 bg-[#c47b3e]/15 text-[#8a4f1c] border border-[#c47b3e]/40 px-2.5 py-1 rounded-full font-semibold text-sm">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 1.5c-2.5 0-4.5 2-4.5 4.5C3.5 9.5 8 14.5 8 14.5s4.5-5 4.5-8.5C12.5 3.5 10.5 1.5 8 1.5z" /><circle cx="8" cy="6" r="1.6" /></svg>
+                  {item.locationName}
+                </span>
+              )}
+              {item.transferable === false ? (
+                <span className="bg-[#efe0c9] text-[#8a5a2b] border border-[#e3c9a3] px-2.5 py-1 rounded-full font-semibold text-sm">
+                  Pickup at this location only — not transferable
+                </span>
+              ) : (
+                <span className="text-[#8a7559] text-sm">Can be transferred to your pickup location</span>
+              )}
+            </div>
+          )}
 
           {/* Countdown */}
           {effectiveEndAt && !auctionClosed && !itemSold && !itemNotActive && (

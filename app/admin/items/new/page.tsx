@@ -578,6 +578,7 @@ function NewItemForm() {
     auctionId: preselectedAuctionId,
     isPremium: false,
     packSize: 0,
+    transferable: true,
   });
   // Combo lot builder: sell several items as ONE lot with a photo collage.
   const [combo, setCombo] = useState(false);
@@ -722,6 +723,7 @@ function NewItemForm() {
       auctionId: preselectedAuctionId,
       isPremium: false,
       packSize: 0,
+      transferable: true,
     });
     setCombo(false);
     setPhotos([]);
@@ -763,6 +765,7 @@ function NewItemForm() {
             taxDeductible: false,
             isPremium: false,
             packSize: 0,
+            transferable: true,
             // preserved: condition, storageLocation (spot), locationId (warehouse), auctionId
           }));
           setCombo(false);
@@ -1019,6 +1022,24 @@ function NewItemForm() {
                   </select>
                 </>
               )}
+            </div>
+
+            <div className="mt-4">
+              <label className="text-base text-[#6f5b46] mb-1.5 block">Transfer</label>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => setFormData((prev) => ({ ...prev, transferable: true }))}
+                  className={`px-4 py-2.5 rounded-xl text-base font-semibold border transition-colors ${
+                    formData.transferable ? "bg-[#6c4d39] text-white border-[#6c4d39]" : "bg-white text-[#4a3a2b] border-[#cdbda3] hover:bg-[#efe3d0]"
+                  }`}>
+                  Transferable
+                </button>
+                <button type="button" onClick={() => setFormData((prev) => ({ ...prev, transferable: false }))}
+                  className={`px-4 py-2.5 rounded-xl text-base font-semibold border transition-colors ${
+                    !formData.transferable ? "bg-[#8a4f1c] text-white border-[#8a4f1c]" : "bg-white text-[#4a3a2b] border-[#cdbda3] hover:bg-[#efe3d0]"
+                  }`}>
+                  Pickup at warehouse only
+                </button>
+              </div>
             </div>
           </div>
 

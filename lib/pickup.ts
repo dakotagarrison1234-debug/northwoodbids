@@ -158,6 +158,7 @@ export async function attachToPendingTransfers(
     where: {
       id: { in: ids },
       status: "PENDING_PICKUP",
+      transferable: true, // non-transferable items stay at their warehouse
       pickupAppointmentId: null,
       transferRequestId: null,
       locationId: { not: null },
@@ -206,10 +207,12 @@ export async function autoTransferToPreferred(
   if (ids.length === 0) return { added: 0, toLocationName: preferred.name };
 
   // Unscheduled paid items NOT at the preferred location and not already moving.
+  // Non-transferable items are excluded — they must be collected at their warehouse.
   const elsewhere = await prisma.item.findMany({
     where: {
       id: { in: ids },
       status: "PENDING_PICKUP",
+      transferable: true,
       pickupAppointmentId: null,
       transferRequestId: null,
       locationId: { not: null },

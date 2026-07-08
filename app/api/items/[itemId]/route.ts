@@ -29,6 +29,7 @@ export async function GET(
         // entire history (newest first, matching what the UI shows).
         bids: { orderBy: { placedAt: "desc" }, take: 50 },
         auction: { select: { title: true, endAt: true, status: true } },
+        location: { select: { name: true } },
         organization: {
           select: {
             id: true,
@@ -48,6 +49,7 @@ export async function GET(
     if (isStaff) {
       const staffItem = {
         ...item,
+        locationName: item.location?.name ?? null,
         retailValue: item.retailValue != null ? Number(item.retailValue) : null,
         startingBid: Number(item.startingBid),
         reservePrice: item.reservePrice != null ? Number(item.reservePrice) : null,
@@ -78,6 +80,7 @@ export async function GET(
     return NextResponse.json({
       item: {
         ...publicItemFields,
+        locationName: item.location?.name ?? null,
         retailValue: publicItemFields.retailValue != null ? Number(publicItemFields.retailValue) : null,
         startingBid: Number(publicItemFields.startingBid),
         currentBid: Number(publicItemFields.currentBid),
@@ -186,6 +189,7 @@ export async function PATCH(
       ...(body.locationId !== undefined && { locationId: body.locationId || null }),
       ...(body.notes !== undefined && { notes: body.notes || null }),
       ...(body.isPremium !== undefined && { isPremium: !!body.isPremium }),
+      ...(body.transferable !== undefined && { transferable: body.transferable !== false }),
       ...(body.packSize !== undefined && { packSize: Number(body.packSize) > 1 ? Math.min(Math.floor(Number(body.packSize)), 12) : null }),
       ...(autoActivate ? { status: "ACTIVE" } : {}),
     };
