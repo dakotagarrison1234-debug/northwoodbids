@@ -343,6 +343,8 @@ model BidderProfile {
   blocked        Boolean       @default(false)
   blockedAt      DateTime?
   blockedReason  String?
+  // Last time we sent a "we miss you" win-back text, so we never re-text too soon.
+  lastWinbackAt  DateTime?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @default(now()) @updatedAt
 }

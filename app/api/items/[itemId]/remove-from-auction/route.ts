@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { canAccessOrg } from "@/lib/auth";
-import { triggerAuctionUpdated } from "@/lib/pusherServer";
+import { triggerAuctionUpdated, triggerItemClosed } from "@/lib/pusherServer";
 
 // POST /api/items/[itemId]/remove-from-auction
 // Pulls an item out of its auction and returns it to Drafts (unlinked). Any active
@@ -48,6 +48,8 @@ export async function POST(
     ]);
 
     triggerAuctionUpdated(item.organization.slug).catch(() => {});
+    // Flip any live viewers on that item's page to "ended" instantly.
+    triggerItemClosed(itemId).catch(() => {});
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error removing item from auction:", error);

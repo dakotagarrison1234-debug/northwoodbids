@@ -65,6 +65,10 @@ export default function ItemPage() {
   const [isWinning, setIsWinning] = useState(false);
 
   const [liveBids, setLiveBids] = useState<LiveBid[]>([]);
+  const [bidCount, setBidCount] = useState(0); // live total, ticks up on every bid
+  // Trailing-debounce the winner/proxy refetch so a burst of bids = one query.
+  const proxyDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const connectedOnceRef = useRef(false); // skip the very first Pusher connect
 
   // Card-on-file gate
   // null = not yet checked, true = has card, false = no card
@@ -114,6 +118,7 @@ export default function ItemPage() {
           const end = d.item.itemEndAt ?? d.item.auction?.endAt ?? null;
           setEffectiveEndAt(end);
           if (end && new Date(end) <= new Date()) setBiddingEnded(true);
+          setBidCount(Array.isArray(d.item.bids) ? d.item.bids.length : 0);
           const sorted = [...d.item.bids].sort(
             (a: Item["bids"][0], b: Item["bids"][0]) =>
               new Date(a.placedAt).getTime() - new Date(b.placedAt).getTime()
@@ -194,7 +199,9 @@ export default function ItemPage() {
       hasActiveProxy?: boolean;
       newEndAt?: string;
     }) => {
-      setItem(prev => prev ? { ...prev, currentBid: data.amount } : prev);
+      // Monotonic guard: never let a late/duplicate event show a lower price.
+      setItem(prev => prev ? { ...prev, currentBid: Math.max(prev.currentBid, data.amount) } : prev);
+      setBidCount(c => c + 1);
       // Privacy: the broadcast no longer carries any user id. We derive an opaque
       // "Bidder N" label client-side by incrementing our own per-page counter on
       // each live bid event — no real/truncated Clerk id is ever on the wire.
@@ -215,8 +222,12 @@ export default function ItemPage() {
         setEffectiveEndAt(data.newEndAt);
         setBiddingEnded(false);
       }
-      // Fix #4 + #5: re-fetch proxy status on every bid to detect beaten proxy + winning state
-      refreshProxyStatus();
+      // Winner/proxy state only matters to a signed-in bidder. Debounce so a burst
+      // of bids collapses into a single refetch (avoids a query-per-viewer stampede).
+      if (isSignedIn) {
+        if (proxyDebounceRef.current) clearTimeout(proxyDebounceRef.current);
+        proxyDebounceRef.current = setTimeout(() => refreshProxyStatus(), 500);
+      }
     });
 
     channel.bind("proxy-update", (data: { hasActiveProxy: boolean }) => {
@@ -233,12 +244,37 @@ export default function ItemPage() {
         .catch(() => {});
     });
 
+    // Catch-up after a reconnect or tab-refocus: events missed during a WebSocket
+    // drop are gone, so pull the authoritative current price/count/end fresh.
+    const catchUp = () => {
+      fetch(`/api/items/${itemId}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (!d.item) return;
+          setItem((prev) => prev ? { ...prev, currentBid: Math.max(prev.currentBid, d.item.currentBid) } : d.item);
+          if (Array.isArray(d.item.bids)) setBidCount(d.item.bids.length);
+          const end = d.item.itemEndAt ?? d.item.auction?.endAt ?? null;
+          if (end) setEffectiveEndAt(end);
+        })
+        .catch(() => {});
+      if (isSignedIn) refreshProxyStatus();
+    };
+    pusher.connection.bind("connected", () => {
+      if (!connectedOnceRef.current) { connectedOnceRef.current = true; return; }
+      catchUp();
+    });
+    const onVisible = () => { if (document.visibilityState === "visible") catchUp(); };
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
       channel.unbind_all();
+      pusher.connection.unbind_all();
       pusher.unsubscribe(`item-${itemId}`);
       pusher.disconnect();
+      document.removeEventListener("visibilitychange", onVisible);
+      if (proxyDebounceRef.current) clearTimeout(proxyDebounceRef.current);
     };
-  }, [itemId, refreshProxyStatus]);
+  }, [itemId, refreshProxyStatus, isSignedIn]);
 
   // Fix #7: auto-refresh 75s after bidding ends (to pick up cron job results)
   const handleExpire = useCallback(() => {
@@ -655,7 +691,7 @@ export default function ItemPage() {
               <div className="text-right flex flex-col items-end gap-2">
                 <div>
                   <div className="text-[#8a7559] text-sm">Bids</div>
-                  <div className="text-[#241a12] font-bold text-xl">{item.bids?.length ?? liveBids.length}</div>
+                  <div className="text-[#241a12] font-bold text-xl">{bidCount}</div>
                 </div>
                 {hasActiveProxy && (
                   <span className="text-xs bg-[#6c4d39]/15 text-[#563e2c] px-2 py-0.5 rounded-full font-medium">
