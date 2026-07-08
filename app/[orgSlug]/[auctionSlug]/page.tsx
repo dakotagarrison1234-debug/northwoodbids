@@ -246,6 +246,14 @@ export default async function AuctionPage({ params }: Props) {
 
               const primaryPhoto = item.photos.find(p => p.isPrimary)?.url || item.photos[0]?.url;
 
+              // Combo/pack lot: render a collage of up to 4 photos + an "N-Pack" badge.
+              const packSize = item.packSize ?? 0;
+              const isCombo = packSize > 1;
+              const collage = [...item.photos]
+                .sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0))
+                .slice(0, 4)
+                .map((p) => p.url);
+
               // Live countdown badge — only for items still accepting bids
               const isItemLive =
                 item.status === "ACTIVE" &&
@@ -278,7 +286,15 @@ export default async function AuctionPage({ params }: Props) {
                 >
                   {/* Photo */}
                   <div className="w-full aspect-square bg-[#efe3d0] flex items-center justify-center text-[#8a7559] overflow-hidden relative">
-                    {primaryPhoto ? (
+                    {isCombo && collage.length > 1 ? (
+                      <div className={`absolute inset-0 grid gap-0.5 ${collage.length <= 2 ? "grid-cols-2 grid-rows-1" : "grid-cols-2 grid-rows-2"}`}>
+                        {collage.map((url, i) => (
+                          <div key={i} className="relative bg-[#efe3d0] overflow-hidden">
+                            <Image src={url} alt="" fill sizes="(max-width:640px) 25vw, 12vw" className="object-cover" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : primaryPhoto ? (
                       <Image
                         src={primaryPhoto}
                         alt={item.title}
@@ -294,6 +310,11 @@ export default async function AuctionPage({ params }: Props) {
                           <path d="m21 15-5-5L5 21" />
                         </svg>
                         <span className="text-xs">No photo</span>
+                      </div>
+                    )}
+                    {isCombo && (
+                      <div className="absolute bottom-2.5 left-2.5 bg-[#241a12]/85 text-white text-xs px-2.5 py-1 rounded-full font-bold shadow-sm z-10">
+                        {packSize}-Pack
                       </div>
                     )}
                     {isItemLive && <ItemCardTimer itemId={item.id} endAt={itemEndAtIso} />}

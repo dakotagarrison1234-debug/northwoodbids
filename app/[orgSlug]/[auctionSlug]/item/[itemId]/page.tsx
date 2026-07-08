@@ -27,6 +27,7 @@ interface Item {
   storageLocation: string | null;
   status: string;
   itemEndAt: string | null;
+  packSize?: number | null;
   photos: { url: string; isPrimary: boolean }[];
   bids: { id: string; amount: number; clerkUserId?: string; bidder?: string; placedAt: string; isProxy?: boolean }[];
   auction: { title: string; endAt: string; status: string } | null;
@@ -587,6 +588,9 @@ export default function ItemPage() {
         {/* Right: bidding */}
         <div>
           <div className="flex items-center gap-2 mb-3 flex-wrap">
+            {(item.packSize ?? 0) > 1 && (
+              <span className="text-xs text-white bg-[#241a12] px-2.5 py-1 rounded-full font-bold">{item.packSize}-Pack lot</span>
+            )}
             {item.category && (
               <span className="text-xs text-[#6c4d39] bg-[#6c4d39]/10 border border-[#6c4d39]/20 px-2.5 py-1 rounded-full font-medium">{item.category}</span>
             )}

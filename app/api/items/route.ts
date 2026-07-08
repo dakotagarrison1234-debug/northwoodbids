@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
       organizationId,
       photos,
       isPremium,
+      packSize,
     } = body;
 
     if (!title || !organizationId) {
@@ -130,6 +131,7 @@ export async function POST(request: NextRequest) {
       organizationId,
       status: itemStatus,
       isPremium: !!isPremium,
+      packSize: Number(packSize) > 1 ? Math.min(Math.floor(Number(packSize)), 12) : null,
       photos: photos && photos.length > 0 ? {
         create: photos.map((url: string, index: number) => ({
           url,

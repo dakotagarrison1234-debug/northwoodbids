@@ -38,10 +38,16 @@ function BarcodeScanner({
   onFill,
   collapsed = false,
   onCollapsedChange,
+  comboMode = false,
+  onAddComboPhoto,
 }: {
   onFill: (r: BarcodeResult) => void;
   collapsed?: boolean;
   onCollapsedChange?: (v: boolean) => void;
+  // Combo mode: picking a result photo just adds it to the collage (no title/price
+  // fill), and the scanner resets so the next item can be scanned right away.
+  comboMode?: boolean;
+  onAddComboPhoto?: (url: string) => void;
 }) {
   const [barcode, setBarcode] = useState("");
   const [scanning, setScanning] = useState(false);
@@ -489,13 +495,24 @@ function BarcodeScanner({
           {/* Image picker */}
           {result.images.length > 0 && (
             <div className="mb-3">
-              <div className="text-xs text-[#8a7559] mb-1.5 font-medium">Pick a photo (optional)</div>
+              <div className="text-xs text-[#8a7559] mb-1.5 font-medium">
+                {comboMode ? "Tap ONE photo to add it to the combo" : "Pick a photo (optional)"}
+              </div>
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {result.images.map((img, i) => (
                   <button
                     key={i}
                     type="button"
-                    onClick={() => applyResult(img)}
+                    onClick={() => {
+                      if (comboMode) {
+                        onAddComboPhoto?.(img);
+                        // reset so the next combo item can be scanned immediately
+                        setResult(null);
+                        setBarcode("");
+                      } else {
+                        applyResult(img);
+                      }
+                    }}
                     className="w-16 h-16 shrink-0 rounded-lg overflow-hidden border-2 border-transparent hover:border-[#6c4d39] transition-colors bg-[#efe3d0]"
                   >
                     <img src={img} alt="" className="w-full h-full object-contain" />
@@ -506,19 +523,21 @@ function BarcodeScanner({
           )}
 
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => applyResult()}
-              className="flex-1 bg-[#6c4d39] hover:bg-[#563e2c] text-white text-base font-bold py-3 rounded-xl transition-colors"
-            >
-              Auto-fill form
-            </button>
+            {!comboMode && (
+              <button
+                type="button"
+                onClick={() => applyResult()}
+                className="flex-1 bg-[#6c4d39] hover:bg-[#563e2c] text-white text-base font-bold py-3 rounded-xl transition-colors"
+              >
+                Auto-fill form
+              </button>
+            )}
             <button
               type="button"
               onClick={() => { setResult(null); setBarcode(""); }}
-              className="text-[#8a7559] hover:text-[#4a3a2b] text-base px-4 py-3 border border-[#cdbda3] rounded-xl transition-colors"
+              className={`text-[#8a7559] hover:text-[#4a3a2b] text-base px-4 py-3 border border-[#cdbda3] rounded-xl transition-colors ${comboMode ? "flex-1" : ""}`}
             >
-              Dismiss
+              {comboMode ? "Skip / scan next" : "Dismiss"}
             </button>
           </div>
         </div>
@@ -559,7 +578,19 @@ function NewItemForm() {
     locationId: searchParams.get("locationId") || "",
     auctionId: preselectedAuctionId,
     isPremium: false,
+    packSize: 0,
   });
+  // Combo lot builder: sell several items as ONE lot with a photo collage.
+  const [combo, setCombo] = useState(false);
+  const toggleCombo = () => {
+    setCombo((on) => {
+      const next = !on;
+      setFormData((prev) => ({ ...prev, packSize: next ? (prev.packSize > 1 ? prev.packSize : 2) : 0 }));
+      if (next) setScannerCollapsed(false);
+      return next;
+    });
+  };
+  const setPackSize = (n: number) => setFormData((prev) => ({ ...prev, packSize: n }));
 
   // Auto-grow the title field so the WHOLE title is always visible (long titles
   // are where naming issues hide — never truncate them behind a scroll).
@@ -691,7 +722,9 @@ function NewItemForm() {
       locationId: "",
       auctionId: preselectedAuctionId,
       isPremium: false,
+      packSize: 0,
     });
+    setCombo(false);
     setPhotos([]);
     setBanner(null);
     setNextCode(null);
@@ -730,8 +763,10 @@ function NewItemForm() {
             reservePrice: "",
             taxDeductible: false,
             isPremium: false,
+            packSize: 0,
             // preserved: condition, storageLocation (spot), locationId (warehouse), auctionId
           }));
+          setCombo(false);
           setPhotos([]);
           // Mint a fresh code for the next item.
           genCode();
@@ -785,8 +820,57 @@ function NewItemForm() {
             </div>
           )}
 
+          {/* ── Combo lot builder ── */}
+          <div className={`rounded-xl border-2 p-5 transition-colors ${combo ? "border-[#6c4d39] bg-[#f6ecda]" : "border-[#e3d6bf] bg-white"}`}>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-lg font-semibold text-[#241a12]">Combo lot</h2>
+                <p className="text-sm text-[#6f5b46] mt-0.5">Sell several items as ONE lot — pick one photo from each to make a collage. Still saves as a single lot &amp; code.</p>
+              </div>
+              <button
+                type="button"
+                onClick={toggleCombo}
+                className={`shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-base font-semibold border-2 transition-colors ${
+                  combo ? "bg-[#6c4d39] text-white border-[#6c4d39]" : "bg-white text-[#6c4d39] border-[#cdbda3] hover:bg-[#efe3d0]"
+                }`}
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1.5" y="1.5" width="6" height="6" rx="1" /><rect x="8.5" y="1.5" width="6" height="6" rx="1" /><rect x="1.5" y="8.5" width="6" height="6" rx="1" /><rect x="8.5" y="8.5" width="6" height="6" rx="1" /></svg>
+                {combo ? "Combo on" : "Combo"}
+              </button>
+            </div>
+            {combo && (
+              <div className="mt-4">
+                <div className="text-sm font-semibold text-[#4a3a2b] mb-2">How many items in the combo?</div>
+                <div className="flex flex-wrap gap-2">
+                  {[2, 3, 4, 5, 6].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setPackSize(n)}
+                      className={`px-4 py-2.5 rounded-xl text-base font-bold border transition-colors ${
+                        formData.packSize === n ? "bg-[#6c4d39] text-white border-[#6c4d39]" : "bg-white text-[#4a3a2b] border-[#cdbda3] hover:bg-[#efe3d0]"
+                      }`}
+                    >
+                      {n}-Pack
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-3 text-sm text-[#6f5b46]">
+                  <span className="font-bold text-[#6c4d39]">{photos.length} of {formData.packSize}</span> photos added. Scan or type each item below and tap <strong>one photo</strong> to add it to the collage (or upload photos in the Photos section).
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* ── Barcode scanner ── (keyed so "Start fresh" / "Save & Add Another" remount it clean) */}
-          <BarcodeScanner key={scannerKey} onFill={handleBarcodeFill} collapsed={scannerCollapsed} onCollapsedChange={setScannerCollapsed} />
+          <BarcodeScanner
+            key={scannerKey}
+            onFill={handleBarcodeFill}
+            collapsed={scannerCollapsed}
+            onCollapsedChange={setScannerCollapsed}
+            comboMode={combo}
+            onAddComboPhoto={importImageFromUrl}
+          />
 
           {/* ── Item details ── */}
           <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">

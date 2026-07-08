@@ -186,6 +186,7 @@ export async function PATCH(
       ...(body.locationId !== undefined && { locationId: body.locationId || null }),
       ...(body.notes !== undefined && { notes: body.notes || null }),
       ...(body.isPremium !== undefined && { isPremium: !!body.isPremium }),
+      ...(body.packSize !== undefined && { packSize: Number(body.packSize) > 1 ? Math.min(Math.floor(Number(body.packSize)), 12) : null }),
       ...(autoActivate ? { status: "ACTIVE" } : {}),
     };
 

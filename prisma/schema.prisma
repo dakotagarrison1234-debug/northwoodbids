@@ -104,6 +104,9 @@ enum AuctionStatus {
   notes           String?
   status          ItemStatus   @default(DRAFT)
   isPremium       Boolean      @default(false)
+  // Combo/pack lot: number of items sold together as ONE lot (null/1 = normal item).
+  // Purely a display flag — the item's photos render as a collage with an "N-Pack" badge.
+  packSize        Int?
   itemEndAt       DateTime?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt

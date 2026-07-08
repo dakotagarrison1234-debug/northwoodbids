@@ -19,7 +19,7 @@ export default function EditItemPage() {
     title: "", description: "", condition: "GOOD", category: "",
     retailValue: "", startingBid: "", reservePrice: "", donorName: "",
     taxDeductible: false, itemCode: "", storageLocation: "", locationId: "", notes: "", auctionId: "",
-    isPremium: false,
+    isPremium: false, packSize: 0,
   });
 
   useEffect(() => {
@@ -38,6 +38,7 @@ export default function EditItemPage() {
           notes: item.notes || "",
           auctionId: item.auctionId || "",
           isPremium: item.isPremium || false,
+          packSize: item.packSize || 0,
         });
         if (item.photos) {
           // Show the current main photo first so it's displayed as main and preserved.
