@@ -46,6 +46,9 @@ function IcoPickup() {
 function IcoGift() {
   return <svg width="16" height="16" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="12" height="8" rx="1"/><path d="M2 9h12M8 6v8"/><path d="M8 6S6.5 2.5 4.5 3.5 6 6 8 6zM8 6s1.5-3.5 3.5-2.5S10 6 8 6z"/></svg>;
 }
+function IcoGame() {
+  return <svg width="16" height="16" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1.5" y="4.5" width="13" height="7" rx="3"/><path d="M4.5 8h2M5.5 7v2"/><circle cx="10.5" cy="7.5" r=".6" fill="currentColor"/><circle cx="11.8" cy="8.8" r=".6" fill="currentColor"/></svg>;
+}
 
 // ── Section label ──────────────────────────────────────────────────────────────
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -240,6 +243,7 @@ export default function UserMenu() {
           <SectionLabel>Account</SectionLabel>
           <NavLink href="/account" iconEl={<IcoUser />} label="My Profile" sublabel="Name, email, phone & payment cards" onClick={close} />
           <NavLink href="/help" iconEl={<IcoHelp />} label="Info & Help" sublabel="Bidding tips, increments, FAQ" onClick={close} />
+          <NavLink href="/play" iconEl={<IcoGame />} label="Play the game" sublabel="Our auction mini-game — for fun" onClick={close} />
 
           {(me?.orgId || me?.isSuperAdmin) && (
             <>

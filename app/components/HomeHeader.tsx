@@ -65,14 +65,6 @@ export default function HomeHeader() {
               <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
             </svg>
           </button>
-          <Link href="/play"
-            className="flex items-center gap-1.5 bg-[#6c4d39] hover:bg-[#563e2c] text-white text-sm font-bold px-3.5 sm:px-4 py-2 rounded-xl shadow-sm transition-colors whitespace-nowrap"
-            aria-label="Play the auction game">
-            <svg className="w-[15px] h-[15px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 4l6 6-3 3M14 4l-3 3M14 4l-9 9 5 5 9-9M5 13l-3 9 9-3" />
-            </svg>
-            Play
-          </Link>
           <Link href="/help"
             className="hidden sm:flex items-center gap-1.5 text-[#6f5b46] hover:text-[#241a12] text-sm px-3 py-1.5 rounded-xl hover:bg-[#efe3d0] transition-colors whitespace-nowrap"
             aria-label="Help">
