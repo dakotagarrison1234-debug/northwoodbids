@@ -15,6 +15,7 @@ type ItemCard = {
   auctionTitle: string | null;
   locationId?: string | null;
   locationName?: string | null;
+  storageLocation?: string | null; // shelf/spot, e.g. "Box 1"
 };
 
 // GET /api/pickup — bidder's pickup view: upcoming appointment, unscheduled items, locations + slots
@@ -71,6 +72,7 @@ export async function GET() {
         title: it.title,
         photo: it.photos[0]?.url ?? null,
         auctionTitle: it.auction?.title ?? null,
+        storageLocation: it.storageLocation ?? null,
       })),
     });
 
@@ -108,6 +110,7 @@ export async function GET() {
       auctionTitle: it.auction?.title ?? null,
       locationId: it.locationId ?? null,
       locationName: it.location?.name ?? null,
+      storageLocation: it.storageLocation ?? null,
     }));
 
     // Active (REQUESTED or LOADED) transfers for this user

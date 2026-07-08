@@ -13,6 +13,17 @@ interface ItemCard {
   auctionTitle: string | null;
   locationId?: string | null;
   locationName?: string | null;
+  storageLocation?: string | null;
+}
+
+// Small "Box 1" chip so the customer/staff know exactly where a staged item sits.
+function SpotChip({ spot }: { spot?: string | null }) {
+  if (!spot) return null;
+  return (
+    <span className="inline-block bg-[#6c4d39]/10 text-[#6c4d39] border border-[#6c4d39]/25 rounded-full px-2 py-0.5 text-xs font-bold font-mono">
+      {spot}
+    </span>
+  );
 }
 interface PendingTransfer {
   id: string;
@@ -693,7 +704,12 @@ export default function PickupPage() {
                           {items.map((it) => (
                             <div key={it.id} className="flex items-center gap-3 bg-white border border-[#e3d6bf] rounded-xl px-4 py-3">
                               <ItemPhoto url={it.photo} title={it.title} />
-                              <div className="font-medium text-base text-[#241a12]">{it.title}</div>
+                              <div className="min-w-0 flex-1">
+                                <div className="font-medium text-base text-[#241a12]">{it.title}</div>
+                                {it.storageLocation && (
+                                  <div className="mt-1 text-sm text-[#6f5b46]">Find it at <SpotChip spot={it.storageLocation} /></div>
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -751,7 +767,7 @@ export default function PickupPage() {
                     </div>
                     <p className="text-sm text-[#8a7559] mt-0.5">Pick a day & time below to collect{transferCount > 0 ? " what's ready — your transferring items can be added once they arrive" : ""}.</p>
                     <ul className="mt-3 space-y-1 text-base text-[#241a12]">
-                      {ready.map((it) => (<li key={it.id}>• {it.title}</li>))}
+                      {ready.map((it) => (<li key={it.id}>• {it.title} <SpotChip spot={it.storageLocation} /></li>))}
                     </ul>
                   </div>
                   {preferredSched ? (
@@ -808,7 +824,7 @@ export default function PickupPage() {
                         <LocationBadge name={a.location.name} />
                         {a.location.address && <div className="text-base text-[#6f5b46] mt-0.5">{a.location.address}</div>}
                         <ul className="mt-3 space-y-1 text-base text-[#241a12]">
-                          {a.items.map((it) => (<li key={it.id}>• {it.title}</li>))}
+                          {a.items.map((it) => (<li key={it.id}>• {it.title} <SpotChip spot={it.storageLocation} /></li>))}
                         </ul>
                         <div className="mt-3 flex flex-wrap gap-2">
                           <button type="button" onClick={() => downloadAppointmentIcs(a)} className="inline-flex items-center gap-2 bg-[#efe3d0] hover:bg-[#e3d6bf] border border-[#cdbda3] text-[#6c4d39] font-semibold text-sm px-4 py-2 rounded-xl transition-colors">Add to calendar</button>
@@ -829,7 +845,7 @@ export default function PickupPage() {
                           </div>
                           <p className="text-sm text-[#8a7559]">Collect {items.length === 1 ? "this item" : "these items"} at {name} — pick a time below.</p>
                           <ul className="mt-2 space-y-1 text-base text-[#241a12]">
-                            {items.map((it) => (<li key={it.id}>• {it.title}</li>))}
+                            {items.map((it) => (<li key={it.id}>• {it.title} <SpotChip spot={it.storageLocation} /></li>))}
                           </ul>
                         </div>
                         {sched ? (
