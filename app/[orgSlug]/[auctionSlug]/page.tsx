@@ -352,10 +352,10 @@ export default async function AuctionPage({ params }: Props) {
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="text-[10px] text-[#8a7559] uppercase tracking-wide">
-                          {isUpcoming ? "Start" : isItemSold ? "Sold" : isItemUnsold ? "Final" : "Bid"}
+                          {isUpcoming ? "Start" : isItemSold ? "Sold" : isItemUnsold ? "Final" : Number(item.currentBid) > 0 ? "Bid" : "No bids"}
                         </div>
                         <div className={`font-extrabold text-base ${isItemUnsold ? "text-[#8a7559]" : "text-[#6c4d39]"}`}>
-                          ${(Number(item.currentBid) || Number(item.startingBid)).toLocaleString()}
+                          ${(isUpcoming ? Number(item.startingBid) : Number(item.currentBid)).toLocaleString()}
                         </div>
                       </div>
                       <span className={bidClass}>{bidLabel}</span>

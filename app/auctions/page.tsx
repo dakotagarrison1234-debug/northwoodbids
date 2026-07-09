@@ -142,12 +142,9 @@ export default async function AuctionsPage() {
                     {auction.title}
                   </h2>
 
-                  {/* Stats */}
+                  {/* Stats — item count only; auction totals are admin-only. */}
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                     <span className="text-[#8a7559]">{activeItems} item{activeItems !== 1 ? "s" : ""}</span>
-                    {raised > 0 && (
-                      <span className="text-[#6c4d39] font-semibold">${raised.toLocaleString()} total</span>
-                    )}
                   </div>
 
                   {/* Most-popular item previews */}

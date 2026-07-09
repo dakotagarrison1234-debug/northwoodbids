@@ -145,7 +145,6 @@ export default async function SearchPage({ searchParams }: Props) {
             </h2>
             <div className="space-y-2.5">
               {auctions.map(auction => {
-                const raised = auction.items.reduce((sum, i) => sum + Number(i.currentBid), 0);
                 return (
                   <Link
                     key={auction.id}
@@ -157,7 +156,7 @@ export default async function SearchPage({ searchParams }: Props) {
                         {auction.title}
                       </div>
                       <div className="text-xs text-[#8a7559] mt-0.5">
-                        {auction.organization.name} · {auction.items.length} items · ${raised.toLocaleString()} total
+                        {auction.organization.name} · {auction.items.length} items
                       </div>
                     </div>
                     <span className="text-xs bg-[#6c4d39]/15 text-[#6c4d39] border border-[#6c4d39]/20 px-2 py-0.5 rounded-full shrink-0 font-semibold">
