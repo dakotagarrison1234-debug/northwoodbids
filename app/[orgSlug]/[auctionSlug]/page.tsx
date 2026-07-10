@@ -360,11 +360,12 @@ export default async function AuctionPage({ params }: Props) {
                       </div>
                       <span className={bidClass}>{bidLabel}</span>
                     </div>
-                    {Number(item.retailValue) > 0 && (
-                      <div className="text-[10px] text-[#8a7559] mt-1.5">
-                        MSRP <span className="line-through">${Number(item.retailValue).toLocaleString()}</span>
-                      </div>
-                    )}
+                    <div className="flex items-center justify-between gap-2 text-[10px] mt-1.5">
+                      <span className="text-[#6c4d39] font-semibold capitalize">{item.condition.replace("_", " ").toLowerCase()}</span>
+                      {Number(item.retailValue) > 0 && (
+                        <span className="text-[#8a7559] shrink-0">MSRP <span className="text-[#a32d2d] font-semibold">${Number(item.retailValue).toLocaleString()}</span></span>
+                      )}
+                    </div>
                   </div>
                 </Link>
                 </div>
