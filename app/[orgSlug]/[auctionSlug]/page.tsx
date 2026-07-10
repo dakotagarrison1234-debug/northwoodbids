@@ -360,6 +360,11 @@ export default async function AuctionPage({ params }: Props) {
                       </div>
                       <span className={bidClass}>{bidLabel}</span>
                     </div>
+                    {Number(item.retailValue) > 0 && (
+                      <div className="text-[10px] text-[#8a7559] mt-1.5">
+                        MSRP <span className="line-through">${Number(item.retailValue).toLocaleString()}</span>
+                      </div>
+                    )}
                   </div>
                 </Link>
                 </div>
