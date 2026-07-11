@@ -25,7 +25,16 @@ export default function DownloadFlyerButton() {
           document.body.appendChild(s);
         });
       }
-      const canvas = await window.html2canvas!(el, { useCORS: true, backgroundColor: "#f1e7d5", scale: 2 });
+      const canvas = await window.html2canvas!(el, {
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        scale: 2,
+        width: el.offsetWidth,
+        height: el.offsetHeight,
+        windowWidth: el.scrollWidth,
+        scrollX: 0,
+        scrollY: -window.scrollY,
+      });
       const link = document.createElement("a");
       link.download = "northwood-bids-flyer.png";
       link.href = canvas.toDataURL("image/png");
