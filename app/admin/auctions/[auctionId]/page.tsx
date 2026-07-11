@@ -127,6 +127,13 @@ export default async function ManageAuctionPage({ params }: Props) {
           >
             View ↗
           </Link>
+          <Link
+            href={`/admin/auctions/${auction.id}/flyer`}
+            className="text-center w-full sm:w-auto text-[#4a3a2b] hover:text-[#241a12] font-semibold text-base bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] px-6 py-3.5 rounded-xl whitespace-nowrap transition-colors inline-flex items-center justify-center gap-1.5"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2.5" width="12" height="11" rx="2"/><circle cx="5.5" cy="6" r="1.2"/><path d="M2.5 11l3-3 3 3 2-2 3 3"/></svg>
+            Flyer
+          </Link>
           <AuctionStatusButtons auctionId={auction.id} status={auction.status} />
         </div>
       </header>
