@@ -8,6 +8,14 @@ import FlyerStage from "./FlyerStage";
 const LOGO_URL =
   "https://assets.cdn.filesafe.space/TwuL7EwKfW8oGIV0Zo5q/media/6a373b261c5d711b35bf4e56.png";
 
+/**
+ * Every image on the flyer goes through our own origin. html2canvas has to read the
+ * pixels back out of the canvas, and any image from a host that doesn't send CORS
+ * headers either taints the canvas or — with crossOrigin set — silently refuses to
+ * render, leaving a blank tile. Proxying makes them all same-origin.
+ */
+const proxied = (url: string) => `/api/admin/image-proxy?url=${encodeURIComponent(url)}`;
+
 function fmtCloses(d: Date) {
   return d.toLocaleString("en-US", {
     timeZone: "America/Detroit",
@@ -97,7 +105,7 @@ export default async function FlyerPage({ params }: Props) {
             {/* Header — light, so the dark logo reads crisp */}
             <div style={{ background: "#faf5ea", borderBottom: "2px solid #efe0c9", padding: "28px 40px 24px", textAlign: "center", flexShrink: 0 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={LOGO_URL} alt="Northwood Bids" crossOrigin="anonymous" style={{ height: 84, width: "auto", maxWidth: 420, objectFit: "contain", margin: "0 auto", display: "block" }} />
+              <img src={proxied(LOGO_URL)} alt="Northwood Bids" style={{ height: 84, width: "auto", maxWidth: 420, objectFit: "contain", margin: "0 auto", display: "block" }} />
               <div style={{ display: "inline-block", background: "#6c4d39", color: "#fff", fontSize: 15, fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", padding: "7px 20px", borderRadius: 999, marginTop: 14 }}>
                 Live Auction
               </div>
@@ -123,7 +131,7 @@ export default async function FlyerPage({ params }: Props) {
                     <div style={{ flex: 1, minHeight: 0, background: "#ffffff", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", padding: 8 }}>
                       {photo ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={photo} alt={item.title} crossOrigin="anonymous" style={{ maxWidth: "100%", maxHeight: "100%", width: "auto", height: "auto", objectFit: "contain", display: "block" }} />
+                        <img src={proxied(photo)} alt={item.title} style={{ maxWidth: "100%", maxHeight: "100%", width: "auto", height: "auto", objectFit: "contain", display: "block" }} />
                       ) : (
                         <div style={{ color: "#b3a085", fontSize: 16 }}>No photo</div>
                       )}
