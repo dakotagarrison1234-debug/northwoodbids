@@ -665,27 +665,45 @@ async function notifyWinners(winnerMap: Map<string, WinnerEntry>): Promise<void>
 }
 
 /**
- * Fires GHL_AUCTION_STARTED_WEBHOOK once per org follower (bidder with preferredOrgId = org.id).
- * Each call includes the bidder's contact info so GHL can route the email to them.
+ * Fires GHL_AUCTION_STARTED_WEBHOOK once per follower and returns how many were sent.
+ *
+ * A "follower" is any bidder who belongs to this org OR hasn't been claimed by any
+ * org at all (preferredOrgId is null). That null case is the important one: the field
+ * only ever gets written when someone arrives through an org-specific link, so the
+ * overwhelming majority of bidders who signed up normally have it empty. Gating the
+ * blast on `preferredOrgId = org.id` meant it reached almost nobody.
  */
 export async function notifyAuctionStartedToFollowers(
   auction: { title: string; slug: string },
   org: { id: string; name: string; slug: string }
-): Promise<void> {
-  if (!process.env.GHL_AUCTION_STARTED_WEBHOOK) return;
+): Promise<number> {
+  if (!process.env.GHL_AUCTION_STARTED_WEBHOOK) return 0;
 
   const followers = await prisma.bidderProfile.findMany({
-    where: { preferredOrgId: org.id },
+    where: {
+      OR: [{ preferredOrgId: org.id }, { preferredOrgId: null }],
+      // No contact details = nothing to send to.
+      NOT: [{ phone: null, email: null }],
+    },
     select: { clerkUserId: true, email: true, phone: true, name: true },
   });
-  if (followers.length === 0) return;
+  if (followers.length === 0) return 0;
 
   const auctionUrl = `${process.env.NEXT_PUBLIC_APP_URL}/${org.slug}/${auction.slug}`;
+
+  // Same person can't get two texts because of a duplicate profile row.
+  const seen = new Set<string>();
+  let sent = 0;
 
   for (const follower of followers) {
     const email = follower.email ?? "";
     const phone = follower.phone ?? "";
+    const key = (phone || email).trim().toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+
     const name = follower.name ?? "Bidder";
+    sent++;
     fetch(process.env.GHL_AUCTION_STARTED_WEBHOOK!, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -706,6 +724,8 @@ export async function notifyAuctionStartedToFollowers(
       }),
     }).catch((err) => console.error("GHL auction-started webhook failed:", err));
   }
+
+  return sent;
 }
 
 /**

@@ -33,12 +33,19 @@ export async function POST(
       );
     }
 
-    await notifyAuctionStartedToFollowers(
+    const sent = await notifyAuctionStartedToFollowers(
       { title: auction.title, slug: auction.slug },
       { id: auction.organization.id, name: auction.organization.name, slug: auction.organization.slug }
     );
 
-    return NextResponse.json({ success: true });
+    if (sent === 0) {
+      return NextResponse.json(
+        { error: "No bidders to text — nobody has a phone or email on file yet." },
+        { status: 422 }
+      );
+    }
+
+    return NextResponse.json({ success: true, sent });
   } catch (error) {
     console.error("notify-live error:", error);
     return NextResponse.json({ error: "Could not send the announcement. Please try again." }, { status: 500 });

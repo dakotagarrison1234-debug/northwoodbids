@@ -51,7 +51,8 @@ export default function AuctionStatusButtons({ auctionId, status }: Props) {
       const res = await fetch(`/api/auctions/${auctionId}/notify-live`, { method: "POST" });
       const data = await res.json();
       if (data.success) {
-        setOk("“Auction is live” text sent to your bidders.");
+        const n = Number(data.sent) || 0;
+        setOk(`“Auction is live” sent to ${n} ${n === 1 ? "bidder" : "bidders"}.`);
       } else {
         setError(data.error || "Could not send the announcement.");
       }
