@@ -194,36 +194,8 @@ export async function POST(request: NextRequest) {
       }).catch((err) => console.error("GHL outbid webhook failed:", err));
     }
 
-    // GHL bid confirmation (for the manual bidder — only if they're still the winner)
-    // If a proxy fired back, the proxy owner's confirmation is handled by the resolver.
-    // The manual bidder was outbid — we skip their "bid confirmed" (they get "outbid" instead).
-    if (!proxyResult.proxyFired && process.env.GHL_BID_CONFIRM_WEBHOOK) {
-      const confirmEmail = profile.email || "";
-      const confirmPhone = profile.phone || "";
-      const confirmName = profile.name || "Bidder";
-      const itemUrl = `${process.env.NEXT_PUBLIC_APP_URL}/${item.organization?.slug}/${item.auction?.slug}/item/${item.id}`;
-      fetch(process.env.GHL_BID_CONFIRM_WEBHOOK, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: confirmEmail,
-          phone: confirmPhone,
-          name: confirmName,
-          firstName: confirmName.split(" ")[0] || confirmName,
-          lastName: confirmName.split(" ").slice(1).join(" ") || "",
-          event: "bid_confirmed",
-          smsMessage: `Northwood Bids: Bid confirmed on ${item.title} at $${amount} — you're the high bidder! ${itemUrl}`,
-          bidderEmail: confirmEmail,
-          bidderPhone: confirmPhone,
-          bidderName: confirmName,
-          itemTitle: item.title,
-          itemUrl,
-          bidAmount: amount,
-          auctionName: item.auction?.title || "Auction",
-          orgName: item.organization?.name || "Organization",
-        }),
-      }).catch((err) => console.error("GHL bid confirm webhook failed:", err));
-    }
+    // (No "bid confirmed" notification — bidders see it live on screen; only the
+    // OUTBID alert is worth a text.)
 
     // Refresh browse grids (auction page, /auctions, org page) so prices update live
     triggerAuctionUpdated(item.organization?.slug).catch(() => {});

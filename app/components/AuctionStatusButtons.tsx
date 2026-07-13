@@ -14,19 +14,15 @@ export default function AuctionStatusButtons({ auctionId, status }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const confirmMessages: Record<string, string> = {
-    OPEN: "Open this auction now? All draft items will go live and bidders can start bidding.",
-    CLOSING: "Let bidders know this auction is closing soon? They'll see a 'closing soon' banner.",
-    SETTLED: "Mark this auction as settled? This means all winners have been taken care of.",
-  };
+  const [ok, setOk] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<
+    { text: string; confirmLabel: string; onConfirm: () => void } | null
+  >(null);
 
   const updateStatus = async (newStatus: string) => {
-    const msg = confirmMessages[newStatus] || `Change auction status to ${newStatus.toLowerCase()}?`;
-    // Status changes here are non-destructive; only ask before opening/closing.
-    if (newStatus === "OPEN" && !confirm(msg)) return;
     setLoading(true);
     setError(null);
+    setOk(null);
     try {
       const res = await fetch(`/api/auctions/${auctionId}`, {
         method: "PATCH",
@@ -46,22 +42,65 @@ export default function AuctionStatusButtons({ auctionId, status }: Props) {
     }
   };
 
+  // Deliberate "auction is live" blast — opening the auction never sends this.
+  const sendLive = async () => {
+    setLoading(true);
+    setError(null);
+    setOk(null);
+    try {
+      const res = await fetch(`/api/auctions/${auctionId}/notify-live`, { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        setOk("“Auction is live” text sent to your bidders.");
+      } else {
+        setError(data.error || "Could not send the announcement.");
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return <span className="text-[#6f5b46] text-base font-semibold">Working…</span>;
   }
+
+  const isLive = status === "OPEN" || status === "CLOSING";
 
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
         {status === "DRAFT" && (
-          // Delete lives in the Danger Zone below — only one delete path.
           <button
-            onClick={() => updateStatus("OPEN")}
+            onClick={() =>
+              setConfirmDialog({
+                text: "Open this auction now? Items go live immediately. No text is sent — use “Send live text” when you're ready to announce it.",
+                confirmLabel: "Open silently",
+                onConfirm: () => updateStatus("OPEN"),
+              })
+            }
             className={`${BTN_BASE} bg-[#6c4d39] hover:bg-[#563e2c] text-white`}
           >
             Open Auction
           </button>
         )}
+
+        {isLive && (
+          <button
+            onClick={() =>
+              setConfirmDialog({
+                text: "Text all your bidders that this auction is live? Only do this when you're ready for traffic.",
+                confirmLabel: "Send live text",
+                onConfirm: sendLive,
+              })
+            }
+            className={`${BTN_BASE} bg-[#c47b3e] hover:bg-[#a9642c] text-white`}
+          >
+            Send &ldquo;Auction is Live&rdquo; text
+          </button>
+        )}
+
         {status === "OPEN" && (
           <button
             onClick={() => updateStatus("CLOSING")}
@@ -70,6 +109,7 @@ export default function AuctionStatusButtons({ auctionId, status }: Props) {
             Mark Closing Soon
           </button>
         )}
+
         {status === "CLOSED" && (
           <button
             onClick={() => updateStatus("SETTLED")}
@@ -79,7 +119,29 @@ export default function AuctionStatusButtons({ auctionId, status }: Props) {
           </button>
         )}
       </div>
+
       {error && <p className="text-red-600 text-base mt-2">{error}</p>}
+      {ok && <p className="text-[#3f5226] text-base mt-2 font-semibold">{ok}</p>}
+
+      {/* In-app confirmation (native confirm() is blocked in some installed/PWA webviews) */}
+      {confirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setConfirmDialog(null)}>
+          <div className="bg-white rounded-2xl border border-[#cdbda3] max-w-sm w-full p-6 shadow-xl text-left" onClick={(e) => e.stopPropagation()}>
+            <p className="text-base text-[#241a12]">{confirmDialog.text}</p>
+            <div className="mt-5 flex gap-3">
+              <button onClick={() => setConfirmDialog(null)} className="flex-1 bg-white border border-[#cdbda3] text-[#6f5b46] hover:bg-[#efe3d0] font-semibold text-base py-3 rounded-xl">
+                Back
+              </button>
+              <button
+                onClick={() => { const fn = confirmDialog.onConfirm; setConfirmDialog(null); fn(); }}
+                className="flex-1 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold text-base py-3 rounded-xl"
+              >
+                {confirmDialog.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

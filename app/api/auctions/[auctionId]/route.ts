@@ -4,7 +4,6 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { triggerAuctionUpdated } from "@/lib/pusherServer";
-import { notifyAuctionStartedToFollowers } from "@/lib/closeAuction";
 
 interface Props {
   params: Promise<{ auctionId: string }>;
@@ -139,7 +138,8 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     }
 
     // Opening is special-cased with an ATOMIC claim so two admins (or an admin +
-    // the cron) can't both open it and double-fire the "auction is live" SMS.
+    // the cron) can't both open it. Opening is ALWAYS SILENT — no "auction is live"
+    // blast. The owner sends that deliberately via /notify-live when they're ready.
     if (status === "OPEN") {
       const claimed = await prisma.auction.updateMany({
         where: { id: auctionId, status: "DRAFT" },
@@ -152,10 +152,6 @@ export async function PATCH(request: NextRequest, { params }: Props) {
         where: { auctionId, status: "DRAFT" },
         data: { status: "ACTIVE" },
       });
-      notifyAuctionStartedToFollowers(
-        { title: auction.title, slug: auction.slug },
-        { id: auction.organization.id, name: auction.organization.name, slug: auction.organization.slug }
-      ).catch((e) => console.error("GHL auction-started webhook failed:", e));
       triggerAuctionUpdated(auction.organization.slug).catch(() => {});
       return NextResponse.json({ success: true });
     }

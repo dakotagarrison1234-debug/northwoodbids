@@ -841,11 +841,8 @@ export async function openScheduledAuctions(): Promise<{ openedAuctions: number 
       prisma.auction.update({ where: { id: auction.id }, data: { status: "OPEN" } }),
       prisma.item.updateMany({ where: { auctionId: auction.id, status: "DRAFT" }, data: { status: "ACTIVE" } }),
     ]);
-
-    notifyAuctionStartedToFollowers(
-      { title: auction.title, slug: auction.slug },
-      { id: auction.organization.id, name: auction.organization.name, slug: auction.organization.slug }
-    ).catch((e) => console.error("GHL auction-started (cron) failed:", e));
+    // Scheduled auctions open SILENTLY. The owner fires the "auction is live" blast
+    // deliberately from the admin (Send live text), so nothing goes out by surprise.
   }
 
   // Also activate any DRAFT items that are already inside an OPEN auction

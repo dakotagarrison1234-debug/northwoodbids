@@ -160,32 +160,7 @@ async function placeProxyBid(
     }).catch((e) => console.error("GHL outbid (proxy) failed:", e));
   }
 
-  // GHL: bid confirmation to the proxy owner
-  if (proxyOwnerProfile && process.env.GHL_BID_CONFIRM_WEBHOOK) {
-    const email = proxyOwnerProfile.email ?? "";
-    const phone = proxyOwnerProfile.phone ?? "";
-    const name = proxyOwnerProfile.name ?? "Bidder";
-    fetch(process.env.GHL_BID_CONFIRM_WEBHOOK, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email, phone, name,
-        firstName: name.split(" ")[0] || name,
-        lastName: name.split(" ").slice(1).join(" ") || "",
-        event: "bid_confirmed",
-        smsMessage: `Northwood Bids: Your max bid is winning ${item.title} at $${amount}. ${itemUrl}`,
-        bidderEmail: email,
-        bidderPhone: phone,
-        bidderName: name,
-        itemTitle: item.title,
-        itemUrl,
-        bidAmount: amount,
-        isProxy: true,
-        auctionName: item.auction?.title ?? "Auction",
-        orgName: item.organization?.name ?? "Organization",
-      }),
-    }).catch((e) => console.error("GHL bid confirm (proxy) failed:", e));
-  }
+  // (No "your max bid is winning" confirmation — only the OUTBID alert is texted.)
 
   return { newAmount: amount, newEndAt: newItemEndAt?.toISOString() ?? null };
 }
