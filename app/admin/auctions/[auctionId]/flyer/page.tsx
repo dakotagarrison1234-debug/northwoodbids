@@ -113,22 +113,25 @@ export default async function FlyerPage({ params }: Props) {
                 const retail = Number(item.retailValue);
                 return (
                   <div key={item.id} style={{ display: "flex", flexDirection: "column", minHeight: 0, border: "2px solid #e3d6bf", borderRadius: 16, overflow: "hidden", background: "#fff" }}>
-                    <div style={{ flex: 1, minHeight: 0, background: "#efe3d0", overflow: "hidden" }}>
+                    {/* CONTAIN, never cover. These are product shots — cropping them to
+                        fill the tile lops the head off the item, which is the whole point
+                        of the flyer. Letterbox on white instead. */}
+                    <div style={{ flex: 1, minHeight: 0, background: "#ffffff", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", padding: 8 }}>
                       {photo ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={photo} alt={item.title} crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                        <img src={photo} alt={item.title} crossOrigin="anonymous" style={{ maxWidth: "100%", maxHeight: "100%", width: "auto", height: "auto", objectFit: "contain", display: "block" }} />
                       ) : (
-                        <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#b3a085", fontSize: 16 }}>No photo</div>
+                        <div style={{ color: "#b3a085", fontSize: 16 }}>No photo</div>
                       )}
                     </div>
-                    <div style={{ flexShrink: 0, padding: "10px 12px 12px" }}>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: "#241a12", lineHeight: 1.25, height: 38, overflow: "hidden" }}>
+                    <div style={{ flexShrink: 0, padding: "8px 12px 10px", borderTop: "1px solid #efe0c9", background: "#faf5ea" }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#241a12", lineHeight: 1.2, height: 34, overflow: "hidden" }}>
                         {item.title}
                       </div>
-                      <div style={{ color: "#6c4d39", fontWeight: 900, fontSize: 30, lineHeight: 1, marginTop: 6 }}>
+                      <div style={{ color: "#6c4d39", fontWeight: 900, fontSize: 28, lineHeight: 1, marginTop: 5 }}>
                         ${price.value.toLocaleString()}
                       </div>
-                      <div style={{ fontSize: 14, color: "#8a7559", lineHeight: 1.2, marginTop: 5 }}>
+                      <div style={{ fontSize: 13, color: "#8a7559", lineHeight: 1.2, marginTop: 4 }}>
                         {price.label}
                         {retail > 0 && (
                           <> · retail <span style={{ color: "#a32d2d", fontWeight: 700 }}>${retail.toLocaleString()}</span></>
