@@ -67,6 +67,9 @@ enum OrgRole {
   status               AuctionStatus @default(DRAFT)
   slug                 String
   endingSoonNotifiedAt DateTime?
+  // When the manual "auction is live" blast was sent. Set once — the button greys
+  // out afterwards so nobody double-texts the whole bidder list.
+  liveNotifiedAt       DateTime?
   createdAt            DateTime      @default(now())
   updatedAt            DateTime      @updatedAt
   organization         Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)

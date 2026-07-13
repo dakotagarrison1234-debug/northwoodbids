@@ -5,16 +5,21 @@ import { useRouter } from "next/navigation";
 interface Props {
   auctionId: string;
   status: string;
+  /** ISO date the "auction is live" blast was sent, or null if it hasn't been. */
+  liveNotifiedAtISO?: string | null;
 }
 
 const BTN_BASE =
   "text-base font-semibold px-6 py-3.5 rounded-xl transition-colors whitespace-nowrap disabled:opacity-50 w-full sm:w-auto text-center";
 
-export default function AuctionStatusButtons({ auctionId, status }: Props) {
+export default function AuctionStatusButtons({ auctionId, status, liveNotifiedAtISO = null }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  // Once the blast has gone out for this auction, the button is spent — locally as
+  // soon as it succeeds, and from the DB on every load after that.
+  const [liveSent, setLiveSent] = useState(!!liveNotifiedAtISO);
   const [confirmDialog, setConfirmDialog] = useState<
     { text: string; confirmLabel: string; onConfirm: () => void } | null
   >(null);
@@ -52,8 +57,12 @@ export default function AuctionStatusButtons({ auctionId, status }: Props) {
       const data = await res.json();
       if (data.success) {
         const n = Number(data.sent) || 0;
+        setLiveSent(true);
         setOk(`“Auction is live” sent to ${n} ${n === 1 ? "bidder" : "bidders"}.`);
+        router.refresh();
       } else {
+        // 409 = the server says it already went out. Believe it and lock the button.
+        if (res.status === 409) setLiveSent(true);
         setError(data.error || "Could not send the announcement.");
       }
     } catch {
@@ -88,18 +97,28 @@ export default function AuctionStatusButtons({ auctionId, status }: Props) {
         )}
 
         {isLive && (
-          <button
-            onClick={() =>
-              setConfirmDialog({
-                text: "Text all your bidders that this auction is live? Only do this when you're ready for traffic.",
-                confirmLabel: "Send live text",
-                onConfirm: sendLive,
-              })
-            }
-            className={`${BTN_BASE} bg-[#c47b3e] hover:bg-[#a9642c] text-white`}
-          >
-            Send &ldquo;Auction is Live&rdquo; text
-          </button>
+          liveSent ? (
+            <span
+              title={liveNotifiedAtISO ? `Sent ${new Date(liveNotifiedAtISO).toLocaleString()}` : "Already sent"}
+              className={`${BTN_BASE} bg-[#efe3d0] border border-[#cdbda3] text-[#8a7559] cursor-not-allowed inline-flex items-center justify-center gap-1.5`}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8.5l3.5 3.5L13 5" /></svg>
+              Live text sent
+            </span>
+          ) : (
+            <button
+              onClick={() =>
+                setConfirmDialog({
+                  text: "Text all your bidders that this auction is live? This can only be sent once, so only do it when you're ready for traffic.",
+                  confirmLabel: "Send live text",
+                  onConfirm: sendLive,
+                })
+              }
+              className={`${BTN_BASE} bg-[#c47b3e] hover:bg-[#a9642c] text-white`}
+            >
+              Send &ldquo;Auction is Live&rdquo; text
+            </button>
+          )
         )}
 
         {status === "OPEN" && (

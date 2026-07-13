@@ -33,14 +33,29 @@ export async function POST(
       );
     }
 
+    // Once per auction, full stop. Two admins tapping the button (or a double-tap on
+    // a laggy connection) must never text the whole bidder list twice.
+    const claimed = await prisma.auction.updateMany({
+      where: { id: auctionId, liveNotifiedAt: null },
+      data: { liveNotifiedAt: new Date() },
+    });
+    if (claimed.count === 0) {
+      return NextResponse.json(
+        { error: "The live announcement has already been sent for this auction." },
+        { status: 409 }
+      );
+    }
+
     const sent = await notifyAuctionStartedToFollowers(
       { title: auction.title, slug: auction.slug },
       { id: auction.organization.id, name: auction.organization.name, slug: auction.organization.slug }
     );
 
     if (sent === 0) {
+      // Nothing actually went out — hand the button back so it can be retried.
+      await prisma.auction.update({ where: { id: auctionId }, data: { liveNotifiedAt: null } });
       return NextResponse.json(
-        { error: "No bidders to text — nobody has a phone or email on file yet." },
+        { error: "Nothing sent — no bidders with contact details, or the SMS provider rejected it." },
         { status: 422 }
       );
     }

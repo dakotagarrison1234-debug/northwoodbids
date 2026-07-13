@@ -236,6 +236,7 @@ export default async function ManageAuctionPage({ params }: Props) {
           status={auction.status}
           isOwnerOrAdmin={isOwnerOrAdmin}
           proxies={activeProxies}
+          liveNotifiedAtISO={auction.liveNotifiedAt ? auction.liveNotifiedAt.toISOString() : null}
         />
 
         {/* Items */}

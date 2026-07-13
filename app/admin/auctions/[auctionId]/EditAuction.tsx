@@ -13,6 +13,8 @@ interface Props {
   status: string;
   isOwnerOrAdmin: boolean;
   proxies: ActiveProxy[];
+  /** When the "auction is live" blast went out — null means it hasn't. */
+  liveNotifiedAtISO: string | null;
 }
 
 /** Date -> "YYYY-MM-DDTHH:mm" in the admin's LOCAL time (for <input datetime-local>). */
@@ -28,7 +30,7 @@ function toLocalInput(d: Date): string {
  * stays clean and easy to scan.
  */
 export default function EditAuction({
-  auctionId, title, description, startAtISO, endAtISO, status, isOwnerOrAdmin, proxies,
+  auctionId, title, description, startAtISO, endAtISO, status, isOwnerOrAdmin, proxies, liveNotifiedAtISO,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(title);
@@ -116,7 +118,7 @@ export default function EditAuction({
           <div className="px-5 sm:px-6 py-5 border-b border-[#efe3d0]">
             <div className="text-sm font-semibold text-[#8a7559] uppercase tracking-wide mb-3">Actions</div>
             <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-3">
-              <AuctionStatusButtons auctionId={auctionId} status={status} />
+              <AuctionStatusButtons auctionId={auctionId} status={status} liveNotifiedAtISO={liveNotifiedAtISO} />
               <Link
                 href={`/admin/auctions/${auctionId}/flyer`}
                 className="text-base font-semibold px-6 py-3.5 rounded-xl whitespace-nowrap transition-colors w-full sm:w-auto text-center bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] text-[#241a12] inline-flex items-center justify-center gap-1.5"
