@@ -1,20 +1,32 @@
 "use client";
 import { useState } from "react";
 
-// Best-effort "download as PNG" using html2canvas from CDN. If the R2 images aren't
-// CORS-enabled the canvas is tainted and export throws — we fall back to telling the
-// admin to just screenshot the flyer (which always works).
+// "Download as PNG" via html2canvas (CDN). The flyer is a real 1080×1080 element
+// that's only *displayed* shrunk, so we drop the preview transform for the moment
+// of capture and put it straight back — otherwise html2canvas bakes the shrink in
+// and you get a tiny image floating in a big empty square.
 declare global {
   interface Window { html2canvas?: (el: HTMLElement, opts?: Record<string, unknown>) => Promise<HTMLCanvasElement>; }
 }
+
+const SIZE = 1080;
 
 export default function DownloadFlyerButton() {
   const [busy, setBusy] = useState(false);
 
   const download = async () => {
-    const el = document.getElementById("flyer");
-    if (!el) return;
+    const flyer = document.getElementById("flyer");
+    const scaleEl = document.getElementById("flyer-scale");
+    const stageEl = document.getElementById("flyer-stage");
+    if (!flyer || !scaleEl || !stageEl) return;
+
     setBusy(true);
+
+    // Remember the preview sizing so we can restore it no matter what happens.
+    const prevTransform = scaleEl.style.transform;
+    const prevStageH = stageEl.style.height;
+    const prevStageW = stageEl.style.width;
+
     try {
       if (!window.html2canvas) {
         await new Promise<void>((resolve, reject) => {
@@ -25,23 +37,38 @@ export default function DownloadFlyerButton() {
           document.body.appendChild(s);
         });
       }
-      const canvas = await window.html2canvas!(el, {
+
+      // Render at true size for the capture. The stage keeps overflow hidden, so
+      // the page doesn't visibly lurch while this happens.
+      scaleEl.style.transform = "none";
+      // Let the browser lay it out before we snapshot it.
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+      const canvas = await window.html2canvas!(flyer, {
         useCORS: true,
+        allowTaint: false,
         backgroundColor: "#ffffff",
-        scale: 2,
-        width: el.offsetWidth,
-        height: el.offsetHeight,
-        windowWidth: el.scrollWidth,
+        scale: 1,          // the element is already 1080 — no upscaling needed
+        width: SIZE,
+        height: SIZE,
+        windowWidth: SIZE,
+        windowHeight: SIZE,
+        x: 0,
+        y: 0,
         scrollX: 0,
-        scrollY: -window.scrollY,
+        scrollY: 0,
       });
+
       const link = document.createElement("a");
       link.download = "northwood-bids-flyer.png";
       link.href = canvas.toDataURL("image/png");
       link.click();
     } catch {
-      alert("Couldn't auto-save the image (photo security). Just screenshot the flyer below to post it.");
+      alert("Couldn't auto-save the image. Screenshot the flyer below instead — it's sized to fit your screen.");
     } finally {
+      scaleEl.style.transform = prevTransform;
+      stageEl.style.height = prevStageH;
+      stageEl.style.width = prevStageW;
       setBusy(false);
     }
   };
