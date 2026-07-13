@@ -34,7 +34,7 @@ export default async function FlyerPage({ params }: Props) {
         where: { status: { in: ["ACTIVE", "DRAFT"] } },
         // Best items first: premium, then most action, then highest value.
         orderBy: [{ isPremium: "desc" }, { currentBid: "desc" }, { retailValue: "desc" }],
-        take: 18,
+        take: 60,   // wide enough that a photographed item never falls outside the pool
         include: { photos: true },
       },
     },
@@ -51,9 +51,13 @@ export default async function FlyerPage({ params }: Props) {
     );
   }
 
-  // Prefer items that actually have a photo; take the top 6.
+  // Items WITH a photo always win a slot, in rank order. Only if there aren't six
+  // of them do we top up with photoless items.
+  // (The old version fell back to the plain top-6 the moment fewer than six items
+  //  had photos — which could drop a photographed item in favour of a blank one.)
   const withPhoto = auction.items.filter((i) => i.photos.length > 0);
-  const chosen = (withPhoto.length >= 6 ? withPhoto : auction.items).slice(0, 6);
+  const withoutPhoto = auction.items.filter((i) => i.photos.length === 0);
+  const chosen = [...withPhoto, ...withoutPhoto].slice(0, 6);
 
   const priceOf = (i: (typeof chosen)[number]) => {
     const cur = Number(i.currentBid);
