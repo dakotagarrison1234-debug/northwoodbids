@@ -693,7 +693,7 @@ export async function notifyAuctionStartedToFollowers(
 
   // Same person can't get two texts because of a duplicate profile row.
   const seen = new Set<string>();
-  let sent = 0;
+  const recipients: { email: string; phone: string; name: string }[] = [];
 
   for (const follower of followers) {
     const email = follower.email ?? "";
@@ -701,30 +701,48 @@ export async function notifyAuctionStartedToFollowers(
     const key = (phone || email).trim().toLowerCase();
     if (!key || seen.has(key)) continue;
     seen.add(key);
-
-    const name = follower.name ?? "Bidder";
-    sent++;
-    fetch(process.env.GHL_AUCTION_STARTED_WEBHOOK!, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email,
-        phone,
-        name,
-        firstName: name.split(" ")[0] || name,
-        lastName: name.split(" ").slice(1).join(" ") || "",
-        event: "auction_started",
-        smsMessage: `Northwood Bids: ${auction.title} is LIVE. Start bidding: ${auctionUrl}`,
-        bidderEmail: email,
-        bidderPhone: phone,
-        bidderName: name,
-        auctionName: auction.title,
-        auctionUrl,
-        orgName: org.name,
-      }),
-    }).catch((err) => console.error("GHL auction-started webhook failed:", err));
+    recipients.push({ email, phone, name: follower.name ?? "Bidder" });
   }
 
+  // AWAIT every webhook. These used to be fire-and-forget, which is fatal on
+  // serverless: the moment the route returns its response the function is frozen
+  // and any in-flight fetch is dropped on the floor. With one follower a single
+  // request could squeak out before the freeze; with a real list, none did — the
+  // admin got "sent to N bidders" and nobody got a text.
+  let sent = 0;
+  await runPooled(
+    recipients,
+    async ({ email, phone, name }) => {
+      try {
+        const res = await fetch(process.env.GHL_AUCTION_STARTED_WEBHOOK!, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            phone,
+            name,
+            firstName: name.split(" ")[0] || name,
+            lastName: name.split(" ").slice(1).join(" ") || "",
+            event: "auction_started",
+            smsMessage: `Northwood Bids: ${auction.title} is LIVE. Start bidding: ${auctionUrl}`,
+            bidderEmail: email,
+            bidderPhone: phone,
+            bidderName: name,
+            auctionName: auction.title,
+            auctionUrl,
+            orgName: org.name,
+          }),
+        });
+        if (res.ok) sent++;
+        else console.error("GHL auction-started webhook rejected:", res.status, await res.text().catch(() => ""));
+      } catch (err) {
+        console.error("GHL auction-started webhook failed:", err);
+      }
+    },
+    5
+  );
+
+  // `sent` is now the number GHL actually ACCEPTED, not the number we tried.
   return sent;
 }
 
