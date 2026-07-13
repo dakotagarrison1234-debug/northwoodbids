@@ -17,7 +17,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     }
 
     const { auctionId } = await params;
-    const { status, endAt, startAt, title } = await request.json();
+    const { status, endAt, startAt, title, description } = await request.json();
 
     // Verify the user belongs to the org that owns this auction
     const auction = await prisma.auction.findUnique({
@@ -48,6 +48,11 @@ export async function PATCH(request: NextRequest, { params }: Props) {
         return NextResponse.json({ error: "Auction name can't be empty." }, { status: 400 });
       }
       editData.title = t;
+    }
+
+    if (description !== undefined) {
+      const d = String(description ?? "").trim();
+      editData.description = d || null;
     }
 
     if (startAt !== undefined) {
