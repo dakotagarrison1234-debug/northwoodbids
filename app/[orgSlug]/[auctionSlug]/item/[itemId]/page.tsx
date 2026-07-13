@@ -777,15 +777,15 @@ export default function ItemPage() {
 
                   {userProxy ? (
                     /* Active max bid display */
-                    <div className="flex items-center justify-between bg-white rounded-xl px-4 py-3">
-                      <div>
+                    <div className="flex items-center justify-between gap-2 bg-white rounded-xl px-4 py-3">
+                      <div className="min-w-0">
                         <p className="text-[#4a3a2b] text-sm font-medium">
                           Your max bid:{" "}
                           <span className="text-[#6c4d39] font-bold text-base">${userProxy.maxAmount.toLocaleString()}</span>
                         </p>
                         <p className="text-[#8a7559] text-xs mt-0.5">We&apos;re auto-bidding on your behalf up to this amount.</p>
                       </div>
-                      <div className="flex gap-2 shrink-0 ml-3">
+                      <div className="flex gap-2 shrink-0">
                         <button
                           onClick={() => { setProxyAmount(String(userProxy.maxAmount)); setUserProxy(null); }}
                           className="text-xs text-[#6f5b46] hover:text-[#241a12] border border-[#cdbda3] hover:border-[#b3a085] px-3 py-1.5 rounded-lg transition-colors"
@@ -889,7 +889,10 @@ export default function ItemPage() {
                       {message.text}
                     </div>
                   )}
-                  <div className="flex gap-3">
+                  {/* min-w-0 on the input is load-bearing: an <input> has an intrinsic
+                      minimum width, so without it a flex row won't shrink on a narrow
+                      phone and the Place Bid button gets pushed off the screen. */}
+                  <div className="flex gap-2 w-full">
                     <input
                       type="number"
                       value={bidAmount}
@@ -897,13 +900,14 @@ export default function ItemPage() {
                       step="1"
                       onChange={e => setBidAmount(e.target.value)}
                       onKeyDown={e => e.key === "Enter" && !placing && handleBid()}
-                      placeholder={`Enter $${minBid.toLocaleString()} or more`}
-                      className="flex-1 bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]"
+                      placeholder={`$${minBid.toLocaleString()}+`}
+                      inputMode="decimal"
+                      className="flex-1 min-w-0 bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]"
                     />
                     <button
                       onClick={handleBid}
                       disabled={placing}
-                      className="bg-[#4a3a2b] hover:bg-[#241a12] disabled:opacity-50 text-white font-bold px-6 py-3 rounded-xl transition-colors shrink-0"
+                      className="bg-[#4a3a2b] hover:bg-[#241a12] disabled:opacity-50 text-white font-bold px-4 sm:px-6 py-3 rounded-xl transition-colors shrink-0 whitespace-nowrap"
                     >
                       {placing ? "Placing…" : "Place Bid"}
                     </button>
