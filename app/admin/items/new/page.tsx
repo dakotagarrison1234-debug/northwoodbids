@@ -40,6 +40,7 @@ function BarcodeScanner({
   onCollapsedChange,
   comboMode = false,
   onAddComboPhoto,
+  autoStart = false,
 }: {
   onFill: (r: BarcodeResult) => void;
   collapsed?: boolean;
@@ -48,6 +49,9 @@ function BarcodeScanner({
   // fill), and the scanner resets so the next item can be scanned right away.
   comboMode?: boolean;
   onAddComboPhoto?: (url: string) => void;
+  // Fire the camera up the moment we mount (used right after "Save & add another"
+  // so the next item is ready to scan with zero taps).
+  autoStart?: boolean;
 }) {
   const [barcode, setBarcode] = useState("");
   const [scanning, setScanning] = useState(false);
@@ -66,6 +70,8 @@ function BarcodeScanner({
   const detectedRef = useRef(false);
   const playingRef = useRef(false);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const comboRef = useRef(comboMode);
+  comboRef.current = comboMode;
 
   // Stop just the decode loop (keep the camera/stream alive).
   const stopLoop = () => {
@@ -206,6 +212,19 @@ function BarcodeScanner({
     }
   };
 
+  // A scan/lookup hit. Outside of combo mode this goes STRAIGHT into the form —
+  // no "apply" step. (Combo mode still shows the picker so one photo can be chosen.)
+  const acceptProduct = (product: BarcodeResult) => {
+    if (comboRef.current) {
+      setResult(product);
+      return;
+    }
+    onFill(product);
+    setResult(null);
+    setBarcode("");
+    setShowSearch(false);
+  };
+
   const doLookup = async (raw: string) => {
     const code = raw.trim();
     if (!code) { setError("Enter a barcode, FNSKU, or ASIN."); return; }
@@ -226,7 +245,7 @@ function BarcodeScanner({
           setError(data.message || data.error || "No product found. Try a name search below.");
           setShowSearch(true);
         } else {
-          setResult(data.product);
+          acceptProduct(data.product);
         }
       } else {
         // Numeric UPC/EAN → UPCitemdb lookup first…
@@ -235,7 +254,7 @@ function BarcodeScanner({
         const res = await fetch(`/api/admin/barcode-lookup?upc=${clean}`);
         const data = await res.json();
         if (res.ok && data.found) {
-          setResult(data.product);
+          acceptProduct(data.product);
         } else {
           // …UPCitemdb missed or is rate-limited — fall back to an Amazon search
           // on the barcode number so a normal barcode still pulls something up.
@@ -272,6 +291,8 @@ function BarcodeScanner({
   };
 
   // Picking a search result pulls full details by ASIN, falling back to the row data.
+  // The SEARCH path is the one place we show a confirm/apply step — a scan is exact,
+  // a search is a guess, so you get to eyeball it (and pick the photo) first.
   const pickSearchResult = async (r: SearchResult) => {
     setLoading(true);
     setError(null);
@@ -287,7 +308,6 @@ function BarcodeScanner({
       setResult({ title: r.title, description: "", brand: r.brand || "", category: "", retailValue: r.price, images: r.image ? [r.image] : [] });
     } finally {
       setSearchResults(null);
-      setShowSearch(false);
       setLoading(false);
     }
   };
@@ -303,6 +323,10 @@ function BarcodeScanner({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => () => releaseCamera(), []);
 
+  // Straight into scan mode after a save — no tap needed.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (autoStart && !collapsed) startCamera(); }, []);
+
   // When the card is minimized, make sure the camera is fully off.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (collapsed) releaseCamera(); }, [collapsed]);
@@ -312,52 +336,28 @@ function BarcodeScanner({
     onFill({ ...result, images: imgOverride ? [imgOverride] : result.images });
     setResult(null);
     setBarcode("");
+    setShowSearch(false);
   };
 
-  const BarcodeIcon = (
-    <svg className="w-5 h-5 text-[#6c4d39] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
-      <path d="M3 9V5a2 2 0 0 1 2-2h4M3 15v4a2 2 0 0 0 2 2h4M21 9V5a2 2 0 0 0-2-2h-4M21 15v4a2 2 0 0 1-2 2h-4"/>
-      <line x1="7" y1="12" x2="7" y2="12.01"/><line x1="10" y1="9" x2="10" y2="15"/><line x1="13" y1="12" x2="13" y2="12.01"/><line x1="16" y1="9" x2="16" y2="15"/>
-    </svg>
-  );
-
-  // Minimized: a compact strip so the card isn't large after an item is saved.
+  // Minimized: a compact strip so the card isn't large after a scan lands.
   if (collapsed) {
     return (
       <button
         type="button"
         onClick={() => onCollapsedChange?.(false)}
-        className="w-full flex items-center justify-between gap-2 bg-gradient-to-br from-[#6c4d39]/8 to-[#f6ecda] border border-[#6c4d39]/25 rounded-xl px-4 py-3 mb-6 hover:border-[#6c4d39]/50 transition-colors"
+        className="w-full flex items-center justify-between gap-2 rounded-xl bg-white border border-[#e3d6bf] px-4 py-3 hover:border-[#6c4d39] transition-colors"
       >
-        <span className="flex items-center gap-2 font-bold text-[#241a12] text-base">
-          {BarcodeIcon} Barcode Auto-Fill
+        <span className="flex items-center gap-2 font-semibold text-[#4a3a2b] text-base">
+          <svg className="w-5 h-5 text-[#6c4d39]" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><rect x="1" y="3" width="14" height="11" rx="1.5"/><circle cx="8" cy="8.5" r="2.5"/><path d="M6 3V1.5M10 3V1.5"/></svg>
+          Scan another barcode
         </span>
-        <span className="flex items-center gap-1 text-sm font-semibold text-[#6c4d39]">
-          Scan
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4" /></svg>
-        </span>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#8a7559]"><path d="M4 6l4 4 4-4" /></svg>
       </button>
     );
   }
 
   return (
-    <div className="bg-gradient-to-br from-[#6c4d39]/8 to-[#f6ecda] border border-[#6c4d39]/25 rounded-xl p-5 mb-6">
-      <div className="flex items-center gap-2 mb-3">
-        {BarcodeIcon}
-        <span className="font-bold text-[#241a12] text-base">Barcode Auto-Fill</span>
-        <span className="text-[10px] text-[#6c4d39] bg-[#6c4d39]/10 border border-[#6c4d39]/20 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide ml-1">New</span>
-        {onCollapsedChange && (
-          <button
-            type="button"
-            onClick={() => onCollapsedChange(true)}
-            title="Minimize"
-            className="ml-auto shrink-0 text-[#8a7559] hover:text-[#241a12] p-1 rounded-lg hover:bg-[#6c4d39]/10 transition-colors"
-          >
-            <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 10L8 6l-4 4" /></svg>
-          </button>
-        )}
-      </div>
-
+    <div>
       {/* Input row */}
       <div className="flex gap-2">
         <button
@@ -366,7 +366,7 @@ function BarcodeScanner({
           className={`flex items-center gap-1.5 px-4 py-3 rounded-xl text-base font-semibold border shrink-0 transition-colors ${
             scanning
               ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
-              : "bg-[#6c4d39]/10 text-[#6c4d39] border-[#6c4d39]/25 hover:bg-[#6c4d39]/20"
+              : "bg-[#6c4d39] text-white border-[#6c4d39] hover:bg-[#563e2c]"
           }`}
         >
           {scanning ? (
@@ -380,7 +380,7 @@ function BarcodeScanner({
           value={barcode}
           onChange={e => setBarcode(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Barcode, FNSKU, or ASIN…"
+          placeholder="or type barcode / FNSKU / ASIN"
           className="flex-1 min-w-0 bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] text-base"
           inputMode="text"
           autoCapitalize="characters"
@@ -391,9 +391,9 @@ function BarcodeScanner({
           type="button"
           onClick={() => doLookup(barcode)}
           disabled={loading || !barcode.trim()}
-          className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-40 text-white px-4 py-3 rounded-xl text-base font-semibold shrink-0 transition-colors"
+          className="bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] disabled:opacity-40 text-[#241a12] px-4 py-3 rounded-xl text-base font-semibold shrink-0 transition-colors"
         >
-          {loading ? "…" : "Look Up"}
+          {loading ? "…" : "Go"}
         </button>
       </div>
 
@@ -406,6 +406,10 @@ function BarcodeScanner({
           </div>
           <div className="absolute bottom-2 left-0 right-0 text-center text-white/80 text-xs">Point at barcode</div>
         </div>
+      )}
+
+      {loading && !scanning && (
+        <p className="mt-2.5 text-sm font-semibold text-[#6c4d39]">Looking it up…</p>
       )}
 
       {/* Error */}
@@ -426,8 +430,7 @@ function BarcodeScanner({
 
       {/* Text-search fallback */}
       {showSearch && !result && (
-        <div className="mt-3 bg-white border border-[#6c4d39]/25 rounded-xl p-4">
-          <div className="text-xs text-[#8a7559] mb-1.5 font-medium">Search Amazon by name</div>
+        <div className="mt-3 bg-[#faf5ea] border border-[#e3d6bf] rounded-xl p-4">
           <div className="flex gap-2">
             <input
               type="text"
@@ -435,7 +438,7 @@ function BarcodeScanner({
               onChange={e => setSearchQuery(e.target.value)}
               onKeyDown={handleSearchKeyDown}
               placeholder='e.g. "Ninja air fryer 5.5qt"'
-              className="flex-1 bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] text-base"
+              className="flex-1 min-w-0 bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] text-base"
             />
             <button
               type="button"
@@ -455,7 +458,7 @@ function BarcodeScanner({
                   key={r.asin}
                   type="button"
                   onClick={() => pickSearchResult(r)}
-                  className="w-full flex items-center gap-3 text-left bg-[#faf5ea] hover:bg-[#f1e7d5] border border-[#e3d6bf] hover:border-[#6c4d39] rounded-lg p-2.5 transition-colors"
+                  className="w-full flex items-center gap-3 text-left bg-white hover:bg-[#f1e7d5] border border-[#e3d6bf] hover:border-[#6c4d39] rounded-lg p-2.5 transition-colors"
                 >
                   <div className="w-12 h-12 shrink-0 rounded-md overflow-hidden bg-[#efe3d0] flex items-center justify-center">
                     {r.image
@@ -477,25 +480,20 @@ function BarcodeScanner({
         </div>
       )}
 
-      {/* Result preview */}
+      {/* Result preview — only for name-search picks and combo scans. */}
       {result && (
-        <div className="mt-3 bg-white border border-[#6c4d39]/25 rounded-xl p-4">
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div className="min-w-0">
-              <div className="text-xs text-[#6c4d39] font-semibold mb-0.5">Found product</div>
-              <div className="font-bold text-[#241a12] text-sm leading-snug">{result.title}</div>
-              {result.brand && <div className="text-xs text-[#8a7559] mt-0.5">{result.brand}</div>}
-              <div className="flex flex-wrap gap-2 mt-1.5">
-                {result.category && <span className="text-[10px] bg-[#6c4d39]/10 text-[#6c4d39] px-2 py-0.5 rounded-full font-medium">{result.category}</span>}
-              </div>
-            </div>
+        <div className="mt-3 bg-white border-2 border-[#6c4d39] rounded-xl p-4">
+          <div className="text-xs text-[#6c4d39] font-bold uppercase tracking-wide mb-1">
+            {comboMode ? "Add to combo" : "Confirm this is it"}
           </div>
+          <div className="font-bold text-[#241a12] text-sm leading-snug">{result.title}</div>
+          {result.brand && <div className="text-xs text-[#8a7559] mt-0.5">{result.brand}</div>}
 
           {/* Image picker */}
           {result.images.length > 0 && (
-            <div className="mb-3">
+            <div className="mt-3">
               <div className="text-xs text-[#8a7559] mb-1.5 font-medium">
-                {comboMode ? "Tap ONE photo to add it to the combo" : "Pick a photo (optional)"}
+                {comboMode ? "Tap ONE photo to add it to the collage" : "Tap a photo to use it as the main photo"}
               </div>
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {result.images.map((img, i) => (
@@ -505,7 +503,6 @@ function BarcodeScanner({
                     onClick={() => {
                       if (comboMode) {
                         onAddComboPhoto?.(img);
-                        // reset so the next combo item can be scanned immediately
                         setResult(null);
                         setBarcode("");
                       } else {
@@ -521,14 +518,14 @@ function BarcodeScanner({
             </div>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 mt-3">
             {!comboMode && (
               <button
                 type="button"
                 onClick={() => applyResult()}
                 className="flex-1 bg-[#6c4d39] hover:bg-[#563e2c] text-white text-base font-bold py-3 rounded-xl transition-colors"
               >
-                Auto-fill form
+                Use this — fill the form
               </button>
             )}
             <button
@@ -536,7 +533,7 @@ function BarcodeScanner({
               onClick={() => { setResult(null); setBarcode(""); }}
               className={`text-[#8a7559] hover:text-[#4a3a2b] text-base px-4 py-3 border border-[#cdbda3] rounded-xl transition-colors ${comboMode ? "flex-1" : ""}`}
             >
-              {comboMode ? "Skip / scan next" : "Dismiss"}
+              {comboMode ? "Skip / scan next" : "Not it"}
             </button>
           </div>
         </div>
@@ -544,6 +541,54 @@ function BarcodeScanner({
     </div>
   );
 }
+
+// ── Step card ─────────────────────────────────────────────────────────────────
+// Every stage of the listing is the same shape: numbered chip, colored spine,
+// title, an at-a-glance "done" tick, and the fields. Top to bottom, no hunting.
+function Step({
+  n, title, hint, color, done, children, right,
+}: {
+  n: number;
+  title: string;
+  hint?: string;
+  color: string;
+  done?: boolean;
+  children: React.ReactNode;
+  right?: React.ReactNode;
+}) {
+  return (
+    <section
+      className="relative bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden"
+      style={{ boxShadow: "0 1px 2px rgba(36,26,18,.04)" }}
+    >
+      <span className="absolute left-0 top-0 bottom-0 w-1.5" style={{ background: color }} />
+      <div className="pl-6 pr-5 py-5">
+        <div className="flex items-center gap-3 mb-4">
+          <span
+            className="w-7 h-7 shrink-0 rounded-full grid place-items-center text-sm font-extrabold text-white"
+            style={{ background: color }}
+          >
+            {done ? "✓" : n}
+          </span>
+          <div className="min-w-0">
+            <h2 className="text-base font-bold text-[#241a12] leading-tight">{title}</h2>
+            {hint && <p className="text-xs text-[#8a7559] leading-tight mt-0.5">{hint}</p>}
+          </div>
+          {right && <div className="ml-auto shrink-0">{right}</div>}
+        </div>
+        {children}
+      </div>
+    </section>
+  );
+}
+
+// Step accent colors — each stage of the flow gets its own, so you can find the
+// section you want by color without reading a word.
+const C_SCAN = "#6c4d39";  // brown  — scan
+const C_PHOTO = "#4a7c59"; // green  — photos
+const C_DETAIL = "#c47b3e";// amber  — details
+const C_PRICE = "#3f6f8f"; // blue   — price
+const C_LOC = "#7b6a3f";   // olive  — location
 
 // ── Main form ─────────────────────────────────────────────────────────────────
 function NewItemForm() {
@@ -559,11 +604,15 @@ function NewItemForm() {
   const [orgId, setOrgId] = useState<string>("");
   const [banner, setBanner] = useState<string | null>(null);
   const [nextCode, setNextCode] = useState<string | null>(null);
-  // Bumping this remounts the BarcodeScanner, clearing its internal state
-  // (barcode, result, error, search results) — used by "Start fresh".
+  // The code on the item you JUST saved — in case you save before writing the tag.
+  const [lastCode, setLastCode] = useState<string | null>(null);
+  const [lastTitle, setLastTitle] = useState<string | null>(null);
+  // Bumping this remounts the BarcodeScanner, clearing its internal state.
   const [scannerKey, setScannerKey] = useState(0);
-  // Minimize the scan card after an item is saved so the form stays compact.
+  // Collapse the scan card once a scan has landed in the form.
   const [scannerCollapsed, setScannerCollapsed] = useState(false);
+  // After "Save & add another" the scanner reopens AND fires the camera itself.
+  const [scannerAutoStart, setScannerAutoStart] = useState(false);
   const [formData, setFormData] = useState({
     title: searchParams.get("title") || "",
     description: searchParams.get("description") || "",
@@ -635,7 +684,7 @@ function NewItemForm() {
     setFormData({ ...formData, [e.target.name]: value });
   };
 
-  // Called when barcode scan succeeds — auto-fill form fields
+  // A scan landed — fill the form, pull the photos, and get out of the way.
   const handleBarcodeFill = (result: BarcodeResult) => {
     setFormData(prev => ({
       ...prev,
@@ -645,10 +694,9 @@ function NewItemForm() {
       description: result.description ? shortenDescription(result.description, 3) : prev.description,
       retailValue: result.retailValue != null ? String(result.retailValue) : prev.retailValue,
     }));
-    // Import all images (up to 3)
     result.images.forEach(url => importImageFromUrl(url));
-    // Scan applied — collapse the scanner so the filled-in form is front and center.
     setScannerCollapsed(true);
+    setBanner("Filled from the scan — check the title, price and photos.");
   };
 
   const importImageFromUrl = async (url: string) => {
@@ -704,10 +752,17 @@ function NewItemForm() {
     });
   };
 
+  const scrollTop = () => {
+    if (typeof window === "undefined") return;
+    // The admin shell scrolls an inner container, not the window — nudge both.
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    document.querySelectorAll<HTMLElement>("[data-scroll-root]").forEach((el) =>
+      el.scrollTo({ top: 0, behavior: "smooth" })
+    );
+  };
+
   // "Start fresh" — wipe the whole form back to a blank new item without a full
   // page reload (there's no browser refresh in the installed standalone app).
-  // Clears every field + photos, mints a new code, and remounts the scanner so
-  // its barcode/result/error/search state is cleared too.
   const resetForm = () => {
     setFormData({
       title: "",
@@ -731,12 +786,13 @@ function NewItemForm() {
     setNextCode(null);
     genCode();
     setScannerKey((k) => k + 1);
-    setScannerCollapsed(false); // fresh item — show the full scanner again
-    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+    setScannerAutoStart(false);
+    setScannerCollapsed(false);
+    scrollTop();
   };
 
-  // addAnother = true → after saving, reset only the per-item fields and stay on
-  // the page so the owner can keep building the catalog quickly.
+  // addAnother = true → keep the auction/warehouse/spot/condition, clear the rest,
+  // jump back to the top, and re-arm the scanner for the next item.
   const handleSave = async (addAnother = false) => {
     if (uploading) { alert("Please wait for photos to finish uploading."); return; }
     if (saving) return;
@@ -745,6 +801,8 @@ function NewItemForm() {
     if (!orgId) { alert("Business not loaded. Please refresh."); return; }
     setSaving(true);
     setBanner(null);
+    const savedCode = formData.itemCode;
+    const savedTitle = formData.title;
     try {
       const res = await fetch("/api/items", {
         method: "POST",
@@ -754,7 +812,6 @@ function NewItemForm() {
       const data = await res.json();
       if (data.success) {
         if (addAnother) {
-          // Keep auction, location, condition, and category for the next item.
           setFormData((prev) => ({
             ...prev,
             title: "",
@@ -770,14 +827,15 @@ function NewItemForm() {
           }));
           setCombo(false);
           setPhotos([]);
-          // Mint a fresh code for the next item.
+          setLastCode(savedCode || null);
+          setLastTitle(savedTitle);
           genCode();
-          // Remount the scanner so its barcode/result/search state is cleared too,
-          // and re-open it so the next item is ready to scan without a click.
+          // Remount the scanner clean, open, and already scanning.
           setScannerKey((k) => k + 1);
           setScannerCollapsed(false);
-          setBanner("Item saved. Ready for the next one.");
-          if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+          setScannerAutoStart(true);
+          setBanner("Saved. Scan the next item.");
+          scrollTop();
         } else {
           router.push(preselectedAuctionId ? `/admin/auctions/${preselectedAuctionId}` : "/admin/auctions");
         }
@@ -788,6 +846,13 @@ function NewItemForm() {
     finally { setSaving(false); }
   };
 
+  const inputCls =
+    "w-full bg-[#faf5ea] border border-[#cdbda3] rounded-xl px-4 py-3 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] focus:bg-white transition-colors";
+
+  const hasPhotos = photos.length > 0;
+  const hasDetails = formData.title.trim().length > 0;
+  const hasLocation = !!formData.locationId;
+
   return (
     <>
       <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-4 flex items-center gap-2 min-w-0">
@@ -797,7 +862,7 @@ function NewItemForm() {
           <Link href="/admin/items" className="text-[#6f5b46] hover:text-[#241a12] text-base font-semibold shrink-0">← Items</Link>
         )}
         <span className="text-[#8a7559]">/</span>
-        <h1 className="text-2xl sm:text-3xl font-semibold">Add New Item</h1>
+        <h1 className="text-2xl sm:text-3xl font-semibold">New item</h1>
         <button
           type="button"
           onClick={resetForm}
@@ -811,45 +876,47 @@ function NewItemForm() {
         </button>
       </header>
 
-      <div className="flex-1 px-6 sm:px-8 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 overflow-auto">
-        <div className="lg:col-span-2 space-y-6">
+      <div data-scroll-root className="flex-1 overflow-auto px-4 sm:px-8 py-6">
+        <div className="mx-auto w-full max-w-2xl space-y-4">
 
-          {/* Success banner (Save & Add Another) */}
+          {/* Status banner (scan landed / item saved) */}
           {banner && (
-            <div className="bg-[#5f7a45]/10 border border-[#5f7a45]/30 text-[#3f5430] rounded-xl px-4 py-3.5 text-base font-medium flex items-center gap-2">
+            <div className="bg-[#5f7a45]/10 border border-[#5f7a45]/30 text-[#3f5430] rounded-xl px-4 py-3 text-base font-medium flex items-center gap-2">
               <svg width="20" height="20" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 10l4 4 8-8"/></svg>
               {banner}
             </div>
           )}
 
-          {/* ── Combo lot builder ── */}
-          <div className={`rounded-xl border-2 p-5 transition-colors ${combo ? "border-[#6c4d39] bg-[#f6ecda]" : "border-[#e3d6bf] bg-white"}`}>
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="text-lg font-semibold text-[#241a12]">Combo lot</h2>
-                <p className="text-sm text-[#6f5b46] mt-0.5">Sell several items as ONE lot — pick one photo from each to make a collage. Still saves as a single lot &amp; code.</p>
-              </div>
+          {/* ── 1 · Scan ── */}
+          <Step
+            n={1}
+            title="Scan the barcode"
+            hint="A scan fills the form for you. Nothing to confirm."
+            color={C_SCAN}
+            done={hasDetails}
+            right={
               <button
                 type="button"
                 onClick={toggleCombo}
-                className={`shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-base font-semibold border-2 transition-colors ${
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-bold border-2 transition-colors ${
                   combo ? "bg-[#6c4d39] text-white border-[#6c4d39]" : "bg-white text-[#6c4d39] border-[#cdbda3] hover:bg-[#efe3d0]"
                 }`}
               >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1.5" y="1.5" width="6" height="6" rx="1" /><rect x="8.5" y="1.5" width="6" height="6" rx="1" /><rect x="1.5" y="8.5" width="6" height="6" rx="1" /><rect x="8.5" y="8.5" width="6" height="6" rx="1" /></svg>
-                {combo ? "Combo on" : "Combo"}
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1.5" y="1.5" width="6" height="6" rx="1" /><rect x="8.5" y="1.5" width="6" height="6" rx="1" /><rect x="1.5" y="8.5" width="6" height="6" rx="1" /><rect x="8.5" y="8.5" width="6" height="6" rx="1" /></svg>
+                {combo ? "Combo on" : "Combo lot"}
               </button>
-            </div>
+            }
+          >
             {combo && (
-              <div className="mt-4">
-                <div className="text-sm font-semibold text-[#4a3a2b] mb-2">How many items in the combo?</div>
+              <div className="mb-4 rounded-xl bg-[#f6ecda] border border-[#e3d6bf] p-4">
+                <div className="text-sm font-semibold text-[#4a3a2b] mb-2">How many items in this lot?</div>
                 <div className="flex flex-wrap gap-2">
                   {[2, 3, 4, 5, 6].map((n) => (
                     <button
                       key={n}
                       type="button"
                       onClick={() => setPackSize(n)}
-                      className={`px-4 py-2.5 rounded-xl text-base font-bold border transition-colors ${
+                      className={`px-3.5 py-2 rounded-lg text-sm font-bold border transition-colors ${
                         formData.packSize === n ? "bg-[#6c4d39] text-white border-[#6c4d39]" : "bg-white text-[#4a3a2b] border-[#cdbda3] hover:bg-[#efe3d0]"
                       }`}
                     >
@@ -858,81 +925,88 @@ function NewItemForm() {
                   ))}
                 </div>
                 <p className="mt-3 text-sm text-[#6f5b46]">
-                  <span className="font-bold text-[#6c4d39]">{photos.length} of {formData.packSize}</span> photos added. Scan or type each item below and tap <strong>one photo</strong> to add it to the collage (or upload photos in the Photos section).
+                  <span className="font-bold text-[#6c4d39]">{photos.length} of {formData.packSize}</span> photos in the collage. Scan each item and tap <strong>one photo</strong> from it. Saves as one lot, one code.
                 </p>
               </div>
             )}
-          </div>
 
-          {/* ── Barcode scanner ── (keyed so "Start fresh" / "Save & Add Another" remount it clean) */}
-          <BarcodeScanner
-            key={scannerKey}
-            onFill={handleBarcodeFill}
-            collapsed={scannerCollapsed}
-            onCollapsedChange={setScannerCollapsed}
-            comboMode={combo}
-            onAddComboPhoto={importImageFromUrl}
-          />
+            <BarcodeScanner
+              key={scannerKey}
+              onFill={handleBarcodeFill}
+              collapsed={scannerCollapsed}
+              onCollapsedChange={setScannerCollapsed}
+              comboMode={combo}
+              onAddComboPhoto={importImageFromUrl}
+              autoStart={scannerAutoStart}
+            />
+          </Step>
 
-          {/* ── Photos (kept near the top so it's editable without scrolling) ── */}
-          <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">Photos <span className="text-[#8a7559] text-base font-normal">(up to 10)</span></h2>
+          {/* ── 2 · Photos ── */}
+          <Step
+            n={2}
+            title="Photos"
+            hint={hasPhotos ? "First photo is what bidders see." : "Up to 10. Scanned items pull theirs in automatically."}
+            color={C_PHOTO}
+            done={hasPhotos}
+            right={hasPhotos ? <span className="text-sm font-bold text-[#4a7c59]">{photos.length}</span> : undefined}
+          >
             <input type="file" accept="image/*" multiple id="photo-upload" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
-            <label htmlFor="photo-upload"
-              className="border-2 border-dashed border-[#cdbda3] rounded-xl p-8 text-center hover:border-[#6c4d39] transition-colors cursor-pointer block">
-              <div className="text-[#8a7559] mb-2 flex justify-center">
-                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="2" y="6" width="20" height="15" rx="2"/><circle cx="12" cy="13.5" r="4"/><path d="M9 6l1.5-3h3L15 6"/>
-                </svg>
+            {hasPhotos ? (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+                {photos.map((url, i) => (
+                  <div key={i} className={`relative aspect-square bg-[#efe3d0] rounded-xl overflow-hidden border-2 ${i === 0 ? "border-[#4a7c59]" : "border-[#e3d6bf]"}`}>
+                    <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-contain" />
+                    {i === 0 ? (
+                      <span className="absolute top-1.5 left-1.5 bg-[#4a7c59] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">Main</span>
+                    ) : (
+                      <button type="button" onClick={() => setMainPhoto(i)}
+                        className="absolute bottom-1.5 left-1.5 bg-white/95 hover:bg-white text-[#4a7c59] text-[11px] font-bold px-2 py-0.5 rounded-md border border-[#cdbda3] shadow-sm transition-colors">
+                        Set main
+                      </button>
+                    )}
+                    <button type="button" onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))}
+                      className="absolute top-1.5 right-1.5 bg-red-500 hover:bg-red-600 text-white text-sm rounded-full w-6 h-6 flex items-center justify-center shadow">×</button>
+                  </div>
+                ))}
+                <label htmlFor="photo-upload"
+                  className="aspect-square rounded-xl border-2 border-dashed border-[#cdbda3] hover:border-[#4a7c59] transition-colors cursor-pointer grid place-items-center text-[#8a7559] hover:text-[#4a7c59]">
+                  <span className="text-2xl leading-none">＋</span>
+                </label>
               </div>
-              <div className="text-[#6f5b46] text-base">{uploading ? "Uploading..." : "Click to upload photos"}</div>
-            </label>
-            {photos.length > 0 && (
-              <>
-                <p className="text-[#8a7559] text-sm mt-4 mb-2">The <strong className="text-[#6c4d39]">Main photo</strong> is what bidders see first. Tap &ldquo;Set as main&rdquo; on any photo to change it.</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {photos.map((url, i) => (
-                    <div key={i} className={`relative aspect-square bg-[#efe3d0] rounded-xl overflow-hidden border-2 ${i === 0 ? "border-[#6c4d39]" : "border-[#e3d6bf]"}`}>
-                      <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-contain" />
-                      {i === 0 ? (
-                        <span className="absolute top-2 left-2 bg-[#6c4d39] text-white text-[11px] font-bold px-2 py-0.5 rounded-full shadow">Main photo</span>
-                      ) : (
-                        <button type="button" onClick={() => setMainPhoto(i)}
-                          className="absolute bottom-2 left-2 bg-white/95 hover:bg-white text-[#6c4d39] text-xs font-semibold px-2.5 py-1 rounded-lg border border-[#cdbda3] shadow-sm transition-colors">
-                          Set as main
-                        </button>
-                      )}
-                      <button type="button" onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))}
-                        className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white text-base rounded-full w-7 h-7 flex items-center justify-center shadow">×</button>
-                    </div>
-                  ))}
+            ) : (
+              <label htmlFor="photo-upload"
+                className="border-2 border-dashed border-[#cdbda3] rounded-xl py-6 text-center hover:border-[#4a7c59] transition-colors cursor-pointer block">
+                <div className="text-[#8a7559] mb-1.5 flex justify-center">
+                  <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="6" width="20" height="15" rx="2"/><circle cx="12" cy="13.5" r="4"/><path d="M9 6l1.5-3h3L15 6"/>
+                  </svg>
                 </div>
-              </>
+                <div className="text-[#6f5b46] text-base font-semibold">{uploading ? "Uploading…" : "Add photos"}</div>
+              </label>
             )}
-          </div>
+          </Step>
 
-          {/* ── Item details ── */}
-          <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">Item Details</h2>
+          {/* ── 3 · Details ── */}
+          <Step n={3} title="Details" color={C_DETAIL} done={hasDetails}>
             <div className="space-y-4">
               <div>
-                <label className="text-base text-[#6f5b46] mb-1.5 block">Item Title *</label>
+                <label className="text-sm font-semibold text-[#6f5b46] mb-1.5 block">Title *</label>
                 <textarea ref={titleRef} name="title" value={formData.title} onChange={handleChange} rows={1}
                   placeholder='e.g. Apple iPad Pro 12.9"'
-                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] resize-none overflow-hidden leading-snug" />
+                  className={`${inputCls} resize-none overflow-hidden leading-snug`} />
               </div>
               <div>
-                <label className="text-base text-[#6f5b46] mb-1.5 block">Description</label>
+                <label className="text-sm font-semibold text-[#6f5b46] mb-1.5 block">Description</label>
                 <textarea name="description" value={formData.description} onChange={handleChange} rows={3}
-                  placeholder="Describe the item..."
-                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] resize-none" />
+                  placeholder="A couple of sentences."
+                  className={`${inputCls} resize-none`} />
               </div>
               <div>
-                <label className="text-base text-[#6f5b46] mb-1.5 block">Condition *</label>
-                <div className="flex flex-wrap gap-2">
+                <label className="text-sm font-semibold text-[#6f5b46] mb-1.5 block">Condition *</label>
+                <div className="grid grid-cols-5 gap-1.5">
                   {[
                     { value: "NEW", label: "New" },
-                    { value: "LIKE_NEW", label: "Like New" },
+                    { value: "LIKE_NEW", label: "Like new" },
                     { value: "GOOD", label: "Good" },
                     { value: "FAIR", label: "Fair" },
                     { value: "POOR", label: "Poor" },
@@ -941,10 +1015,10 @@ function NewItemForm() {
                       key={c.value}
                       type="button"
                       onClick={() => setFormData((prev) => ({ ...prev, condition: c.value }))}
-                      className={`px-4 py-2.5 rounded-xl text-base font-semibold border transition-colors ${
+                      className={`px-1 py-2.5 rounded-lg text-sm font-bold border transition-colors ${
                         formData.condition === c.value
-                          ? "bg-[#6c4d39] text-white border-[#6c4d39]"
-                          : "bg-[#efe3d0] text-[#4a3a2b] border-[#cdbda3] hover:bg-[#e7dcc6]"
+                          ? "bg-[#c47b3e] text-white border-[#c47b3e]"
+                          : "bg-[#faf5ea] text-[#4a3a2b] border-[#cdbda3] hover:bg-[#efe3d0]"
                       }`}
                     >
                       {c.label}
@@ -952,128 +1026,127 @@ function NewItemForm() {
                   ))}
                 </div>
               </div>
-              <div>
-                <label className="text-base text-[#6f5b46] mb-1.5 block">Featured</label>
-                <button
-                  type="button"
-                  onClick={() => setFormData((prev) => ({ ...prev, isPremium: !prev.isPremium }))}
-                  className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-base font-semibold border-2 transition-colors ${
-                    formData.isPremium
-                      ? "bg-[#c47b3e] text-white border-[#c47b3e]"
-                      : "bg-white text-[#6c4d39] border-[#cdbda3] hover:bg-[#efe3d0]"
-                  }`}
-                >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill={formData.isPremium ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M8 1.5l1.8 3.9 4.2.5-3.1 2.9.8 4.2L8 11.4 4.3 13l.8-4.2L2 5.9l4.2-.5L8 1.5z" /></svg>
-                  {formData.isPremium ? "Premium item" : "Mark as Premium"}
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setFormData((prev) => ({ ...prev, isPremium: !prev.isPremium }))}
+                className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-base font-bold border-2 transition-colors ${
+                  formData.isPremium
+                    ? "bg-[#c47b3e] text-white border-[#c47b3e]"
+                    : "bg-white text-[#8a7559] border-[#cdbda3] hover:bg-[#efe3d0]"
+                }`}
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill={formData.isPremium ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M8 1.5l1.8 3.9 4.2.5-3.1 2.9.8 4.2L8 11.4 4.3 13l.8-4.2L2 5.9l4.2-.5L8 1.5z" /></svg>
+                {formData.isPremium ? "Featured — pinned to the top" : "Feature this item"}
+              </button>
             </div>
-          </div>
+          </Step>
 
-          {/* ── Pricing ── */}
-          <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">Pricing</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* ── 4 · Price ── */}
+          <Step n={4} title="Price" hint="Starts at $2 unless you change it." color={C_PRICE} done>
+            <div className="grid grid-cols-3 gap-2.5">
               {[
-                { label: "Retail / Est. Value", name: "retailValue", placeholder: "0.00" },
-                { label: "Starting Bid *", name: "startingBid", placeholder: "0.00" },
-                { label: "Reserve Price", name: "reservePrice", placeholder: "Optional" },
+                { label: "Retail", name: "retailValue", placeholder: "0.00" },
+                { label: "Start *", name: "startingBid", placeholder: "2" },
+                { label: "Reserve", name: "reservePrice", placeholder: "—" },
               ].map((field) => (
                 <div key={field.name}>
-                  <label className="text-base text-[#6f5b46] mb-1.5 block">{field.label}</label>
+                  <label className="text-sm font-semibold text-[#6f5b46] mb-1.5 block">{field.label}</label>
                   <div className="relative">
                     <span className="absolute left-3 top-3 text-[#8a7559]">$</span>
                     <input name={field.name} value={formData[field.name as keyof typeof formData] as string}
-                      onChange={handleChange} type="number" placeholder={field.placeholder}
-                      className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl pl-7 pr-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]" />
+                      onChange={handleChange} type="number" inputMode="decimal" placeholder={field.placeholder}
+                      className={`${inputCls} pl-7 pr-2`} />
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+          </Step>
 
-        </div>
-
-        {/* ── Sidebar ── */}
-        <div className="space-y-6">
-          <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">Item Location</h2>
-
-            <div>
-              <label className="text-base text-[#6f5b46] mb-1.5 block">Shelf / spot</label>
-              <input name="storageLocation" value={formData.storageLocation} onChange={handleChange}
-                placeholder="e.g. Shelf 2 / Bin 4 / Row C"
-                className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]" />
-            </div>
-
-            <div className="mt-4">
-              <label className="text-base text-[#6f5b46] mb-1.5 block">Warehouse *</label>
-              {pickupLocations.length === 0 ? (
-                <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3.5 text-base text-amber-800">
-                  You don&apos;t have any warehouses yet. Items need a warehouse before they can be saved.{" "}
-                  <a href="/admin/pickup" className="font-semibold underline underline-offset-2">Set up a warehouse first →</a>
+          {/* ── 5 · Location ── */}
+          <Step n={5} title="Where it lives" color={C_LOC} done={hasLocation}>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-semibold text-[#6f5b46] mb-1.5 block">Warehouse *</label>
+                  {pickupLocations.length === 0 ? (
+                    <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+                      No warehouses yet.{" "}
+                      <a href="/admin/pickup" className="font-semibold underline underline-offset-2">Set one up →</a>
+                    </div>
+                  ) : (
+                    <select name="locationId" value={formData.locationId} onChange={handleChange}
+                      className={`${inputCls} ${!formData.locationId ? "border-[#c47b3e]" : ""}`}>
+                      <option value="">Choose…</option>
+                      {pickupLocations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                    </select>
+                  )}
                 </div>
-              ) : (
-                <>
-                  <select name="locationId" value={formData.locationId} onChange={handleChange}
-                    className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]">
-                    <option value="">Choose a warehouse…</option>
-                    {pickupLocations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-                  </select>
-                </>
-              )}
-            </div>
+                <div>
+                  <label className="text-sm font-semibold text-[#6f5b46] mb-1.5 block">Shelf / spot</label>
+                  <input name="storageLocation" value={formData.storageLocation} onChange={handleChange}
+                    placeholder="Box 1"
+                    className={inputCls} />
+                </div>
+              </div>
 
-            <div className="mt-4">
-              <label className="text-base text-[#6f5b46] mb-1.5 block">Transfer</label>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <button type="button" onClick={() => setFormData((prev) => ({ ...prev, transferable: true }))}
-                  className={`px-4 py-2.5 rounded-xl text-base font-semibold border transition-colors ${
-                    formData.transferable ? "bg-[#6c4d39] text-white border-[#6c4d39]" : "bg-white text-[#4a3a2b] border-[#cdbda3] hover:bg-[#efe3d0]"
+                  className={`px-3 py-2.5 rounded-xl text-sm font-bold border transition-colors ${
+                    formData.transferable ? "bg-[#7b6a3f] text-white border-[#7b6a3f]" : "bg-[#faf5ea] text-[#4a3a2b] border-[#cdbda3] hover:bg-[#efe3d0]"
                   }`}>
-                  Transferable
+                  Can transfer
                 </button>
                 <button type="button" onClick={() => setFormData((prev) => ({ ...prev, transferable: false }))}
-                  className={`px-4 py-2.5 rounded-xl text-base font-semibold border transition-colors ${
-                    !formData.transferable ? "bg-[#8a4f1c] text-white border-[#8a4f1c]" : "bg-white text-[#4a3a2b] border-[#cdbda3] hover:bg-[#efe3d0]"
+                  className={`px-3 py-2.5 rounded-xl text-sm font-bold border transition-colors ${
+                    !formData.transferable ? "bg-[#8a4f1c] text-white border-[#8a4f1c]" : "bg-[#faf5ea] text-[#4a3a2b] border-[#cdbda3] hover:bg-[#efe3d0]"
                   }`}>
-                  Pickup at warehouse only
+                  Pickup here only
                 </button>
               </div>
-            </div>
-          </div>
 
-          {/* Auction picker only when NOT created inside an auction (it's pre-assigned otherwise). */}
-          {!preselectedAuctionId && (
-            <div className="bg-white border border-[#e3d6bf] rounded-xl p-6">
-              <h2 className="text-lg font-semibold mb-4">Assign to Auction</h2>
-              <select name="auctionId" value={formData.auctionId} onChange={handleChange}
-                className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]">
-                <option value="">Save as draft</option>
-                {auctions.map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}
-              </select>
+              {/* Auction picker only when NOT created inside an auction. */}
+              {!preselectedAuctionId && (
+                <div>
+                  <label className="text-sm font-semibold text-[#6f5b46] mb-1.5 block">Auction</label>
+                  <select name="auctionId" value={formData.auctionId} onChange={handleChange} className={inputCls}>
+                    <option value="">Save as draft</option>
+                    {auctions.map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}
+                  </select>
+                </div>
+              )}
+            </div>
+          </Step>
+
+          {/* Last item's code — for when you save before writing the tag. */}
+          {lastCode && (
+            <div className="flex items-center gap-2 justify-center text-sm text-[#8a7559] pt-1">
+              <span>Last saved:</span>
+              <span className="font-mono font-bold text-[#6f5b46]">#{lastCode}</span>
+              {lastTitle && <span className="truncate max-w-[45%] hidden sm:inline">· {lastTitle}</span>}
             </div>
           )}
+
+          <div className="h-2" />
         </div>
       </div>
 
-      {/* ── Bottom action bar ── */}
-      <footer className="bar-safe-bottom safe-x border-t border-[#e3d6bf] bg-[#faf5ea] px-6 sm:px-8 pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      {/* ── Sticky action bar ── */}
+      <footer className="bar-safe-bottom safe-x border-t border-[#e3d6bf] bg-[#faf5ea] px-4 sm:px-8 pt-3 flex items-center gap-3">
         {/* Tag # right by the Save buttons — write it on the item before saving. */}
         {nextCode ? (
-          <div className="flex items-center gap-2.5 rounded-xl bg-[#6c4d39]/10 border border-[#6c4d39]/30 px-4 py-2.5">
-            <span className="text-sm font-semibold text-[#6f5b46] leading-tight">Write on tag</span>
-            <span className="font-mono text-2xl font-extrabold text-[#6c4d39] tracking-wider whitespace-nowrap">#{nextCode}</span>
+          <div className="flex flex-col leading-none shrink-0 rounded-xl bg-[#6c4d39]/10 border border-[#6c4d39]/30 px-3 py-2">
+            <span className="text-[10px] font-bold text-[#8a7559] uppercase tracking-wide">Write on tag</span>
+            <span className="font-mono text-xl font-extrabold text-[#6c4d39] tracking-wider whitespace-nowrap mt-0.5">#{nextCode}</span>
           </div>
-        ) : <span className="hidden sm:block" />}
-        <div className="flex flex-col sm:flex-row gap-3">
+        ) : <span />}
+        <div className="flex gap-2 ml-auto min-w-0">
           <button onClick={() => handleSave(true)} disabled={saving || uploading}
-            className="bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] disabled:opacity-50 text-[#241a12] text-base px-6 py-3.5 rounded-xl font-semibold transition-colors">
-            {saving ? "Saving..." : "Save & Add Another"}
+            className="bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] disabled:opacity-50 text-[#241a12] text-base px-4 sm:px-6 py-3.5 rounded-xl font-bold transition-colors whitespace-nowrap">
+            {saving ? "Saving…" : "Save + next"}
           </button>
           <button onClick={() => handleSave(false)} disabled={saving || uploading}
-            className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white text-base px-6 py-3.5 rounded-xl font-semibold transition-colors">
-            {saving ? "Saving..." : uploading ? "Uploading..." : "Save Item"}
+            className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white text-base px-4 sm:px-6 py-3.5 rounded-xl font-bold transition-colors whitespace-nowrap">
+            {saving ? "Saving…" : uploading ? "Uploading…" : "Save & done"}
           </button>
         </div>
       </footer>
@@ -1088,21 +1161,11 @@ export default function NewItemPage() {
         <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-4 flex items-center gap-2">
           <Skeleton className="h-8 w-48" />
         </header>
-        <div className="flex-1 px-6 sm:px-8 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          <div className="lg:col-span-2 space-y-6">
-            <Skeleton className="h-28 w-full rounded-xl" />
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="bg-white border border-[#e3d6bf] rounded-xl p-6 space-y-4">
-                <Skeleton className="h-5 w-32" />
-                <Skeleton className="h-12 w-full rounded-xl" />
-                <Skeleton className="h-12 w-full rounded-xl" />
-              </div>
-            ))}
-          </div>
-          <div className="space-y-6">
-            {[0, 1].map((i) => (
-              <div key={i} className="bg-white border border-[#e3d6bf] rounded-xl p-6 space-y-4">
-                <Skeleton className="h-5 w-32" />
+        <div className="flex-1 px-4 sm:px-8 py-6">
+          <div className="mx-auto w-full max-w-2xl space-y-4">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white border border-[#e3d6bf] rounded-2xl p-5 space-y-3">
+                <Skeleton className="h-5 w-40" />
                 <Skeleton className="h-12 w-full rounded-xl" />
               </div>
             ))}
