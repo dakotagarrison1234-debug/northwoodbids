@@ -6,6 +6,7 @@ import { getNextValidBid } from "@/lib/bidIncrements";
 import { resolveProxiesAfterBid } from "@/lib/proxyBidResolver";
 import { getPusherServer, triggerAuctionUpdated } from "@/lib/pusherServer";
 import { POPCORN_WINDOW_MS, POPCORN_EXTENSION_MS } from "@/lib/constants";
+import { queueOutbidAlert } from "@/lib/outbidAlerts";
 
 export async function POST(request: NextRequest) {
   try {
@@ -97,9 +98,6 @@ export async function POST(request: NextRequest) {
     }
 
     const previousActiveBid = item.bids[0];
-    const outbidProfile = previousActiveBid
-      ? await prisma.bidderProfile.findUnique({ where: { clerkUserId: previousActiveBid.clerkUserId } })
-      : null;
 
     // Popcorn bidding: extend item end time if bid placed in last 2:00
     let newItemEndAt: Date | null = null;
@@ -159,39 +157,11 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // GHL outbid alert (only fire if the proxy didn't already outbid the previous holder)
-    if (
-      !proxyResult.proxyFired &&
-      previousActiveBid &&
-      previousActiveBid.clerkUserId !== userId &&
-      process.env.GHL_OUTBID_WEBHOOK
-    ) {
-      const outbidEmail = outbidProfile?.email || "";
-      const outbidPhone = outbidProfile?.phone || "";
-      const outbidName = outbidProfile?.name || "Bidder";
-      const itemUrl = `${process.env.NEXT_PUBLIC_APP_URL}/${item.organization?.slug}/${item.auction?.slug}/item/${item.id}`;
-      fetch(process.env.GHL_OUTBID_WEBHOOK, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: outbidEmail,
-          phone: outbidPhone,
-          name: outbidName,
-          firstName: outbidName.split(" ")[0] || outbidName,
-          lastName: outbidName.split(" ").slice(1).join(" ") || "",
-          event: "outbid",
-          smsMessage: `Northwood Bids: You've been outbid on ${item.title} — now $${amount}. Jump back in: ${itemUrl}`,
-          bidderEmail: outbidEmail,
-          bidderPhone: outbidPhone,
-          bidderName: outbidName,
-          itemTitle: item.title,
-          itemUrl,
-          outbidAmount: previousActiveBid.amount,
-          newBidAmount: amount,
-          auctionName: item.auction?.title || "Auction",
-          orgName: item.organization?.name || "Organization",
-        }),
-      }).catch((err) => console.error("GHL outbid webhook failed:", err));
+    // Outbid alert — QUEUED, never sent from here. The cron coalesces a bidder's
+    // alerts into one text once the bidding on them settles, so a $1-at-a-time
+    // nibbling war doesn't fire a text per bid. See lib/outbidAlerts.ts.
+    if (!proxyResult.proxyFired && previousActiveBid && previousActiveBid.clerkUserId !== userId) {
+      await queueOutbidAlert(previousActiveBid.clerkUserId, item.id);
     }
 
     // (No "bid confirmed" notification — bidders see it live on screen; only the

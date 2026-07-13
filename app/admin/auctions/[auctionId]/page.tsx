@@ -4,6 +4,7 @@ import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg } from "@/lib/auth";
 import { type ActiveProxy } from "./ProxyBidsPanel";
+import RecentBidsPanel, { type RecentBid } from "./RecentBidsPanel";
 import LocalDate from "@/app/components/LocalDate";
 import StatusPill from "@/app/components/StatusPill";
 import { statusStyle } from "@/lib/statusStyles";
@@ -88,6 +89,42 @@ export default async function ManageAuctionPage({ params }: Props) {
   const isScheduled = auction.status === "DRAFT" && auction.startAt > now;
   const isPastStart = auction.status === "DRAFT" && auction.startAt <= now;
   const isEnded = auction.status === "CLOSED" || auction.status === "SETTLED";
+
+  // The last 10 bids across the whole auction — the "is anything happening" feed.
+  const recentBidRows = await prisma.bid.findMany({
+    where: { item: { auctionId } },
+    orderBy: { placedAt: "desc" },
+    take: 10,
+    select: {
+      id: true,
+      itemId: true,
+      clerkUserId: true,
+      amount: true,
+      placedAt: true,
+      isProxy: true,
+      status: true,
+      item: { select: { title: true } },
+    },
+  });
+  // Bidder names live on BidderProfile, not on Bid — resolve them in one query.
+  const bidderIds = [...new Set(recentBidRows.map((b) => b.clerkUserId))];
+  const bidderProfiles = bidderIds.length
+    ? await prisma.bidderProfile.findMany({
+        where: { clerkUserId: { in: bidderIds } },
+        select: { clerkUserId: true, name: true, email: true },
+      })
+    : [];
+  const bidderNameById = new Map(bidderProfiles.map((p) => [p.clerkUserId, p.name || p.email || "Bidder"]));
+  const recentBids: RecentBid[] = recentBidRows.map((b) => ({
+    id: b.id,
+    itemId: b.itemId,
+    itemTitle: b.item?.title ?? "Item",
+    bidderName: bidderNameById.get(b.clerkUserId) ?? "Bidder",
+    amount: Number(b.amount),
+    placedAtISO: b.placedAt.toISOString(),
+    isProxy: b.isProxy,
+    isTop: b.status === "ACTIVE",
+  }));
 
   // Owner/admin only: the active Max Bids (proxy bids) on this auction's items.
   // Max amounts are competitive info, so staff below admin don't see them.
@@ -238,6 +275,10 @@ export default async function ManageAuctionPage({ params }: Props) {
           proxies={activeProxies}
           liveNotifiedAtISO={auction.liveNotifiedAt ? auction.liveNotifiedAt.toISOString() : null}
         />
+
+        {/* Last 10 bids on this auction. Refreshes live — PusherRefresh above is
+            listening on `auction-updated`, which fires on every bid. */}
+        <RecentBidsPanel bids={recentBids} />
 
         {/* Items */}
         <div className="bg-white border border-[#e3d6bf] rounded-xl overflow-hidden">

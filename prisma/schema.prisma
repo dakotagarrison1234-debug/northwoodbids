@@ -121,6 +121,7 @@ enum AuctionStatus {
   bids            Bid[]
   payments        Payment[]
   proxyBids       ProxyBid[]
+  outbidAlerts    OutbidAlert[]
   pickedUpAt          DateTime?
   pickupAppointmentId String?
   pickupAppointment   PickupAppointment? @relation(fields: [pickupAppointmentId], references: [id], onDelete: SetNull)
@@ -157,6 +158,24 @@ model PickupLocation {
 
 // Block-off dates (vacations, holidays) — no pickup slots are offered on any day
 // within [startDate, endDate] (inclusive), regardless of the weekly hours.
+/// A pending "you've been outbid" alert, waiting to be coalesced into a text.
+/// We never text straight from the bid path any more: a $50 max bid being nibbled
+/// at $1 a time would have fired 49 separate texts. Alerts land here instead, and
+/// the cron batches everything that settled in the last ~30s into ONE message.
+model OutbidAlert {
+  id           String    @id @default(cuid())
+  clerkUserId  String
+  itemId       String
+  /// Bumped every time they're outbid again on this item — restarts the quiet window.
+  createdAt    DateTime  @default(now())
+  /// Null = still pending. Set once it's been texted (or deliberately suppressed).
+  sentAt       DateTime?
+  item         Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([clerkUserId, sentAt])
+  @@index([sentAt, createdAt])
+}
+
 model PickupBlackout {
   id         String         @id @default(cuid())
   locationId String

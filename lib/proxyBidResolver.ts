@@ -19,6 +19,7 @@ import { Prisma } from "@prisma/client";
 import { getIncrement, getNextValidBid } from "@/lib/bidIncrements";
 import { getPusherServer } from "@/lib/pusherServer";
 import { POPCORN_WINDOW_MS, POPCORN_EXTENSION_MS } from "@/lib/constants";
+import { queueOutbidAlert } from "@/lib/outbidAlerts";
 
 type ItemContext = {
   id: string;
@@ -72,13 +73,8 @@ async function placeProxyBid(
     }
   }
 
-  // Fetch profiles before transaction (avoid slow I/O inside the transaction)
-  const [displacedProfile, proxyOwnerProfile] = await Promise.all([
-    displacedBidderId && displacedBidderId !== proxy.clerkUserId
-      ? prisma.bidderProfile.findUnique({ where: { clerkUserId: displacedBidderId } })
-      : Promise.resolve(null),
-    prisma.bidderProfile.findUnique({ where: { clerkUserId: proxy.clerkUserId } }),
-  ]);
+  // (No profile lookups here any more — the outbid alert is queued by user id and
+  //  the contact details are resolved by the cron at send time.)
 
   // Atomic: optimistic-lock guard + mark existing ACTIVE bid OUTBID + create proxy auto-bid.
   // End-time guard: an item with no per-item end falls back to the auction end, so
@@ -129,35 +125,12 @@ async function placeProxyBid(
     ...(newItemEndAt ? { newEndAt: newItemEndAt.toISOString() } : {}),
   });
 
-  const itemUrl =
-    item.organization && item.auction
-      ? `${process.env.NEXT_PUBLIC_APP_URL}/${item.organization.slug}/${item.auction.slug}/item/${item.id}`
-      : process.env.NEXT_PUBLIC_APP_URL ?? "";
-
-  // GHL: outbid notification to the displaced bidder
-  if (displacedBidderId && displacedBidderId !== proxy.clerkUserId && displacedProfile && process.env.GHL_OUTBID_WEBHOOK) {
-    const email = displacedProfile.email ?? "";
-    const phone = displacedProfile.phone ?? "";
-    const name = displacedProfile.name ?? "Bidder";
-    fetch(process.env.GHL_OUTBID_WEBHOOK, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email, phone, name,
-        firstName: name.split(" ")[0] || name,
-        lastName: name.split(" ").slice(1).join(" ") || "",
-        event: "outbid",
-        smsMessage: `Northwood Bids: You've been outbid on ${item.title} — now $${amount}. Jump back in: ${itemUrl}`,
-        bidderEmail: email,
-        bidderPhone: phone,
-        bidderName: name,
-        itemTitle: item.title,
-        itemUrl,
-        newBidAmount: amount,
-        auctionName: item.auction?.title ?? "Auction",
-        orgName: item.organization?.name ?? "Organization",
-      }),
-    }).catch((e) => console.error("GHL outbid (proxy) failed:", e));
+  // Outbid alert — QUEUED, not sent. This is THE path that used to spam: a bidder
+  // nibbling $1 at a time against a $50 max bid triggers an auto-bid (and therefore
+  // an outbid alert) on every single one of their bids. Now the cron rolls them all
+  // into one text once things go quiet. See lib/outbidAlerts.ts.
+  if (displacedBidderId && displacedBidderId !== proxy.clerkUserId) {
+    await queueOutbidAlert(displacedBidderId, item.id);
   }
 
   // (No "your max bid is winning" confirmation — only the OUTBID alert is texted.)

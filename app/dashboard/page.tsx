@@ -908,9 +908,10 @@ function BidderDashboardInner() {
                     </section>
                   )}
 
-                  {/* You've been outbid */}
+                  {/* You've been outbid — id is the deep-link target for the
+                      coalesced outbid text ("outbid on 3 items" → /dashboard#outbid). */}
                   {visibleLosing.length > 0 && (
-                    <section>
+                    <section id="outbid" className="scroll-mt-24">
                       <div className="flex items-center gap-2 mb-3">
                         <span className="w-2 h-2 rounded-full bg-red-600 inline-block" />
                         <h2 className="font-bold text-red-600 text-sm uppercase tracking-wider">You&apos;ve been outbid ({visibleLosing.length})</h2>
