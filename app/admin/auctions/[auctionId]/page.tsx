@@ -38,6 +38,8 @@ export default async function ManageAuctionPage({ params }: Props) {
       items: {
         include: {
           photos: true,
+          // Which warehouse each item sits in — powers the per-warehouse split below.
+          location: { select: { id: true, name: true } },
           // Single top ACTIVE bid (uses [itemId, status, amount] index) instead of full history.
           bids: { where: { status: "ACTIVE" }, orderBy: { amount: "desc" }, take: 1 },
           // Total bid count is shown in the table — get it from the DB, not by loading rows.
@@ -65,6 +67,23 @@ export default async function ManageAuctionPage({ params }: Props) {
     ? auction.items.filter(i => i.status === "ACTIVE").reduce((sum, item) => sum + Number(item.currentBid), 0)
     : auction.items.filter(i => SOLD_STATUSES.includes(i.status)).reduce((sum, item) => sum + Number(item.currentBid), 0);
   const totalBids = auction.items.reduce((sum, item) => sum + item._count.bids, 0);
+
+  // Per-warehouse split (Owosso vs Gladwin vs …): how many items sit at each, and
+  // what they're worth. "Worth" follows the same rule as the headline total —
+  // live bids while the auction is running, confirmed sales once it's closed.
+  const isLiveAuction = auction.status === "OPEN" || auction.status === "CLOSING";
+  const counted = (s: string) => (isLiveAuction ? s === "ACTIVE" : SOLD_STATUSES.includes(s));
+  const byWarehouse = new Map<string, { name: string; items: number; total: number }>();
+  for (const item of auction.items) {
+    const key = item.location?.id ?? "none";
+    const name = item.location?.name ?? "No warehouse";
+    const row = byWarehouse.get(key) ?? { name, items: 0, total: 0 };
+    row.items += 1;
+    if (counted(item.status)) row.total += Number(item.currentBid);
+    byWarehouse.set(key, row);
+  }
+  const warehouses = [...byWarehouse.values()].sort((a, b) => b.items - a.items);
+
   const now = new Date();
   const isScheduled = auction.status === "DRAFT" && auction.startAt > now;
   const isPastStart = auction.status === "DRAFT" && auction.startAt <= now;
@@ -147,6 +166,34 @@ export default async function ManageAuctionPage({ params }: Props) {
             </div>
           ))}
         </div>
+
+        {/* Per-warehouse split — where this auction's items physically are, and what
+            each warehouse is carrying. Admin-only info (bidders never see totals). */}
+        {warehouses.length > 0 && (
+          <div className="bg-white border border-[#e3d6bf] rounded-xl px-5 py-4">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <h2 className="text-base font-bold text-[#241a12] inline-flex items-center gap-1.5">
+                <IcoPin /> By warehouse
+              </h2>
+              <span className="text-xs text-[#8a7559]">
+                {isLiveAuction ? "Current bids" : isEnded ? "Sold" : "No bids yet"}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              {warehouses.map((w) => (
+                <div key={w.name} className="rounded-xl border border-[#e3d6bf] bg-[#faf5ea] px-4 py-3">
+                  <div className="text-sm font-bold text-[#241a12] truncate">{w.name}</div>
+                  <div className="flex items-baseline justify-between gap-2 mt-1">
+                    <span className="text-sm text-[#6f5b46]">
+                      {w.items} {w.items === 1 ? "item" : "items"}
+                    </span>
+                    <span className="text-lg font-extrabold text-[#6c4d39]">{money(w.total)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Auction timeline */}
         <div className="bg-white border border-[#e3d6bf] rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-4 text-base">
