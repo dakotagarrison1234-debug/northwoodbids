@@ -118,9 +118,12 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 
     // State machine guard — prevent illegal auction status transitions
     const auctionTransitions: Record<string, string[]> = {
+      // DRAFT is reachable again from OPEN/CLOSING — that's "unopen", the undo for
+      // an auction started by accident. It is NOT the same as closing: no winners
+      // are picked, nothing is charged, and every bid is left exactly where it is.
       DRAFT:   ["OPEN"],
-      OPEN:    ["CLOSING", "CLOSED"],
-      CLOSING: ["CLOSED", "OPEN"],
+      OPEN:    ["CLOSING", "CLOSED", "DRAFT"],
+      CLOSING: ["CLOSED", "OPEN", "DRAFT"],
       CLOSED:  ["SETTLED"],
       SETTLED: [],
     };
@@ -140,6 +143,70 @@ export async function PATCH(request: NextRequest, { params }: Props) {
           { status: 422 }
         );
       }
+    }
+
+    // ── UNOPEN (OPEN/CLOSING → DRAFT) ─────────────────────────────────────────
+    // The undo for "I opened this by accident." It pulls the auction back to DRAFT
+    // and hides its items again, but it is NOT a close: no winner is picked, no card
+    // is charged, and every existing bid is left untouched. Re-open later and the
+    // auction resumes with its bid history and current prices intact.
+    if (status === "DRAFT") {
+      // If any item already finished, its outcome is real — someone may already have
+      // been charged. Reverting the auction around a settled item would be a mess, so
+      // refuse rather than half-undo it.
+      const finishedItem = await prisma.item.findFirst({
+        where: {
+          auctionId,
+          status: { in: ["SOLD", "PENDING_PICKUP", "PICKED_UP", "UNSOLD"] },
+        },
+        select: { id: true },
+      });
+      if (finishedItem) {
+        return NextResponse.json(
+          {
+            error:
+              "Some items in this auction have already ended, so it can't be un-opened. Those results are final.",
+          },
+          { status: 422 }
+        );
+      }
+
+      // Atomic claim, same as opening — two admins can't race each other.
+      const claimed = await prisma.auction.updateMany({
+        where: { id: auctionId, status: { in: ["OPEN", "CLOSING"] } },
+        data: {
+          status: "DRAFT",
+          // CRITICAL: the cron auto-opens any DRAFT auction whose startAt has passed.
+          // An accidentally-opened auction almost always has a start time in the past,
+          // so without pushing it forward the next cron tick (within a minute) would
+          // just re-open it and the undo would look broken. Park it a week out; the
+          // owner sets the real time in Edit auction.
+          ...(auction.startAt <= new Date()
+            ? { startAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) }
+            : {}),
+          // Let them send a proper "auction is live" text when it really opens.
+          liveNotifiedAt: null,
+          // Re-arm the "ending soon" warning for the real run.
+          endingSoonNotifiedAt: null,
+        },
+      });
+      if (claimed.count === 0) {
+        return NextResponse.json(
+          { error: "This auction is no longer open, so it can't be un-opened." },
+          { status: 409 }
+        );
+      }
+
+      // Hide the items again. ONLY touch ACTIVE ones — anything in another state is
+      // left alone. Bids are deliberately NOT modified: they stay ACTIVE with their
+      // amounts, so reopening resumes exactly where this left off.
+      await prisma.item.updateMany({
+        where: { auctionId, status: "ACTIVE" },
+        data: { status: "DRAFT" },
+      });
+
+      triggerAuctionUpdated(auction.organization.slug).catch(() => {});
+      return NextResponse.json({ success: true });
     }
 
     // Opening is special-cased with an ATOMIC claim so two admins (or an admin +

@@ -130,6 +130,23 @@ export default function AuctionStatusButtons({ auctionId, status, liveNotifiedAt
           </button>
         )}
 
+        {/* Undo an accidental open. Not a close — no winners, no charges, bids kept. */}
+        {isLive && (
+          <button
+            onClick={() =>
+              setConfirmDialog({
+                text:
+                  "Un-open this auction and put it back to draft? Items are hidden from bidders again. Nothing is closed or charged, and any bids already placed are kept — reopen and it picks up right where it left off. Set the new start time in Edit auction.",
+                confirmLabel: "Un-open it",
+                onConfirm: () => updateStatus("DRAFT"),
+              })
+            }
+            className={`${BTN_BASE} bg-white hover:bg-[#efe3d0] border border-[#cdbda3] text-[#6f5b46]`}
+          >
+            Un-open (back to draft)
+          </button>
+        )}
+
         {status === "CLOSED" && (
           <button
             onClick={() => updateStatus("SETTLED")}
