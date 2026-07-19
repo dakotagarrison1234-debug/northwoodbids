@@ -321,6 +321,10 @@ model Payment {
   creditApplied         Decimal?      @db.Decimal(10, 2)
   stripePaymentIntentId String?
   status                PaymentStatus @default(PENDING)
+  // True when the winner was an org admin/owner: the win is honored (item goes to
+  // pickup) but no card is ever charged. Kept out of sales totals so comped admin
+  // wins don't inflate revenue. Normal bidders are NEVER comped.
+  comped                Boolean       @default(false)
   autoChargeAttemptedAt DateTime?
   failureReason         String?
   createdAt             DateTime      @default(now())

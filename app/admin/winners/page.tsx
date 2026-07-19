@@ -29,7 +29,7 @@ export default async function WinnersPage() {
     }),
     prisma.payment.findMany({
       where: { item: { organizationId: orgId } },
-      select: { id: true, itemId: true, status: true },
+      select: { id: true, itemId: true, status: true, comped: true },
       take: FETCH_CAP,
     }),
   ]);
@@ -94,6 +94,7 @@ export default async function WinnersPage() {
       winnerMap.set(bid.clerkUserId, g);
     }
     const payment = paymentMap.get(bid.itemId);
+    const comped = payment?.comped === true;
     const paid = payment?.status === "PAID";
     g.items.push({
       id: bid.item.id,
@@ -101,6 +102,7 @@ export default async function WinnersPage() {
       photo: photoOf(bid.item),
       amount: Number(bid.amount),
       paid,
+      comped,
       status: bid.item.status,
       auctionId: bid.item.auctionId,
       auctionTitle: bid.item.auction?.title ?? null,

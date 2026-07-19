@@ -142,6 +142,26 @@ async function closeItem(
  * On failure:  creates Payment records (status=FAILED) + logs the reason.
  *              Winners will see a retry option on their dashboard.
  */
+/**
+ * Is this winner an admin who should be comped instead of charged?
+ * True for OWNER/ADMIN members of the org, or a configured super-admin. STAFF and
+ * ordinary bidders are never comped. Runs in the cron (no request context), so the
+ * super-admin list is read straight from the env, not from the auth() session.
+ */
+async function isCompedWinner(clerkUserId: string, orgId: string): Promise<boolean> {
+  const superAdmins = (process.env.SUPER_ADMIN_IDS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (superAdmins.includes(clerkUserId)) return true;
+
+  const member = await prisma.orgMember.findFirst({
+    where: { clerkUserId, organizationId: orgId, role: { in: ["OWNER", "ADMIN"] } },
+    select: { id: true },
+  });
+  return !!member;
+}
+
 async function chargeWinners(
   winnerMap: Map<string, WinnerEntry>,
   org: OrgForCharging,
@@ -213,6 +233,25 @@ async function chargeOneWinner(
   const itemIds = chargeItems.map((i) => i.id);
 
   const now = new Date();
+
+  // ── Admin comp ─────────────────────────────────────────────────────────────
+  // If the winner is an OWNER/ADMIN of this org (or a super-admin), the bid was a
+  // real bid in every way — it drove the price, outbid other people, and won — but
+  // the admin is never charged. We honor the win (items move to pickup) and record
+  // a $0 comped Payment so nothing tries to bill them later and it stays out of
+  // sales totals. No Stripe, no Bid Bucks, no receipt.
+  //
+  // This is the ONLY place admin bids are treated differently. The bid path itself
+  // is untouched, so normal bidding is completely unaffected.
+  if (await isCompedWinner(clerkUserId, org.id)) {
+    await recordWinnerStatus(chargingWinner, "PAID", now, {
+      moveItemsToPendingPickup: true,
+      comped: true,
+    });
+    await autoAttachPaidItems(clerkUserId, org.id);
+    console.log(`Auto-charge: COMPED admin win for ${clerkUserId} (${itemIds.length} item(s)) — no charge`);
+    return;
+  }
 
   if (!bidderCustomer?.defaultPaymentMethodId) {
     // No card on file — mark all items as FAILED so bidder sees them on dashboard
@@ -386,6 +425,7 @@ async function recordWinnerStatus(
     stripePaymentIntentId?: string;
     failureReason?: string;
     moveItemsToPendingPickup?: boolean;
+    comped?: boolean;
   } = {}
 ): Promise<void> {
   const { clerkUserId } = winner;
@@ -430,12 +470,15 @@ async function recordWinnerStatus(
         data: {
           clerkUserId,
           itemId: item.id,
-          amount: item.amount,
-          applicationFeeAmount: itemFeeCents / 100,
-          taxAmount: itemTaxCents / 100,
+          // A comp is a $0 bill — the winning amount is kept on the item/bid for the
+          // record, but the Payment row itself charges nothing.
+          amount: opts.comped ? 0 : item.amount,
+          applicationFeeAmount: opts.comped ? 0 : itemFeeCents / 100,
+          taxAmount: opts.comped ? 0 : itemTaxCents / 100,
           creditApplied: itemCreditCents > 0 ? itemCreditCents / 100 : null,
           stripePaymentIntentId: opts.stripePaymentIntentId,
           status,
+          comped: opts.comped ?? false,
           autoChargeAttemptedAt: attemptedAt,
           failureReason: opts.failureReason,
         },

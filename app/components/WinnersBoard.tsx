@@ -22,6 +22,7 @@ export type WinItem = {
   photo: string | null;
   amount: number;
   paid: boolean;
+  comped: boolean;
   status: string;
   auctionId: string | null;
   auctionTitle: string | null;
@@ -194,8 +195,8 @@ function ItemRow({ it, winnerName, winnerClerkUserId }: { it: WinItem; winnerNam
         )}
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-[#6c4d39] font-bold text-sm">{money(it.amount)}</span>
-          <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full border ${it.paid ? "bg-green-100 text-green-700 border-green-200" : "bg-amber-100 text-amber-700 border-amber-200"}`}>
-            {it.paid ? "Paid" : "Unpaid"}
+          <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full border ${it.comped ? "bg-[#efe3d0] text-[#6c4d39] border-[#cdbda3]" : it.paid ? "bg-green-100 text-green-700 border-green-200" : "bg-amber-100 text-amber-700 border-amber-200"}`}>
+            {it.comped ? "Comp" : it.paid ? "Paid" : "Unpaid"}
           </span>
           <StatusPill status={it.status} />
         </div>
