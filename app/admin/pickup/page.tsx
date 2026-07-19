@@ -138,6 +138,10 @@ export default function AdminPickupPage() {
   const [selectedApptId, setSelectedApptId] = useState<string | null>(null);
   const [showCollected, setShowCollected] = useState(false);
   const [showCompletedTransfers, setShowCompletedTransfers] = useState(false);
+  // Transfers are collapsed to one line each until tapped, and filterable by
+  // direction ("Gladwin → Owosso") so a run can be picked out at a glance.
+  const [expandedTransferId, setExpandedTransferId] = useState<string | null>(null);
+  const [transferDir, setTransferDir] = useState<string>("all");
   const [apptSearch, setApptSearch] = useState("");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -346,10 +350,34 @@ export default function AdminPickupPage() {
     (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()
   );
   const filteredScheduled = sortedScheduled.filter((a) => apptMatches(a, apptSearch));
-  const activeTransfers = transfers.filter(
+  const allActiveTransfers = transfers.filter(
     (t) => t.status === "REQUESTED" || t.status === "LOADED"
   );
   const completedTransfers = transfers.filter((t) => t.status === "COMPLETED");
+
+  // A transfer's "from" comes off its items (they're the things being moved). Almost
+  // always one warehouse; if a run somehow spans two, say so rather than pick one.
+  const transferFrom = (t: Transfer): string => {
+    const names = [...new Set(t.items.map((i) => i.fromLocationName).filter(Boolean))] as string[];
+    if (names.length === 0) return "Unassigned";
+    if (names.length === 1) return names[0];
+    return "Multiple";
+  };
+  const transferDirLabel = (t: Transfer) => `${transferFrom(t)} → ${t.toLocation.name}`;
+
+  // Direction chips are built from the transfers that actually exist, so you only
+  // ever see runs you really have (Gladwin → Owosso, Owosso → Gladwin, …).
+  const directionCounts = new Map<string, number>();
+  for (const t of allActiveTransfers) {
+    const label = transferDirLabel(t);
+    directionCounts.set(label, (directionCounts.get(label) ?? 0) + 1);
+  }
+  const directions = [...directionCounts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+
+  const activeTransfers =
+    transferDir === "all"
+      ? allActiveTransfers
+      : allActiveTransfers.filter((t) => transferDirLabel(t) === transferDir);
 
   return (
     <>
@@ -593,82 +621,138 @@ export default function AdminPickupPage() {
           // ── Transfers ──
           <div className="space-y-4 max-w-3xl">
             <h2 className="text-xl font-semibold">
-              Active transfers ({activeTransfers.length})
+              Active transfers ({activeTransfers.length}
+              {transferDir !== "all" ? ` of ${allActiveTransfers.length}` : ""})
             </h2>
+
+            {/* Direction filter — pick a run (Gladwin → Owosso) and see only that. */}
+            {directions.length > 1 && (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => { setTransferDir("all"); setExpandedTransferId(null); }}
+                  className={`px-3.5 py-2 rounded-xl text-sm font-bold border transition-colors ${
+                    transferDir === "all"
+                      ? "bg-[#6c4d39] text-white border-[#6c4d39]"
+                      : "bg-white text-[#4a3a2b] border-[#cdbda3] hover:bg-[#efe3d0]"
+                  }`}
+                >
+                  All ({allActiveTransfers.length})
+                </button>
+                {directions.map(([label, count]) => (
+                  <button
+                    key={label}
+                    onClick={() => { setTransferDir(label); setExpandedTransferId(null); }}
+                    className={`px-3.5 py-2 rounded-xl text-sm font-bold border transition-colors ${
+                      transferDir === label
+                        ? "bg-[#6c4d39] text-white border-[#6c4d39]"
+                        : "bg-white text-[#4a3a2b] border-[#cdbda3] hover:bg-[#efe3d0]"
+                    }`}
+                  >
+                    {label} ({count})
+                  </button>
+                ))}
+              </div>
+            )}
+
             {activeTransfers.length === 0 ? (
               <div className="text-base text-[#8a7559] bg-white border border-[#e3d6bf] rounded-xl px-5 py-8 text-center">
-                No transfers waiting. When a bidder asks for their items to be moved to another location, it shows up here.
+                {allActiveTransfers.length === 0
+                  ? "No transfers waiting. When a bidder asks for their items to be moved to another location, it shows up here."
+                  : "No transfers on this run right now."}
               </div>
             ) : (
-              activeTransfers.map((t) => (
-                <div key={t.id} className="bg-white border border-[#cdbda3] rounded-xl px-5 py-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="text-lg font-semibold text-[#241a12]">
-                        {t.bidder.name || "Unknown Bidder"}
+              // Collapsed to one line each — name, direction, item count, status.
+              // Tap to open the gather list and the action buttons.
+              activeTransfers.map((t) => {
+                const expanded = expandedTransferId === t.id;
+                return (
+                <div key={t.id} className="bg-white border border-[#cdbda3] rounded-xl overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedTransferId(expanded ? null : t.id)}
+                    className="w-full text-left px-5 py-4 hover:bg-[#faf5ea] transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-lg font-semibold text-[#241a12] truncate">
+                          {t.bidder.name || "Unknown Bidder"}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-base text-[#6f5b46]">
+                          <LocationBadge name={transferFrom(t)} size="sm" />
+                          <span aria-hidden>→</span>
+                          <LocationBadge name={t.toLocation.name} size="sm" />
+                          <span>· {t.items.length} item{t.items.length !== 1 ? "s" : ""}</span>
+                        </div>
                       </div>
-                      <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-0.5 text-base text-[#6f5b46]">
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span
+                          className={`text-sm px-3 py-1 rounded-full font-bold border ${
+                            t.status === "LOADED"
+                              ? "bg-[#efe0c9] text-[#8a5a2b] border-[#e3c9a3]"
+                              : "bg-amber-50 text-amber-600 border-amber-200"
+                          }`}
+                        >
+                          {t.status === "LOADED" ? "In transit" : "Requested"}
+                        </span>
+                        <span className={`text-[#8a7559] transition-transform ${expanded ? "rotate-180" : ""}`}>
+                          <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4" /></svg>
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+
+                  {expanded && (
+                    <div className="px-5 pb-4 border-t border-[#efe3d0] pt-4">
+                      <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-base text-[#6f5b46]">
                         {t.bidder.email && <span>{t.bidder.email}</span>}
                         {t.bidder.phone && <span>{t.bidder.phone}</span>}
                       </div>
+                      <div className="text-sm text-[#8a7559] mt-1">Requested {fmtDateTime(t.createdAt)}</div>
+
+                      <div className="mt-3">
+                        <div className="text-sm font-semibold text-[#8a7559] uppercase tracking-wide mb-2">
+                          {t.items.length} item{t.items.length !== 1 ? "s" : ""} to gather
+                        </div>
+                        <ul className="space-y-2">
+                          {t.items.map((it) => (
+                            <li key={it.id} className="flex items-start gap-2 bg-[#f1e7d5] rounded-xl px-4 py-2.5">
+                              <span className="text-[#5f7a45] mt-0.5">☐</span>
+                              <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-base text-[#241a12]">
+                                <span className="font-semibold">{it.title}</span>
+                                <span className="text-[#6f5b46]">— now at</span>
+                                <LocationBadge name={it.fromLocationName || "Unassigned"} size="sm" />
+                                <span className="text-[#6f5b46]">· {it.storageLocation || "no spot"}</span>
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div className="mt-4 flex flex-col sm:flex-row gap-3">
+                        {t.status === "REQUESTED" && (
+                          <button
+                            onClick={() => setTransferStatus(t.id, "LOADED", t.toLocation.name)}
+                            className="flex-1 bg-white border-2 border-[#6c4d39] text-[#6c4d39] hover:bg-[#efe3d0] font-semibold text-base py-3.5 rounded-xl transition-colors"
+                          >
+                            Mark Loaded
+                          </button>
+                        )}
+                        <button
+                          onClick={() => askConfirm(
+                            `This moves the items to ${t.toLocation.name} and lets the bidder schedule — continue?`,
+                            () => setTransferStatus(t.id, "COMPLETED", t.toLocation.name),
+                            { confirmLabel: "Mark Dropped Off" }
+                          )}
+                          className="flex-1 bg-[#5f7a45] hover:bg-[#4f6639] text-white font-semibold text-base py-3.5 rounded-xl transition-colors"
+                        >
+                          Mark Dropped Off
+                        </button>
+                      </div>
                     </div>
-                    <span
-                      className={`text-sm px-3 py-1 rounded-full font-bold shrink-0 border ${
-                        t.status === "LOADED"
-                          ? "bg-[#efe0c9] text-[#8a5a2b] border-[#e3c9a3]"
-                          : "bg-amber-50 text-amber-600 border-amber-200"
-                      }`}
-                    >
-                      {t.status === "LOADED" ? "Loaded / in transit" : `Requested ${fmtDateTime(t.createdAt)}`}
-                    </span>
-                  </div>
-
-                  <div className="mt-3 flex items-center gap-2 text-lg font-semibold text-[#241a12]">
-                    <span aria-hidden>→</span>
-                    <LocationBadge name={t.toLocation.name} />
-                  </div>
-
-                  <div className="mt-3">
-                    <div className="text-sm font-semibold text-[#8a7559] uppercase tracking-wide mb-2">
-                      {t.items.length} item{t.items.length !== 1 ? "s" : ""} to gather
-                    </div>
-                    <ul className="space-y-2">
-                      {t.items.map((it) => (
-                        <li key={it.id} className="flex items-start gap-2 bg-[#f1e7d5] rounded-xl px-4 py-2.5">
-                          <span className="text-[#5f7a45] mt-0.5">☐</span>
-                          <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-base text-[#241a12]">
-                            <span className="font-semibold">{it.title}</span>
-                            <span className="text-[#6f5b46]">— now at</span>
-                            <LocationBadge name={it.fromLocationName || "Unassigned"} size="sm" />
-                            <span className="text-[#6f5b46]">· {it.storageLocation || "no spot"}</span>
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="mt-4 flex flex-col sm:flex-row gap-3">
-                    {t.status === "REQUESTED" && (
-                      <button
-                        onClick={() => setTransferStatus(t.id, "LOADED", t.toLocation.name)}
-                        className="flex-1 bg-white border-2 border-[#6c4d39] text-[#6c4d39] hover:bg-[#efe3d0] font-semibold text-base py-3.5 rounded-xl transition-colors"
-                      >
-                        Mark Loaded
-                      </button>
-                    )}
-                    <button
-                      onClick={() => askConfirm(
-                        `This moves the items to ${t.toLocation.name} and lets the bidder schedule — continue?`,
-                        () => setTransferStatus(t.id, "COMPLETED", t.toLocation.name),
-                        { confirmLabel: "Mark Dropped Off" }
-                      )}
-                      className="flex-1 bg-[#5f7a45] hover:bg-[#4f6639] text-white font-semibold text-base py-3.5 rounded-xl transition-colors"
-                    >
-                      Mark Dropped Off
-                    </button>
-                  </div>
+                  )}
                 </div>
-              ))
+                );
+              })
             )}
 
             {/* Recently completed — collapsed by default, reveal with the arrow */}
