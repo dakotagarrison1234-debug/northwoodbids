@@ -90,6 +90,17 @@ export default async function ManageAuctionPage({ params }: Props) {
   const isPastStart = auction.status === "DRAFT" && auction.startAt <= now;
   const isEnded = auction.status === "CLOSED" || auction.status === "SETTLED";
 
+  // Comped (admin-won) items in this auction. The totals below are HAMMER totals —
+  // they include admin wins, because those bids were real. Reports counts money that
+  // actually moved, so it excludes them. Surfacing the comp count here is what makes
+  // the two pages reconcile instead of looking like one of them is wrong.
+  const compedRows = await prisma.payment.findMany({
+    where: { comped: true, item: { auctionId } },
+    select: { itemId: true, item: { select: { currentBid: true } } },
+  });
+  const compedCount = compedRows.length;
+  const compedTotal = compedRows.reduce((s, r) => s + Number(r.item?.currentBid ?? 0), 0);
+
   // The last 10 bids across the whole auction — the "is anything happening" feed.
   const recentBidRows = await prisma.bid.findMany({
     where: { item: { auctionId } },
@@ -196,10 +207,26 @@ export default async function ManageAuctionPage({ params }: Props) {
             { label: "Items", value: auction.items.length },
             { label: "Total Bids", value: totalBids },
             { label: "Active Items", value: auction.items.filter(i => i.status === "ACTIVE").length },
-          ].map((stat) => (
+          ].map((stat, i) => (
             <div key={stat.label} className="bg-white border border-[#e3d6bf] rounded-xl p-5 sm:p-6">
               <div className="text-[#6f5b46] text-sm sm:text-base font-medium mb-1.5">{stat.label}</div>
               <div className="text-2xl sm:text-3xl font-bold text-[#241a12]">{stat.value}</div>
+              {/* The money tile is HAMMER ONLY — no premium, no tax, and it includes
+                  admin comps. Say so, or it silently disagrees with Reports. */}
+              {i === 0 && (
+                <div className="text-xs text-[#8a7559] mt-1.5 leading-snug">
+                  Winning bids only — before premium &amp; tax.
+                  {compedCount > 0 && (
+                    <>
+                      {" "}Includes{" "}
+                      <span className="font-semibold text-[#6c4d39]">
+                        {money(compedTotal)} comped
+                      </span>{" "}
+                      ({compedCount} of your own win{compedCount !== 1 ? "s" : ""}), which Reports leaves out.
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
