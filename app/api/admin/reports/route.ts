@@ -1,57 +1,55 @@
-import { NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg } from "@/lib/auth";
 
-// Stripe standard pricing (US): 2.9% + $0.30 per successful charge.
+// Stripe standard US pricing: 2.9% + $0.30 per successful charge (per PaymentIntent).
 const STRIPE_PCT = 0.029;
 const STRIPE_FIXED = 0.3;
-
-// Safety cap. One row per item sold, so this is years of runway for a single shop.
 const ROW_CAP = 20000;
 
 const num = (d: unknown) => (d == null ? 0 : Number(d));
-const round = (n: number) => Math.round(n * 100) / 100;
+const r2 = (n: number) => Math.round(n * 100) / 100;
 
 type Bucket = {
   key: string;
   label: string;
-  sub?: string | null;
+  when: string | null;
   itemsSold: number;
   hammer: number;
   premium: number;
   tax: number;
-  charged: number;
-  compedCount: number;
-  compedHammer: number;
-  unpaidCount: number;
-  unpaidAmount: number;
+  credit: number;
+  fees: number;
+  net: number;
+  /** Cross-split: for an auction this is its warehouses, and vice versa. */
+  split: Map<string, number>;
 };
 
-function newBucket(key: string, label: string, sub?: string | null): Bucket {
-  return {
-    key, label, sub: sub ?? null,
-    itemsSold: 0, hammer: 0, premium: 0, tax: 0, charged: 0,
-    compedCount: 0, compedHammer: 0, unpaidCount: 0, unpaidAmount: 0,
-  };
-}
+const newBucket = (key: string, label: string, when: string | null = null): Bucket => ({
+  key, label, when,
+  itemsSold: 0, hammer: 0, premium: 0, tax: 0, credit: 0, fees: 0, net: 0,
+  split: new Map(),
+});
 
 /**
- * One query, then every report is aggregated from it in memory. Deliberately not a
- * pile of separate DB aggregates: the numbers on this page have to reconcile with
- * each other exactly, and the surest way to guarantee that is to compute them all
- * from one identical set of rows.
+ * Every report on the page comes from this one endpoint, computed from one set of
+ * rows, so the figures can't drift apart from each other.
  *
- * COMPED ROWS are the subtle bit. An admin win writes a PAID Payment with amount 0
- * and no PaymentIntent. So it must be excluded from revenue (it earned nothing), from
- * the item-sold count (nothing was sold), and — this was a live bug — from the Stripe
- * fee estimate, where it was being treated as its own charge and billed a phantom 30¢.
- * It's reported on its own line instead, valued at the item's real winning bid.
+ * NET is the only number that matters to the operator: hammer + premium − Bid Bucks
+ * credit − Stripe's cut. Sales tax is deliberately absent — it's collected from the
+ * buyer and handed to Michigan, so it passes through and nets to zero.
+ *
+ * Two subtleties that would otherwise produce wrong numbers:
+ *  1. Stripe charges once per PaymentIntent, not per item. A buyer winning six lots
+ *     across two auctions is ONE fee, which is then split across those rows in
+ *     proportion to what each was worth — never counted once per row.
+ *  2. Admin comps are PAID rows worth $0. They're excluded outright: they earned
+ *     nothing and would otherwise count as items sold and drag every average down.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   const membership = await getUserOrg();
-  if (!membership) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!membership) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const orgId = membership.organizationId;
 
   const orgConfig = await prisma.organization.findUnique({
@@ -61,130 +59,132 @@ export async function GET() {
   const feePercent = num(orgConfig?.platformFeePercent);
   const taxPercent = orgConfig?.taxExempt ? 0 : num(orgConfig?.taxPercent);
 
-  const rows = await prisma.payment.findMany({
-    where: { item: { organizationId: orgId } },
+  const range = req.nextUrl.searchParams.get("range") || "90d";
+  const now = new Date();
+  let from: Date | null = null;
+  if (range === "30d") from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  else if (range === "90d") from = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+  else if (range === "ytd") from = new Date(now.getFullYear(), 0, 1);
+
+  const paidRows = await prisma.payment.findMany({
+    where: {
+      status: "PAID",
+      comped: false,
+      item: { organizationId: orgId },
+      ...(from ? { createdAt: { gte: from } } : {}),
+    },
     select: {
-      amount: true,
-      taxAmount: true,
-      applicationFeeAmount: true,
-      status: true,
-      comped: true,
-      stripePaymentIntentId: true,
-      createdAt: true,
-      clerkUserId: true,
+      amount: true, applicationFeeAmount: true, taxAmount: true, creditApplied: true,
+      stripePaymentIntentId: true, createdAt: true,
       item: {
         select: {
-          title: true,
-          currentBid: true,
           auctionId: true,
           auction: { select: { title: true, endAt: true } },
           location: { select: { id: true, name: true } },
         },
       },
     },
-    orderBy: { createdAt: "desc" },
     take: ROW_CAP,
   });
 
-  // ── Headline totals ────────────────────────────────────────────────────────
-  let hammer = 0, premium = 0, tax = 0, itemsSold = 0;
-  let compedCount = 0, compedHammer = 0;
+  // ── Allocate each Stripe charge across the rows that shared it ───────────────
+  const grossOf = (p: (typeof paidRows)[number]) =>
+    num(p.amount) + num(p.applicationFeeAmount) + num(p.taxAmount) - num(p.creditApplied ?? 0);
 
+  const piGross = new Map<string, number>();
+  for (const p of paidRows) {
+    if (!p.stripePaymentIntentId) continue;
+    piGross.set(p.stripePaymentIntentId, (piGross.get(p.stripePaymentIntentId) ?? 0) + grossOf(p));
+  }
+  const feeForRow = (p: (typeof paidRows)[number]): number => {
+    const gross = grossOf(p);
+    if (!p.stripePaymentIntentId) return gross > 0 ? gross * STRIPE_PCT + STRIPE_FIXED : 0;
+    const total = piGross.get(p.stripePaymentIntentId) ?? 0;
+    if (total <= 0) return 0;
+    const totalFee = total * STRIPE_PCT + STRIPE_FIXED;
+    return totalFee * (gross / total);
+  };
+
+  // ── Aggregate ───────────────────────────────────────────────────────────────
   const byAuction = new Map<string, Bucket>();
   const byWarehouse = new Map<string, Bucket>();
-  // Stripe charges one fee per PaymentIntent, not per item — group by intent.
-  const intents = new Map<string, number>();
-  let soloGross = 0, soloCount = 0;
+  const totals = newBucket("all", "All");
+  const uniqueCharges = new Set<string>();
+  let soloCharges = 0;
 
-  const now = new Date();
-  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  let weekSales = 0, monthSales = 0;
-
-  const monthWindows: { label: string; start: Date; end: Date; total: number }[] = [];
+  const monthWindows: { label: string; start: Date; end: Date; net: number }[] = [];
   for (let i = 5; i >= 0; i--) {
     const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
     monthWindows.push({
-      label: start.toLocaleString("en-US", { month: "short", year: "2-digit" }),
-      start, end, total: 0,
+      label: start.toLocaleString("en-US", { month: "short" }),
+      start, end, net: 0,
     });
   }
 
-  // Who still owes money.
-  const owedBy = new Map<string, { amountDue: number; items: string[] }>();
+  const add = (b: Bucket, p: (typeof paidRows)[number], fee: number) => {
+    const sale = num(p.amount);
+    const prem = num(p.applicationFeeAmount);
+    const tax = num(p.taxAmount);
+    const credit = num(p.creditApplied ?? 0);
+    b.itemsSold += 1;
+    b.hammer += sale;
+    b.premium += prem;
+    b.tax += tax;
+    b.credit += credit;
+    b.fees += fee;
+    b.net += sale + prem - credit - fee;
+  };
 
-  for (const r of rows) {
-    const a = num(r.amount);
-    const t = num(r.taxAmount);
-    const p = num(r.applicationFeeAmount);
-    const gross = a + t + p;
-    const itemHammer = num(r.item?.currentBid);
+  for (const p of paidRows) {
+    const fee = feeForRow(p);
+    if (p.stripePaymentIntentId) uniqueCharges.add(p.stripePaymentIntentId);
+    else if (grossOf(p) > 0) soloCharges++;
 
-    const aucKey = r.item?.auctionId ?? "none";
-    const aucLabel = r.item?.auction?.title ?? "No auction";
-    if (!byAuction.has(aucKey)) {
-      byAuction.set(
-        aucKey,
-        newBucket(aucKey, aucLabel, r.item?.auction?.endAt ? r.item.auction.endAt.toISOString() : null)
-      );
+    const aKey = p.item?.auctionId ?? "none";
+    const aLabel = p.item?.auction?.title ?? "No auction";
+    if (!byAuction.has(aKey)) {
+      byAuction.set(aKey, newBucket(aKey, aLabel, p.item?.auction?.endAt?.toISOString() ?? null));
     }
-    const ab = byAuction.get(aucKey)!;
+    const wKey = p.item?.location?.id ?? "none";
+    const wLabel = p.item?.location?.name ?? "Unassigned";
+    if (!byWarehouse.has(wKey)) byWarehouse.set(wKey, newBucket(wKey, wLabel));
 
-    const whKey = r.item?.location?.id ?? "none";
-    const whLabel = r.item?.location?.name ?? "No warehouse";
-    if (!byWarehouse.has(whKey)) byWarehouse.set(whKey, newBucket(whKey, whLabel));
-    const wb = byWarehouse.get(whKey)!;
+    const ab = byAuction.get(aKey)!;
+    const wb = byWarehouse.get(wKey)!;
+    add(ab, p, fee);
+    add(wb, p, fee);
+    add(totals, p, fee);
 
-    if (r.comped) {
-      // Won by an admin — honored, never charged. Counted, never banked.
-      compedCount++;
-      compedHammer += itemHammer;
-      ab.compedCount++; ab.compedHammer += itemHammer;
-      wb.compedCount++; wb.compedHammer += itemHammer;
-      continue;
-    }
+    const rowNet = num(p.amount) + num(p.applicationFeeAmount) - num(p.creditApplied ?? 0) - fee;
+    ab.split.set(wLabel, (ab.split.get(wLabel) ?? 0) + rowNet);
+    wb.split.set(aLabel, (wb.split.get(aLabel) ?? 0) + rowNet);
 
-    if (r.status === "PAID") {
-      hammer += a; premium += p; tax += t; itemsSold++;
-      ab.itemsSold++; ab.hammer += a; ab.premium += p; ab.tax += t; ab.charged += gross;
-      wb.itemsSold++; wb.hammer += a; wb.premium += p; wb.tax += t; wb.charged += gross;
-
-      if (r.stripePaymentIntentId) {
-        intents.set(r.stripePaymentIntentId, (intents.get(r.stripePaymentIntentId) ?? 0) + gross);
-      } else {
-        // A genuine no-intent charge (e.g. fully covered by Bid Bucks) — its own line.
-        soloGross += gross; soloCount++;
-      }
-
-      if (r.createdAt >= weekAgo) weekSales += a + t;
-      if (r.createdAt >= monthStart) monthSales += a + t;
-      for (const w of monthWindows) {
-        if (r.createdAt >= w.start && r.createdAt < w.end) { w.total += a + t; break; }
-      }
-    } else if (r.status === "PENDING" || r.status === "FAILED") {
-      ab.unpaidCount++; ab.unpaidAmount += gross;
-      wb.unpaidCount++; wb.unpaidAmount += gross;
-      const cur = owedBy.get(r.clerkUserId) ?? { amountDue: 0, items: [] };
-      cur.amountDue += gross;
-      if (r.item?.title) cur.items.push(r.item.title);
-      owedBy.set(r.clerkUserId, cur);
+    for (const m of monthWindows) {
+      if (p.createdAt >= m.start && p.createdAt < m.end) { m.net += rowNet; break; }
     }
   }
 
-  const totalCharged = hammer + premium + tax;
-
-  // Stripe fee estimate: one 2.9% + 30¢ per real charge.
-  let stripeFees = 0;
-  let txnCount = 0;
-  for (const gross of intents.values()) { stripeFees += gross * STRIPE_PCT + STRIPE_FIXED; txnCount++; }
-  stripeFees += soloGross * STRIPE_PCT + STRIPE_FIXED * soloCount;
-  txnCount += soloCount;
-
-  const netDeposited = totalCharged - stripeFees; // what Stripe actually pays out
-  const netProfit = netDeposited - tax;           // after remitting sales tax to MI
-
-  // ── Who owes ───────────────────────────────────────────────────────────────
+  // ── Still owed ──────────────────────────────────────────────────────────────
+  const owedRows = await prisma.payment.findMany({
+    where: {
+      status: { in: ["PENDING", "FAILED"] },
+      comped: false,
+      item: { organizationId: orgId },
+    },
+    select: {
+      clerkUserId: true, amount: true, applicationFeeAmount: true, taxAmount: true,
+      item: { select: { title: true } },
+    },
+    take: 2000,
+  });
+  const owedBy = new Map<string, { amountDue: number; items: string[] }>();
+  for (const p of owedRows) {
+    const cur = owedBy.get(p.clerkUserId) ?? { amountDue: 0, items: [] };
+    cur.amountDue += num(p.amount) + num(p.applicationFeeAmount) + num(p.taxAmount);
+    if (p.item?.title) cur.items.push(p.item.title);
+    owedBy.set(p.clerkUserId, cur);
+  }
   const owedIds = [...owedBy.keys()];
   const profiles = owedIds.length
     ? await prisma.bidderProfile.findMany({
@@ -192,58 +192,50 @@ export async function GET() {
         select: { clerkUserId: true, name: true, email: true, phone: true },
       })
     : [];
-  const pMap = new Map(profiles.map((pr) => [pr.clerkUserId, pr]));
+  const pMap = new Map(profiles.map((x) => [x.clerkUserId, x]));
   const owers = [...owedBy.entries()]
-    .map(([uid, v]) => {
-      const pr = pMap.get(uid);
-      return {
-        name: pr?.name ?? "Bidder",
-        email: pr?.email ?? "",
-        phone: pr?.phone ?? "",
-        amountDue: round(v.amountDue),
-        items: v.items,
-      };
-    })
+    .map(([uid, v]) => ({
+      name: pMap.get(uid)?.name ?? "Bidder",
+      email: pMap.get(uid)?.email ?? "",
+      phone: pMap.get(uid)?.phone ?? "",
+      amountDue: r2(v.amountDue),
+      itemCount: v.items.length,
+    }))
     .sort((a, b) => b.amountDue - a.amountDue);
-  const totalOutstanding = owers.reduce((s, o) => s + o.amountDue, 0);
 
-  const finish = (b: Bucket) => ({
-    ...b,
-    hammer: round(b.hammer),
-    premium: round(b.premium),
-    tax: round(b.tax),
-    charged: round(b.charged),
-    compedHammer: round(b.compedHammer),
-    unpaidAmount: round(b.unpaidAmount),
+  const out = (b: Bucket) => ({
+    key: b.key,
+    label: b.label,
+    when: b.when,
+    itemsSold: b.itemsSold,
+    hammer: r2(b.hammer),
+    premium: r2(b.premium),
+    tax: r2(b.tax),
+    credit: r2(b.credit),
+    fees: r2(b.fees),
+    net: r2(b.net),
+    avgItem: b.itemsSold > 0 ? r2(b.hammer / b.itemsSold) : 0,
+    split: [...b.split.entries()]
+      .map(([label, net]) => ({ label, net: r2(net) }))
+      .sort((x, y) => y.net - x.net),
   });
 
   return NextResponse.json({
+    range,
     feePercent,
     taxPercent,
-    truncated: rows.length >= ROW_CAP,
     totals: {
-      hammer: round(hammer),
-      premium: round(premium),
-      tax: round(tax),
-      totalCharged: round(totalCharged),
-      stripeFees: round(stripeFees),
-      netDeposited: round(netDeposited),
-      netProfit: round(netProfit),
-      itemsSold,
-      txnCount,
-      compedCount,
-      compedHammer: round(compedHammer),
-      averageSale: itemsSold > 0 ? round(hammer / itemsSold) : 0,
+      ...out(totals),
+      buyersPaid: r2(totals.hammer + totals.premium + totals.tax),
+      chargeCount: uniqueCharges.size + soloCharges,
     },
-    periods: {
-      weekSales: round(weekSales),
-      monthSales: round(monthSales),
-      byMonth: monthWindows.map((w) => ({ label: w.label, total: round(w.total) })),
+    trend: monthWindows.map((m) => ({ label: m.label, net: r2(m.net) })),
+    auctions: [...byAuction.values()].map(out).sort((a, b) => b.net - a.net),
+    warehouses: [...byWarehouse.values()].map(out).sort((a, b) => b.net - a.net),
+    owed: {
+      total: r2(owers.reduce((s, o) => s + o.amountDue, 0)),
+      count: owers.length,
+      owers: owers.slice(0, 25),
     },
-    byAuction: [...byAuction.values()]
-      .map(finish)
-      .sort((a, b) => (b.sub ?? "").localeCompare(a.sub ?? "")),
-    byWarehouse: [...byWarehouse.values()].map(finish).sort((a, b) => b.hammer - a.hammer),
-    outstanding: { total: round(totalOutstanding), count: owers.length, owers },
   });
 }
