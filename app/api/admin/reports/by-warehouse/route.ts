@@ -47,6 +47,10 @@ export async function GET(req: NextRequest) {
   const payments = await prisma.payment.findMany({
     where: {
       status: "PAID",
+      // Admin comps are PAID rows worth $0 — they'd count as items sold while
+      // contributing nothing, quietly dragging the per-item averages down. A payout
+      // report should only ever see money that actually moved.
+      comped: false,
       item: { organizationId: orgId },
       ...(from ? { createdAt: { gte: from } } : {}),
     },

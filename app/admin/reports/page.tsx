@@ -23,6 +23,21 @@ interface ReportData {
   outstanding: { total: number; count: number; owers: Ower[] };
 }
 
+// Payout report (warehouse → auction). "Net" is what the business actually pockets:
+// hammer + premium − Bid Bucks credit − Stripe's cut, with sales tax passed straight
+// through (collected then remitted, so it nets to zero).
+interface PayoutBucket {
+  net: number; sales: number; premium: number; tax: number; fees: number; credit: number; itemsSold: number;
+}
+interface PayoutWarehouse extends PayoutBucket {
+  name: string;
+  auctions: (PayoutBucket & { title: string })[];
+}
+interface PayoutReport {
+  warehouses: PayoutWarehouse[];
+  grandTotal: PayoutBucket;
+}
+
 const money = (n: number) =>
   "$" + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const money0 = (n: number) => "$" + Math.round(n).toLocaleString();
@@ -138,10 +153,23 @@ function BreakdownTable({ rows, emptyText }: { rows: Bucket[]; emptyText: string
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
+const RANGES: { key: string; label: string }[] = [
+  { key: "30d", label: "30 days" },
+  { key: "90d", label: "90 days" },
+  { key: "ytd", label: "This year" },
+  { key: "all", label: "All time" },
+];
+
 export default function ReportsPage() {
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+
+  // Payout report (warehouse → auction), with its own time range.
+  const [payout, setPayout] = useState<PayoutReport | null>(null);
+  const [payoutRange, setPayoutRange] = useState("90d");
+  const [payoutLoading, setPayoutLoading] = useState(false);
+  const [openWarehouse, setOpenWarehouse] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -153,7 +181,17 @@ export default function ReportsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const loadPayout = useCallback((range: string) => {
+    setPayoutLoading(true);
+    fetch(`/api/admin/reports/by-warehouse?range=${range}`)
+      .then((r) => r.json())
+      .then((w) => setPayout(w && w.warehouses ? w : null))
+      .catch(() => setPayout(null))
+      .finally(() => setPayoutLoading(false));
+  }, []);
+
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { loadPayout(payoutRange); }, [payoutRange, loadPayout]);
 
   if (loading) {
     return <div className="flex-1 flex items-center justify-center"><p className="text-lg text-[#8a7559]">Loading reports…</p></div>;
@@ -266,6 +304,131 @@ export default function ReportsPage() {
           what="The same money, split by where the items were stored."
         >
           <BreakdownTable rows={byWarehouse} emptyText="No completed sales yet." />
+        </Section>
+
+        {/* ── Payout: warehouse → auction ── */}
+        <Section
+          title="Payout by warehouse"
+          what="What each warehouse earned, broken down by auction. Tap a warehouse to see its auctions."
+        >
+          <div className="flex flex-wrap gap-2 mb-4">
+            {RANGES.map((r) => (
+              <button
+                key={r.key}
+                onClick={() => setPayoutRange(r.key)}
+                className={`px-3.5 py-2 rounded-xl text-sm font-bold border transition-colors ${
+                  payoutRange === r.key
+                    ? "bg-[#6c4d39] text-white border-[#6c4d39]"
+                    : "bg-white text-[#4a3a2b] border-[#cdbda3] hover:bg-[#efe3d0]"
+                }`}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+
+          {payoutLoading ? (
+            <p className="text-base text-[#8a7559]">Loading…</p>
+          ) : !payout || payout.warehouses.length === 0 ? (
+            <p className="text-base text-[#8a7559]">No paid sales in this period.</p>
+          ) : (
+            <div className="space-y-3">
+              {/* Grand total first, so the headline number is the one you came for. */}
+              <div className="bg-[#6c4d39] text-white rounded-xl px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-bold uppercase tracking-wider text-[#e8d9c2]">
+                    Total payout — all warehouses
+                  </div>
+                  <div className="text-sm text-[#e8d9c2] mt-0.5">
+                    {payout.grandTotal.itemsSold} item{payout.grandTotal.itemsSold !== 1 ? "s" : ""} sold
+                  </div>
+                </div>
+                <div className="text-3xl font-extrabold tabular-nums">{money(payout.grandTotal.net)}</div>
+              </div>
+
+              {payout.warehouses.map((w) => {
+                const open = openWarehouse === w.name;
+                return (
+                  <div key={w.name} className="border border-[#e3d6bf] rounded-xl overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setOpenWarehouse(open ? null : w.name)}
+                      className="w-full text-left px-5 py-4 bg-[#faf5ea] hover:bg-[#f1e7d5] transition-colors"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-lg font-bold text-[#241a12]">{w.name}</div>
+                          <div className="text-sm text-[#6f5b46] mt-0.5">
+                            {w.itemsSold} item{w.itemsSold !== 1 ? "s" : ""} · {w.auctions.length} auction
+                            {w.auctions.length !== 1 ? "s" : ""}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="text-right">
+                            <div className="text-xs font-bold text-[#8a7559] uppercase tracking-wide">Payout</div>
+                            <div className="text-xl font-extrabold text-[#5f7a45] tabular-nums">{money(w.net)}</div>
+                          </div>
+                          <span className={`text-[#8a7559] transition-transform ${open ? "rotate-180" : ""}`}>
+                            <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4" /></svg>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* The math, spelled out on one line. */}
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-sm text-[#6f5b46]">
+                        <span>Hammer <strong className="text-[#241a12]">{money(w.sales)}</strong></span>
+                        <span>+ Premium <strong className="text-[#241a12]">{money(w.premium)}</strong></span>
+                        {w.credit > 0 && <span>− Bid Bucks <strong className="text-red-600">{money(w.credit)}</strong></span>}
+                        <span>− Stripe <strong className="text-red-600">{money(w.fees)}</strong></span>
+                        <span className="text-[#8a7559]">(tax {money(w.tax)} collected &amp; remitted)</span>
+                      </div>
+                    </button>
+
+                    {open && (
+                      <div className="border-t border-[#efe3d0] overflow-x-auto">
+                        <table className="w-full text-base border-collapse min-w-[620px]">
+                          <thead>
+                            <tr className="text-left text-sm font-bold text-[#8a7559] uppercase tracking-wide bg-white">
+                              <th className="py-2.5 px-5">Auction</th>
+                              <th className="py-2.5 px-3 text-right">Items</th>
+                              <th className="py-2.5 px-3 text-right">Hammer</th>
+                              <th className="py-2.5 px-3 text-right">Premium</th>
+                              <th className="py-2.5 px-3 text-right">Tax</th>
+                              <th className="py-2.5 px-3 text-right">Stripe</th>
+                              <th className="py-2.5 px-5 text-right">Payout</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {w.auctions.map((a) => (
+                              <tr key={a.title} className="border-t border-[#efe3d0] bg-white">
+                                <td className="py-3 px-5 font-semibold text-[#241a12]">{a.title}</td>
+                                <td className="py-3 px-3 text-right tabular-nums">{a.itemsSold}</td>
+                                <td className="py-3 px-3 text-right tabular-nums">{money(a.sales)}</td>
+                                <td className="py-3 px-3 text-right tabular-nums text-[#6f5b46]">{money(a.premium)}</td>
+                                <td className="py-3 px-3 text-right tabular-nums text-[#8a7559]">{money(a.tax)}</td>
+                                <td className="py-3 px-3 text-right tabular-nums text-red-600">−{money(a.fees)}</td>
+                                <td className="py-3 px-5 text-right tabular-nums font-extrabold text-[#5f7a45]">{money(a.net)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              <div className="bg-[#efe3d0] border border-[#cdbda3] rounded-xl p-4 text-base text-[#4a3a2b] leading-relaxed">
+                <strong>How payout is worked out.</strong> Hammer price + buyer&apos;s premium,
+                minus any Bid Bucks credit the buyer used, minus Stripe&apos;s cut. Sales tax isn&apos;t
+                in the payout because you collect it and hand it straight to Michigan — in and out, nets to zero.
+                <br /><br />
+                When one buyer wins items across two warehouses, Stripe charges them once. That single
+                fee is split between the warehouses in proportion to what each was owed, so no warehouse
+                is charged for the other&apos;s share. Your own comped wins are excluded entirely.
+              </div>
+            </div>
+          )}
         </Section>
 
         {/* ── Admin comps ── */}
