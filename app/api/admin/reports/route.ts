@@ -165,6 +165,43 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // ── Money left on the table ─────────────────────────────────────────────────
+  // Every winner who had a max bid set usually pays LESS than that max — the item
+  // stops at one increment over the runner-up. The gap between what their max would
+  // have paid and what they actually paid is demand you had but didn't capture.
+  // A large number here says items are closing too cheaply: too few bidders in the
+  // room, increments too small, or reserves set too low.
+  const wonBids = await prisma.bid.findMany({
+    where: {
+      status: "WON",
+      item: { organizationId: orgId },
+      ...(from ? { placedAt: { gte: from } } : {}),
+    },
+    select: { itemId: true, clerkUserId: true, amount: true },
+    take: ROW_CAP,
+  });
+  const wonItemIds = wonBids.map((b) => b.itemId);
+  const proxies = wonItemIds.length
+    ? await prisma.proxyBid.findMany({
+        where: { itemId: { in: wonItemIds } },
+        select: { itemId: true, clerkUserId: true, maxAmount: true },
+      })
+    : [];
+  const proxyByKey = new Map(proxies.map((p) => [`${p.itemId}:${p.clerkUserId}`, num(p.maxAmount)]));
+
+  let headroomTotal = 0;
+  let headroomItems = 0;
+  let biggestGap = 0;
+  for (const b of wonBids) {
+    const max = proxyByKey.get(`${b.itemId}:${b.clerkUserId}`);
+    if (max == null) continue;                 // won by hand, no max was set
+    const gap = max - num(b.amount);
+    if (gap <= 0) continue;                    // paid their full max — nothing left
+    headroomTotal += gap;
+    headroomItems += 1;
+    if (gap > biggestGap) biggestGap = gap;
+  }
+
   // ── Still owed ──────────────────────────────────────────────────────────────
   const owedRows = await prisma.payment.findMany({
     where: {
@@ -228,6 +265,12 @@ export async function GET(req: NextRequest) {
       ...out(totals),
       buyersPaid: r2(totals.hammer + totals.premium + totals.tax),
       chargeCount: uniqueCharges.size + soloCharges,
+    },
+    headroom: {
+      total: r2(headroomTotal),
+      items: headroomItems,
+      biggest: r2(biggestGap),
+      avg: headroomItems > 0 ? r2(headroomTotal / headroomItems) : 0,
     },
     trend: monthWindows.map((m) => ({ label: m.label, net: r2(m.net) })),
     auctions: [...byAuction.values()].map(out).sort((a, b) => b.net - a.net),

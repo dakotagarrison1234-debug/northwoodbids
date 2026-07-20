@@ -15,6 +15,7 @@ interface Report {
   feePercent: number;
   taxPercent: number;
   totals: Bucket & { buyersPaid: number; chargeCount: number };
+  headroom: { total: number; items: number; biggest: number; avg: number };
   trend: { label: string; net: number }[];
   auctions: Bucket[];
   warehouses: Bucket[];
@@ -26,6 +27,48 @@ const money = (n: number) =>
 const money0 = (n: number) => "$" + Math.round(n).toLocaleString();
 const shortDate = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
+
+/**
+ * What's actually counted in a given figure. Every report on this page carries one,
+ * because "sales" silently means four different things depending on whether premium,
+ * tax and your own comped wins are in or out — and a number you can't scope is a
+ * number you can't trust.
+ */
+function Scope({ items }: { items: { label: string; on: boolean }[] }) {
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-2">
+      {items.map((i) => (
+        <span
+          key={i.label}
+          className={`inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border ${
+            i.on
+              ? "bg-green-50 text-green-700 border-green-200"
+              : "bg-slate-50 text-slate-400 border-slate-200"
+          }`}
+        >
+          {i.on ? "✓" : "✕"} {i.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// The three inclusions that change what a money figure means.
+const SCOPE_NET = [
+  { label: "Premium", on: true },
+  { label: "Tax", on: false },
+  { label: "Your wins", on: false },
+];
+const SCOPE_HAMMER = [
+  { label: "Premium", on: false },
+  { label: "Tax", on: false },
+  { label: "Your wins", on: false },
+];
+const SCOPE_PAID = [
+  { label: "Premium", on: true },
+  { label: "Tax", on: true },
+  { label: "Your wins", on: false },
+];
 
 const RANGES = [
   { key: "30d", label: "30d" },
@@ -270,13 +313,42 @@ export default function ReportsPage() {
             {auctions.length !== 1 ? "s" : ""}
             {totals.avgItem > 0 ? ` · ${money0(totals.avgItem)} average` : ""}
           </div>
-          <div className="mt-5 rounded-2xl bg-white/12 p-3">
+          <Scope items={SCOPE_NET} />
+          <div className="mt-4 rounded-2xl bg-white/12 p-3">
             <div className="text-[11px] font-bold uppercase tracking-wider text-[#d8e6c8] mb-1 px-1">
               Last 6 months
             </div>
             <TrendChart data={trend} />
           </div>
         </div>
+
+        {/* ── Money left on the table ── */}
+        {d.headroom.items > 0 && (
+          <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-sm font-bold uppercase tracking-wide text-amber-800">
+                  Left on the table
+                </div>
+                <div className="text-3xl font-extrabold text-amber-700 tabular-nums mt-0.5">
+                  {money0(d.headroom.total)}
+                </div>
+              </div>
+              <span className="text-3xl shrink-0">📉</span>
+            </div>
+            <p className="text-base text-amber-900 mt-2 leading-snug">
+              On <strong>{d.headroom.items}</strong> item{d.headroom.items !== 1 ? "s" : ""} the winner
+              had set a max bid <em>higher</em> than what they ended up paying — the item stopped one
+              increment above the runner-up. That gap averaged <strong>{money0(d.headroom.avg)}</strong>,
+              biggest was <strong>{money0(d.headroom.biggest)}</strong>.
+            </p>
+            <p className="text-sm text-amber-800 mt-2 leading-snug">
+              This is demand you had but didn&apos;t capture. A big number usually means too few
+              bidders competing on those lots — not that anything is broken.
+            </p>
+            <Scope items={SCOPE_HAMMER} />
+          </div>
+        )}
 
         {/* ── Best auction callout ── */}
         {best && best.net > 0 && (
@@ -299,7 +371,8 @@ export default function ReportsPage() {
         {/* ── Auctions ── */}
         <div>
           <h2 className="text-lg font-bold text-[#241a12] px-1 mb-1">What each auction made</h2>
-          <p className="text-sm text-[#6f5b46] px-1 mb-3">Biggest earner first. Tap one for the breakdown.</p>
+          <p className="text-sm text-[#6f5b46] px-1">Biggest earner first. Tap one for the breakdown.</p>
+          <div className="px-1 mb-3"><Scope items={SCOPE_NET} /></div>
           {auctions.length === 0 ? (
             <p className="text-base text-[#8a7559] bg-white border border-[#e3d6bf] rounded-2xl p-6 text-center">
               No sales in this period.
@@ -340,7 +413,8 @@ export default function ReportsPage() {
         {warehouses.length > 0 && (
           <div>
             <h2 className="text-lg font-bold text-[#241a12] px-1 mb-1">What each warehouse made</h2>
-            <p className="text-sm text-[#6f5b46] px-1 mb-3">Same money, split by where the items were stored.</p>
+            <p className="text-sm text-[#6f5b46] px-1">Same money, split by where the items were stored.</p>
+            <div className="px-1 mb-3"><Scope items={SCOPE_NET} /></div>
             <div className="space-y-2.5">
               {warehouses.map((w, i) => (
                 <EarnerCard
@@ -366,7 +440,8 @@ export default function ReportsPage() {
         {/* ── Money split ── */}
         <div className="bg-white border border-[#e3d6bf] rounded-2xl p-5">
           <h2 className="text-lg font-bold text-[#241a12]">Where the money went</h2>
-          <p className="text-sm text-[#6f5b46] mb-4">Everything buyers paid you, and who ended up with it.</p>
+          <p className="text-sm text-[#6f5b46]">Everything buyers paid you, and who ended up with it.</p>
+          <div className="mb-4"><Scope items={SCOPE_PAID} /></div>
           <MoneyBar t={totals} />
         </div>
 
@@ -380,6 +455,7 @@ export default function ReportsPage() {
               <div>
                 <h2 className="text-lg font-bold text-[#241a12]">Still owed to you</h2>
                 <p className="text-sm text-[#6f5b46]">Cards that didn&apos;t go through. Not counted above.</p>
+                <Scope items={SCOPE_PAID} />
               </div>
             </div>
             <div className="text-3xl font-extrabold text-[#a3701d] tabular-nums my-3">{money(owed.total)}</div>
@@ -398,6 +474,31 @@ export default function ReportsPage() {
             </div>
           </div>
         )}
+
+        {/* Legend for the ✓/✕ chips above every report. */}
+        <div className="bg-white border border-[#e3d6bf] rounded-2xl p-4">
+          <h3 className="text-base font-bold text-[#241a12] mb-2">What the tags on each report mean</h3>
+          <dl className="text-sm text-[#4a3a2b] space-y-2">
+            <div>
+              <dt className="font-bold inline">✓ Premium — </dt>
+              <dd className="inline">your {d.feePercent}% buyer&apos;s premium is counted in that figure.</dd>
+            </div>
+            <div>
+              <dt className="font-bold inline">✓ Tax — </dt>
+              <dd className="inline">
+                sales tax is counted. Most reports say ✕ here on purpose: tax isn&apos;t your money,
+                you just hold it for Michigan.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-bold inline">✓ Your wins — </dt>
+              <dd className="inline">
+                items you won yourself are counted. Every money report says ✕ — you&apos;re never
+                charged, so they earned $0 and would inflate the numbers.
+              </dd>
+            </div>
+          </dl>
+        </div>
 
         <p className="text-sm text-[#8a7559] px-1 leading-snug">
           &ldquo;You made&rdquo; = winning bids + your {d.feePercent}% premium, minus Stripe&apos;s cut and any
