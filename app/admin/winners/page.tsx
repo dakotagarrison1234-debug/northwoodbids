@@ -1,188 +1,314 @@
-export const dynamic = "force-dynamic";
-import { prisma } from "@/lib/prisma";
-import { requireUserOrg } from "@/lib/auth";
-import { money } from "@/lib/format";
-import PusherRefresh from "@/app/components/PusherRefresh";
-import WinnersBoard, { type Leader, type Winner } from "@/app/components/WinnersBoard";
+"use client";
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { fmtMoney, fmtMoney0 } from "../format";
+import { Pill, Panel, Empty } from "../ui";
 
-// Bound the org-wide pulls so the page stays fast even with thousands of items.
-// (The board itself searches + paginates client-side on top of this.)
-const FETCH_CAP = 3000;
-const OWERS_SHOWN = 100;
-
-export default async function WinnersPage() {
-  const membership = await requireUserOrg();
-  const orgId = membership.organization.id;
-
-  const [wonBids, activeBids, payments] = await Promise.all([
-    prisma.bid.findMany({
-      where: { status: "WON", item: { organizationId: orgId } },
-      include: { item: { include: { photos: { where: { isPrimary: true }, take: 1 }, auction: { select: { title: true } } } } },
-      orderBy: { placedAt: "desc" },
-      take: FETCH_CAP,
-    }),
-    prisma.bid.findMany({
-      where: { status: "ACTIVE", item: { organizationId: orgId } },
-      include: { item: { include: { photos: { where: { isPrimary: true }, take: 1 } } } },
-      orderBy: { amount: "desc" },
-      take: FETCH_CAP,
-    }),
-    prisma.payment.findMany({
-      where: { item: { organizationId: orgId } },
-      select: { id: true, itemId: true, status: true, comped: true },
-      take: FETCH_CAP,
-    }),
-  ]);
-
-  // Resolve bidder display info
-  const allBidderIds = [...new Set([...wonBids.map((b) => b.clerkUserId), ...activeBids.map((b) => b.clerkUserId)])];
-  const profiles = allBidderIds.length
-    ? await prisma.bidderProfile.findMany({
-        where: { clerkUserId: { in: allBidderIds } },
-        select: { clerkUserId: true, name: true, email: true, phone: true },
-      })
-    : [];
-  const profileMap = new Map(profiles.map((p) => [p.clerkUserId, p]));
-  const paymentMap = new Map(payments.map((p) => [p.itemId, p]));
-
-  const displayName = (id: string) => {
-    const p = profileMap.get(id);
-    return p?.name || p?.email || "Bidder";
+interface LeaderRow { name: string; value: number; items?: number }
+interface OwedRow { clerkUserId: string; name: string; phone: string; email: string; itemCount: number; amount: number }
+interface FeedRow {
+  id: string; itemId: string; title: string; photo: string | null;
+  auctionId: string | null; auctionTitle: string | null;
+  amount: number; wonAt: string; clerkUserId: string; name: string;
+  state: "paid" | "unpaid" | "comped";
+}
+interface Data {
+  stats: {
+    totalWon: number; winCount: number; winnerCount: number; avgWin: number;
+    owedTotal: number; owedPeople: number;
+    biggest: { amount: number; title: string; name: string } | null;
   };
-  const emailOf = (id: string) => profileMap.get(id)?.email || null;
-  const phoneOf = (id: string) => profileMap.get(id)?.phone || null;
-  const photoOf = (item: { photos: { url: string }[] }) => item.photos[0]?.url ?? null;
+  leaders: { spend: LeaderRow[]; wins: LeaderRow[]; bids: LeaderRow[]; live: LeaderRow[] };
+  owed: OwedRow[];
+  feed: FeedRow[];
+  total: number; skip: number; page: number;
+}
 
-  // ── Who owes money ──────────────────────────────────────────────────────────
-  const owers = wonBids.filter((b) => paymentMap.get(b.itemId)?.status !== "PAID");
-  const totalOwed = owers.reduce((sum, b) => sum + Number(b.amount), 0);
+const MEDALS = ["🥇", "🥈", "🥉"];
 
-  // ── Leaders (per bidder) ────────────────────────────────────────────────────
-  const leaderMap = new Map<string, Leader>();
-  for (const bid of activeBids) {
-    let g = leaderMap.get(bid.clerkUserId);
-    if (!g) {
-      g = {
-        clerkUserId: bid.clerkUserId,
-        name: displayName(bid.clerkUserId),
-        email: emailOf(bid.clerkUserId),
-        phone: phoneOf(bid.clerkUserId),
-        total: 0,
-        items: [],
-      };
-      leaderMap.set(bid.clerkUserId, g);
-    }
-    g.items.push({ id: bid.item.id, title: bid.item.title, photo: photoOf(bid.item), amount: Number(bid.amount) });
-    g.total += Number(bid.amount);
-  }
-  const leaders = [...leaderMap.values()].sort((a, b) => b.total - a.total);
+/** Horizontal bar leaderboard — rank, name, bar, value. Reads at a glance. */
+function Board({
+  title, sub, rows, format, color,
+}: { title: string; sub: string; rows: LeaderRow[]; format: (n: number) => string; color: string }) {
+  const max = Math.max(1, ...rows.map((r) => r.value));
+  return (
+    <Panel title={title} sub={sub}>
+      {rows.length === 0 ? (
+        <Empty text="Nothing here yet." />
+      ) : (
+        <ul className="px-4 py-3 space-y-2.5">
+          {rows.map((r, i) => (
+            <li key={r.name + i}>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <span className="min-w-0 flex items-center gap-1.5">
+                  <span className="w-6 shrink-0 text-center text-sm font-bold text-slate-400">
+                    {MEDALS[i] ?? i + 1}
+                  </span>
+                  <span className="truncate font-semibold text-slate-900">{r.name}</span>
+                </span>
+                <span className="shrink-0 font-extrabold tabular-nums text-slate-900">
+                  {format(r.value)}
+                  {r.items != null && <span className="text-sm font-normal text-slate-400"> · {r.items}</span>}
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-slate-100 overflow-hidden ml-7">
+                <div className="h-full rounded-full" style={{ width: `${(r.value / max) * 100}%`, background: color }} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
+  );
+}
 
-  // ── Confirmed winners (per bidder) ──────────────────────────────────────────
-  const winnerMap = new Map<string, Winner>();
-  for (const bid of wonBids) {
-    let g = winnerMap.get(bid.clerkUserId);
-    if (!g) {
-      g = {
-        clerkUserId: bid.clerkUserId,
-        name: displayName(bid.clerkUserId),
-        email: emailOf(bid.clerkUserId),
-        phone: phoneOf(bid.clerkUserId),
-        total: 0,
-        unpaid: 0,
-        items: [],
-      };
-      winnerMap.set(bid.clerkUserId, g);
-    }
-    const payment = paymentMap.get(bid.itemId);
-    const comped = payment?.comped === true;
-    const paid = payment?.status === "PAID";
-    g.items.push({
-      id: bid.item.id,
-      title: bid.item.title,
-      photo: photoOf(bid.item),
-      amount: Number(bid.amount),
-      paid,
-      comped,
-      status: bid.item.status,
-      auctionId: bid.item.auctionId,
-      auctionTitle: bid.item.auction?.title ?? null,
-      paymentId: payment?.id ?? null,
-    });
-    g.total += Number(bid.amount);
-    if (!paid) g.unpaid += 1;
-  }
-  const winners = [...winnerMap.values()]
-    .map((w) => ({ ...w, items: [...w.items].sort((a, b) => b.amount - a.amount) }))
-    .sort((a, b) => {
-      if ((a.unpaid > 0) !== (b.unpaid > 0)) return a.unpaid > 0 ? -1 : 1;
-      return b.total - a.total;
-    });
+export default function WinnersPage() {
+  const [d, setD] = useState<Data | null>(null);
+  const [q, setQ] = useState("");
+  const [skip, setSkip] = useState(0);
+  const [filter, setFilter] = useState<"all" | "unpaid" | "paid">("all");
+  const [tab, setTab] = useState<"money" | "leaders">("money");
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback((query: string, sk: number, f: string) => {
+    setLoading(true);
+    fetch(`/api/admin/winners?q=${encodeURIComponent(query)}&skip=${sk}&filter=${f}`)
+      .then((r) => r.json())
+      .then((j) => { if (j.stats) setD(j); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => load(q.trim(), skip, filter), q ? 300 : 0);
+    return () => clearTimeout(t);
+  }, [q, skip, filter, load]);
+
+  // Any change of search or filter starts back at page 1.
+  useEffect(() => { setSkip(0); }, [q, filter]);
+
+  const stats = d?.stats;
 
   return (
     <>
-      <PusherRefresh channel="auctions" event="auction-updated" />
-      <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-5">
-        <h1 className="text-2xl sm:text-3xl font-semibold">Winners &amp; Payments</h1>
+      <header className="border-b border-slate-200 bg-white px-4 sm:px-8 py-4">
+        <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900">Winners &amp; Payments</h1>
       </header>
 
-      <div className="px-6 sm:px-8 py-6 space-y-8">
-        {/* Who owes money */}
-        <div>
-          <h2 className="text-lg font-semibold mb-4">
-            Who owes money {owers.length > 0 && <span className="text-[#6c4d39]">({money(totalOwed)})</span>}
-          </h2>
-          {owers.length === 0 ? (
-            <div className="bg-white border border-[#e3d6bf] rounded-xl p-6 text-base text-[#6f5b46]">
-              Everyone&apos;s paid up — no one currently owes money.
-            </div>
-          ) : (
-            <div className="bg-white border border-[#e3d6bf] rounded-xl divide-y divide-[#e3d6bf]">
-              {owers.slice(0, OWERS_SHOWN).map((bid) => {
-                const email = emailOf(bid.clerkUserId);
-                const phone = phoneOf(bid.clerkUserId);
-                return (
-                  <div key={bid.id} className="px-5 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="text-base font-semibold text-[#241a12]">{displayName(bid.clerkUserId)}</div>
-                      <div className="text-sm text-[#8a7559] truncate">
-                        {bid.item.title}
-                        {email ? ` · ${email}` : ""}
-                        {phone ? ` · ${phone}` : ""}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-lg font-bold text-[#6c4d39] mr-1">{money(Number(bid.amount))}</span>
-                      {email && (
-                        <a
-                          href={`mailto:${email}?subject=${encodeURIComponent(`Payment for "${bid.item.title}"`)}`}
-                          className="text-base font-semibold bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] text-[#241a12] px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap"
-                        >
-                          Email
-                        </a>
-                      )}
-                      {phone && (
-                        <a
-                          href={`tel:${phone}`}
-                          className="text-base font-semibold bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] text-[#241a12] px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap"
-                        >
-                          Call
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-              {owers.length > OWERS_SHOWN && (
-                <div className="px-5 sm:px-6 py-3 text-sm text-[#8a7559]">
-                  Showing first {OWERS_SHOWN} of {owers.length}. Use Confirmed Winners search below to find a specific bidder.
+      <div className="px-4 sm:px-8 py-5 space-y-4 max-w-2xl w-full">
+
+        {/* ── Money owed: the only thing that needs action ── */}
+        {stats && stats.owedTotal > 0 && (
+          <Link
+            href="#owed"
+            className="block rounded-2xl border-2 border-red-200 bg-red-50 p-4 active:scale-[0.99] transition-transform"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-bold uppercase tracking-wide text-red-700">Not collected</div>
+                <div className="text-3xl font-extrabold text-red-600 tabular-nums mt-0.5">
+                  {fmtMoney(stats.owedTotal)}
                 </div>
-              )}
+                <div className="text-sm text-red-800 mt-0.5">
+                  {stats.owedPeople} {stats.owedPeople === 1 ? "person" : "people"} owe you
+                </div>
+              </div>
+              <span className="text-red-300 text-2xl">›</span>
             </div>
-          )}
+          </Link>
+        )}
+
+        {/* ── Headline stats ── */}
+        {stats && (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl border-2 border-green-200 bg-green-50 p-4">
+              <div className="text-sm font-bold uppercase tracking-wide text-slate-500">Total won</div>
+              <div className="text-2xl font-extrabold text-green-700 tabular-nums mt-0.5">{fmtMoney0(stats.totalWon)}</div>
+              <div className="text-sm text-slate-500 mt-0.5">{stats.winCount} items</div>
+            </div>
+            <div className="rounded-2xl border-2 border-slate-200 bg-white p-4">
+              <div className="text-sm font-bold uppercase tracking-wide text-slate-500">Winners</div>
+              <div className="text-2xl font-extrabold text-slate-900 tabular-nums mt-0.5">{stats.winnerCount}</div>
+              <div className="text-sm text-slate-500 mt-0.5">{fmtMoney0(stats.avgWin)} average</div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Biggest win — a bit of fun ── */}
+        {stats?.biggest && (
+          <div className="rounded-2xl bg-slate-900 text-white p-4 flex items-center gap-4">
+            <span className="text-3xl shrink-0">🏆</span>
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Biggest win ever</div>
+              <div className="text-2xl font-extrabold tabular-nums leading-tight">{fmtMoney0(stats.biggest.amount)}</div>
+              <div className="text-sm text-slate-300 truncate">
+                {stats.biggest.name} · {stats.biggest.title}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Tabs ── */}
+        <div className="flex gap-2">
+          {([
+            { k: "money", label: "Wins & payments" },
+            { k: "leaders", label: "Leaderboards" },
+          ] as const).map((t) => (
+            <button
+              key={t.k}
+              onClick={() => setTab(t.k)}
+              className={`flex-1 min-h-[48px] rounded-xl border-2 font-bold text-base transition-colors ${
+                tab === t.k ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
 
-        {/* Confirmed winners + leaders — compact, searchable, paginated */}
-        <WinnersBoard leaders={leaders} winners={winners} />
+        {tab === "leaders" ? (
+          <div className="space-y-4">
+            <Board title="Top spenders" sub="Most money won, all time" rows={d?.leaders.spend ?? []} format={fmtMoney0} color="#16a34a" />
+            <Board title="Most wins" sub="Items taken home" rows={d?.leaders.wins ?? []} format={(v) => String(v)} color="#0284c7" />
+            <Board title="Most bids placed" sub="Who's most active" rows={d?.leaders.bids ?? []} format={(v) => String(v)} color="#c47b3e" />
+            <Board title="Leading right now" sub="Winning live items — money in the air" rows={d?.leaders.live ?? []} format={fmtMoney0} color="#7c3aed" />
+          </div>
+        ) : (
+          <>
+            {/* ── Who owes ── */}
+            {d && d.owed.length > 0 && (
+              <div id="owed" className="scroll-mt-4">
+                <Panel title="Who owes you" sub={`${d.owed.length} ${d.owed.length === 1 ? "person" : "people"}`}>
+                  <ul className="divide-y divide-slate-100">
+                    {d.owed.map((o) => (
+                      <li key={o.clerkUserId} className="px-4 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="font-bold text-slate-900 truncate">{o.name}</div>
+                            <div className="text-sm text-slate-500">
+                              {o.itemCount} item{o.itemCount !== 1 ? "s" : ""}
+                            </div>
+                          </div>
+                          <div className="text-xl font-extrabold text-red-600 tabular-nums shrink-0">
+                            {fmtMoney(o.amount)}
+                          </div>
+                        </div>
+                        <div className="flex gap-2 mt-2.5">
+                          {o.phone && (
+                            <a href={`tel:${o.phone}`} className="flex-1 min-h-[44px] inline-flex items-center justify-center rounded-xl border-2 border-slate-200 bg-white font-bold text-base text-slate-700">
+                              Call
+                            </a>
+                          )}
+                          {o.email && (
+                            <a href={`mailto:${o.email}`} className="flex-1 min-h-[44px] inline-flex items-center justify-center rounded-xl border-2 border-slate-200 bg-white font-bold text-base text-slate-700">
+                              Email
+                            </a>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </Panel>
+              </div>
+            )}
+
+            {/* ── Search + filter ── */}
+            <input
+              type="text"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search winner or item…"
+              className="w-full bg-white border-2 border-slate-200 rounded-xl px-4 min-h-[48px] text-base text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400"
+            />
+            <div className="flex gap-2">
+              {([
+                { k: "all", label: "All" },
+                { k: "unpaid", label: "Unpaid" },
+                { k: "paid", label: "Paid" },
+              ] as const).map((f) => (
+                <button
+                  key={f.k}
+                  onClick={() => setFilter(f.k)}
+                  className={`flex-1 min-h-[44px] rounded-xl border-2 font-bold text-base transition-colors ${
+                    filter === f.k ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {/* ── Wins feed ── */}
+            <Panel title="Wins" sub={d ? `${d.total.toLocaleString()} total` : ""}>
+              {loading && !d ? (
+                <p className="px-4 py-8 text-center text-slate-500">Loading…</p>
+              ) : !d || d.feed.length === 0 ? (
+                <Empty text={q ? "No matches." : "No wins yet."} />
+              ) : (
+                <ul className="divide-y divide-slate-100">
+                  {d.feed.map((w) => {
+                    // Sold items open the winner's INVOICE — never the item editor.
+                    const href = w.auctionId
+                      ? `/invoice/${w.auctionId}?user=${encodeURIComponent(w.clerkUserId)}`
+                      : null;
+                    const row = (
+                      <div className="flex items-center gap-3 px-4 py-3">
+                        <span className="w-12 h-12 shrink-0 rounded-lg overflow-hidden bg-slate-100 grid place-items-center">
+                          {w.photo ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={w.photo} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-[10px] text-slate-400">—</span>
+                          )}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-slate-900 truncate">{w.title}</div>
+                          <div className="text-sm text-slate-500 truncate">{w.name}</div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <div className="font-extrabold text-slate-900 tabular-nums">{fmtMoney0(w.amount)}</div>
+                          <div className="mt-0.5">
+                            <Pill tone={w.state === "paid" ? "green" : w.state === "comped" ? "slate" : "red"}>
+                              {w.state === "paid" ? "Paid" : w.state === "comped" ? "Comp" : "Unpaid"}
+                            </Pill>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                    return (
+                      <li key={w.id}>
+                        {href ? <Link href={href} className="block active:bg-slate-50">{row}</Link> : row}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+
+              {/* Pagination — the list never grows unbounded. */}
+              {d && d.total > d.page && (
+                <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-slate-100">
+                  <button
+                    onClick={() => setSkip(Math.max(0, skip - d.page))}
+                    disabled={skip === 0}
+                    className="min-h-[44px] px-4 rounded-xl border-2 border-slate-200 bg-white font-bold text-base text-slate-700 disabled:opacity-40"
+                  >
+                    ← Prev
+                  </button>
+                  <span className="text-sm text-slate-500 tabular-nums">
+                    {skip + 1}–{Math.min(skip + d.page, d.total)} of {d.total.toLocaleString()}
+                  </span>
+                  <button
+                    onClick={() => setSkip(skip + d.page)}
+                    disabled={skip + d.page >= d.total}
+                    className="min-h-[44px] px-4 rounded-xl border-2 border-slate-200 bg-white font-bold text-base text-slate-700 disabled:opacity-40"
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+            </Panel>
+          </>
+        )}
       </div>
     </>
   );
