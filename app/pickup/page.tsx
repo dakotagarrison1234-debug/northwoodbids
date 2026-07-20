@@ -245,8 +245,20 @@ function SlotPicker({
   const navBtn =
     "flex items-center gap-1 rounded-xl border-2 border-[#e3d6bf] bg-white px-3 py-2 text-sm font-semibold text-[#241a12] hover:bg-[#efe3d0] disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
 
+  // Today never appears in the slot list once the 8am cutoff has passed. Say why,
+  // or it just looks like the schedule is broken.
+  const todayKey = dayKey(new Date().toISOString());
+  const todayMissing = !days.some((d) => d.key === todayKey);
+
   return (
     <div className="space-y-5">
+      {todayMissing && (
+        <p className="text-sm text-[#6f5b46] bg-[#f6ecda] border border-[#e3c9a3] rounded-xl px-4 py-2.5">
+          Same-day pickups close at <strong>8:00 AM</strong> so we have time to pull your order —
+          the soonest you can book is shown below.
+        </p>
+      )}
+
       {/* Week navigation */}
       <div>
         <label className="block text-base font-semibold text-[#241a12] mb-2">Pick a day (Michigan time)</label>

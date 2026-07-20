@@ -10,6 +10,17 @@ export const PICKUP_TZ = "America/Detroit";
 export type Slot = { startsAt: string; remaining: number };
 
 const DAYS_AHEAD = 28;
+
+/**
+ * Same-day cutoff, in pickup-timezone hours (24h clock).
+ *
+ * Orders have to be gathered and boxed before a customer turns up, so a booking
+ * made at 2pm for 3pm the same day is a fire drill. Book before 8am and today is
+ * still fair game; book after and the earliest option rolls to the next day the
+ * location is actually open — which may be tomorrow, or later if tomorrow is
+ * closed or blacked out.
+ */
+const SAME_DAY_CUTOFF_HOUR = 8;
 const WD: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
 
 /** Calendar year/month/day + weekday of an instant, as seen in the pickup timezone. */
@@ -305,8 +316,16 @@ export async function getAvailableSlots(
   const today = zonedYMD(now);
   const noonAnchor = Date.UTC(today.y, today.mo - 1, today.d, 12, 0, 0);
 
+  // Past the cutoff, today is off the table entirely — skip day 0 rather than
+  // filtering times, so a location that's open until 6pm doesn't keep offering
+  // 5pm today at 4:59pm.
+  const nowHourLocal = Number(
+    new Intl.DateTimeFormat("en-US", { timeZone: PICKUP_TZ, hour: "2-digit", hour12: false }).format(now)
+  );
+  const skipToday = nowHourLocal >= SAME_DAY_CUTOFF_HOUR;
+
   const candidates: Date[] = [];
-  for (let dayOffset = 0; dayOffset <= DAYS_AHEAD; dayOffset++) {
+  for (let dayOffset = skipToday ? 1 : 0; dayOffset <= DAYS_AHEAD; dayOffset++) {
     const dayInstant = new Date(noonAnchor + dayOffset * 24 * 60 * 60 * 1000);
     const { y, mo, d, weekday } = zonedYMD(dayInstant);
     if (isBlackedOut(y, mo, d)) continue; // vacation/holiday — no slots this day
