@@ -78,7 +78,17 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     if (status === "COLLECTED") {
       await prisma.item.updateMany({
         where: { pickupAppointmentId: id },
-        data: { status: "PICKED_UP", pickedUpAt: new Date() },
+        data: { status: "PICKED_UP", pickedUpAt: new Date(), grabbedAt: null },
+      });
+    }
+
+    // Staging an order supersedes the gather checklist — the items are physically
+    // in the box now, so the tick marks have served their purpose. Clearing them
+    // means an order that gets un-staged starts its checklist clean.
+    if (stagedSpot !== undefined || status === "CANCELLED") {
+      await prisma.item.updateMany({
+        where: { pickupAppointmentId: id },
+        data: { grabbedAt: null },
       });
     }
 

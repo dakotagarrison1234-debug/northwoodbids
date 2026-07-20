@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { Pill, Panel, Btn, Empty, StatCard, fmtMoney, type Tone } from "../ui";
+import { Pill, Panel, Btn, Empty, StatCard, type Tone } from "../ui";
+import { fmtMoney } from "../format";
 
 type Person = { clerkUserId: string; name: string | null; email: string | null; phone: string | null };
 type Referral = {

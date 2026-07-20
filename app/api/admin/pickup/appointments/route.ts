@@ -16,7 +16,14 @@ export async function GET() {
       },
       include: {
         location: { select: { id: true, name: true } },
-        items: { select: { id: true, title: true, itemCode: true, storageLocation: true } },
+        items: {
+          select: {
+            id: true, title: true, itemCode: true, storageLocation: true, grabbedAt: true,
+            // One thumbnail per item — staff match the picture to the shelf far
+            // faster than they read a title.
+            photos: { select: { url: true }, orderBy: { isPrimary: "desc" }, take: 1 },
+          },
+        },
       },
       orderBy: { startsAt: "asc" },
     });
@@ -40,7 +47,14 @@ export async function GET() {
       clerkUserId: a.clerkUserId,
       location: a.location,
       locationId: a.locationId,
-      items: a.items,
+      items: a.items.map((it) => ({
+        id: it.id,
+        title: it.title,
+        itemCode: it.itemCode,
+        storageLocation: it.storageLocation,
+        grabbed: it.grabbedAt != null,
+        photo: it.photos[0]?.url ?? null,
+      })),
       bidder: profileMap.get(a.clerkUserId) ?? { name: null, email: null, phone: null },
     }));
 

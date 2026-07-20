@@ -31,6 +31,9 @@ interface ApptItem {
   title: string;
   itemCode: string | null;
   storageLocation: string | null;
+  /** Ticked off the gather list. Persisted, so it survives refresh. */
+  grabbed: boolean;
+  photo: string | null;
 }
 interface Bidder {
   name: string | null;
@@ -236,6 +239,36 @@ export default function AdminPickupPage() {
       } else flash(d.error || "Could not update.", false);
     } catch {
       flash("Something went wrong.", false);
+    }
+  };
+
+  // Tick an item off the gather list. Optimistic so the checkmark lands instantly
+  // while you're walking — waiting on a round trip per item would be unusable.
+  const toggleGrab = async (apptId: string, itemId: string, next: boolean) => {
+    setAppointments((prev) =>
+      prev.map((a) =>
+        a.id !== apptId
+          ? a
+          : { ...a, items: a.items.map((it) => (it.id === itemId ? { ...it, grabbed: next } : it)) }
+      )
+    );
+    try {
+      const res = await fetch(`/api/admin/pickup/items/${itemId}/grab`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ grabbed: next }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      // Put it back if the server refused, so the screen never lies.
+      setAppointments((prev) =>
+        prev.map((a) =>
+          a.id !== apptId
+            ? a
+            : { ...a, items: a.items.map((it) => (it.id === itemId ? { ...it, grabbed: !next } : it)) }
+        )
+      );
+      flash("Couldn't save that. Try again.", false);
     }
   };
 
@@ -451,21 +484,96 @@ export default function AdminPickupPage() {
       </div>
     )}
 
-    <div className="mt-4">
-      <div className="text-sm font-semibold text-[#8a7559] uppercase tracking-wide mb-2">
-        {a.items.length} item{a.items.length !== 1 ? "s" : ""} to gather
-      </div>
-      <ul className="text-base text-[#241a12] space-y-2">
-        {a.items.map((it) => (
-          <li key={it.id} className="flex items-start gap-2 bg-[#f1e7d5] rounded-xl px-4 py-2.5">
-            {it.itemCode && (
-              <span className="font-mono font-bold text-[#6c4d39] bg-[#6c4d39]/10 border border-[#6c4d39]/20 rounded px-1.5 py-0.5 text-sm shrink-0">{it.itemCode}</span>
-            )}
-            <span>{it.title}{it.storageLocation ? <span className="text-[#8a7559] text-sm"> · {it.storageLocation}</span> : null}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
+    {/* ── Gather list ──
+        Photo + tag number are what staff actually use to find a thing on a shelf,
+        so both lead. Tap anywhere on a row to tick it off; it's saved server-side,
+        so a locked phone or a second person helping doesn't lose the progress. */}
+    {(() => {
+      const grabbed = a.items.filter((it) => it.grabbed).length;
+      const all = a.items.length;
+      const allGrabbed = all > 0 && grabbed === all;
+      return (
+        <div className="mt-4">
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <div className="text-sm font-bold text-[#8a7559] uppercase tracking-wide">
+              Gather {all} item{all !== 1 ? "s" : ""}
+            </div>
+            <div className={`text-base font-extrabold tabular-nums ${allGrabbed ? "text-[#4f6639]" : "text-[#8a5a2b]"}`}>
+              {grabbed}/{all}
+            </div>
+          </div>
+
+          {all > 0 && (
+            <div className="h-2 rounded-full bg-[#efe3d0] overflow-hidden mb-2.5">
+              <div
+                className={`h-full rounded-full transition-all ${allGrabbed ? "bg-[#5f7a45]" : "bg-[#c47b3e]"}`}
+                style={{ width: `${(grabbed / all) * 100}%` }}
+              />
+            </div>
+          )}
+
+          <ul className="space-y-2">
+            {a.items.map((it) => (
+              <li key={it.id}>
+                <button
+                  type="button"
+                  onClick={() => toggleGrab(a.id, it.id, !it.grabbed)}
+                  className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 border-2 text-left transition-colors ${
+                    it.grabbed
+                      ? "bg-[#5f7a45]/10 border-[#5f7a45]/40"
+                      : "bg-white border-[#e3d6bf] active:bg-[#faf5ea]"
+                  }`}
+                >
+                  {/* Tick box, 44px hit area via the whole row. */}
+                  <span className={`w-7 h-7 shrink-0 rounded-lg border-2 grid place-items-center ${
+                    it.grabbed ? "bg-[#5f7a45] border-[#5f7a45] text-white" : "bg-white border-[#cdbda3]"
+                  }`}>
+                    {it.grabbed && (
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8.5l3.5 3.5L13 5" /></svg>
+                    )}
+                  </span>
+
+                  <span className="w-12 h-12 shrink-0 rounded-lg overflow-hidden bg-[#efe3d0] grid place-items-center">
+                    {it.photo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={it.photo} alt="" className={`w-full h-full object-cover ${it.grabbed ? "opacity-60" : ""}`} />
+                    ) : (
+                      <span className="text-[10px] text-[#b3a085]">No photo</span>
+                    )}
+                  </span>
+
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1.5 flex-wrap">
+                      {it.itemCode && (
+                        <span className="font-mono font-extrabold text-[#6c4d39] bg-[#6c4d39]/10 border border-[#6c4d39]/25 rounded px-1.5 py-0.5 text-sm">
+                          {it.itemCode}
+                        </span>
+                      )}
+                      {it.storageLocation && (
+                        <span className="text-sm font-bold text-[#8a5a2b] bg-[#f6ecda] border border-[#e3c9a3] rounded px-1.5 py-0.5">
+                          {it.storageLocation}
+                        </span>
+                      )}
+                    </span>
+                    <span className={`block text-base mt-0.5 leading-snug line-clamp-2 ${
+                      it.grabbed ? "text-[#8a7559] line-through" : "text-[#241a12]"
+                    }`}>
+                      {it.title}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          {allGrabbed && !a.stagedSpot && (
+            <p className="mt-2.5 text-base font-bold text-[#4f6639]">
+              Everything&apos;s gathered — stage it below.
+            </p>
+          )}
+        </div>
+      );
+    })()}
 
     {/* Reschedule editor */}
     {editingApptId === a.id ? (

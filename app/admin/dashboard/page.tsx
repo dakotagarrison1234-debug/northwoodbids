@@ -4,7 +4,10 @@ import { prisma } from "@/lib/prisma";
 import type { ItemStatus } from "@prisma/client";
 import { requireUserOrg } from "@/lib/auth";
 import PusherRefresh from "@/app/components/PusherRefresh";
-import { Panel, Pill, Empty, fmtMoney0, fmtMoney } from "../ui";
+import { Panel, Pill, Empty } from "../ui";
+// Formatters come from the server-safe module — importing them from ui.tsx
+// ("use client") makes them client references and they throw when called here.
+import { fmtMoney0, fmtMoney } from "../format";
 
 /**
  * The admin's home screen answers ONE question: what needs me right now?

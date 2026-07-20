@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { fmtMoney } from "./format";
 
 /**
  * Shared admin UI vocabulary.
@@ -108,11 +109,6 @@ export function Empty({ text, action }: { text: string; action?: React.ReactNode
     </div>
   );
 }
-
-/** Consistent money formatting. Negative always reads as negative, in red. */
-export const fmtMoney = (n: number) =>
-  "$" + Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-export const fmtMoney0 = (n: number) => "$" + Math.round(Math.abs(n)).toLocaleString();
 
 export function Money({ value, bold = true }: { value: number; bold?: boolean }) {
   const neg = value < 0;

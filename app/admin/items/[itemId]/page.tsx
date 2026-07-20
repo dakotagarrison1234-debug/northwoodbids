@@ -3,7 +3,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import Skeleton from "@/app/components/Skeleton";
-import { Pill, fmtMoney } from "../../ui";
+import { Pill } from "../../ui";
+import { fmtMoney } from "../../format";
 
 export default function EditItemPage() {
   const router = useRouter();
