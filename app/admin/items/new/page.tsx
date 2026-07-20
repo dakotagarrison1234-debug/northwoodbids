@@ -710,7 +710,7 @@ function NewItemForm() {
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    if (photos.length + files.length > 10) { alert("Maximum 10 photos per item"); return; }
+    if (photos.length + files.length > 10) { setBanner("Maximum 10 photos per item."); return; }
     setUploading(true);
     const failed: string[] = [];
     for (const file of files) {
@@ -738,7 +738,7 @@ function NewItemForm() {
     }
     e.target.value = "";
     setUploading(false);
-    if (failed.length) alert(`Failed to upload: ${failed.join(", ")}`);
+    if (failed.length) setBanner(`Couldn't upload: ${failed.join(", ")}`);
   };
 
   // Make the chosen photo the main one by moving it to the front (index 0 = primary).
@@ -794,11 +794,11 @@ function NewItemForm() {
   // addAnother = true → keep the auction/warehouse/spot/condition, clear the rest,
   // jump back to the top, and re-arm the scanner for the next item.
   const handleSave = async (addAnother = false) => {
-    if (uploading) { alert("Please wait for photos to finish uploading."); return; }
+    if (uploading) { setBanner("Hang on — photos are still uploading."); return; }
     if (saving) return;
-    if (!formData.title) { alert("Please enter an item title"); return; }
-    if (!formData.locationId) { alert("Please choose a warehouse for this item."); return; }
-    if (!orgId) { alert("Business not loaded. Please refresh."); return; }
+    if (!formData.title) { setBanner("Give the item a title first."); scrollTop(); return; }
+    if (!formData.locationId) { setBanner("Pick a warehouse — step 5."); return; }
+    if (!orgId) { setBanner("Business not loaded — pull down to refresh."); return; }
     setSaving(true);
     setBanner(null);
     const savedCode = formData.itemCode;
@@ -840,9 +840,9 @@ function NewItemForm() {
           router.push(preselectedAuctionId ? `/admin/auctions/${preselectedAuctionId}` : "/admin/auctions");
         }
       } else {
-        alert("Error saving item: " + data.error);
+        setBanner("Couldn't save: " + data.error);
       }
-    } catch { alert("Something went wrong."); }
+    } catch { setBanner("Something went wrong. Try again."); }
     finally { setSaving(false); }
   };
 
@@ -880,12 +880,23 @@ function NewItemForm() {
         <div className="mx-auto w-full max-w-2xl space-y-4">
 
           {/* Status banner (scan landed / item saved) */}
-          {banner && (
-            <div className="bg-[#5f7a45]/10 border border-[#5f7a45]/30 text-[#3f5430] rounded-xl px-4 py-3 text-base font-medium flex items-center gap-2">
-              <svg width="20" height="20" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 10l4 4 8-8"/></svg>
-              {banner}
-            </div>
-          )}
+          {/* One banner for both outcomes, coloured by which it is — a problem
+              rendered in success-green is worse than no banner at all. */}
+          {banner && (() => {
+            const good = /saved|filled|ready/i.test(banner);
+            return (
+              <div className={`rounded-xl px-4 py-3 text-base font-semibold flex items-center gap-2 border-2 ${
+                good
+                  ? "bg-[#5f7a45]/10 border-[#5f7a45]/40 text-[#3f5430]"
+                  : "bg-red-50 border-red-200 text-red-700"
+              }`}>
+                <svg width="20" height="20" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  {good ? <path d="M4 10l4 4 8-8" /> : <><circle cx="10" cy="10" r="8" /><path d="M10 6v5M10 13.5v.5" /></>}
+                </svg>
+                {banner}
+              </div>
+            );
+          })()}
 
           {/* ── 1 · Scan ── */}
           <Step

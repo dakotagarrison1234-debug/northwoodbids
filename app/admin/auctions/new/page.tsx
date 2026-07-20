@@ -20,6 +20,7 @@ function defaultStart(): Date {
 export default function NewAuctionPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [orgId, setOrgId] = useState<string>("");
   const [formData, setFormData] = useState(() => {
     const start = defaultStart();
@@ -42,15 +43,18 @@ export default function NewAuctionPage() {
   };
 
   const handleSave = async () => {
+    // Inline errors, not alert() — the button is already disabled for these cases,
+    // so these are belt-and-braces rather than the primary feedback.
+    setError(null);
     if (!formData.title || !formData.startAt || !formData.endAt) {
-      alert("Please fill in title, start date, and end date");
+      setError("Give it a name and both dates.");
       return;
     }
     if (new Date(formData.endAt) <= new Date(formData.startAt)) {
-      alert("End date must be after start date");
+      setError("The closing time has to be after the opening time.");
       return;
     }
-    if (!orgId) { alert("Business not loaded. Please refresh."); return; }
+    if (!orgId) { setError("Business not loaded — pull down to refresh."); return; }
     setSaving(true);
     try {
       // Convert datetime-local values (local time, no tz) to UTC ISO strings
@@ -67,56 +71,90 @@ export default function NewAuctionPage() {
         // Go straight to the new auction's manage page
         router.push(`/admin/auctions/${data.auction.id}`);
       } else {
-        alert("Error: " + data.error);
+        setError(data.error || "Could not create the auction.");
       }
-    } catch { alert("Something went wrong."); }
+    } catch { setError("Something went wrong. Please try again."); }
     finally { setSaving(false); }
   };
 
+  const input =
+    "w-full bg-white border-2 border-slate-200 rounded-xl px-4 min-h-[52px] text-base text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400";
+
+  // Plain-English summary of what they've set, so the dates aren't just two
+  // opaque pickers. Bad ranges are caught here rather than on submit.
+  const start = formData.startAt ? new Date(formData.startAt) : null;
+  const end = formData.endAt ? new Date(formData.endAt) : null;
+  const validRange = start && end && !isNaN(start.getTime()) && !isNaN(end.getTime()) && end > start;
+  const days = validRange ? Math.round((end.getTime() - start.getTime()) / 864e5) : 0;
+  const fmt = (d: Date) =>
+    d.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
   return (
     <>
-      <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-4 flex items-center justify-between gap-3 flex-wrap">
+      <header className="border-b border-slate-200 bg-white px-4 sm:px-8 py-3.5">
         <div className="flex items-center gap-2 min-w-0">
-          <Link href="/admin/auctions" className="text-[#6f5b46] hover:text-[#241a12] text-base font-semibold shrink-0">← Auctions</Link>
-          <span className="text-[#8a7559]">/</span>
-          <h1 className="text-2xl sm:text-3xl font-semibold">New Auction</h1>
+          <Link href="/admin/auctions" className="text-slate-500 text-base font-semibold shrink-0 py-2 pr-1">← Auctions</Link>
+          <span className="text-slate-300">/</span>
+          <h1 className="text-xl sm:text-2xl font-semibold text-slate-900">New auction</h1>
         </div>
-        <button onClick={handleSave} disabled={saving}
-          className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white text-base px-6 py-3.5 rounded-xl font-semibold shrink-0 transition-colors">
-          {saving ? "Creating..." : "Create Auction"}
-        </button>
       </header>
 
-      <div className="px-6 sm:px-8 py-6 max-w-2xl">
-        <div className="bg-white border border-[#e3d6bf] rounded-xl p-6 sm:p-7 space-y-6">
-          <div>
-            <label className="text-base text-[#6f5b46] mb-1.5 block">Auction Title *</label>
+      <div className="px-4 sm:px-8 py-5 max-w-2xl w-full space-y-4">
+        {error && (
+          <p className="text-base text-red-700 bg-red-50 border-2 border-red-200 rounded-xl px-4 py-3">{error}</p>
+        )}
+
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-4">
+          <label className="block">
+            <span className="block text-sm font-bold text-slate-600 mb-1.5">Name *</span>
             <input name="title" value={formData.title} onChange={handleChange}
-              placeholder="e.g. Spring Gala 2025"
-              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]" />
-          </div>
-          <div>
-            <label className="text-base text-[#6f5b46] mb-1.5 block">Description</label>
+              placeholder="e.g. Weekly Overstock — Sept 12"
+              className={input} />
+          </label>
+          <label className="block">
+            <span className="block text-sm font-bold text-slate-600 mb-1.5">Description</span>
             <textarea name="description" value={formData.description} onChange={handleChange} rows={3}
-              placeholder="Tell bidders about this auction..."
-              className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] resize-none" />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-base text-[#6f5b46] mb-1.5 block">Start Date & Time *</label>
-              <input name="startAt" value={formData.startAt} onChange={handleChange} type="datetime-local"
-                className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]" />
-            </div>
-            <div>
-              <label className="text-base text-[#6f5b46] mb-1.5 block">End Date & Time *</label>
-              <input name="endAt" value={formData.endAt} onChange={handleChange} type="datetime-local"
-                className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]" />
-              <p className="text-[#8a7559] text-sm mt-2">
-                These dates are set for you — change them any time. The auction goes live automatically at its start time.
-              </p>
-            </div>
-          </div>
+              placeholder="What's in this one? Shown to bidders."
+              className={`${input} py-3 resize-none`} />
+          </label>
         </div>
+
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-4">
+          <div className="text-sm font-bold text-slate-600 uppercase tracking-wide">When it runs</div>
+          <label className="block">
+            <span className="block text-sm font-bold text-slate-600 mb-1.5">Opens</span>
+            <input name="startAt" value={formData.startAt} onChange={handleChange} type="datetime-local" className={input} />
+          </label>
+          <label className="block">
+            <span className="block text-sm font-bold text-slate-600 mb-1.5">Closes</span>
+            <input name="endAt" value={formData.endAt} onChange={handleChange} type="datetime-local" className={input} />
+          </label>
+
+          {start && end && !validRange ? (
+            <p className="text-base text-red-700 bg-red-50 border-2 border-red-200 rounded-xl px-4 py-3">
+              The closing time has to be after the opening time.
+            </p>
+          ) : validRange ? (
+            <div className="rounded-xl bg-slate-900 text-white px-4 py-3">
+              <div className="text-sm text-slate-400 font-bold uppercase tracking-wide">Runs for</div>
+              <div className="text-xl font-extrabold mt-0.5">{days} day{days !== 1 ? "s" : ""}</div>
+              <div className="text-sm text-slate-300 mt-1">{fmt(start)} → {fmt(end)}</div>
+            </div>
+          ) : null}
+
+          <p className="text-sm text-slate-500">
+            It opens and closes on its own at these times. Nothing is texted to bidders when it opens —
+            you send that yourself from the auction&apos;s controls when you&apos;re ready.
+          </p>
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={saving || !formData.title.trim() || !validRange}
+          className="w-full min-h-[52px] bg-slate-900 active:bg-slate-800 disabled:opacity-40 text-white text-base font-bold rounded-xl transition-colors"
+        >
+          {saving ? "Creating…" : "Create auction"}
+        </button>
       </div>
     </>
   );

@@ -485,7 +485,8 @@ export default function EditItemPage() {
       {/* In-app confirmation (native confirm() is blocked in some installed/PWA webviews) */}
       {/* Sticky save. The form is ~6 cards tall on a phone; with Save in the header
           you had to scroll all the way back up after every edit. */}
-      <div className="sticky bottom-0 bar-safe-bottom safe-x border-t border-slate-200 bg-white px-4 sm:px-8 pt-3 pb-3">
+      {/* bottom-[68px] on mobile keeps this clear of the fixed tab bar. */}
+      <div className="sticky bottom-[68px] md:bottom-0 bar-safe-bottom safe-x border-t border-slate-200 bg-white px-4 sm:px-8 pt-3 pb-3">
         <button
           onClick={handleSave}
           disabled={saving || uploading}

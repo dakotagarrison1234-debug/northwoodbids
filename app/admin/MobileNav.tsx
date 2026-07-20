@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
 
 function NavIcon({ name }: { name: string }) {
@@ -30,6 +31,18 @@ interface Props {
 export default function MobileNav({ navItems, orgName, role }: Props) {
   const [open, setOpen] = useState(false);
   const { signOut } = useClerk();
+  const pathname = usePathname();
+
+  // The four screens staff actually live in get a permanent bottom bar. Everything
+  // else stays in the drawer. Reaching Pickup used to be three taps (hamburger →
+  // scroll → tap) on a screen someone opens twenty times a shift; now it's one,
+  // and it's at the bottom where a thumb already is.
+  const TABS = [
+    { href: "/admin/dashboard", label: "Today", icon: "home" },
+    { href: "/admin/auctions", label: "Auctions", icon: "gavel" },
+    { href: "/admin/pickup", label: "Pickup", icon: "package" },
+    { href: "/admin/winners", label: "Money", icon: "trophy" },
+  ].filter((t) => navItems.some((n) => n.href === t.href) || t.href === "/admin/dashboard");
 
   const handleSignOut = async () => {
     setOpen(false);
@@ -118,6 +131,43 @@ export default function MobileNav({ navItems, orgName, role }: Props) {
           </div>
         </div>
       )}
+
+      {/* ── Bottom tab bar (mobile only) ──
+          Fixed, thumb-height, always visible. The fifth slot opens the drawer for
+          everything else, so nothing is lost — it's just no longer the only way in. */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 bar-safe-bottom safe-x flex">
+        {TABS.map((t) => {
+          const active = pathname === t.href || pathname.startsWith(t.href + "/");
+          return (
+            <Link
+              key={t.href}
+              href={t.href}
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 min-h-[56px] ${
+                active ? "text-slate-900" : "text-slate-400"
+              }`}
+            >
+              <span className="w-6 h-6 flex items-center justify-center"><NavIcon name={t.icon} /></span>
+              <span className={`text-[11px] ${active ? "font-extrabold" : "font-semibold"}`}>{t.label}</span>
+              {/* Active marker — a bar reads faster than a colour change alone. */}
+              <span className={`h-0.5 w-6 rounded-full ${active ? "bg-slate-900" : "bg-transparent"}`} />
+            </Link>
+          );
+        })}
+        <button
+          onClick={() => setOpen(true)}
+          className="flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 min-h-[56px] text-slate-400"
+          aria-label="More"
+        >
+          <span className="w-6 h-6 flex items-center justify-center">
+            <svg width="24" height="24" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <circle cx="3.5" cy="8" r="1" fill="currentColor" /><circle cx="8" cy="8" r="1" fill="currentColor" /><circle cx="12.5" cy="8" r="1" fill="currentColor" />
+            </svg>
+          </span>
+          <span className="text-[11px] font-semibold">More</span>
+          <span className="h-0.5 w-6" />
+        </button>
+      </nav>
+
     </>
   );
 }

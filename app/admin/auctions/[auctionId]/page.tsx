@@ -7,11 +7,11 @@ import { type ActiveProxy } from "./ProxyBidsPanel";
 import RecentBidsPanel, { type RecentBid } from "./RecentBidsPanel";
 import LocalDate from "@/app/components/LocalDate";
 import StatusPill from "@/app/components/StatusPill";
-import { statusStyle } from "@/lib/statusStyles";
 import { money } from "@/lib/format";
 import DeleteAuctionButton from "./DeleteAuctionButton";
 import EditAuction from "./EditAuction";
 import PusherRefresh from "@/app/components/PusherRefresh";
+import { Pill } from "../../ui";
 
 function IcoWarning() {
   return <svg width="14" height="14" fill="none" viewBox="0 0 14 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 2L1.5 12h11L7 2z"/><path d="M7 6v3M7 10.5v.5"/></svg>;
@@ -169,64 +169,60 @@ export default async function ManageAuctionPage({ params }: Props) {
   return (
     <>
       <PusherRefresh channel="auctions" event="auction-updated" />
-      <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <Link href="/admin/auctions" className="text-[#6f5b46] hover:text-[#241a12] text-base font-semibold shrink-0">← Auctions</Link>
-          <span className="text-[#8a7559]">/</span>
-          <h1 className="text-2xl sm:text-3xl font-semibold truncate">{auction.title}</h1>
-          <span className={`text-sm font-semibold px-2.5 py-1 rounded-full shrink-0 ${
-            isScheduled ? "bg-[#6c4d39]/12 text-[#6c4d39]" : statusStyle(auction.status)
-          }`}>
-            {isScheduled ? "scheduled" : auction.status.toLowerCase()}
-          </span>
-          {isPastStart && (
-            <span className="text-xs text-amber-600 bg-yellow-500/10 px-2 py-1 rounded-full shrink-0">
-              <span className="inline-flex items-center gap-1"><IcoWarning /> starting shortly</span>
-            </span>
-          )}
+      <header className="border-b border-slate-200 bg-white px-4 sm:px-8 py-3.5">
+        <div className="flex items-center gap-2 min-w-0">
+          <Link href="/admin/auctions" className="text-slate-500 text-base font-semibold shrink-0 py-2 pr-1">← Auctions</Link>
+          <span className="text-slate-300">/</span>
+          {/* Full title wraps rather than truncating — you need to know which
+              auction you're about to change. */}
+          <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 leading-snug break-words min-w-0">{auction.title}</h1>
         </div>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 sm:shrink-0">
+        <div className="flex flex-wrap items-center gap-2 mt-2">
+          <Pill tone={
+            auction.status === "OPEN" ? "green" :
+            auction.status === "CLOSING" ? "amber" :
+            isScheduled ? "slate" : "slate"
+          }>
+            {isScheduled ? "Scheduled" : auction.status.toLowerCase()}
+          </Pill>
+          {isPastStart && <Pill tone="amber">Starting shortly</Pill>}
           <Link
             href={`/${auction.organization.slug}/${auction.slug}`}
             target="_blank"
-            className="text-center w-full sm:w-auto text-[#4a3a2b] hover:text-[#241a12] font-semibold text-base bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] px-6 py-3.5 rounded-xl whitespace-nowrap transition-colors"
+            className="ml-auto shrink-0 inline-flex items-center justify-center min-h-[40px] px-4 rounded-xl border-2 border-slate-200 bg-white text-slate-700 font-bold text-base"
           >
             View ↗
           </Link>
         </div>
       </header>
 
-      <div className="px-6 sm:px-8 py-6 space-y-6">
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      <div className="px-4 sm:px-8 py-5 space-y-4 max-w-2xl w-full">
+        {/* Money first and big — everything else is a supporting count. */}
+        <div className="rounded-2xl border-2 border-green-200 bg-green-50 p-4">
+          <div className="text-sm font-bold uppercase tracking-wide text-slate-500">
+            {(auction.status === "OPEN" || auction.status === "CLOSING") ? "Bid so far" : "Sold for"}
+          </div>
+          <div className="text-4xl font-extrabold text-green-700 tabular-nums mt-0.5">{money(totalRaised)}</div>
+          <div className="text-sm text-slate-600 mt-1.5 leading-snug">
+            Winning bids only — before premium &amp; tax.
+            {compedCount > 0 && (
+              <>
+                {" "}Includes <strong>{money(compedTotal)} comped</strong>{" "}
+                ({compedCount} of your own win{compedCount !== 1 ? "s" : ""}), which Reports leaves out.
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2.5">
           {[
-            {
-              label: (auction.status === "OPEN" || auction.status === "CLOSING") ? "Current Bid Total" : "Total Sales",
-              value: money(totalRaised),
-            },
             { label: "Items", value: auction.items.length },
-            { label: "Total Bids", value: totalBids },
-            { label: "Active Items", value: auction.items.filter(i => i.status === "ACTIVE").length },
-          ].map((stat, i) => (
-            <div key={stat.label} className="bg-white border border-[#e3d6bf] rounded-xl p-5 sm:p-6">
-              <div className="text-[#6f5b46] text-sm sm:text-base font-medium mb-1.5">{stat.label}</div>
-              <div className="text-2xl sm:text-3xl font-bold text-[#241a12]">{stat.value}</div>
-              {/* The money tile is HAMMER ONLY — no premium, no tax, and it includes
-                  admin comps. Say so, or it silently disagrees with Reports. */}
-              {i === 0 && (
-                <div className="text-xs text-[#8a7559] mt-1.5 leading-snug">
-                  Winning bids only — before premium &amp; tax.
-                  {compedCount > 0 && (
-                    <>
-                      {" "}Includes{" "}
-                      <span className="font-semibold text-[#6c4d39]">
-                        {money(compedTotal)} comped
-                      </span>{" "}
-                      ({compedCount} of your own win{compedCount !== 1 ? "s" : ""}), which Reports leaves out.
-                    </>
-                  )}
-                </div>
-              )}
+            { label: "Bids", value: totalBids },
+            { label: "Live", value: auction.items.filter(i => i.status === "ACTIVE").length },
+          ].map((stat) => (
+            <div key={stat.label} className="bg-white border border-slate-200 rounded-2xl p-3 text-center">
+              <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{stat.label}</div>
+              <div className="text-2xl font-extrabold text-slate-900 tabular-nums mt-0.5">{stat.value}</div>
             </div>
           ))}
         </div>
@@ -234,16 +230,16 @@ export default async function ManageAuctionPage({ params }: Props) {
         {/* Per-warehouse split — where this auction's items physically are, and what
             each warehouse is carrying. Admin-only info (bidders never see totals). */}
         {warehouses.length > 0 && (
-          <div className="bg-white border border-[#e3d6bf] rounded-xl px-5 py-4">
+          <div className="bg-white border border-slate-200 rounded-2xl px-4 py-4">
             <div className="flex items-center justify-between gap-3 mb-3">
-              <h2 className="text-base font-bold text-[#241a12] inline-flex items-center gap-1.5">
+              <h2 className="text-base font-bold text-slate-900 inline-flex items-center gap-1.5">
                 <IcoPin /> By warehouse
               </h2>
-              <span className="text-xs text-[#8a7559]">
+              <span className="text-xs text-slate-400">
                 {isLiveAuction ? "Current bids" : isEnded ? "Sold" : "No bids yet"}
               </span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-2 gap-2.5">
               {warehouses.map((w) => (
                 <div key={w.name} className="rounded-xl border border-[#e3d6bf] bg-[#faf5ea] px-4 py-3">
                   <div className="text-sm font-bold text-[#241a12] truncate">{w.name}</div>

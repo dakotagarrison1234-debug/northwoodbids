@@ -166,6 +166,7 @@ export default function AdminPickupPage() {
   const [stageSpot, setStageSpot] = useState("");
   // Which warehouse's pickups to show ("all" = both). You work one building at a time.
   const [apptLocationId, setApptLocationId] = useState<string>("all");
+  const [showAddLoc, setShowAddLoc] = useState(false);
   const [apptSearch, setApptSearch] = useState("");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -1311,11 +1312,22 @@ export default function AdminPickupPage() {
           </div>
         ) : (
           // ── Locations & Hours ──
-          <div className="space-y-8 max-w-3xl">
-            {/* Add location form */}
-            <div className="bg-white border border-[#e3d6bf] rounded-xl p-5">
-              <h2 className="text-xl font-semibold mb-4">Add a pickup location</h2>
-              <div className="space-y-3">
+          <div className="space-y-6 max-w-3xl">
+            {/* Adding a location happens once; setting hours happens constantly —
+                so the form is collapsed and the locations themselves lead. */}
+            <div className="bg-white border border-[#e3d6bf] rounded-xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowAddLoc((v) => !v)}
+                className="w-full px-5 min-h-[56px] flex items-center justify-between gap-3 hover:bg-[#faf5ea] transition-colors"
+              >
+                <span className="text-lg font-bold text-[#241a12]">+ Add a pickup location</span>
+                <span className={`text-[#8a7559] transition-transform ${showAddLoc ? "rotate-180" : ""}`}>
+                  <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4" /></svg>
+                </span>
+              </button>
+              {showAddLoc && (
+              <div className="space-y-3 px-5 pb-5 pt-1 border-t border-[#efe3d0]">
                 <input
                   value={newLoc.name}
                   onChange={(e) => setNewLoc({ ...newLoc, name: e.target.value })}
@@ -1336,13 +1348,14 @@ export default function AdminPickupPage() {
                   className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-base"
                 />
                 <button
-                  onClick={addLocation}
+                  onClick={() => { addLocation(); setShowAddLoc(false); }}
                   disabled={!newLoc.name.trim()}
-                  className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-40 text-white font-semibold text-base px-6 py-3 rounded-xl"
+                  className="w-full min-h-[48px] bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-40 text-white font-bold text-base rounded-xl"
                 >
                   Add location
                 </button>
               </div>
+              )}
             </div>
 
             {locations.length === 0 ? (
