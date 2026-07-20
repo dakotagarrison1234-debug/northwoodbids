@@ -639,7 +639,9 @@ export default function AdminPickupPage() {
           <div className="space-y-8">
             {/* ── Warehouse switch ── scopes everything below it. ── */}
             {locations.length > 1 && (
-              <div className="max-w-3xl -mb-4">
+              /* No negative margin here — it pulled the next block up and the chips
+                 physically overlapped the Today card on a phone. */
+              <div className="max-w-3xl">
                 <div className="flex flex-wrap gap-2">
                   {[{ id: "all", name: "All warehouses" }, ...locations].map((l) => {
                     const active = apptLocationId === l.id;

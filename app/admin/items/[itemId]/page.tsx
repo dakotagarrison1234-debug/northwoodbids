@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import Skeleton from "@/app/components/Skeleton";
+import { Pill, fmtMoney } from "../../ui";
 
 export default function EditItemPage() {
   const router = useRouter();
@@ -22,7 +23,10 @@ export default function EditItemPage() {
     isPremium: false, packSize: 0, transferable: true,
   });
   // Meta used by the danger zone (delete / remove-from-auction gating).
-  const [meta, setMeta] = useState<{ status: string; inAuction: boolean; hasBids: boolean; sold: boolean } | null>(null);
+  const [meta, setMeta] = useState<{
+    status: string; inAuction: boolean; hasBids: boolean; sold: boolean;
+    currentBid: number; bidCount: number;
+  } | null>(null);
   const [dangerBusy, setDangerBusy] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<
     { text: string; confirmLabel: string; onConfirm: () => void } | null
@@ -60,6 +64,8 @@ export default function EditItemPage() {
           inAuction: !!item.auctionId,
           hasBids: Array.isArray(item.bids) && item.bids.length > 0,
           sold,
+          currentBid: Number(item.currentBid ?? 0),
+          bidCount: Array.isArray(item.bids) ? item.bids.length : 0,
         });
       }
     }).catch(() => {}).finally(() => setLoading(false));
@@ -209,21 +215,36 @@ export default function EditItemPage() {
 
   return (
     <>
-      <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-4 flex items-center justify-between gap-3 flex-wrap">
+      <header className="border-b border-slate-200 bg-white px-4 sm:px-8 py-3.5">
         <div className="flex items-center gap-2 min-w-0">
           <Link
             href={formData.auctionId ? `/admin/auctions/${formData.auctionId}` : "/admin/auctions"}
-            className="text-[#6f5b46] hover:text-[#241a12] text-base font-semibold shrink-0"
+            className="text-slate-500 text-base font-semibold shrink-0 py-2 pr-1"
           >
             ← {loading ? "Back" : formData.auctionId ? "Auction" : "Auctions"}
           </Link>
-          <span className="text-[#8a7559]">/</span>
-          <h1 className="text-2xl sm:text-3xl font-semibold">Edit Item</h1>
+          <span className="text-slate-300">/</span>
+          <h1 className="text-xl sm:text-2xl font-semibold text-slate-900">Edit item</h1>
         </div>
-        <button onClick={handleSave} disabled={saving || uploading}
-          className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white text-base px-6 py-3.5 rounded-xl font-semibold shrink-0 transition-colors">
-          {saving ? "Saving..." : uploading ? "Uploading..." : "Save Changes"}
-        </button>
+        {/* An admin editing an item needs to know whether it's live, what it's bid to,
+            and whether it's already sold — none of that was on screen before, so it was
+            possible to edit a live item with bids on it without realising. */}
+        {meta && (
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <Pill tone={meta.sold ? "green" : meta.status === "ACTIVE" ? "amber" : "slate"}>
+              {meta.sold ? "Sold" : meta.status === "ACTIVE" ? "Live now" : meta.status.toLowerCase()}
+            </Pill>
+            {meta.bidCount > 0 && (
+              <span className="text-base text-slate-600">
+                <strong className="text-slate-900">{fmtMoney(meta.currentBid)}</strong>
+                {" · "}{meta.bidCount} bid{meta.bidCount !== 1 ? "s" : ""}
+              </span>
+            )}
+            {meta.status === "ACTIVE" && meta.bidCount > 0 && (
+              <span className="text-sm text-amber-700 font-semibold">Careful — people are bidding on this</span>
+            )}
+          </div>
+        )}
       </header>
 
       <div className="flex-1 px-6 sm:px-8 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 overflow-auto">
@@ -233,20 +254,44 @@ export default function EditItemPage() {
             {photos.length > 0 && (
               <>
                 <p className="text-[#8a7559] text-sm mb-2">The <strong className="text-[#6c4d39]">Main photo</strong> is what bidders see first. Tap &ldquo;Set as main&rdquo; on any photo to change it.</p>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-4">
+                {/* 2-up on a phone, and the controls live in a BAR UNDER the photo
+                    rather than floating on top of it. At 3-across the badge, the
+                    delete button and "Set as main" physically overlapped each other
+                    inside an ~87px tile. */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                   {photos.map((url, i) => (
-                    <div key={i} className={`relative aspect-square bg-[#efe3d0] rounded-lg overflow-hidden border-2 ${i === 0 ? "border-[#6c4d39]" : "border-transparent"}`}>
-                      <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-contain" />
-                      {i === 0 ? (
-                        <span className="absolute top-1.5 left-1.5 bg-[#6c4d39] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow">Main photo</span>
-                      ) : (
-                        <button type="button" onClick={() => setMainPhoto(i)}
-                          className="absolute bottom-1.5 left-1.5 bg-white/95 hover:bg-white text-[#6c4d39] text-[11px] font-semibold px-2 py-0.5 rounded-lg border border-[#cdbda3] shadow-sm transition-colors">
-                          Set as main
+                    <div key={i} className={`rounded-xl overflow-hidden border-2 ${i === 0 ? "border-green-500" : "border-slate-200"}`}>
+                      <div className="relative aspect-square bg-slate-100">
+                        <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-contain" />
+                        {i === 0 && (
+                          <span className="absolute top-2 left-2 bg-green-600 text-white text-[11px] font-bold px-2 py-1 rounded-full shadow">
+                            Main
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex border-t border-slate-200">
+                        {i === 0 ? (
+                          <span className="flex-1 min-h-[44px] flex items-center justify-center text-sm font-bold text-green-700 bg-green-50">
+                            Shown first
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setMainPhoto(i)}
+                            className="flex-1 min-h-[44px] text-sm font-bold text-slate-600 bg-white active:bg-slate-100"
+                          >
+                            Make main
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          aria-label="Delete photo"
+                          onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))}
+                          className="w-[44px] min-h-[44px] flex items-center justify-center text-red-600 bg-white border-l border-slate-200 active:bg-red-50"
+                        >
+                          <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 4h10M6.5 4V2.5h3V4M5 4v9.5h6V4M6.5 6.5v5M9.5 6.5v5" /></svg>
                         </button>
-                      )}
-                      <button type="button" onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))}
-                        className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center shadow">×</button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -437,6 +482,18 @@ export default function EditItemPage() {
       </div>
 
       {/* In-app confirmation (native confirm() is blocked in some installed/PWA webviews) */}
+      {/* Sticky save. The form is ~6 cards tall on a phone; with Save in the header
+          you had to scroll all the way back up after every edit. */}
+      <div className="sticky bottom-0 bar-safe-bottom safe-x border-t border-slate-200 bg-white px-4 sm:px-8 pt-3 pb-3">
+        <button
+          onClick={handleSave}
+          disabled={saving || uploading}
+          className="w-full min-h-[52px] bg-slate-900 active:bg-slate-800 disabled:opacity-50 text-white text-base font-bold rounded-xl transition-colors"
+        >
+          {saving ? "Saving…" : uploading ? "Uploading photos…" : "Save changes"}
+        </button>
+      </div>
+
       {confirmDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setConfirmDialog(null)}>
           <div className="bg-white rounded-2xl border border-[#cdbda3] max-w-sm w-full p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>

@@ -952,25 +952,40 @@ function NewItemForm() {
           >
             <input type="file" accept="image/*" multiple id="photo-upload" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
             {hasPhotos ? (
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+              /* 2-up on a phone with the controls in a bar UNDER the photo. At
+                 3-across the badge, "Set main" and the 24px delete button all
+                 collided inside one ~87px tile. */
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {photos.map((url, i) => (
-                  <div key={i} className={`relative aspect-square bg-[#efe3d0] rounded-xl overflow-hidden border-2 ${i === 0 ? "border-[#4a7c59]" : "border-[#e3d6bf]"}`}>
-                    <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-contain" />
-                    {i === 0 ? (
-                      <span className="absolute top-1.5 left-1.5 bg-[#4a7c59] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">Main</span>
-                    ) : (
-                      <button type="button" onClick={() => setMainPhoto(i)}
-                        className="absolute bottom-1.5 left-1.5 bg-white/95 hover:bg-white text-[#4a7c59] text-[11px] font-bold px-2 py-0.5 rounded-md border border-[#cdbda3] shadow-sm transition-colors">
-                        Set main
+                  <div key={i} className={`rounded-xl overflow-hidden border-2 ${i === 0 ? "border-[#4a7c59]" : "border-[#e3d6bf]"}`}>
+                    <div className="relative aspect-square bg-[#efe3d0]">
+                      <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-contain" />
+                      {i === 0 && (
+                        <span className="absolute top-2 left-2 bg-[#4a7c59] text-white text-[11px] font-bold px-2 py-1 rounded-full shadow">Main</span>
+                      )}
+                    </div>
+                    <div className="flex border-t border-[#e3d6bf]">
+                      {i === 0 ? (
+                        <span className="flex-1 min-h-[44px] flex items-center justify-center text-sm font-bold text-[#4a7c59] bg-[#4a7c59]/10">
+                          Shown first
+                        </span>
+                      ) : (
+                        <button type="button" onClick={() => setMainPhoto(i)}
+                          className="flex-1 min-h-[44px] text-sm font-bold text-[#6f5b46] bg-white active:bg-[#efe3d0]">
+                          Make main
+                        </button>
+                      )}
+                      <button type="button" aria-label="Delete photo"
+                        onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))}
+                        className="w-[44px] min-h-[44px] flex items-center justify-center text-red-600 bg-white border-l border-[#e3d6bf] active:bg-red-50">
+                        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 4h10M6.5 4V2.5h3V4M5 4v9.5h6V4M6.5 6.5v5M9.5 6.5v5" /></svg>
                       </button>
-                    )}
-                    <button type="button" onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))}
-                      className="absolute top-1.5 right-1.5 bg-red-500 hover:bg-red-600 text-white text-sm rounded-full w-6 h-6 flex items-center justify-center shadow">×</button>
+                    </div>
                   </div>
                 ))}
                 <label htmlFor="photo-upload"
-                  className="aspect-square rounded-xl border-2 border-dashed border-[#cdbda3] hover:border-[#4a7c59] transition-colors cursor-pointer grid place-items-center text-[#8a7559] hover:text-[#4a7c59]">
-                  <span className="text-2xl leading-none">＋</span>
+                  className="min-h-[120px] rounded-xl border-2 border-dashed border-[#cdbda3] hover:border-[#4a7c59] transition-colors cursor-pointer grid place-items-center text-[#8a7559] hover:text-[#4a7c59]">
+                  <span className="text-3xl leading-none">＋</span>
                 </label>
               </div>
             ) : (

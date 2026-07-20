@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { Pill } from "../ui";
 
 interface Bidder {
   clerkUserId: string;
@@ -22,6 +23,7 @@ export default function BiddersPage() {
   const [confirmDialog, setConfirmDialog] = useState<
     { text: string; confirmLabel: string; danger?: boolean; onConfirm: () => void } | null
   >(null);
+  const [filter, setFilter] = useState<"all" | "blocked" | "staff">("all");
 
   const canManage = myRole === "OWNER" || myRole === "ADMIN";
   const isOwner = myRole === "OWNER";
@@ -119,60 +121,99 @@ export default function BiddersPage() {
   const roleBadge = (role: Bidder["role"]) => {
     if (!role) return null;
     const label = role === "OWNER" ? "Owner" : role === "ADMIN" ? "Admin" : "Staff";
-    const cls =
-      role === "OWNER"
-        ? "bg-[#c47b3e]/15 text-[#8a4f1c] border-[#c47b3e]/30"
-        : "bg-[#6c4d39]/12 text-[#6c4d39] border-[#6c4d39]/25";
-    return <span className={`text-xs font-bold uppercase tracking-wide border px-2 py-0.5 rounded-full ${cls}`}>{label}</span>;
+    return <Pill tone={role === "OWNER" ? "blue" : "slate"}>{label}</Pill>;
   };
+
+  // Filter by what you actually came here to do. Scanning 200 cards to find the
+  // blocked people was the only way to answer "who's blocked?" before.
+  const shown = bidders.filter((b) =>
+    filter === "blocked" ? b.blocked : filter === "staff" ? b.role != null : true
+  );
+  const blockedCount = bidders.filter((b) => b.blocked).length;
+  const staffCount = bidders.filter((b) => b.role != null).length;
+  const atCap = bidders.length >= 200;
+
+  const FILTERS: { key: typeof filter; label: string; count: number }[] = [
+    { key: "all", label: "Everyone", count: bidders.length },
+    { key: "blocked", label: "Blocked", count: blockedCount },
+    { key: "staff", label: "Staff", count: staffCount },
+  ];
 
   return (
     <>
-      <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-5">
-        <h1 className="text-2xl sm:text-3xl font-semibold">Bidders</h1>
-        <p className="text-base text-[#6f5b46] mt-1">Search bidders, block troublemakers, or promote someone to staff with one tap.</p>
+      <header className="border-b border-slate-200 bg-white px-4 sm:px-8 py-4">
+        <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900">Bidders</h1>
+        <p className="text-base text-slate-500 mt-0.5">Block someone, or make them staff.</p>
       </header>
 
-      <div className="flex-1 px-6 sm:px-8 py-6 overflow-auto">
+      <div className="flex-1 px-4 sm:px-8 py-5 overflow-auto max-w-2xl w-full">
         <input
           type="text"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search by name, email, or phone…"
-          className="w-full max-w-md bg-white border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] mb-6"
+          placeholder="Search name, email, or phone…"
+          className="w-full bg-white border-2 border-slate-200 rounded-xl px-4 min-h-[48px] text-base text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400"
         />
 
+        <div className="flex gap-2 mt-3 mb-4">
+          {FILTERS.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              className={`flex-1 min-h-[44px] rounded-xl border-2 font-bold text-base transition-colors ${
+                filter === f.key
+                  ? "bg-slate-900 text-white border-slate-900"
+                  : "bg-white text-slate-600 border-slate-200"
+              }`}
+            >
+              {f.label}
+              <span className={filter === f.key ? "text-slate-400 ml-1.5" : "text-slate-400 ml-1.5"}>{f.count}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* The API caps at 200. Silently dropping records is worse than saying so. */}
+        {atCap && !q && (
+          <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
+            Showing the 200 most recent bidders. Use search to find anyone else.
+          </p>
+        )}
+
         {loading ? (
-          <p className="text-[#8a7559] text-base">Loading…</p>
-        ) : bidders.length === 0 ? (
-          <p className="text-[#8a7559] text-base">No bidders found.</p>
+          <p className="text-slate-500 text-base">Loading…</p>
+        ) : shown.length === 0 ? (
+          <p className="text-slate-500 text-base">
+            {filter === "blocked" ? "Nobody is blocked." : filter === "staff" ? "No staff yet." : "No bidders found."}
+          </p>
         ) : (
           <div className="space-y-3">
-            {bidders.map((b) => {
+            {shown.map((b) => {
               const busy = busyId === b.clerkUserId;
               const isMember = b.role != null;
               return (
                 <div
                   key={b.clerkUserId}
-                  className={`bg-white border rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 ${
-                    b.blocked ? "border-red-300 bg-red-50/40" : "border-[#e3d6bf]"
+                  className={`bg-white border-2 rounded-2xl p-4 ${
+                    b.blocked ? "border-red-300 bg-red-50" : "border-slate-200"
                   }`}
                 >
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-base font-semibold text-[#241a12]">{b.name || "Unnamed bidder"}</span>
+                      <span className="text-base font-bold text-slate-900 break-words">{b.name || "Unnamed bidder"}</span>
                       {roleBadge(b.role)}
-                      {b.blocked && (
-                        <span className="text-xs font-bold uppercase tracking-wide bg-red-100 text-red-700 border border-red-200 px-2 py-0.5 rounded-full">Blocked</span>
-                      )}
+                      {b.blocked && <Pill tone="red">Blocked</Pill>}
                     </div>
-                    <div className="text-sm text-[#6f5b46] mt-0.5 flex flex-wrap gap-x-3">
-                      {b.email && <span>{b.email}</span>}
-                      {b.phone && <span>{b.phone}</span>}
+                    {/* break-all: a long email used to run straight out of the card. */}
+                    <div className="text-sm text-slate-500 mt-1 space-y-0.5">
+                      {b.email && <div className="break-all">{b.email}</div>}
+                      {b.phone && <div>{b.phone}</div>}
                     </div>
+                    {b.blocked && b.blockedReason && (
+                      <p className="text-sm text-red-700 mt-1.5">{b.blockedReason}</p>
+                    )}
                   </div>
 
-                  <div className="shrink-0 flex flex-wrap gap-2 sm:justify-end">
+                  <div className="flex flex-wrap gap-2 mt-3">
                     {/* Role management (owner/admin only). Never for the owner row. */}
                     {b.role !== "OWNER" && canManage && (
                       <>

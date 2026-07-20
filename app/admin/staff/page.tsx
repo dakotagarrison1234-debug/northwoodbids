@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { Pill } from "../ui";
 import { useUser } from "@clerk/nextjs";
 
 interface Member {
@@ -128,50 +129,66 @@ export default function StaffPage() {
 
   return (
     <>
-      <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-5">
-        <h1 className="text-2xl sm:text-3xl font-semibold">Team Members</h1>
+      <header className="border-b border-slate-200 bg-white px-4 sm:px-8 py-4 flex items-center justify-between gap-3">
+        <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900">Team</h1>
+        {canInvite && (
+          /* The reason people open this page is to add someone — it was previously
+             the LAST thing on the page, below every member and every invite. */
+          <a
+            href="#invite"
+            className="shrink-0 inline-flex items-center justify-center min-h-[48px] px-5 rounded-xl bg-slate-900 text-white font-bold text-base"
+          >
+            + Invite
+          </a>
+        )}
       </header>
 
-      <div className="px-6 sm:px-8 py-6 max-w-2xl space-y-8">
+      <div className="px-4 sm:px-8 py-5 max-w-2xl space-y-6">
+        {/* Errors surface HERE, at the top, not buried inside the invite form where
+            a failed "Remove" would render off-screen (or not at all for non-admins). */}
+        {error && (
+          <p className="text-base text-red-700 bg-red-50 border-2 border-red-200 rounded-xl px-4 py-3">{error}</p>
+        )}
+
         {/* Current Members */}
         <section>
-          <h2 className="text-sm font-semibold text-[#8a7559] uppercase tracking-wider mb-4">
-            Current Members ({members.length})
+          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">
+            Members ({members.length})
           </h2>
-          <div className="bg-white border border-[#e3d6bf] rounded-xl divide-y divide-[#e3d6bf]">
+          <div className="bg-white border border-slate-200 rounded-2xl divide-y divide-slate-100">
             {members.map((member) => {
               const isSelf = member.clerkUserId === user?.id;
               const isOwner = member.role === "OWNER";
               const canRemoveMember = canRemove && !isSelf && !isOwner;
               return (
-                <div key={member.id} className="px-5 py-4 flex items-center justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="text-base font-medium text-[#241a12] flex items-center gap-2">
-                      <span className="truncate">
-                        {member.displayName || "New team member"}
-                      </span>
-                      {isSelf && <span className="text-sm text-[#8a7559]">(you)</span>}
+                <div key={member.id} className="px-4 py-3.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-base font-bold text-slate-900 flex items-center gap-2 flex-wrap">
+                        <span className="break-words">{member.displayName || "New team member"}</span>
+                        {isSelf && <span className="text-sm font-normal text-slate-400">(you)</span>}
+                      </div>
+                      {member.email && member.email !== member.displayName && (
+                        <div className="text-sm text-slate-500 mt-0.5 break-all">{member.email}</div>
+                      )}
+                      {!member.displayName && (
+                        <div className="text-sm text-slate-400 mt-0.5">Hasn&apos;t signed in yet.</div>
+                      )}
                     </div>
-                    {member.email && member.email !== member.displayName && (
-                      <div className="text-sm text-[#8a7559] mt-0.5 truncate">{member.email}</div>
-                    )}
-                    {!member.displayName && (
-                      <div className="text-sm text-[#8a7559] mt-0.5">Hasn&apos;t signed in yet — name will appear here once they do.</div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className={`text-sm font-semibold ${roleColor(member.role)}`}>
+                    {/* Role as a coloured pill — three muted browns at 14px were
+                        effectively unreadable, and role is the whole point of the row. */}
+                    <Pill tone={member.role === "OWNER" ? "blue" : member.role === "ADMIN" ? "green" : "slate"}>
                       {roleLabel(member.role)}
-                    </span>
-                    {canRemoveMember && (
-                      <button
-                        onClick={() => removeMember(member.id, member.displayName || "this team member")}
-                        className="text-base font-semibold text-red-600 hover:bg-red-50 px-4 py-2.5 rounded-xl border border-red-300 hover:border-red-400 transition-colors"
-                      >
-                        Remove
-                      </button>
-                    )}
+                    </Pill>
                   </div>
+                  {canRemoveMember && (
+                    <button
+                      onClick={() => removeMember(member.id, member.displayName || "this team member")}
+                      className="mt-2.5 w-full min-h-[44px] text-base font-bold text-red-600 bg-white rounded-xl border-2 border-red-200 active:bg-red-50 transition-colors"
+                    >
+                      Remove from team
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -184,22 +201,25 @@ export default function StaffPage() {
             <h2 className="text-sm font-semibold text-[#8a7559] uppercase tracking-wider mb-4">
               Pending Invites ({invites.length})
             </h2>
-            <div className="bg-white border border-[#e3d6bf] rounded-xl divide-y divide-[#e3d6bf]">
+            <div className="bg-white border border-slate-200 rounded-2xl divide-y divide-slate-100">
               {invites.map((invite) => (
-                <div key={invite.id} className="px-5 py-4 flex items-center justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="text-base">{invite.email}</div>
-                    <div className="text-sm text-[#8a7559] mt-0.5">
-                      Expires <span suppressHydrationWarning>{new Date(invite.expiresAt).toLocaleDateString()}</span>
-                      {" · "}{roleLabel(invite.role)}
+                <div key={invite.id} className="px-4 py-3.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      {/* break-all — a long invite email used to spill over the button. */}
+                      <div className="text-base font-semibold text-slate-900 break-all">{invite.email}</div>
+                      <div className="text-sm text-slate-500 mt-0.5">
+                        Expires <span suppressHydrationWarning>{new Date(invite.expiresAt).toLocaleDateString()}</span>
+                      </div>
                     </div>
+                    <Pill tone="amber">{roleLabel(invite.role)}</Pill>
                   </div>
                   {canInvite && (
                     <button
                       onClick={() => revokeInvite(invite.id, invite.email)}
-                      className="text-base font-semibold text-red-600 hover:bg-red-50 px-4 py-2.5 rounded-xl border border-red-300 hover:border-red-400 transition-colors shrink-0"
+                      className="mt-2.5 w-full min-h-[44px] text-base font-bold text-red-600 bg-white rounded-xl border-2 border-red-200 active:bg-red-50 transition-colors"
                     >
-                      Revoke
+                      Revoke invite
                     </button>
                   )}
                 </div>
@@ -210,9 +230,9 @@ export default function StaffPage() {
 
         {/* Invite Form — OWNER/ADMIN only */}
         {canInvite && (
-          <section>
-            <h2 className="text-sm font-semibold text-[#8a7559] uppercase tracking-wider mb-4">
-              Invite Someone
+          <section id="invite" className="scroll-mt-4">
+            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">
+              Invite someone
             </h2>
             <div className="bg-white border border-[#e3d6bf] rounded-xl p-6 sm:p-7 space-y-4">
               <div>
