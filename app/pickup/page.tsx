@@ -745,12 +745,14 @@ export default function PickupPage() {
                             Your order is boxed &amp; ready
                           </div>
                           <div className="text-2xl font-extrabold leading-tight mt-0.5">
-                            Ask for {appointment.stagedSpot}
+                            {appointment.stagedSpot}
                           </div>
                         </div>
                       </div>
                       <p className="text-base text-[#d8e6c8] mt-3">
-                        Everything below is packed together in one spot — just give this to whoever meets you.
+                        Everything below is packed together and labeled{" "}
+                        <strong className="text-white">{appointment.stagedSpot}</strong>. Come to{" "}
+                        {appointment.location.name} and it&apos;ll be waiting for you.
                       </p>
                     </div>
                   )}
@@ -791,7 +793,10 @@ export default function PickupPage() {
                               <ItemPhoto url={it.photo} title={it.title} />
                               <div className="min-w-0 flex-1">
                                 <div className="font-medium text-base text-[#241a12]">{it.title}</div>
-                                {it.storageLocation && (
+                                {/* Once the order is staged, every item is in the staged
+                                    box — the shelf it used to sit on is stale, and showing
+                                    both would send the customer to two different places. */}
+                                {!appointment.stagedSpot && it.storageLocation && (
                                   <div className="mt-1 text-sm text-[#6f5b46]">Find it at <SpotChip spot={it.storageLocation} /></div>
                                 )}
                               </div>
