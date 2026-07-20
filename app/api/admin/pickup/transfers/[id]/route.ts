@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { getUserOrg } from "@/lib/auth";
 import { attachToUpcomingAppointment } from "@/lib/pickup";
 import { notifyTransferArrived } from "@/lib/transferNotify";
@@ -25,6 +26,42 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     const { status } = await request.json();
     if (!["LOADED", "COMPLETED", "CANCELLED"].includes(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
+
+    // ── UNDO a completed drop-off ────────────────────────────────────────────
+    // Completing a transfer overwrites each item's home location and unlinks it,
+    // so undoing needs the snapshot we took at drop-off. Per-item, because one
+    // transfer can gather items from more than one warehouse.
+    if (transfer.status === "COMPLETED" && status === "LOADED") {
+      const snap = transfer.revertSnapshot as { itemId: string; locationId: string | null }[] | null;
+      if (!snap || !Array.isArray(snap) || snap.length === 0) {
+        return NextResponse.json(
+          { error: "This drop-off was recorded before undo was supported, so it can't be reversed automatically." },
+          { status: 422 }
+        );
+      }
+
+      await prisma.$transaction([
+        ...snap.map((s) =>
+          prisma.item.update({
+            where: { id: s.itemId },
+            data: {
+              locationId: s.locationId,
+              transferRequestId: id,
+              // The item is going back to the origin warehouse, so it can't be
+              // collected at the destination — drop it off any appointment the
+              // drop-off auto-attached it to.
+              pickupAppointmentId: null,
+            },
+          })
+        ),
+        prisma.transferRequest.update({
+          where: { id },
+          data: { status: "LOADED", completedAt: null, revertSnapshot: Prisma.DbNull },
+        }),
+      ]);
+
+      return NextResponse.json({ success: true, reverted: snap.length });
     }
 
     // Already terminal — refuse so a double-click / stale tab can't re-run the
@@ -53,6 +90,14 @@ export async function PATCH(request: NextRequest, { params }: Props) {
         console.error("notifyTransferArrived failed (continuing):", e);
       }
 
+      // Record where each item lived BEFORE we move it — this is the only chance
+      // to capture it, and it's what makes an accidental drop-off reversible.
+      const moving = await prisma.item.findMany({
+        where: { transferRequestId: id },
+        select: { id: true, locationId: true },
+      });
+      const snapshot = moving.map((m) => ({ itemId: m.id, locationId: m.locationId }));
+
       // Items have arrived: set their home location to the destination, detach transfer.
       await prisma.item.updateMany({
         where: { transferRequestId: id },
@@ -60,7 +105,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       });
       await prisma.transferRequest.update({
         where: { id },
-        data: { status: "COMPLETED", completedAt: new Date() },
+        data: { status: "COMPLETED", completedAt: new Date(), revertSnapshot: snapshot },
       });
 
       // Fold the arrived items into the bidder's upcoming appointment at this

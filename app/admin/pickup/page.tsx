@@ -272,6 +272,47 @@ export default function AdminPickupPage() {
     }
   };
 
+  // Undo a drop-off. The server restores each item's original warehouse from the
+  // snapshot taken at completion, so a transfer that gathered from two places
+  // unwinds correctly rather than dumping everything at one location.
+  const revertTransfer = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/pickup/transfers/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "LOADED" }),
+      });
+      const d = await res.json();
+      if (d.success) {
+        flash("Drop-off undone — items are back at their original warehouse.", true);
+        setExpandedTransferId(null);
+        loadTransfers();
+      } else flash(d.error || "Could not undo that drop-off.", false);
+    } catch {
+      flash("Could not undo that drop-off.", false);
+    }
+  };
+
+  // Undo a collection. Puts the appointment back to SCHEDULED and its items back
+  // to waiting — the fix for a mis-tap, which previously needed a DB edit.
+  const reopenAppt = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/pickup/appointments/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "SCHEDULED" }),
+      });
+      const d = await res.json();
+      if (d.success) {
+        flash("Pickup reopened — items are waiting again.", true);
+        setSelectedApptId(null);
+        loadAppointments();
+      } else flash(d.error || "Could not reopen that pickup.", false);
+    } catch {
+      flash("Could not reopen that pickup.", false);
+    }
+  };
+
   // Stage (or re-label) a whole order in one spot. Blank spot un-stages it.
   const saveStage = async (id: string, spot: string) => {
     try {
@@ -973,24 +1014,83 @@ export default function AdminPickupPage() {
                   </span>
                 </button>
                 {showCollected && (
-                <div className="space-y-3 max-w-3xl">
-                  {collected.map((a) => (
-                    <div key={a.id} className="bg-white/60 border border-[#e3d6bf] rounded-xl px-5 py-4 opacity-75">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <div className="font-semibold text-base text-[#241a12]">{a.bidder.name || "Unknown Bidder"}</div>
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-base text-[#8a7559]">
-                            <span className="font-semibold text-[#241a12]">{fmtDateTime(a.startsAt)}</span>
-                            <LocationBadge name={a.location.name} size="sm" />
-                            <span>· {a.items.length} item{a.items.length !== 1 ? "s" : ""}</span>
+                <div className="space-y-2 max-w-3xl">
+                  {/* Collected orders open up like any other, so a mis-tap can be
+                      undone. Before this, marking something collected by accident
+                      could only be fixed in the database. */}
+                  {collected.map((a) => {
+                    const expanded = selectedApptId === a.id;
+                    return (
+                      <div key={a.id} className="bg-white border border-[#e3d6bf] rounded-xl overflow-hidden">
+                        <button
+                          onClick={() => setSelectedApptId(expanded ? null : a.id)}
+                          className="w-full text-left px-4 py-3.5 flex items-center justify-between gap-3 hover:bg-[#faf5ea] transition-colors"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold text-[#241a12] truncate">{a.bidder.name || "Unknown Bidder"}</div>
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-[#6f5b46] mt-0.5">
+                              <span>{fmtDateTime(a.startsAt)}</span>
+                              <LocationBadge name={a.location.name} size="sm" />
+                              <span>· {a.items.length} item{a.items.length !== 1 ? "s" : ""}</span>
+                            </div>
                           </div>
-                        </div>
-                        <span className="text-sm bg-green-50 text-green-700 border border-green-200 px-3 py-1 rounded-full font-bold">
-                          Collected
-                        </span>
+                          <span className="shrink-0 text-sm bg-green-50 text-green-700 border border-green-200 px-3 py-1 rounded-full font-bold">
+                            Collected
+                          </span>
+                          <span className={`text-[#8a7559] shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`}>
+                            <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4" /></svg>
+                          </span>
+                        </button>
+
+                        {expanded && (
+                          <div className="px-4 pb-4 pt-1 border-t border-[#efe3d0]">
+                            {(a.bidder.email || a.bidder.phone) && (
+                              <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-3 text-base text-[#6f5b46]">
+                                {a.bidder.email && <span className="break-all">{a.bidder.email}</span>}
+                                {a.bidder.phone && <span>{a.bidder.phone}</span>}
+                              </div>
+                            )}
+                            <div className="mt-3">
+                              <div className="text-sm font-bold text-[#8a7559] uppercase tracking-wide mb-2">
+                                {a.items.length} item{a.items.length !== 1 ? "s" : ""} handed over
+                              </div>
+                              <ul className="space-y-2">
+                                {a.items.map((it) => (
+                                  <li key={it.id} className="flex items-center gap-3 bg-[#faf5ea] border border-[#e3d6bf] rounded-xl px-3 py-2">
+                                    <span className="w-10 h-10 shrink-0 rounded-lg overflow-hidden bg-[#efe3d0] grid place-items-center">
+                                      {it.photo ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img src={it.photo} alt="" className="w-full h-full object-cover" />
+                                      ) : (
+                                        <span className="text-[10px] text-[#b3a085]">—</span>
+                                      )}
+                                    </span>
+                                    <span className="min-w-0 flex-1">
+                                      {it.itemCode && (
+                                        <span className="font-mono font-bold text-[#6c4d39] text-sm">{it.itemCode} </span>
+                                      )}
+                                      <span className="text-base text-[#241a12]">{it.title}</span>
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+
+                            <button
+                              onClick={() => askConfirm(
+                                "Reopen this pickup? Its items go back to waiting for collection and the appointment becomes active again. Use this if it was marked collected by mistake.",
+                                () => reopenAppt(a.id),
+                                { confirmLabel: "Reopen pickup" }
+                              )}
+                              className="mt-4 w-full min-h-[48px] bg-white border-2 border-[#cdbda3] text-[#6f5b46] font-bold text-base rounded-xl active:bg-[#efe3d0] transition-colors"
+                            >
+                              Reopen — this wasn&apos;t picked up
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 )}
               </div>
@@ -1147,25 +1247,63 @@ export default function AdminPickupPage() {
                   </span>
                 </button>
                 {showCompletedTransfers && (
-                <div className="space-y-3">
-                  {completedTransfers.map((t) => (
-                    <div key={t.id} className="bg-white/60 border border-[#e3d6bf] rounded-xl px-5 py-4 opacity-75">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <div className="font-semibold text-base text-[#241a12]">{t.bidder.name || "Unknown Bidder"}</div>
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-base text-[#8a7559]">
-                            <span aria-hidden>→</span>
-                            <LocationBadge name={t.toLocation.name} size="sm" />
-                            <span>· {t.items.length} item{t.items.length !== 1 ? "s" : ""}
-                            {t.completedAt ? ` · ${fmtDateTime(t.completedAt)}` : ""}</span>
+                <div className="space-y-2">
+                  {/* Completed drop-offs open up so a mis-tap can be undone. */}
+                  {completedTransfers.map((t) => {
+                    const open = expandedTransferId === t.id;
+                    return (
+                      <div key={t.id} className="bg-white border border-[#e3d6bf] rounded-xl overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedTransferId(open ? null : t.id)}
+                          className="w-full text-left px-4 py-3.5 flex items-center justify-between gap-3 hover:bg-[#faf5ea] transition-colors"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold text-[#241a12] truncate">{t.bidder.name || "Unknown Bidder"}</div>
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-[#6f5b46] mt-0.5">
+                              <span aria-hidden>→</span>
+                              <LocationBadge name={t.toLocation.name} size="sm" />
+                              <span>· {t.items.length} item{t.items.length !== 1 ? "s" : ""}
+                              {t.completedAt ? ` · ${fmtDateTime(t.completedAt)}` : ""}</span>
+                            </div>
                           </div>
-                        </div>
-                        <span className="text-sm bg-green-50 text-green-700 border border-green-200 px-3 py-1 rounded-full font-bold">
-                          Dropped off
-                        </span>
+                          <span className="shrink-0 text-sm bg-green-50 text-green-700 border border-green-200 px-3 py-1 rounded-full font-bold">
+                            Dropped off
+                          </span>
+                          <span className={`text-[#8a7559] shrink-0 transition-transform ${open ? "rotate-180" : ""}`}>
+                            <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4" /></svg>
+                          </span>
+                        </button>
+
+                        {open && (
+                          <div className="px-4 pb-4 pt-1 border-t border-[#efe3d0]">
+                            <div className="mt-3">
+                              <div className="text-sm font-bold text-[#8a7559] uppercase tracking-wide mb-2">
+                                {t.items.length} item{t.items.length !== 1 ? "s" : ""} moved
+                              </div>
+                              <ul className="space-y-1.5">
+                                {t.items.map((it) => (
+                                  <li key={it.id} className="text-base text-[#241a12] bg-[#faf5ea] border border-[#e3d6bf] rounded-lg px-3 py-2">
+                                    {it.title}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                            <button
+                              onClick={() => askConfirm(
+                                `Undo this drop-off? The ${t.items.length} item${t.items.length !== 1 ? "s go" : " goes"} back to the warehouse ${t.items.length !== 1 ? "they were" : "it was"} in before, and the transfer becomes active again. The "your items arrived" text already sent won't be recalled.`,
+                                () => revertTransfer(t.id),
+                                { confirmLabel: "Undo drop-off" }
+                              )}
+                              className="mt-4 w-full min-h-[48px] bg-white border-2 border-[#cdbda3] text-[#6f5b46] font-bold text-base rounded-xl active:bg-[#efe3d0] transition-colors"
+                            >
+                              Undo — these weren&apos;t dropped off
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 )}
               </div>

@@ -33,9 +33,15 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
-    // Guard terminal states — don't re-collect an already-collected/cancelled appt
-    // (would re-stamp pickedUpAt and re-fire item transitions).
-    if (status !== undefined && status !== appt.status && appt.status !== "SCHEDULED") {
+    // Reopening: COLLECTED/CANCELLED → SCHEDULED. Marking an order collected by
+    // accident (or tapping the wrong row) used to be permanent, which meant a
+    // mis-tap could only be fixed in the database. Staff need an undo.
+    const reopening = status === "SCHEDULED" && appt.status !== "SCHEDULED";
+
+    // Everything else out of a terminal state is still blocked — re-collecting an
+    // already-collected appointment would re-stamp pickedUpAt and re-fire the
+    // item transitions.
+    if (status !== undefined && status !== appt.status && appt.status !== "SCHEDULED" && !reopening) {
       return NextResponse.json(
         { error: `This appointment is already ${appt.status.toLowerCase()}.` },
         { status: 409 }
@@ -79,6 +85,16 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       await prisma.item.updateMany({
         where: { pickupAppointmentId: id },
         data: { status: "PICKED_UP", pickedUpAt: new Date(), grabbedAt: null },
+      });
+    }
+
+    // Reopening puts the items back to waiting-for-pickup. Only items this
+    // appointment actually picked up are touched, so an item that was since
+    // handed over on a different appointment isn't dragged backwards.
+    if (reopening) {
+      await prisma.item.updateMany({
+        where: { pickupAppointmentId: id, status: "PICKED_UP" },
+        data: { status: "PENDING_PICKUP", pickedUpAt: null },
       });
     }
 

@@ -244,6 +244,12 @@ model TransferRequest {
   notes          String?
   createdAt      DateTime       @default(now())
   completedAt    DateTime?
+  /// Snapshot taken at drop-off: [{ itemId, locationId }] — where each item lived
+  /// BEFORE this transfer moved it. Completing a transfer overwrites the items'
+  /// home location and unlinks them, which is otherwise unrecoverable; a transfer
+  /// can also span two warehouses, so a single origin wouldn't be enough. This is
+  /// what makes "undo drop-off" possible after a mis-tap. Cleared once reverted.
+  revertSnapshot Json?
   organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   toLocation     PickupLocation @relation("TransferTo", fields: [toLocationId], references: [id], onDelete: Cascade)
   items          Item[]
