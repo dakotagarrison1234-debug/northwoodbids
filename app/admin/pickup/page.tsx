@@ -161,6 +161,8 @@ export default function AdminPickupPage() {
   // Order staging: box the whole order up and label it once ("Box 4").
   const [stagingApptId, setStagingApptId] = useState<string | null>(null);
   const [stageSpot, setStageSpot] = useState("");
+  // Which warehouse's pickups to show ("all" = both). You work one building at a time.
+  const [apptLocationId, setApptLocationId] = useState<string>("all");
   const [apptSearch, setApptSearch] = useState("");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -364,8 +366,18 @@ export default function AdminPickupPage() {
     }
   };
 
-  const scheduled = appointments.filter((a) => a.status === "SCHEDULED");
-  const collected = appointments.filter((a) => a.status === "COLLECTED");
+  // Warehouse filter — you physically work one building at a time, so picking
+  // Owosso should make Gladwin's pickups disappear entirely rather than sit there
+  // as noise. Scopes this whole screen: today, coming up, and collected.
+  const inWarehouse = (a: Appointment) => apptLocationId === "all" || a.locationId === apptLocationId;
+  const scheduled = appointments.filter((a) => a.status === "SCHEDULED" && inWarehouse(a));
+  const collected = appointments.filter((a) => a.status === "COLLECTED" && inWarehouse(a));
+
+  // Counts per warehouse for the chips — from SCHEDULED only, unfiltered, so each
+  // chip always shows that warehouse's real workload.
+  const scheduledAll = appointments.filter((a) => a.status === "SCHEDULED");
+  const countFor = (locId: string) =>
+    locId === "all" ? scheduledAll.length : scheduledAll.filter((a) => a.locationId === locId).length;
 
   // Master-detail: searchable, soonest-first list; selecting one shows only that
   // customer's items. Falls back to the first match so a customer is always shown.
@@ -625,6 +637,32 @@ export default function AdminPickupPage() {
           <div className="text-center py-20 text-base text-[#8a7559]">Loading…</div>
         ) : tab === "appointments" ? (
           <div className="space-y-8">
+            {/* ── Warehouse switch ── scopes everything below it. ── */}
+            {locations.length > 1 && (
+              <div className="max-w-3xl -mb-4">
+                <div className="flex flex-wrap gap-2">
+                  {[{ id: "all", name: "All warehouses" }, ...locations].map((l) => {
+                    const active = apptLocationId === l.id;
+                    const n = countFor(l.id);
+                    return (
+                      <button
+                        key={l.id}
+                        onClick={() => { setApptLocationId(l.id); setSelectedApptId(null); setStagingApptId(null); }}
+                        className={`px-4 py-2.5 rounded-xl text-base font-bold border-2 transition-colors ${
+                          active
+                            ? "bg-[#6c4d39] text-white border-[#6c4d39]"
+                            : "bg-white text-[#4a3a2b] border-[#cdbda3] hover:bg-[#efe3d0]"
+                        }`}
+                      >
+                        {l.name}
+                        <span className={`ml-2 text-sm ${active ? "text-[#e8d9c2]" : "text-[#8a7559]"}`}>{n}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* ── TODAY ── The day's actual work, first and unmissable. ── */}
             <div className="max-w-3xl">
               <div className={`rounded-2xl border-2 p-5 mb-3 ${
@@ -640,6 +678,9 @@ export default function AdminPickupPage() {
                       allTodayStaged && todayAppts.length > 0 ? "text-[#d8e6c8]" : "text-[#8a5a2b]"
                     }`}>
                       Today
+                      {apptLocationId !== "all" && (
+                        <> · {locations.find((l) => l.id === apptLocationId)?.name}</>
+                      )}
                     </div>
                     <div className={`text-2xl font-extrabold mt-0.5 ${
                       allTodayStaged && todayAppts.length > 0 ? "text-white" : "text-[#241a12]"
