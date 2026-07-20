@@ -80,6 +80,21 @@ function fmtDateTime(iso: string) {
     minute: "2-digit",
   });
 }
+/** Just the clock time — the day is already implied by the section it's in. */
+function fmtTimeOnly(iso: string) {
+  return new Date(iso).toLocaleString("en-US", {
+    timeZone: "America/Detroit",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+/** Michigan-local YYYY-MM-DD, so "today" means today in the warehouse, not UTC. */
+function detroitDayKey(d: Date | string) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Detroit",
+    year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(new Date(d));
+}
 function minutesToLabel(mins: number) {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
@@ -374,6 +389,16 @@ export default function AdminPickupPage() {
     (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()
   );
   const filteredScheduled = sortedScheduled.filter((a) => apptMatches(a, apptSearch));
+
+  // Today's pickups are the actual job — everything else is planning. Split them out
+  // so the day's work is the first thing on screen, in time order, with staging
+  // progress you can see without counting.
+  const todayKey = detroitDayKey(new Date());
+  const todayAppts = filteredScheduled.filter((a) => detroitDayKey(a.startsAt) === todayKey);
+  const laterAppts = filteredScheduled.filter((a) => detroitDayKey(a.startsAt) !== todayKey);
+  const todayStaged = todayAppts.filter((a) => a.stagedSpot).length;
+  const todayItems = todayAppts.reduce((s, a) => s + a.items.length, 0);
+  const allTodayStaged = todayAppts.length > 0 && todayStaged === todayAppts.length;
   const allActiveTransfers = transfers.filter(
     (t) => t.status === "REQUESTED" || t.status === "LOADED"
   );
@@ -402,6 +427,157 @@ export default function AdminPickupPage() {
     transferDir === "all"
       ? allActiveTransfers
       : allActiveTransfers.filter((t) => transferDirLabel(t) === transferDir);
+
+  // The expanded appointment panel — items to gather, the staging box, and the
+  // actions. Shared by Today and Coming up so the two lists can never drift apart.
+  const ApptDetail = ({ a }: { a: Appointment }) => (
+    <div className="px-5 pb-5 pt-1 border-t border-[#efe3d0]">
+    {(a.bidder.email || a.bidder.phone) && (
+      <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-3 text-base text-[#6f5b46]">
+        {a.bidder.email && <span>{a.bidder.email}</span>}
+        {a.bidder.phone && <span>{a.bidder.phone}</span>}
+      </div>
+    )}
+
+    <div className="mt-4">
+      <div className="text-sm font-semibold text-[#8a7559] uppercase tracking-wide mb-2">
+        {a.items.length} item{a.items.length !== 1 ? "s" : ""} to gather
+      </div>
+      <ul className="text-base text-[#241a12] space-y-2">
+        {a.items.map((it) => (
+          <li key={it.id} className="flex items-start gap-2 bg-[#f1e7d5] rounded-xl px-4 py-2.5">
+            {it.itemCode && (
+              <span className="font-mono font-bold text-[#6c4d39] bg-[#6c4d39]/10 border border-[#6c4d39]/20 rounded px-1.5 py-0.5 text-sm shrink-0">{it.itemCode}</span>
+            )}
+            <span>{it.title}{it.storageLocation ? <span className="text-[#8a7559] text-sm"> · {it.storageLocation}</span> : null}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    {/* Reschedule editor */}
+    {editingApptId === a.id ? (
+      <div className="mt-4 bg-[#f1e7d5] rounded-xl p-4 space-y-3">
+        <div>
+          <label className="block text-base font-semibold mb-1">Date & time (Michigan)</label>
+          <input
+            type="datetime-local"
+            value={editStartsAt}
+            onChange={(e) => setEditStartsAt(e.target.value)}
+            className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-base"
+          />
+        </div>
+        <div>
+          <label className="block text-base font-semibold mb-1">Location</label>
+          <select
+            value={editLocationId}
+            onChange={(e) => setEditLocationId(e.target.value)}
+            className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-base"
+          >
+            {locations.map((l) => (
+              <option key={l.id} value={l.id}>{l.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => saveReschedule(a.id)}
+            className="flex-1 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold text-base py-3 rounded-xl"
+          >
+            Save
+          </button>
+          <button
+            onClick={() => setEditingApptId(null)}
+            className="flex-1 bg-white border border-[#cdbda3] text-[#6f5b46] font-semibold text-base py-3 rounded-xl"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    ) : stagingApptId === a.id ? (
+      /* Stage the order: one spot for everything above. */
+      <div className="mt-4 bg-[#f1e7d5] rounded-xl p-4">
+        <label className="block text-base font-semibold mb-1">
+          Where is this order boxed up?
+        </label>
+        <p className="text-sm text-[#6f5b46] mb-2">
+          The customer sees this on their pickup screen. It clears itself once collected.
+        </p>
+        <input
+          type="text"
+          autoFocus
+          value={stageSpot}
+          onChange={(e) => setStageSpot(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") saveStage(a.id, stageSpot); }}
+          placeholder="Box 4"
+          className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-base"
+        />
+        <div className="flex gap-2 mt-3">
+          <button
+            onClick={() => saveStage(a.id, stageSpot)}
+            disabled={!stageSpot.trim()}
+            className="flex-1 bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-40 text-white font-semibold text-base py-3 rounded-xl"
+          >
+            {a.stagedSpot ? "Update spot" : "Stage order"}
+          </button>
+          <button
+            onClick={() => { setStagingApptId(null); setStageSpot(""); }}
+            className="flex-1 bg-white border border-[#cdbda3] text-[#6f5b46] font-semibold text-base py-3 rounded-xl"
+          >
+            Cancel
+          </button>
+        </div>
+        {a.stagedSpot && (
+          <button
+            onClick={() => saveStage(a.id, "")}
+            className="w-full mt-2 text-base font-semibold text-red-600 py-2"
+          >
+            Un-stage this order
+          </button>
+        )}
+      </div>
+    ) : (
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button
+          onClick={() => { setStagingApptId(a.id); setStageSpot(a.stagedSpot ?? ""); }}
+          className={`font-semibold text-base px-4 py-2.5 rounded-xl border ${
+            a.stagedSpot
+              ? "bg-[#efe3d0] border-[#cdbda3] text-[#6c4d39]"
+              : "bg-[#8a5a2b] border-[#8a5a2b] text-white"
+          }`}
+        >
+          {a.stagedSpot ? `Staged in ${a.stagedSpot}` : "Stage order"}
+        </button>
+        <button
+          onClick={() => startEdit(a)}
+          className="bg-white border border-[#cdbda3] text-[#6f5b46] hover:bg-[#efe3d0] font-semibold text-base px-4 py-2.5 rounded-xl"
+        >
+          Reschedule
+        </button>
+        <button
+          onClick={() => askConfirm(
+            "Mark this whole order as picked up? Every item on it will be marked collected and the staging spot frees up.",
+            () => markCollected(a.id),
+            { confirmLabel: "Order picked up" }
+          )}
+          className="bg-[#5f7a45] hover:bg-[#4f6639] text-white font-semibold text-base px-4 py-2.5 rounded-xl"
+        >
+          Order picked up
+        </button>
+        <button
+          onClick={() => askConfirm(
+            "Cancel this appointment? Its items will return to the unscheduled list.",
+            () => cancelAppt(a.id),
+            { confirmLabel: "Cancel appointment", danger: true }
+          )}
+          className="bg-white border border-red-500/30 text-red-600 hover:bg-red-50 font-semibold text-base px-4 py-2.5 rounded-xl"
+        >
+          Cancel
+        </button>
+      </div>
+    )}
+    </div>
+  );
 
   return (
     <>
@@ -449,10 +625,124 @@ export default function AdminPickupPage() {
           <div className="text-center py-20 text-base text-[#8a7559]">Loading…</div>
         ) : tab === "appointments" ? (
           <div className="space-y-8">
-            {/* Scheduled — master/detail: pick a customer, see only their items */}
+            {/* ── TODAY ── The day's actual work, first and unmissable. ── */}
+            <div className="max-w-3xl">
+              <div className={`rounded-2xl border-2 p-5 mb-3 ${
+                todayAppts.length === 0
+                  ? "bg-white border-[#e3d6bf]"
+                  : allTodayStaged
+                  ? "bg-[#5f7a45] border-[#5f7a45] text-white"
+                  : "bg-[#f6ecda] border-[#e3c9a3]"
+              }`}>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className={`text-sm font-bold uppercase tracking-wider ${
+                      allTodayStaged && todayAppts.length > 0 ? "text-[#d8e6c8]" : "text-[#8a5a2b]"
+                    }`}>
+                      Today
+                    </div>
+                    <div className={`text-2xl font-extrabold mt-0.5 ${
+                      allTodayStaged && todayAppts.length > 0 ? "text-white" : "text-[#241a12]"
+                    }`}>
+                      {todayAppts.length === 0
+                        ? "No pickups today"
+                        : `${todayAppts.length} pickup${todayAppts.length !== 1 ? "s" : ""} · ${todayItems} item${todayItems !== 1 ? "s" : ""}`}
+                    </div>
+                  </div>
+                  {todayAppts.length > 0 && (
+                    <div className="text-right shrink-0">
+                      <div className={`text-3xl font-extrabold tabular-nums ${
+                        allTodayStaged ? "text-white" : "text-[#6c4d39]"
+                      }`}>
+                        {todayStaged}/{todayAppts.length}
+                      </div>
+                      <div className={`text-xs font-bold uppercase tracking-wide ${
+                        allTodayStaged ? "text-[#d8e6c8]" : "text-[#8a5a2b]"
+                      }`}>
+                        staged
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {todayAppts.length > 0 && (
+                  <>
+                    <div className={`mt-3 h-2.5 rounded-full overflow-hidden ${allTodayStaged ? "bg-white/25" : "bg-white"}`}>
+                      <div
+                        className={`h-full rounded-full transition-all ${allTodayStaged ? "bg-white" : "bg-[#5f7a45]"}`}
+                        style={{ width: `${(todayStaged / todayAppts.length) * 100}%` }}
+                      />
+                    </div>
+                    <p className={`text-sm mt-2.5 ${allTodayStaged ? "text-[#d8e6c8]" : "text-[#6f5b46]"}`}>
+                      {allTodayStaged
+                        ? "Everything's boxed and labeled. You're ready for the day."
+                        : `${todayAppts.length - todayStaged} order${todayAppts.length - todayStaged !== 1 ? "s" : ""} still to gather and label.`}
+                    </p>
+                  </>
+                )}
+              </div>
+
+              {todayAppts.length > 0 && (
+                <div className="space-y-2">
+                  {todayAppts.map((a) => {
+                    const expanded = selectedApptId === a.id;
+                    return (
+                      <div
+                        key={a.id}
+                        className={`bg-white border-2 rounded-xl overflow-hidden ${
+                          a.stagedSpot ? "border-[#5f7a45]/40" : "border-[#e3c9a3]"
+                        }`}
+                      >
+                        <button
+                          onClick={() => setSelectedApptId(expanded ? null : a.id)}
+                          className="w-full text-left px-4 py-3.5 flex items-center gap-3 hover:bg-[#faf5ea] transition-colors"
+                        >
+                          {/* Time leads — you work a day in time order. */}
+                          <div className="shrink-0 w-16 text-center">
+                            <div className="text-base font-extrabold text-[#241a12] leading-tight">
+                              {fmtTimeOnly(a.startsAt).replace(/\s?(AM|PM)/, "")}
+                            </div>
+                            <div className="text-[10px] font-bold text-[#8a7559] uppercase">
+                              {fmtTimeOnly(a.startsAt).includes("PM") ? "PM" : "AM"}
+                            </div>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold text-[#241a12] truncate">
+                              {a.bidder.name || "Unknown Bidder"}
+                            </div>
+                            <div className="text-sm text-[#6f5b46] flex flex-wrap items-center gap-x-2 gap-y-1 mt-0.5">
+                              <span>{a.items.length} item{a.items.length !== 1 ? "s" : ""}</span>
+                              <LocationBadge name={a.location.name} size="sm" />
+                            </div>
+                          </div>
+                          {a.stagedSpot ? (
+                            <span className="shrink-0 inline-flex items-center gap-1 bg-[#5f7a45] text-white rounded-lg px-2.5 py-1.5 text-sm font-bold">
+                              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8.5l3.5 3.5L13 5" /></svg>
+                              {a.stagedSpot}
+                            </span>
+                          ) : (
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              onClick={(e) => { e.stopPropagation(); setSelectedApptId(a.id); setStagingApptId(a.id); setStageSpot(""); }}
+                              onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setSelectedApptId(a.id); setStagingApptId(a.id); setStageSpot(""); } }}
+                              className="shrink-0 bg-[#8a5a2b] hover:bg-[#74491f] text-white rounded-lg px-3 py-1.5 text-sm font-bold cursor-pointer"
+                            >
+                              Stage
+                            </span>
+                          )}
+                        </button>
+                        {expanded && <ApptDetail a={a} />}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* ── Later ── everything beyond today ── */}
             <div>
               <h2 className="text-xl font-semibold mb-4">
-                Upcoming ({scheduled.length})
+                Coming up ({laterAppts.length})
               </h2>
               {scheduled.length === 0 ? (
                 <div className="text-base text-[#8a7559] bg-white border border-[#e3d6bf] rounded-xl px-5 py-8 text-center">
@@ -467,11 +757,13 @@ export default function AdminPickupPage() {
                     placeholder="Search customer or item…"
                     className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-base focus:outline-none focus:border-[#6c4d39]"
                   />
-                  {filteredScheduled.length === 0 ? (
-                    <p className="text-base text-[#8a7559] px-1 py-3">No matches.</p>
+                  {laterAppts.length === 0 ? (
+                    <p className="text-base text-[#8a7559] px-1 py-3">
+                      {apptSearch ? "No matches." : "Nothing scheduled beyond today."}
+                    </p>
                   ) : (
                     <div className="space-y-2">
-                      {filteredScheduled.map((a) => {
+                      {laterAppts.map((a) => {
                         const expanded = selectedApptId === a.id;
                         return (
                           <div key={a.id} className="bg-white border border-[#e3d6bf] rounded-xl overflow-hidden">
@@ -507,154 +799,7 @@ export default function AdminPickupPage() {
                             </button>
 
                             {/* Expanded detail — items + actions */}
-                            {expanded && (
-                              <div className="px-5 pb-5 pt-1 border-t border-[#efe3d0]">
-                                {(a.bidder.email || a.bidder.phone) && (
-                                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-3 text-base text-[#6f5b46]">
-                                    {a.bidder.email && <span>{a.bidder.email}</span>}
-                                    {a.bidder.phone && <span>{a.bidder.phone}</span>}
-                                  </div>
-                                )}
-
-                                <div className="mt-4">
-                                  <div className="text-sm font-semibold text-[#8a7559] uppercase tracking-wide mb-2">
-                                    {a.items.length} item{a.items.length !== 1 ? "s" : ""} to gather
-                                  </div>
-                                  <ul className="text-base text-[#241a12] space-y-2">
-                                    {a.items.map((it) => (
-                                      <li key={it.id} className="flex items-start gap-2 bg-[#f1e7d5] rounded-xl px-4 py-2.5">
-                                        {it.itemCode && (
-                                          <span className="font-mono font-bold text-[#6c4d39] bg-[#6c4d39]/10 border border-[#6c4d39]/20 rounded px-1.5 py-0.5 text-sm shrink-0">{it.itemCode}</span>
-                                        )}
-                                        <span>{it.title}{it.storageLocation ? <span className="text-[#8a7559] text-sm"> · {it.storageLocation}</span> : null}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-
-                                {/* Reschedule editor */}
-                                {editingApptId === a.id ? (
-                                  <div className="mt-4 bg-[#f1e7d5] rounded-xl p-4 space-y-3">
-                                    <div>
-                                      <label className="block text-base font-semibold mb-1">Date & time (Michigan)</label>
-                                      <input
-                                        type="datetime-local"
-                                        value={editStartsAt}
-                                        onChange={(e) => setEditStartsAt(e.target.value)}
-                                        className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-base"
-                                      />
-                                    </div>
-                                    <div>
-                                      <label className="block text-base font-semibold mb-1">Location</label>
-                                      <select
-                                        value={editLocationId}
-                                        onChange={(e) => setEditLocationId(e.target.value)}
-                                        className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-base"
-                                      >
-                                        {locations.map((l) => (
-                                          <option key={l.id} value={l.id}>{l.name}</option>
-                                        ))}
-                                      </select>
-                                    </div>
-                                    <div className="flex gap-2">
-                                      <button
-                                        onClick={() => saveReschedule(a.id)}
-                                        className="flex-1 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold text-base py-3 rounded-xl"
-                                      >
-                                        Save
-                                      </button>
-                                      <button
-                                        onClick={() => setEditingApptId(null)}
-                                        className="flex-1 bg-white border border-[#cdbda3] text-[#6f5b46] font-semibold text-base py-3 rounded-xl"
-                                      >
-                                        Cancel
-                                      </button>
-                                    </div>
-                                  </div>
-                                ) : stagingApptId === a.id ? (
-                                  /* Stage the order: one spot for everything above. */
-                                  <div className="mt-4 bg-[#f1e7d5] rounded-xl p-4">
-                                    <label className="block text-base font-semibold mb-1">
-                                      Where is this order boxed up?
-                                    </label>
-                                    <p className="text-sm text-[#6f5b46] mb-2">
-                                      The customer sees this on their pickup screen. It clears itself once collected.
-                                    </p>
-                                    <input
-                                      type="text"
-                                      autoFocus
-                                      value={stageSpot}
-                                      onChange={(e) => setStageSpot(e.target.value)}
-                                      onKeyDown={(e) => { if (e.key === "Enter") saveStage(a.id, stageSpot); }}
-                                      placeholder="Box 4"
-                                      className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-base"
-                                    />
-                                    <div className="flex gap-2 mt-3">
-                                      <button
-                                        onClick={() => saveStage(a.id, stageSpot)}
-                                        disabled={!stageSpot.trim()}
-                                        className="flex-1 bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-40 text-white font-semibold text-base py-3 rounded-xl"
-                                      >
-                                        {a.stagedSpot ? "Update spot" : "Stage order"}
-                                      </button>
-                                      <button
-                                        onClick={() => { setStagingApptId(null); setStageSpot(""); }}
-                                        className="flex-1 bg-white border border-[#cdbda3] text-[#6f5b46] font-semibold text-base py-3 rounded-xl"
-                                      >
-                                        Cancel
-                                      </button>
-                                    </div>
-                                    {a.stagedSpot && (
-                                      <button
-                                        onClick={() => saveStage(a.id, "")}
-                                        className="w-full mt-2 text-base font-semibold text-red-600 py-2"
-                                      >
-                                        Un-stage this order
-                                      </button>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <div className="mt-4 flex flex-wrap gap-2">
-                                    <button
-                                      onClick={() => { setStagingApptId(a.id); setStageSpot(a.stagedSpot ?? ""); }}
-                                      className={`font-semibold text-base px-4 py-2.5 rounded-xl border ${
-                                        a.stagedSpot
-                                          ? "bg-[#efe3d0] border-[#cdbda3] text-[#6c4d39]"
-                                          : "bg-[#8a5a2b] border-[#8a5a2b] text-white"
-                                      }`}
-                                    >
-                                      {a.stagedSpot ? `Staged in ${a.stagedSpot}` : "Stage order"}
-                                    </button>
-                                    <button
-                                      onClick={() => startEdit(a)}
-                                      className="bg-white border border-[#cdbda3] text-[#6f5b46] hover:bg-[#efe3d0] font-semibold text-base px-4 py-2.5 rounded-xl"
-                                    >
-                                      Reschedule
-                                    </button>
-                                    <button
-                                      onClick={() => askConfirm(
-                                        "Mark this whole order as picked up? Every item on it will be marked collected and the staging spot frees up.",
-                                        () => markCollected(a.id),
-                                        { confirmLabel: "Order picked up" }
-                                      )}
-                                      className="bg-[#5f7a45] hover:bg-[#4f6639] text-white font-semibold text-base px-4 py-2.5 rounded-xl"
-                                    >
-                                      Order picked up
-                                    </button>
-                                    <button
-                                      onClick={() => askConfirm(
-                                        "Cancel this appointment? Its items will return to the unscheduled list.",
-                                        () => cancelAppt(a.id),
-                                        { confirmLabel: "Cancel appointment", danger: true }
-                                      )}
-                                      className="bg-white border border-red-500/30 text-red-600 hover:bg-red-50 font-semibold text-base px-4 py-2.5 rounded-xl"
-                                    >
-                                      Cancel
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            )}
+                            {expanded && <ApptDetail a={a} />}
                           </div>
                         );
                       })}
