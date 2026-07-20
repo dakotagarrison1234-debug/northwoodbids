@@ -209,6 +209,11 @@ model PickupAppointment {
   locationId     String
   startsAt       DateTime
   status         PickupApptStatus  @default(SCHEDULED)
+  // Where the whole order is boxed up and waiting ("Box 4"). Set when staff stage
+  // the order, shown to the customer, and cleared the moment it's collected — so
+  // the spot is free again for the next pickup.
+  stagedSpot     String?
+  stagedAt       DateTime?
   notes          String?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt

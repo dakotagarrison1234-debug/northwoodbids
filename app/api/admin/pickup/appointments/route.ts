@@ -36,6 +36,7 @@ export async function GET() {
       startsAt: a.startsAt.toISOString(),
       status: a.status,
       notes: a.notes,
+      stagedSpot: a.stagedSpot ?? null,
       clerkUserId: a.clerkUserId,
       location: a.location,
       locationId: a.locationId,

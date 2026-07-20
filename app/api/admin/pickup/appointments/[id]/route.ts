@@ -19,7 +19,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    const { startsAt, locationId, status, notes } = await request.json();
+    const { startsAt, locationId, status, notes, stagedSpot } = await request.json();
 
     // If relocating, verify the new location belongs to this org
     if (locationId !== undefined) {
@@ -42,6 +42,18 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       );
     }
 
+    // Staging the order: one spot for the whole order ("Box 4"). Sending an empty
+    // string un-stages it. Collecting always clears it, so the spot frees up for
+    // the next pickup without anyone having to remember to reset it.
+    let stagedPatch: { stagedSpot?: string | null; stagedAt?: Date | null } = {};
+    if (stagedSpot !== undefined) {
+      const spot = String(stagedSpot ?? "").trim();
+      stagedPatch = spot ? { stagedSpot: spot, stagedAt: new Date() } : { stagedSpot: null, stagedAt: null };
+    }
+    if (status === "COLLECTED" || status === "CANCELLED") {
+      stagedPatch = { stagedSpot: null, stagedAt: null };
+    }
+
     const updated = await prisma.pickupAppointment.update({
       where: { id },
       data: {
@@ -49,6 +61,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
         ...(locationId !== undefined && { locationId }),
         ...(status !== undefined && { status }),
         ...(notes !== undefined && { notes: notes ? String(notes) : null }),
+        ...stagedPatch,
       },
     });
 

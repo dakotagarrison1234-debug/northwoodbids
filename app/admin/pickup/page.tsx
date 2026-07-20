@@ -42,6 +42,7 @@ interface Appointment {
   startsAt: string;
   status: "SCHEDULED" | "COLLECTED" | "CANCELLED";
   notes: string | null;
+  stagedSpot: string | null;
   clerkUserId: string;
   locationId: string;
   location: { id: string; name: string };
@@ -142,6 +143,9 @@ export default function AdminPickupPage() {
   // direction ("Gladwin → Owosso") so a run can be picked out at a glance.
   const [expandedTransferId, setExpandedTransferId] = useState<string | null>(null);
   const [transferDir, setTransferDir] = useState<string>("all");
+  // Order staging: box the whole order up and label it once ("Box 4").
+  const [stagingApptId, setStagingApptId] = useState<string | null>(null);
+  const [stageSpot, setStageSpot] = useState("");
   const [apptSearch, setApptSearch] = useState("");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -215,6 +219,26 @@ export default function AdminPickupPage() {
       } else flash(d.error || "Could not update.", false);
     } catch {
       flash("Something went wrong.", false);
+    }
+  };
+
+  // Stage (or re-label) a whole order in one spot. Blank spot un-stages it.
+  const saveStage = async (id: string, spot: string) => {
+    try {
+      const res = await fetch(`/api/admin/pickup/appointments/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stagedSpot: spot }),
+      });
+      const d = await res.json();
+      if (d.success) {
+        flash(spot.trim() ? `Order staged in ${spot.trim()}.` : "Order un-staged.", true);
+        setStagingApptId(null);
+        setStageSpot("");
+        loadAppointments();
+      } else flash(d.error || "Could not stage the order.", false);
+    } catch {
+      flash("Could not stage the order.", false);
     }
   };
 
@@ -463,6 +487,13 @@ export default function AdminPickupPage() {
                                 <div className="text-sm text-[#6f5b46] mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
                                   <span className="font-semibold text-[#241a12]">{fmtDateTime(a.startsAt)}</span>
                                   <LocationBadge name={a.location.name} size="sm" />
+                                  {/* Staged orders are ready to hand over — call that out on the row. */}
+                                  {a.stagedSpot && (
+                                    <span className="inline-flex items-center gap-1 bg-[#5f7a45]/12 text-[#4f6639] border border-[#5f7a45]/25 rounded-full px-2 py-0.5 font-bold">
+                                      <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 5.5h12v8H2zM2 5.5 4 2.5h8l2 3M8 2.5v11" /></svg>
+                                      {a.stagedSpot}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                               <div className="flex items-center gap-3 shrink-0">
@@ -540,8 +571,60 @@ export default function AdminPickupPage() {
                                       </button>
                                     </div>
                                   </div>
+                                ) : stagingApptId === a.id ? (
+                                  /* Stage the order: one spot for everything above. */
+                                  <div className="mt-4 bg-[#f1e7d5] rounded-xl p-4">
+                                    <label className="block text-base font-semibold mb-1">
+                                      Where is this order boxed up?
+                                    </label>
+                                    <p className="text-sm text-[#6f5b46] mb-2">
+                                      The customer sees this on their pickup screen. It clears itself once collected.
+                                    </p>
+                                    <input
+                                      type="text"
+                                      autoFocus
+                                      value={stageSpot}
+                                      onChange={(e) => setStageSpot(e.target.value)}
+                                      onKeyDown={(e) => { if (e.key === "Enter") saveStage(a.id, stageSpot); }}
+                                      placeholder="Box 4"
+                                      className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-base"
+                                    />
+                                    <div className="flex gap-2 mt-3">
+                                      <button
+                                        onClick={() => saveStage(a.id, stageSpot)}
+                                        disabled={!stageSpot.trim()}
+                                        className="flex-1 bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-40 text-white font-semibold text-base py-3 rounded-xl"
+                                      >
+                                        {a.stagedSpot ? "Update spot" : "Stage order"}
+                                      </button>
+                                      <button
+                                        onClick={() => { setStagingApptId(null); setStageSpot(""); }}
+                                        className="flex-1 bg-white border border-[#cdbda3] text-[#6f5b46] font-semibold text-base py-3 rounded-xl"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                    {a.stagedSpot && (
+                                      <button
+                                        onClick={() => saveStage(a.id, "")}
+                                        className="w-full mt-2 text-base font-semibold text-red-600 py-2"
+                                      >
+                                        Un-stage this order
+                                      </button>
+                                    )}
+                                  </div>
                                 ) : (
                                   <div className="mt-4 flex flex-wrap gap-2">
+                                    <button
+                                      onClick={() => { setStagingApptId(a.id); setStageSpot(a.stagedSpot ?? ""); }}
+                                      className={`font-semibold text-base px-4 py-2.5 rounded-xl border ${
+                                        a.stagedSpot
+                                          ? "bg-[#efe3d0] border-[#cdbda3] text-[#6c4d39]"
+                                          : "bg-[#8a5a2b] border-[#8a5a2b] text-white"
+                                      }`}
+                                    >
+                                      {a.stagedSpot ? `Staged in ${a.stagedSpot}` : "Stage order"}
+                                    </button>
                                     <button
                                       onClick={() => startEdit(a)}
                                       className="bg-white border border-[#cdbda3] text-[#6f5b46] hover:bg-[#efe3d0] font-semibold text-base px-4 py-2.5 rounded-xl"
@@ -550,13 +633,13 @@ export default function AdminPickupPage() {
                                     </button>
                                     <button
                                       onClick={() => askConfirm(
-                                        "Mark this appointment as collected? All its items will be marked picked up.",
+                                        "Mark this whole order as picked up? Every item on it will be marked collected and the staging spot frees up.",
                                         () => markCollected(a.id),
-                                        { confirmLabel: "Mark Collected" }
+                                        { confirmLabel: "Order picked up" }
                                       )}
                                       className="bg-[#5f7a45] hover:bg-[#4f6639] text-white font-semibold text-base px-4 py-2.5 rounded-xl"
                                     >
-                                      Mark Collected
+                                      Order picked up
                                     </button>
                                     <button
                                       onClick={() => askConfirm(

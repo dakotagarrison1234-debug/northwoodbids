@@ -61,6 +61,8 @@ export async function GET() {
     const mapAppt = (a: (typeof scheduledAppts)[number]) => ({
       id: a.id,
       startsAt: a.startsAt.toISOString(),
+      // Set once staff box the whole order up — "your order is in Box 4".
+      stagedSpot: a.stagedSpot ?? null,
       location: {
         id: a.location.id,
         name: a.location.name,

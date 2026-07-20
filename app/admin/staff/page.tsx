@@ -29,6 +29,9 @@ export default function StaffPage() {
   const [sending, setSending] = useState(false);
   const [inviteUrl, setInviteUrl] = useState("");
   const [error, setError] = useState("");
+  const [confirmDialog, setConfirmDialog] = useState<
+    { text: string; confirmLabel: string; danger?: boolean; onConfirm: () => void } | null
+  >(null);
 
   const load = () => {
     Promise.all([
@@ -47,27 +50,35 @@ export default function StaffPage() {
   const canInvite = myRole === "OWNER" || myRole === "ADMIN";
   const canRemove = myRole === "OWNER";
 
-  const revokeInvite = async (inviteId: string, email: string) => {
-    if (!confirm(`Revoke invite for ${email}?`)) return;
+  // In-app confirm — native confirm() is silently blocked in the installed/PWA
+  // webview, so these buttons did nothing at all there.
+  const doRevokeInvite = async (inviteId: string) => {
     const res = await fetch(`/api/orgs/invite/${inviteId}`, { method: "DELETE" });
     const data = await res.json();
-    if (data.success) {
-      load();
-    } else {
-      alert("Error: " + (data.error || "Failed to revoke invite"));
-    }
+    if (data.success) load();
+    else setError(data.error || "Failed to revoke invite.");
   };
+  const revokeInvite = (inviteId: string, email: string) =>
+    setConfirmDialog({
+      text: `Revoke the invite for ${email}? Their link will stop working.`,
+      confirmLabel: "Revoke invite",
+      danger: true,
+      onConfirm: () => doRevokeInvite(inviteId),
+    });
 
-  const removeMember = async (memberId: string, name: string) => {
-    if (!confirm(`Remove ${name} from the team? They will lose access immediately.`)) return;
+  const doRemoveMember = async (memberId: string) => {
     const res = await fetch(`/api/orgs/members/${memberId}`, { method: "DELETE" });
     const data = await res.json();
-    if (data.success) {
-      load();
-    } else {
-      alert("Error: " + (data.error || "Failed to remove member"));
-    }
+    if (data.success) load();
+    else setError(data.error || "Failed to remove member.");
   };
+  const removeMember = (memberId: string, name: string) =>
+    setConfirmDialog({
+      text: `Remove ${name} from the team? They lose access immediately.`,
+      confirmLabel: "Remove",
+      danger: true,
+      onConfirm: () => doRemoveMember(memberId),
+    });
 
   const handleInvite = async () => {
     if (!email.trim()) { setError("Email is required."); return; }
@@ -259,6 +270,28 @@ export default function StaffPage() {
           </section>
         )}
       </div>
+
+      {/* In-app confirmation (native confirm() is blocked in some installed/PWA webviews) */}
+      {confirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setConfirmDialog(null)}>
+          <div className="bg-white rounded-2xl border border-[#cdbda3] max-w-sm w-full p-6 shadow-xl text-left" onClick={(e) => e.stopPropagation()}>
+            <p className="text-base text-[#241a12]">{confirmDialog.text}</p>
+            <div className="mt-5 flex gap-3">
+              <button onClick={() => setConfirmDialog(null)} className="flex-1 bg-white border border-[#cdbda3] text-[#6f5b46] hover:bg-[#efe3d0] font-semibold text-base py-3 rounded-xl">
+                Back
+              </button>
+              <button
+                onClick={() => { const fn = confirmDialog.onConfirm; setConfirmDialog(null); fn(); }}
+                className={`flex-1 text-white font-semibold text-base py-3 rounded-xl ${
+                  confirmDialog.danger ? "bg-red-600 hover:bg-red-700" : "bg-[#6c4d39] hover:bg-[#563e2c]"
+                }`}
+              >
+                {confirmDialog.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

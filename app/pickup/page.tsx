@@ -42,6 +42,8 @@ interface ApptLocation {
 interface Appointment {
   id: string;
   startsAt: string;
+  /** Set once staff box the order up — "your order is in Box 4". */
+  stagedSpot: string | null;
   location: ApptLocation;
   items: ItemCard[];
 }
@@ -458,8 +460,13 @@ export default function PickupPage() {
     }
   };
 
-  const cancelById = async (id: string) => {
-    if (!confirm("Cancel this pickup appointment? Your items will go back to the waiting list.")) return;
+  // Confirm modal state — native confirm() is silently blocked in the installed app,
+  // which made "Cancel pickup" look like a dead button.
+  const [confirmDialog, setConfirmDialog] = useState<
+    { text: string; confirmLabel: string; danger?: boolean; onConfirm: () => void } | null
+  >(null);
+
+  const doCancelById = async (id: string) => {
     setBusy(true);
     setMsg(null);
     try {
@@ -478,7 +485,41 @@ export default function PickupPage() {
       setBusy(false);
     }
   };
+  const cancelById = (id: string) =>
+    setConfirmDialog({
+      text: "Cancel this pickup? Your items go back to the waiting list and you can book a new time whenever you're ready.",
+      confirmLabel: "Cancel pickup",
+      danger: true,
+      onConfirm: () => doCancelById(id),
+    });
   const cancel = () => { if (data?.appointment) cancelById(data.appointment.id); };
+
+  // Customer confirming they've collected their order. Same effect as staff pressing
+  // "Order picked up": items are marked collected and the staged spot frees up.
+  const doCollect = async (id: string) => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/pickup/${id}/collect`, { method: "POST" });
+      const d = await res.json();
+      if (d.success) {
+        setMsg({ text: "All set — thanks for picking up! Enjoy your wins.", ok: true });
+        load();
+      } else {
+        setMsg({ text: d.error || "Could not update. Please try again.", ok: false });
+      }
+    } catch {
+      setMsg({ text: "Something went wrong. Please try again.", ok: false });
+    } finally {
+      setBusy(false);
+    }
+  };
+  const collectById = (id: string) =>
+    setConfirmDialog({
+      text: "Mark this order as picked up? Only do this once you actually have your items.",
+      confirmLabel: "Yes, I got it",
+      onConfirm: () => doCollect(id),
+    });
 
   if (!isLoaded || loading) {
     return (
@@ -679,6 +720,28 @@ export default function PickupPage() {
                     <div className={`text-2xl font-extrabold mt-1 ${apptPassed ? "text-amber-700" : "text-green-700"}`}>{fmtDateTime(appointment.startsAt)}</div>
                     {apptPassed && <div className="text-sm text-[#6f5b46] mt-2">Please reschedule below, or contact us if you already picked up.</div>}
                   </div>
+                  {/* Order is boxed and waiting — the single most useful thing we can
+                      tell them, so it sits above everything else. */}
+                  {appointment.stagedSpot && (
+                    <div className="bg-[#5f7a45] text-white px-6 py-5">
+                      <div className="flex items-center gap-3">
+                        <span className="w-11 h-11 rounded-2xl bg-white/20 grid place-items-center shrink-0">
+                          <svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 5.5h12v8H2zM2 5.5 4 2.5h8l2 3M8 2.5v11" /></svg>
+                        </span>
+                        <div className="min-w-0">
+                          <div className="text-sm font-bold uppercase tracking-wider text-[#d8e6c8]">
+                            Your order is boxed &amp; ready
+                          </div>
+                          <div className="text-2xl font-extrabold leading-tight mt-0.5">
+                            Ask for {appointment.stagedSpot}
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-base text-[#d8e6c8] mt-3">
+                        Everything below is packed together in one spot — just give this to whoever meets you.
+                      </p>
+                    </div>
+                  )}
                   <div className="px-6 py-5">
                     <LocationBadge name={appointment.location.name} />
                     {appointment.location.address && <div className="text-base text-[#6f5b46] mt-0.5">{appointment.location.address}</div>}
@@ -689,6 +752,16 @@ export default function PickupPage() {
                       className="mt-4 inline-flex items-center gap-2 bg-[#efe3d0] hover:bg-[#e3d6bf] border border-[#cdbda3] text-[#6c4d39] font-semibold text-base px-4 py-2.5 rounded-xl transition-colors">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
                       Add to calendar
+                    </button>
+
+                    {/* Let them close it out themselves — saves staff chasing it. */}
+                    <button
+                      type="button"
+                      onClick={() => collectById(appointment.id)}
+                      disabled={busy}
+                      className="mt-3 w-full bg-[#5f7a45] hover:bg-[#4f6639] disabled:opacity-50 text-white font-bold text-base py-3.5 rounded-xl transition-colors"
+                    >
+                      I picked up my order
                     </button>
                   </div>
                 </div>
@@ -862,6 +935,28 @@ export default function PickupPage() {
           </div>
         )}
       </div>
+
+      {/* In-app confirmation — native confirm() is blocked in the installed app. */}
+      {confirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setConfirmDialog(null)}>
+          <div className="bg-white rounded-2xl border border-[#cdbda3] max-w-sm w-full p-6 shadow-xl text-left" onClick={(e) => e.stopPropagation()}>
+            <p className="text-base text-[#241a12]">{confirmDialog.text}</p>
+            <div className="mt-5 flex gap-3">
+              <button onClick={() => setConfirmDialog(null)} className="flex-1 bg-white border border-[#cdbda3] text-[#6f5b46] hover:bg-[#efe3d0] font-semibold text-base py-3 rounded-xl">
+                Back
+              </button>
+              <button
+                onClick={() => { const fn = confirmDialog.onConfirm; setConfirmDialog(null); fn(); }}
+                className={`flex-1 text-white font-semibold text-base py-3 rounded-xl ${
+                  confirmDialog.danger ? "bg-red-600 hover:bg-red-700" : "bg-[#5f7a45] hover:bg-[#4f6639]"
+                }`}
+              >
+                {confirmDialog.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
