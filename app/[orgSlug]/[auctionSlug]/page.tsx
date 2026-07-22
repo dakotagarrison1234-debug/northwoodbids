@@ -363,16 +363,6 @@ export default async function AuctionPage({ params }: Props) {
                       </div>
                     )}
 
-                    {/* Size sits ON the photo, bottom-right — the one free corner.
-                        Buried in the grey meta line a bare "M" was invisible, and for
-                        apparel size is the single attribute that decides whether the
-                        listing is even worth opening. Solid dark chip so it reads
-                        against any photo. */}
-                    {item.size && (
-                      <div className="absolute bottom-2.5 right-2.5 z-10 bg-white text-[#241a12] text-xs px-2.5 py-1 rounded-lg font-extrabold uppercase tracking-wide shadow-md max-w-[70%] truncate">
-                        {item.size}
-                      </div>
-                    )}
                   </div>
 
                   {/* ── Info. Fixed-shape block: title (2 lines), meta (1 line), then
@@ -383,12 +373,22 @@ export default async function AuctionPage({ params }: Props) {
                       {item.title}
                     </h3>
 
-                    {/* Condition and size on ONE line. They used to be two separate
-                        micro-rows, and the size row only existed sometimes — which is
-                        what made card heights jump around. */}
-                    <p className="text-[11px] text-[#8a7559] capitalize truncate mt-0.5">
-                      {metaBits.join(" · ")}
-                    </p>
+                    {/* Condition left, size right — ONE row, always rendered, so card
+                        heights can't diverge. Size lives here rather than on the photo:
+                        with the countdown, status badge and N-Pack chip already up
+                        there, a fourth overlay made the image feel cluttered. Labelling
+                        it "Size:" is what makes a bare "M" legible — unlabelled it just
+                        looked like a stray letter. */}
+                    <div className="flex items-center justify-between gap-2 mt-1">
+                      <span className="text-[11px] text-[#8a7559] capitalize truncate">
+                        {metaBits.join(" · ")}
+                      </span>
+                      {item.size && (
+                        <span className="shrink-0 max-w-[60%] truncate text-[11px] bg-[#efe3d0] border border-[#cdbda3] text-[#241a12] rounded-md px-1.5 py-0.5">
+                          Size <span className="font-extrabold">{item.size}</span>
+                        </span>
+                      )}
+                    </div>
 
                     <div className="mt-auto pt-2.5">
                       <div className="flex items-end justify-between gap-2">
