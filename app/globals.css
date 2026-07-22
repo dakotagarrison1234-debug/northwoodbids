@@ -37,6 +37,28 @@ html, body {
   max-width: 100%;
 }
 
+/* ── Quick-bid button feedback ──
+   The arming window drains a bar left→right so the confirm state visibly expires;
+   the sweep is the "landed" moment. Both are short and non-blocking — the point is
+   to feel decisive, not to make anyone wait for an animation.
+   Respects prefers-reduced-motion below. */
+@keyframes quickbid-drain {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+@keyframes quickbid-sweep {
+  0%   { opacity: 0; transform: translateX(-100%) skewX(-12deg); }
+  35%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(120%) skewX(-12deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Keep the state changes (colour/text) — drop the movement. */
+  .animate-\[quickbid-sweep_600ms_ease-out\],
+  .animate-\[quickbid-drain_2600ms_linear_forwards\] {
+    animation: none !important;
+  }
+}
+
 /* ── Stop iOS Safari auto-zooming on focus ──
    iOS zooms the whole page whenever you tap a form field whose font-size is under
    16px, and it does NOT zoom back out afterwards — you're left pinching to recover

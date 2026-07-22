@@ -50,9 +50,12 @@ export default function ItemPage() {
   const [item, setItem] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Manual bid
-  const [bidAmount, setBidAmount] = useState("");
+  // Bidding
   const [placing, setPlacing] = useState(false);
+  // Double-tap quick bid: armed = first tap landed, waiting for the confirm tap.
+  const [quickArmed, setQuickArmed] = useState(false);
+  const [bidFlash, setBidFlash] = useState(false);
+  const armTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
   // Proxy bid
@@ -286,23 +289,54 @@ export default function ItemPage() {
   }, []);
 
   // Manual bid handler
-  const handleBid = async () => {
+  /**
+   * Double-tap quick bid.
+   *
+   * First tap arms (2.6s window), second tap places the next minimum increment.
+   * A single tap deliberately does nothing: this spends real money, and a stray
+   * thumb on a scrolling page shouldn't cost anyone $16. Arming is cheaper than a
+   * confirm modal — no context switch, and the second tap lands in the same spot.
+   *
+   * Haptics are best-effort. `navigator.vibrate` works on Android; iOS Safari does
+   * not expose it at all, which is why the visual feedback has to carry the moment
+   * on its own rather than being a bonus on top of the buzz.
+   */
+  const buzz = (pattern: number | number[]) => {
+    try { navigator.vibrate?.(pattern); } catch { /* unsupported — visuals cover it */ }
+  };
+
+  const handleQuickBid = () => {
     if (!isSignedIn) {
       router.push(`/sign-in?redirect_url=${encodeURIComponent(window.location.pathname)}`);
       return;
     }
-    const amount = parseFloat(bidAmount);
-    const currentBid = item?.currentBid || 0;
-    const minBid = currentBid > 0 ? getNextValidBid(currentBid) : Math.ceil(item?.startingBid || 0);
-    if (!bidAmount || amount < minBid) {
-      setMessage({ text: `Minimum bid is $${minBid.toLocaleString()}`, type: "error" });
-      return;
-    }
-    if (!Number.isInteger(amount)) {
-      setMessage({ text: "Whole dollars only — no cents.", type: "error" });
+    if (placing) return;
+
+    if (!quickArmed) {
+      setQuickArmed(true);
+      buzz(12); // light tick — "I heard you"
+      if (armTimerRef.current) clearTimeout(armTimerRef.current);
+      armTimerRef.current = setTimeout(() => setQuickArmed(false), 2600);
       return;
     }
 
+    // Second tap — commit.
+    if (armTimerRef.current) clearTimeout(armTimerRef.current);
+    setQuickArmed(false);
+    buzz([18, 40, 28]); // heavier double-thump on commit
+    const currentBid = item?.currentBid || 0;
+    const next = currentBid > 0 ? getNextValidBid(currentBid) : Math.ceil(item?.startingBid || 0);
+    void placeBid(next);
+  };
+
+  // Clear the arming timer if the user navigates away mid-window.
+  useEffect(() => () => { if (armTimerRef.current) clearTimeout(armTimerRef.current); }, []);
+
+  /**
+   * Shared bid submission. Both entry points funnel through here so the card gate,
+   * popcorn-extension handling and error paths can't drift apart.
+   */
+  const placeBid = async (amount: number) => {
     // Card gate — show modal if no card on file
     if (hasCard === false) {
       setShowCardModal(true);
@@ -319,11 +353,14 @@ export default function ItemPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setBidAmount("");
         if (data.proxyFired) {
           setMessage({ text: `Bid of $${amount.toLocaleString()} placed — instantly outbid by an active max bid.`, type: "error" });
+          buzz([10, 60, 10]); // stutter = "you're already behind again"
         } else {
-          setMessage({ text: `Bid of $${amount.toLocaleString()} placed!`, type: "success" });
+          setMessage({ text: `You're the top bid at $${amount.toLocaleString()}!`, type: "success" });
+          // Success moment: light sweep across the button + a confident buzz.
+          setBidFlash(true);
+          setTimeout(() => setBidFlash(false), 650);
         }
         if (data.newEndAt) {
           setEffectiveEndAt(data.newEndAt);
@@ -342,6 +379,7 @@ export default function ItemPage() {
       setPlacing(false);
     }
   };
+
 
   // Set / update proxy bid handler
   const handleSetProxy = async () => {
@@ -880,52 +918,96 @@ export default function ItemPage() {
                 ═══════════════════════════════════════════════════════════ */}
                 <div className="flex items-center gap-3 mb-5">
                   <div className="flex-1 h-px bg-[#e3d6bf]" />
-                  <span className="text-xs text-[#b3a085]">or bid a specific amount</span>
+                  <span className="text-xs text-[#b3a085]">or just take the lead</span>
                   <div className="flex-1 h-px bg-[#e3d6bf]" />
                 </div>
 
                 {/* ═══════════════════════════════════════════════════════════
-                    MANUAL BID — secondary option (its own card for separation)
+                    QUICK BID — double tap to bid the next increment.
+
+                    Replaces the old "type an amount" box. Nobody types $17 into a
+                    field; they either set a max, or they want to nudge it up one
+                    increment right now. Double-tap (rather than a single tap) is the
+                    guard against a mis-tap costing real money — no modal, no extra
+                    screen, but still deliberate.
                 ═══════════════════════════════════════════════════════════ */}
                 <div className="bg-white border border-[#e3d6bf] rounded-2xl p-4">
-                  <h3 className="font-bold text-sm text-[#241a12] mb-1">Bid a specific amount</h3>
-                  <div className="text-[#8a7559] text-xs mb-3">{item.currentBid > 0 ? `Minimum next bid: $${minBid.toLocaleString()}` : `Be the first bidder — start at $${minBid.toLocaleString()}`}</div>
                   {message && (
                     <div className={`text-sm mb-3 px-3 py-2 rounded-lg ${
-                      message.type === "success" ? "bg-[#6c4d39]/20 text-[#6c4d39]" : "bg-red-500/20 text-red-600"
+                      message.type === "success" ? "bg-green-100 text-green-800" : "bg-red-500/20 text-red-600"
                     }`}>
                       {message.text}
                     </div>
                   )}
-                  {/* min-w-0 on the input is load-bearing: an <input> has an intrinsic
-                      minimum width, so without it a flex row won't shrink on a narrow
-                      phone and the Place Bid button gets pushed off the screen. */}
-                  <div className="flex gap-2 w-full">
-                    <input
-                      type="number"
-                      value={bidAmount}
-                      min={minBid}
-                      step="1"
-                      onChange={e => setBidAmount(e.target.value)}
-                      onKeyDown={e => e.key === "Enter" && !placing && handleBid()}
-                      placeholder={`$${minBid.toLocaleString()}+`}
-                      inputMode="decimal"
-                      className="flex-1 min-w-0 bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]"
-                    />
-                    <button
-                      onClick={handleBid}
-                      disabled={placing}
-                      className="bg-[#4a3a2b] hover:bg-[#241a12] disabled:opacity-50 text-white font-bold px-4 sm:px-6 py-3 rounded-xl transition-colors shrink-0 whitespace-nowrap"
-                    >
-                      {placing ? "Placing…" : "Place Bid"}
-                    </button>
-                  </div>
+
+                  {isWinning ? (
+                    /* You can't outbid yourself — say so rather than taking the money. */
+                    <div className="rounded-2xl bg-green-50 border-2 border-green-200 px-4 py-5 text-center">
+                      <div className="text-2xl mb-1">🎉</div>
+                      <p className="text-lg font-extrabold text-green-800">You&apos;re the top bid</p>
+                      <p className="text-sm text-green-700 mt-0.5">
+                        No need to bid again — we&apos;ll alert you if someone passes you.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        onClick={handleQuickBid}
+                        disabled={placing}
+                        className={`relative w-full overflow-hidden rounded-2xl font-extrabold text-white transition-all duration-150 disabled:opacity-60 select-none ${
+                          quickArmed
+                            ? "bg-[#c47b3e] scale-[0.98] shadow-inner"
+                            : "bg-[#4a7c59] active:scale-[0.98] shadow-[0_4px_0_#3c6449]"
+                        }`}
+                        style={{ minHeight: 76, WebkitTapHighlightColor: "transparent" }}
+                      >
+                        {/* Success wash — a quick sweep of light across the button. */}
+                        {bidFlash && (
+                          <span className="pointer-events-none absolute inset-0 bg-white/35 animate-[quickbid-sweep_600ms_ease-out]" />
+                        )}
+                        <span className="relative flex flex-col items-center justify-center py-3 px-4">
+                          {placing ? (
+                            <span className="text-lg">Placing…</span>
+                          ) : quickArmed ? (
+                            <>
+                              <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/90">
+                                Tap again to confirm
+                              </span>
+                              <span className="text-3xl leading-tight tabular-nums">
+                                ${minBid.toLocaleString()}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/85">
+                                Double tap to bid
+                              </span>
+                              <span className="text-3xl leading-tight tabular-nums">
+                                ${minBid.toLocaleString()}
+                              </span>
+                            </>
+                          )}
+                        </span>
+                        {/* Arming window, draining left to right — shows the confirm
+                            state is temporary without needing to explain it. */}
+                        {quickArmed && (
+                          <span className="pointer-events-none absolute bottom-0 left-0 h-1 bg-white/70 animate-[quickbid-drain_2600ms_linear_forwards]" />
+                        )}
+                      </button>
+
+                      <p className="text-center text-xs text-[#8a7559] mt-2">
+                        {item.currentBid > 0
+                          ? `Next bid up from $${item.currentBid.toLocaleString()}`
+                          : "Be the first bidder"}
+                      </p>
+                    </>
+                  )}
+
                   {/* Total-due preview */}
                   {(() => {
                     const feePct = item.org?.platformFeePercent ?? 0;
                     const taxPct = item.org?.taxPercent ?? 0;
-                    const entered = parseFloat(bidAmount);
-                    const baseBid = Number.isFinite(entered) && entered > 0 ? entered : minBid;
+                    const baseBid = minBid;
                     const bidCents = Math.round(baseBid * 100);
                     const feeCents = Math.round(baseBid * feePct / 100 * 100);
                     const taxCents = Math.round((bidCents + feeCents) * taxPct / 100);
@@ -935,7 +1017,7 @@ export default function ItemPage() {
                     return (
                       <div className="mt-3 bg-[#efe3d0]/60 border border-[#cdbda3]/60 rounded-xl px-4 py-3 text-xs space-y-1">
                         <div className="flex justify-between text-[#6f5b46]">
-                          <span>{Number.isFinite(entered) && entered > 0 ? "Your bid" : "Minimum bid"}</span>
+                          <span>Your bid</span>
                           <span className="tabular-nums">${fmt(bidCents)}</span>
                         </div>
                         {feePct > 0 && (
