@@ -40,6 +40,32 @@ interface Bidder {
   email: string | null;
   phone: string | null;
 }
+
+// Lots of bidders never set a name, so the email is often the only way to tell
+// two "Unknown Bidder" rows apart. Primary line = name or, failing that, email;
+// secondary = email (when a name exists) or phone.
+function bidderPrimary(b: Bidder) {
+  return b.name || b.email || b.phone || "Unknown bidder";
+}
+function bidderSecondary(b: Bidder) {
+  if (b.name) return b.email || b.phone || null; // name shown above, add contact
+  if (b.email) return b.phone || null;           // email is the primary, add phone
+  return null;
+}
+interface WaitingRow {
+  clerkUserId: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  items: number;
+  locationName: string | null;
+  hasLocation: boolean;
+  waitingDays: number;
+}
+interface WaitingData {
+  rows: WaitingRow[];
+  totals: { people: number; items: number; noLocation: number };
+}
 interface Appointment {
   id: string;
   startsAt: string;
@@ -153,7 +179,7 @@ function localInputToIso(local: string) {
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function AdminPickupPage() {
-  const [tab, setTab] = useState<"appointments" | "locations" | "transfers">("appointments");
+  const [tab, setTab] = useState<"appointments" | "locations" | "transfers" | "waiting">("appointments");
   const [selectedApptId, setSelectedApptId] = useState<string | null>(null);
   const [showCollected, setShowCollected] = useState(false);
   const [showCompletedTransfers, setShowCompletedTransfers] = useState(false);
@@ -171,6 +197,7 @@ export default function AdminPickupPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
+  const [waiting, setWaiting] = useState<WaitingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   // In-app confirmation (native confirm() is blocked in some installed/PWA webviews).
@@ -201,10 +228,16 @@ export default function AdminPickupPage() {
       .then((d) => setTransfers(d.transfers ?? []))
       .catch(() => {});
   }, []);
+  const loadWaiting = useCallback(() => {
+    return fetch("/api/admin/pickup/waiting")
+      .then((r) => r.json())
+      .then((d) => setWaiting(d.rows ? d : null))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
-    Promise.all([loadAppointments(), loadLocations(), loadTransfers()]).finally(() => setLoading(false));
-  }, [loadAppointments, loadLocations, loadTransfers]);
+    Promise.all([loadAppointments(), loadLocations(), loadTransfers(), loadWaiting()]).finally(() => setLoading(false));
+  }, [loadAppointments, loadLocations, loadTransfers, loadWaiting]);
 
   const flash = (text: string, ok: boolean) => {
     setMsg({ text, ok });
@@ -743,30 +776,39 @@ export default function AdminPickupPage() {
 
   return (
     <>
-      <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-4">
-        <h1 className="text-2xl sm:text-3xl font-semibold">Pickup Scheduling</h1>
-        <p className="text-[#8a7559] text-base mt-0.5">Manage appointments and pickup hours</p>
-        <div className="flex gap-2 mt-4 flex-wrap">
-          {(["appointments", "locations", "transfers"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`relative px-5 py-2.5 rounded-xl text-base font-semibold transition-colors ${
-                tab === t
-                  ? "bg-[#6c4d39] text-white"
-                  : "bg-white border border-[#e3d6bf] text-[#6f5b46] hover:bg-[#efe3d0]"
-              }`}
-            >
-              {t === "appointments" ? "Appointments" : t === "locations" ? "Locations & Hours" : "Transfers"}
-              {t === "transfers" && activeTransfers.length > 0 && (
-                <span className={`ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full text-sm font-bold ${
-                  tab === t ? "bg-white text-[#6c4d39]" : "bg-[#6c4d39] text-white"
-                }`}>
-                  {activeTransfers.length}
-                </span>
-              )}
-            </button>
-          ))}
+      <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-4">
+        <h1 className="text-2xl sm:text-3xl font-semibold">Pickup</h1>
+        {/* Horizontal-scroll tab strip so four tabs never wrap or squash on a phone. */}
+        <div className="flex gap-2 mt-3 overflow-x-auto -mx-4 px-4 pb-1 sm:mx-0 sm:px-0">
+          {(["appointments", "waiting", "transfers", "locations"] as const).map((t) => {
+            const badge =
+              t === "transfers" ? activeTransfers.length :
+              t === "waiting" ? waiting?.totals.people ?? 0 : 0;
+            const label =
+              t === "appointments" ? "Appointments" :
+              t === "waiting" ? "Waiting" :
+              t === "transfers" ? "Transfers" : "Locations";
+            return (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`relative shrink-0 px-4 min-h-[44px] rounded-xl text-base font-bold transition-colors ${
+                  tab === t ? "bg-slate-900 text-white" : "bg-white border-2 border-slate-200 text-slate-600"
+                }`}
+              >
+                {label}
+                {badge > 0 && (
+                  <span className={`ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full text-sm font-bold ${
+                    t === "waiting"
+                      ? (tab === t ? "bg-white text-amber-700" : "bg-amber-500 text-white")
+                      : (tab === t ? "bg-white text-slate-900" : "bg-slate-900 text-white")
+                  }`}>
+                    {badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </header>
 
@@ -900,8 +942,11 @@ export default function AdminPickupPage() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="font-semibold text-[#241a12] truncate">
-                              {a.bidder.name || "Unknown Bidder"}
+                              {bidderPrimary(a.bidder)}
                             </div>
+                            {bidderSecondary(a.bidder) && (
+                              <div className="text-sm text-[#8a7559] truncate">{bidderSecondary(a.bidder)}</div>
+                            )}
                             <div className="text-sm text-[#6f5b46] flex flex-wrap items-center gap-x-2 gap-y-1 mt-0.5">
                               <span>{a.items.length} item{a.items.length !== 1 ? "s" : ""}</span>
                               <LocationBadge name={a.location.name} size="sm" />
@@ -967,8 +1012,11 @@ export default function AdminPickupPage() {
                             >
                               <div className="min-w-0">
                                 <div className="font-semibold text-[#241a12] truncate">
-                                  {a.bidder.name || "Unknown Bidder"}
+                                  {bidderPrimary(a.bidder)}
                                 </div>
+                                {bidderSecondary(a.bidder) && (
+                                  <div className="text-sm text-[#8a7559] truncate">{bidderSecondary(a.bidder)}</div>
+                                )}
                                 <div className="text-sm text-[#6f5b46] mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
                                   <span className="font-semibold text-[#241a12]">{fmtDateTime(a.startsAt)}</span>
                                   <LocationBadge name={a.location.name} size="sm" />
@@ -1028,7 +1076,10 @@ export default function AdminPickupPage() {
                           className="w-full text-left px-4 py-3.5 flex items-center justify-between gap-3 hover:bg-[#faf5ea] transition-colors"
                         >
                           <div className="min-w-0 flex-1">
-                            <div className="font-semibold text-[#241a12] truncate">{a.bidder.name || "Unknown Bidder"}</div>
+                            <div className="font-semibold text-[#241a12] truncate">{bidderPrimary(a.bidder)}</div>
+                            {bidderSecondary(a.bidder) && (
+                              <div className="text-sm text-[#8a7559] truncate">{bidderSecondary(a.bidder)}</div>
+                            )}
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-[#6f5b46] mt-0.5">
                               <span>{fmtDateTime(a.startsAt)}</span>
                               <LocationBadge name={a.location.name} size="sm" />
@@ -1097,6 +1148,89 @@ export default function AdminPickupPage() {
               </div>
             )}
           </div>
+        ) : tab === "waiting" ? (
+          // ── Waiting to pick up ──
+          // Winners with items still unclaimed — no appointment booked. Split by
+          // whether they've even chosen a location, because that's a different chase.
+          <div className="space-y-4 max-w-2xl">
+            {!waiting || waiting.rows.length === 0 ? (
+              <div className="bg-white border-2 border-green-200 rounded-2xl px-5 py-10 text-center">
+                <div className="text-2xl mb-1">🎉</div>
+                <p className="text-base font-bold text-green-700">Nobody&apos;s waiting.</p>
+                <p className="text-sm text-slate-500 mt-1">Everyone with won items has booked a pickup.</p>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-3 gap-2.5">
+                  {[
+                    { k: "People", v: waiting.totals.people, tone: "slate" },
+                    { k: "Items", v: waiting.totals.items, tone: "slate" },
+                    { k: "No location", v: waiting.totals.noLocation, tone: "amber" },
+                  ].map((s) => (
+                    <div key={s.k} className={`rounded-2xl border-2 p-3 text-center ${
+                      s.tone === "amber" && s.v > 0 ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white"
+                    }`}>
+                      <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{s.k}</div>
+                      <div className={`text-2xl font-extrabold tabular-nums mt-0.5 ${
+                        s.tone === "amber" && s.v > 0 ? "text-amber-700" : "text-slate-900"
+                      }`}>{s.v}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <ul className="space-y-2">
+                  {waiting.rows.map((w) => (
+                    <li key={w.clerkUserId} className={`bg-white border-2 rounded-2xl p-4 ${
+                      w.hasLocation ? "border-slate-200" : "border-amber-200 bg-amber-50/40"
+                    }`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="font-bold text-slate-900 break-words">
+                            {w.name || w.email || w.phone || "Unknown bidder"}
+                          </div>
+                          {/* Email always shown when there's also a name — it's how
+                              you actually identify the many nameless bidders. */}
+                          {w.name && w.email && (
+                            <div className="text-sm text-slate-500 break-all">{w.email}</div>
+                          )}
+                          {w.phone && <div className="text-sm text-slate-500">{w.phone}</div>}
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <div className="text-xl font-extrabold text-slate-900 tabular-nums">{w.items}</div>
+                          <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                            item{w.items !== 1 ? "s" : ""}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 mt-2.5">
+                        {w.hasLocation ? (
+                          <span className="inline-flex items-center gap-1 text-sm font-bold bg-slate-100 text-slate-700 border border-slate-200 rounded-full px-2.5 py-1">
+                            📍 {w.locationName ?? "Location set"}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-sm font-bold bg-amber-100 text-amber-800 border border-amber-200 rounded-full px-2.5 py-1">
+                            No location picked
+                          </span>
+                        )}
+                        <span className="text-sm text-slate-500">
+                          waiting {w.waitingDays === 0 ? "today" : `${w.waitingDays} day${w.waitingDays !== 1 ? "s" : ""}`}
+                        </span>
+                        <span className="ml-auto flex gap-2">
+                          {w.phone && (
+                            <a href={`tel:${w.phone}`} className="inline-flex items-center justify-center min-h-[40px] px-4 rounded-xl border-2 border-slate-200 bg-white font-bold text-sm text-slate-700">Call</a>
+                          )}
+                          {w.email && (
+                            <a href={`mailto:${w.email}`} className="inline-flex items-center justify-center min-h-[40px] px-4 rounded-xl border-2 border-slate-200 bg-white font-bold text-sm text-slate-700">Email</a>
+                          )}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
         ) : tab === "transfers" ? (
           // ── Transfers ──
           <div className="space-y-4 max-w-3xl">
@@ -1155,8 +1289,11 @@ export default function AdminPickupPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="text-lg font-semibold text-[#241a12] truncate">
-                          {t.bidder.name || "Unknown Bidder"}
+                          {bidderPrimary(t.bidder)}
                         </div>
+                        {bidderSecondary(t.bidder) && (
+                          <div className="text-sm text-[#8a7559] truncate">{bidderSecondary(t.bidder)}</div>
+                        )}
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-base text-[#6f5b46]">
                           <LocationBadge name={transferFrom(t)} size="sm" />
                           <span aria-hidden>→</span>
@@ -1260,7 +1397,10 @@ export default function AdminPickupPage() {
                           className="w-full text-left px-4 py-3.5 flex items-center justify-between gap-3 hover:bg-[#faf5ea] transition-colors"
                         >
                           <div className="min-w-0 flex-1">
-                            <div className="font-semibold text-[#241a12] truncate">{t.bidder.name || "Unknown Bidder"}</div>
+                            <div className="font-semibold text-[#241a12] truncate">{bidderPrimary(t.bidder)}</div>
+                            {bidderSecondary(t.bidder) && (
+                              <div className="text-sm text-[#8a7559] truncate">{bidderSecondary(t.bidder)}</div>
+                            )}
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-[#6f5b46] mt-0.5">
                               <span aria-hidden>→</span>
                               <LocationBadge name={t.toLocation.name} size="sm" />
