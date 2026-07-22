@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import LocationBadge from "@/app/components/LocationBadge";
+import MessageSheet, { type MessageTarget } from "../MessageSheet";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Window {
@@ -198,6 +199,7 @@ export default function AdminPickupPage() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [waiting, setWaiting] = useState<WaitingData | null>(null);
+  const [msgTarget, setMsgTarget] = useState<MessageTarget | null>(null);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   // In-app confirmation (native confirm() is blocked in some installed/PWA webviews).
@@ -1216,12 +1218,17 @@ export default function AdminPickupPage() {
                         <span className="text-sm text-slate-500">
                           waiting {w.waitingDays === 0 ? "today" : `${w.waitingDays} day${w.waitingDays !== 1 ? "s" : ""}`}
                         </span>
-                        <span className="ml-auto flex gap-2">
-                          {w.phone && (
-                            <a href={`tel:${w.phone}`} className="inline-flex items-center justify-center min-h-[40px] px-4 rounded-xl border-2 border-slate-200 bg-white font-bold text-sm text-slate-700">Call</a>
-                          )}
-                          {w.email && (
-                            <a href={`mailto:${w.email}`} className="inline-flex items-center justify-center min-h-[40px] px-4 rounded-xl border-2 border-slate-200 bg-white font-bold text-sm text-slate-700">Email</a>
+                        <span className="ml-auto">
+                          {w.phone ? (
+                            <button
+                              onClick={() => setMsgTarget({ clerkUserId: w.clerkUserId, name: w.name, phone: w.phone })}
+                              className="inline-flex items-center gap-1.5 min-h-[40px] px-4 rounded-xl bg-sky-600 active:bg-sky-700 text-white font-bold text-sm"
+                            >
+                              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h12v8H5l-3 3V3z" /></svg>
+                              Text
+                            </button>
+                          ) : (
+                            <span className="text-sm text-slate-400">No phone</span>
                           )}
                         </span>
                       </div>
@@ -1524,6 +1531,8 @@ export default function AdminPickupPage() {
       </div>
 
       {/* In-app confirmation dialog (replaces native confirm, which some webviews block) */}
+      <MessageSheet target={msgTarget} onClose={() => setMsgTarget(null)} />
+
       {confirmDialog && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"

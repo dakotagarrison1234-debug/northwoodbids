@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { Pill } from "../ui";
+import MessageSheet, { type MessageTarget } from "../MessageSheet";
 
 interface Bidder {
   clerkUserId: string;
@@ -24,6 +25,7 @@ export default function BiddersPage() {
     { text: string; confirmLabel: string; danger?: boolean; onConfirm: () => void } | null
   >(null);
   const [filter, setFilter] = useState<"all" | "blocked" | "staff">("all");
+  const [msgTarget, setMsgTarget] = useState<MessageTarget | null>(null);
 
   const canManage = myRole === "OWNER" || myRole === "ADMIN";
   const isOwner = myRole === "OWNER";
@@ -214,6 +216,17 @@ export default function BiddersPage() {
                   </div>
 
                   <div className="flex flex-wrap gap-2 mt-3">
+                    {/* Text this customer directly. Owner/admin only, and only if
+                        we have a number to text. */}
+                    {canManage && b.phone && (
+                      <button
+                        onClick={() => setMsgTarget({ clerkUserId: b.clerkUserId, name: b.name, phone: b.phone })}
+                        className="inline-flex items-center gap-1.5 text-base font-bold px-4 min-h-[44px] rounded-xl bg-sky-600 active:bg-sky-700 text-white"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h12v8H5l-3 3V3z" /></svg>
+                        Text
+                      </button>
+                    )}
                     {/* Role management (owner/admin only). Never for the owner row. */}
                     {b.role !== "OWNER" && canManage && (
                       <>
@@ -268,6 +281,8 @@ export default function BiddersPage() {
           </div>
         )}
       </div>
+
+      <MessageSheet target={msgTarget} onClose={() => setMsgTarget(null)} />
 
       {/* In-app confirmation (native confirm() is blocked in some installed/PWA webviews) */}
       {confirmDialog && (
