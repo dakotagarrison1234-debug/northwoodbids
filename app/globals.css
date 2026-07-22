@@ -46,17 +46,27 @@ html, body {
    re-breaking it the next time someone adds one), this enforces the floor once for
    every text-entry control.
 
-   Scoped to `pointer: coarse` so it only applies to touch devices — desktop keeps
-   its own sizing. Nothing shrinks: no field in the app is larger than 16px.
-   Deliberately NOT solved with `maximum-scale=1` on the viewport, which would fix
-   the zoom by disabling pinch-to-zoom entirely — that breaks accessibility for
-   anyone who needs to magnify the page. */
-@media (pointer: coarse) {
-  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
-  textarea,
-  select {
-    font-size: 16px !important;
-  }
+   Applied unconditionally rather than behind `@media (pointer: coarse)`. The media
+   query was the tidier version, but it adds a way for this to silently not apply,
+   and 16px form text on desktop is perfectly reasonable — so the guarantee is worth
+   more than the tidiness here.
+
+   Deliberately NOT solved with `maximum-scale=1` on the viewport, which stops the
+   zoom by disabling pinch-to-zoom entirely — that breaks the site for anyone who
+   needs to magnify it. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+textarea,
+select {
+  font-size: 16px !important;
+  /* Safari also inflates text on its own in some layouts; pin it. */
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Stop Safari auto-inflating body text, which can knock computed field sizes
+   around and re-trigger the zoom. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* ── Safe-area helpers (installed/standalone app on notched phones) ──
