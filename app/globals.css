@@ -37,6 +37,12 @@ html, body {
   max-width: 100%;
 }
 
+/* Hide the native disclosure triangle on <details><summary>. `list-none` covers
+   Chrome/Firefox; Safari needs the -webkit pseudo-element or it draws its own
+   arrow next to our chevron. */
+summary::-webkit-details-marker { display: none; }
+summary { list-style: none; }
+
 /* ── Quick-bid button feedback ──
    The arming window drains a bar left→right so the confirm state visibly expires;
    the sweep is the "landed" moment. Both are short and non-blocking — the point is

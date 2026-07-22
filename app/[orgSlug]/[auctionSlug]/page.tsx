@@ -229,20 +229,44 @@ export default async function AuctionPage({ params }: Props) {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 items-stretch">
             {premiumFirst.map((item) => {
               const isItemSold = SOLD_STATUSES.includes(item.status);
               const isItemUnsold = item.status === "UNSOLD";
               const isItemClosed = isItemSold || isItemUnsold;
               const winning = isLive && !isItemClosed && isUserWinning(item.bids);
-              const bidLabel = isUpcoming ? "Preview" : isItemUnsold ? "Ended" : isItemSold ? "Sold" : isClosed ? "Closed" : winning ? "All Set" : "Bid Now";
-              const bidClass = isUpcoming
-                ? "bg-[#efe3d0] text-[#6c4d39] text-xs px-3 py-1.5 rounded-xl font-bold border border-[#6c4d39]/20"
-                : isClosed || isItemClosed
-                ? "bg-[#efe3d0] text-[#8a7559] text-xs px-3 py-1.5 rounded-xl font-medium"
-                : winning
-                ? "bg-[#efe0c9] text-[#563e2c] text-xs px-3 py-1.5 rounded-xl font-bold border border-[#6c4d39]/30"
-                : "bg-[#6c4d39] hover:bg-[#563e2c] text-white text-xs px-3 py-1.5 rounded-xl font-bold transition-colors";
+              const bidLabel = isUpcoming ? "Preview" : isItemUnsold ? "Ended" : isItemSold ? "Sold" : isClosed ? "Closed" : winning ? "You're winning" : "Bid now";
+              // Full-width CTA bar. On a 2-up mobile grid a small right-aligned pill
+              // reads as decoration; a bar reads as the thing to press.
+              const bidClass = `block w-full text-center rounded-xl py-2 text-xs font-bold transition-colors ${
+                isUpcoming
+                  ? "bg-[#efe3d0] text-[#6c4d39] border border-[#6c4d39]/20"
+                  : isClosed || isItemClosed
+                  ? "bg-[#f4efe4] text-[#a3927b]"
+                  : winning
+                  ? "bg-[#efe0c9] text-[#563e2c] border border-[#6c4d39]/30"
+                  : "bg-[#6c4d39] group-hover:bg-[#563e2c] text-white"
+              }`;
+
+              // Price shown depends on where the item is in its life. Every branch
+              // gets BOTH a label and a value so the pair always reads as a sentence
+              // ("Current bid / $14") instead of a floating number.
+              const priceLabel = isUpcoming
+                ? "Starts at"
+                : isItemSold
+                ? "Sold for"
+                : isItemUnsold
+                ? "Ended at"
+                : Number(item.currentBid) > 0
+                ? "Current bid"
+                : "No bids yet";
+              const priceValue = isUpcoming ? Number(item.startingBid) : Number(item.currentBid);
+
+              // One meta line, always rendered so card heights can't diverge.
+              const metaBits = [
+                item.condition.replace("_", " ").toLowerCase(),
+                item.size || null,
+              ].filter(Boolean);
 
               const primaryPhoto = item.photos.find(p => p.isPrimary)?.url || item.photos[0]?.url;
 
@@ -261,20 +285,14 @@ export default async function AuctionPage({ params }: Props) {
               const itemEndAtIso = (item.itemEndAt ?? auction.endAt).toISOString();
 
               return (
-                <div key={item.id} className="relative">
-                {isStaff && (
-                  <Link
-                    href={`/admin/items/${item.id}`}
-                    className="absolute top-2 right-2 z-20 bg-white/95 hover:bg-white border border-[#cdbda3] text-[#6c4d39] rounded-full w-8 h-8 flex items-center justify-center shadow-sm transition-colors"
-                    title="Edit listing"
-                    aria-label="Edit listing"
-                  >
-                    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11.5 2.5l2 2L6 12l-2.5.5L4 10l7.5-7.5z" /></svg>
-                  </Link>
-                )}
+                /* h-full + flex column all the way down is what keeps every card in a
+                   row the same height, with prices and CTAs on a shared baseline.
+                   Without it, a 1-line title or a missing size silently shortens the
+                   card and the whole row goes ragged. */
+                <div key={item.id} className="flex flex-col h-full">
                 <Link
                   href={`/${orgSlug}/${auctionSlug}/item/${item.id}`}
-                  className={`cv-card block bg-white border rounded-2xl overflow-hidden transition-all group ${
+                  className={`cv-card flex flex-col h-full bg-white border rounded-2xl overflow-hidden transition-all group ${
                     item.isPremium
                       ? "nb-premium border-2"
                       : winning
@@ -312,72 +330,97 @@ export default async function AuctionPage({ params }: Props) {
                         <span className="text-xs">No photo</span>
                       </div>
                     )}
-                    {isCombo && (
-                      <div className="absolute bottom-2.5 left-2.5 bg-[#241a12]/85 text-white text-xs px-2.5 py-1 rounded-full font-bold shadow-sm z-10">
-                        {packSize}-Pack
-                      </div>
-                    )}
+                    {/* ── Badge zones. One badge per corner, never two.
+                        top-left  = countdown (ItemCardTimer hardcodes this position)
+                        top-right = status (premium / winning / sold / ended)
+                        bottom-left = N-Pack
+                        bottom-right = staff edit
+                        Previously Premium, Winning and the timer ALL sat top-left and
+                        drew on top of each other on any live featured item. ── */}
                     {isItemLive && <ItemCardTimer itemId={item.id} endAt={itemEndAtIso} />}
-                    {item.isPremium && !winning && (
-                      <div className="absolute top-2.5 left-2.5 bg-[#c47b3e] text-white text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1 shadow-sm">
-                        <svg className="w-3 h-3" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5l1.8 3.9 4.2.5-3.1 2.9.8 4.2L8 11.4 4.3 13l.8-4.2L2 5.9l4.2-.5L8 1.5z" /></svg>
-                        Premium
-                      </div>
-                    )}
-                    {winning && (
-                      <div className="absolute top-2.5 left-2.5 bg-[#6c4d39] text-white text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1 shadow-sm">
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M2 4.5H1V2.5h1M10 4.5h1V2.5h-1M2 4.5h8v2.5a4 4 0 0 1-8 0V4.5zM3.5 10h5M6 7.5V10"/>
-                        </svg>
-                        Winning
-                      </div>
-                    )}
-                    {isItemSold && (
-                      <div className="absolute top-2.5 right-2.5 bg-[#f1e7d5]/80 backdrop-blur-sm text-[#4a3a2b] text-xs px-2.5 py-1 rounded-full font-semibold">
-                        Sold
-                      </div>
-                    )}
-                    {isItemUnsold && (
-                      <div className="absolute top-2.5 right-2.5 bg-[#f1e7d5]/80 backdrop-blur-sm text-[#8a7559] text-xs px-2.5 py-1 rounded-full font-medium">
-                        Ended
+
+                    {(() => {
+                      // Exactly one status badge, in priority order.
+                      const badge = isItemSold
+                        ? { text: "Sold", cls: "bg-[#241a12]/80 text-white" }
+                        : isItemUnsold
+                        ? { text: "Ended", cls: "bg-[#f1e7d5]/85 text-[#8a7559]" }
+                        : winning
+                        ? { text: "Winning", cls: "bg-[#6c4d39] text-white" }
+                        : item.isPremium
+                        ? { text: "Featured", cls: "bg-[#c47b3e] text-white" }
+                        : null;
+                      if (!badge) return null;
+                      return (
+                        <div className={`absolute top-2.5 right-2.5 z-10 text-[11px] px-2.5 py-1 rounded-full font-bold shadow-sm backdrop-blur-sm ${badge.cls}`}>
+                          {badge.text}
+                        </div>
+                      );
+                    })()}
+
+                    {isCombo && (
+                      <div className="absolute bottom-2.5 left-2.5 bg-[#241a12]/85 text-white text-[11px] px-2.5 py-1 rounded-full font-bold shadow-sm z-10">
+                        {packSize}-Pack
                       </div>
                     )}
                   </div>
 
-                  {/* Info */}
-                  <div className="p-3">
-                    <h3 className="font-bold text-sm leading-tight group-hover:text-[#6c4d39] transition-colors line-clamp-2 mb-2">
+                  {/* ── Info. Fixed-shape block: title (2 lines), meta (1 line), then
+                      price + CTA pinned to the bottom via mt-auto so they line up
+                      across every card in the row. ── */}
+                  <div className="flex flex-col flex-1 p-3">
+                    <h3 className="font-bold text-sm leading-snug group-hover:text-[#6c4d39] transition-colors line-clamp-2 min-h-[2.5rem] break-words">
                       {item.title}
                     </h3>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-[10px] text-[#8a7559] uppercase tracking-wide">
-                          {isUpcoming ? "Start" : isItemSold ? "Sold" : isItemUnsold ? "Final" : Number(item.currentBid) > 0 ? "Bid" : "No bids"}
+
+                    {/* Condition and size on ONE line. They used to be two separate
+                        micro-rows, and the size row only existed sometimes — which is
+                        what made card heights jump around. */}
+                    <p className="text-[11px] text-[#8a7559] capitalize truncate mt-0.5">
+                      {metaBits.join(" · ")}
+                    </p>
+
+                    <div className="mt-auto pt-2.5">
+                      <div className="flex items-end justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="text-[10px] text-[#8a7559] uppercase tracking-wide leading-none">
+                            {priceLabel}
+                          </div>
+                          <div className={`font-extrabold text-lg leading-tight tabular-nums truncate ${isItemUnsold ? "text-[#8a7559]" : "text-[#6c4d39]"}`}>
+                            ${priceValue.toLocaleString()}
+                          </div>
                         </div>
-                        <div className={`font-extrabold text-base ${isItemUnsold ? "text-[#8a7559]" : "text-[#6c4d39]"}`}>
-                          ${(isUpcoming ? Number(item.startingBid) : Number(item.currentBid)).toLocaleString()}
-                        </div>
+                        {/* MSRP sits beside the price it's contrasting with, not
+                            floating off on its own row. */}
+                        {Number(item.retailValue) > 0 && (
+                          <div className="text-right shrink-0">
+                            <div className="text-[10px] text-[#8a7559] uppercase tracking-wide leading-none">Retail</div>
+                            <div className="text-[13px] font-bold text-[#a32d2d] leading-tight tabular-nums">
+                              ${Number(item.retailValue).toLocaleString()}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <span className={bidClass}>{bidLabel}</span>
+
+                      <div className={`${bidClass} mt-2.5`}>{bidLabel}</div>
                     </div>
-                    <div className="flex items-center justify-between gap-2 text-[10px] mt-1.5">
-                      <span className="text-[#6c4d39] font-semibold capitalize min-w-0 truncate">{item.condition.replace("_", " ").toLowerCase()}</span>
-                      {Number(item.retailValue) > 0 && (
-                        <span className="text-[#8a7559] shrink-0">MSRP <span className="text-[#a32d2d] font-semibold">${Number(item.retailValue).toLocaleString()}</span></span>
-                      )}
-                    </div>
-                    {/* Size on its own line, as a chip. Clothing shoppers filter on this
-                        before anything else, so it can't be buried inside the listing —
-                        but it only appears when set, so non-apparel cards are unchanged. */}
-                    {item.size && (
-                      <div className="mt-1.5">
-                        <span className="inline-block bg-[#6c4d39]/10 text-[#6c4d39] border border-[#6c4d39]/25 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide max-w-full truncate">
-                          {item.size}
-                        </span>
-                      </div>
-                    )}
                   </div>
                 </Link>
+
+                {/* Staff edit as its own strip UNDER the card, not floating over it.
+                    Absolutely positioning it inside the card meant it sat on top of
+                    the CTA bar and swallowed taps meant for "Bid now". A separate row
+                    can't collide with anything and is a bigger tap target anyway.
+                    Nested <Link>s are invalid HTML, so it has to live outside. */}
+                {isStaff && (
+                  <Link
+                    href={`/admin/items/${item.id}`}
+                    className="mt-1.5 flex items-center justify-center gap-1.5 rounded-xl border border-[#cdbda3] bg-white/80 hover:bg-white text-[#6c4d39] text-xs font-bold py-2 transition-colors"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11.5 2.5l2 2L6 12l-2.5.5L4 10l7.5-7.5z" /></svg>
+                    Edit listing
+                  </Link>
+                )}
                 </div>
               );
             })}

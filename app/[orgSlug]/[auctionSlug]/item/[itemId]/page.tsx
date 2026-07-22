@@ -480,9 +480,11 @@ export default function ItemPage() {
           {/* Left: photo */}
           <div>
             <Skeleton className="w-full aspect-square rounded-2xl mb-3" />
-            <div className="grid grid-cols-5 gap-1.5">
+            {/* Mirrors the real thumbnail strip (flex, 64px squares) so nothing
+                shifts when the photos land. */}
+            <div className="flex gap-1.5">
               {[0, 1, 2, 3, 4].map((i) => (
-                <Skeleton key={i} className="aspect-square rounded-lg" />
+                <Skeleton key={i} className="w-16 h-16 shrink-0 rounded-lg" />
               ))}
             </div>
           </div>
@@ -643,15 +645,18 @@ export default function ItemPage() {
               </>
             )}
           </div>
-          {/* Thumbnails */}
+          {/* Thumbnails — a flex strip, not a 5-column grid. With 2-4 photos (the
+              usual case) the grid left 1-3 empty columns, so the thumbs sat in a row
+              of visible holes; with 6 you got one orphan on a second row. Fixed-width
+              items that scroll sideways handle any count with no gaps. */}
           {item.photos.length > 1 && (
-            <div className="grid grid-cols-5 gap-1.5">
+            <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
               {item.photos.map((photo, i) => (
                 <button
                   key={i}
                   onClick={() => setSelectedPhotoIdx(i)}
-                  className={`relative aspect-square bg-white rounded-lg overflow-hidden flex items-center justify-center border-2 transition-colors ${
-                    i === selectedPhotoIdx ? "border-[#6c4d39]" : "border-transparent hover:border-[#6c4d39]/40"
+                  className={`relative w-16 h-16 shrink-0 bg-white rounded-lg overflow-hidden border-2 transition-colors ${
+                    i === selectedPhotoIdx ? "border-[#6c4d39]" : "border-[#e3d6bf] hover:border-[#6c4d39]/40"
                   }`}
                   aria-label={`Photo ${i + 1}`}
                 >
@@ -664,109 +669,102 @@ export default function ItemPage() {
 
         {/* Right: bidding */}
         <div>
-          <div className="flex items-center gap-2 mb-3 flex-wrap">
+          {/* ── 1. What it is ──
+              Title leads. The badge row used to sit ABOVE the title, so the first
+              thing you read was "Good · Medium" rather than the product. Now the
+              attributes sit under the name, as a supporting line. */}
+          <h1 className="font-display text-2xl sm:text-3xl font-bold leading-tight">{item.title}</h1>
+
+          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
             {(item.packSize ?? 0) > 1 && (
               <span className="text-xs text-white bg-[#241a12] px-2.5 py-1 rounded-full font-bold">{item.packSize}-Pack lot</span>
             )}
-            {item.category && (
-              <span className="text-xs text-[#6c4d39] bg-[#6c4d39]/10 border border-[#6c4d39]/20 px-2.5 py-1 rounded-full font-medium">{item.category}</span>
-            )}
-            <span className="text-xs text-[#6f5b46] bg-[#efe3d0] border border-[#e3d6bf] px-2.5 py-1 rounded-full capitalize font-medium">
-              {item.condition.replace("_", " ").toLowerCase()}
-            </span>
-            {/* Size gets the strongest badge of the row — it's the detail that decides
-                whether the item is even relevant to this bidder. */}
             {item.size && (
               <span className="text-xs text-white bg-[#6c4d39] px-2.5 py-1 rounded-full font-bold">
                 Size {item.size}
               </span>
             )}
-            {item.taxDeductible && (
-              <span className="text-xs text-[#6c4d39] bg-[#6c4d39]/10 border border-[#6c4d39]/20 px-2.5 py-1 rounded-full font-medium">Tax Deductible</span>
+            <span className="text-xs text-[#6f5b46] bg-[#efe3d0] border border-[#e3d6bf] px-2.5 py-1 rounded-full capitalize font-medium">
+              {item.condition.replace("_", " ").toLowerCase()}
+            </span>
+            {item.category && (
+              <span className="text-xs text-[#6c4d39] bg-[#6c4d39]/10 border border-[#6c4d39]/20 px-2.5 py-1 rounded-full font-medium">{item.category}</span>
             )}
           </div>
 
-          <h1 className="font-display text-2xl sm:text-3xl font-bold mb-2">{item.title}</h1>
-          {item.description && <ExpandableDescription text={item.description} />}
-
-          {/* Pickup location + transferable — so bidders know where it is and how they get it */}
-          {(item.locationName || item.transferable === false) && (
-            <div className="flex flex-wrap items-center gap-2 mt-3 mb-1">
-              {item.locationName && (
-                <span className="inline-flex items-center gap-1 bg-[#c47b3e]/15 text-[#8a4f1c] border border-[#c47b3e]/40 px-2.5 py-1 rounded-full font-semibold text-sm">
-                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 1.5c-2.5 0-4.5 2-4.5 4.5C3.5 9.5 8 14.5 8 14.5s4.5-5 4.5-8.5C12.5 3.5 10.5 1.5 8 1.5z" /><circle cx="8" cy="6" r="1.6" /></svg>
-                  {item.locationName}
-                </span>
-              )}
-              {item.transferable === false ? (
-                <span className="bg-[#efe0c9] text-[#8a5a2b] border border-[#e3c9a3] px-2.5 py-1 rounded-full font-semibold text-sm">
-                  Pickup at this location only — not transferable
-                </span>
-              ) : (
-                <span className="text-[#8a7559] text-sm">Can be transferred to your pickup location</span>
-              )}
-            </div>
-          )}
-
-          {/* Countdown */}
-          {effectiveEndAt && !auctionClosed && !itemSold && !itemNotActive && (
-            <div className={`rounded-2xl px-4 py-3 mb-6 flex items-center justify-between border transition-all ${
-              biddingEnded
-                ? "bg-white border-[#e3d6bf]"
-                : "bg-[#f6ecda] border-[#6c4d39]/25"
-            }`}>
-              <span className="text-[#8a7559] text-sm font-medium">
-                {biddingEnded ? "Bidding ended" : "Time remaining"}
-              </span>
-              {!biddingEnded ? (
-                <Countdown endAt={effectiveEndAt} onExpire={handleExpire} />
-              ) : (
-                <span className="text-[#8a7559] font-semibold text-sm">Refreshing results shortly…</span>
-              )}
-            </div>
-          )}
-
-          {/* Retail value */}
-          {item.retailValue && (
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              <div className="bg-[#f6ecda] border border-[#6c4d39]/25 rounded-xl p-4">
-                <div className="text-[#6c4d39] text-xs font-semibold uppercase tracking-wide mb-1">Retail Value</div>
-                <div className="text-[#563e2c] font-extrabold text-xl">${item.retailValue.toLocaleString()}</div>
+          {/* ── 2. What it costs ──
+              Price and retail side by side in one block. Retail used to live in a
+              `grid-cols-2` containing a single child, which left a literal empty
+              half-width hole beside it. */}
+          <div className="mt-4 rounded-2xl border border-[#e3d6bf] bg-white overflow-hidden">
+            <div className="flex items-stretch divide-x divide-[#e3d6bf]">
+              <div className="flex-1 px-4 py-3.5 min-w-0">
+                <div className="text-[#8a7559] text-xs font-semibold uppercase tracking-wide">
+                  {item.currentBid > 0 ? "Current bid" : "Starting bid"}
+                </div>
+                <div className="text-[#6c4d39] font-extrabold text-3xl leading-tight tabular-nums mt-0.5 truncate">
+                  ${currentBid.toLocaleString()}
+                </div>
+                <div className="text-xs text-[#8a7559] mt-0.5">
+                  {bidCount} bid{bidCount !== 1 ? "s" : ""}
+                </div>
               </div>
+              {item.retailValue ? (
+                <div className="px-4 py-3.5 shrink-0 flex flex-col justify-center bg-[#faf5ea]">
+                  <div className="text-[#8a7559] text-xs font-semibold uppercase tracking-wide">Retail</div>
+                  <div className="text-[#a32d2d] font-extrabold text-xl leading-tight tabular-nums mt-0.5">
+                    ${item.retailValue.toLocaleString()}
+                  </div>
+                  {currentBid > 0 && item.retailValue > currentBid && (
+                    <div className="text-[11px] font-bold text-[#4a7c59] mt-0.5">
+                      {Math.round((1 - currentBid / item.retailValue) * 100)}% below
+                    </div>
+                  )}
+                </div>
+              ) : null}
             </div>
-          )}
+
+            {/* ── 3. Urgency — attached to the price, not floating in its own card ── */}
+            {effectiveEndAt && !auctionClosed && !itemSold && !itemNotActive && (
+              <div className={`px-4 py-2.5 flex items-center justify-between gap-3 border-t ${
+                biddingEnded ? "bg-white border-[#e3d6bf]" : "bg-[#f6ecda] border-[#6c4d39]/20"
+              }`}>
+                <span className="text-[#8a7559] text-xs font-semibold uppercase tracking-wide">
+                  {biddingEnded ? "Bidding ended" : "Time left"}
+                </span>
+                {!biddingEnded ? (
+                  <Countdown endAt={effectiveEndAt} onExpire={handleExpire} />
+                ) : (
+                  <span className="text-[#8a7559] font-semibold text-sm">Refreshing results…</span>
+                )}
+              </div>
+            )}
+          </div>
+
 
           {/* ── Unified bidding card: Max Bid (primary) + manual bid (secondary) ── */}
           <div className="bg-white border border-[#e3d6bf] rounded-2xl p-4 sm:p-6 mb-6 shadow-[0_0_25px_rgba(108,77,57,0.04)]">
 
-            {/* Current bid header */}
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <div className="text-[#8a7559] text-sm">{item.currentBid > 0 ? "Current Bid" : "Starting Bid"}</div>
-                <div className="text-[#6c4d39] font-extrabold text-3xl sm:text-4xl">${currentBid.toLocaleString()}</div>
+            {/* Status strip — price and bid count now live in the block above, so this
+                only carries state the bidder needs while deciding: am I winning, and
+                is my max still armed. No duplicated numbers. */}
+            {(showWinning || hasActiveProxy) && (
+              <div className="flex flex-wrap items-center gap-2 mb-4">
                 {showWinning && (
-                  <div className="mt-1.5">
-                    <span className="inline-flex items-center gap-1.5 text-xs bg-[#6c4d39]/20 text-[#c47b3e] border border-[#6c4d39]/30 px-2.5 py-0.5 rounded-full font-semibold">
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M3 5H1V3h2M9 5h2V3h-2M3 5h6v3a3 3 0 0 1-6 0V5zM4 11h4M6 8v3" />
-                      </svg>
-                      You&apos;re Winning
-                    </span>
-                  </div>
+                  <span className="inline-flex items-center gap-1.5 text-xs bg-[#4a7c59] text-white px-2.5 py-1 rounded-full font-bold">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M2 6.5l2.5 2.5L10 3.5" />
+                    </svg>
+                    You&apos;re winning
+                  </span>
                 )}
-              </div>
-              <div className="text-right flex flex-col items-end gap-2">
-                <div>
-                  <div className="text-[#8a7559] text-sm">Bids</div>
-                  <div className="text-[#241a12] font-bold text-xl">{bidCount}</div>
-                </div>
                 {hasActiveProxy && (
-                  <span className="text-xs bg-[#6c4d39]/15 text-[#563e2c] px-2 py-0.5 rounded-full font-medium">
-                    Max Bid Active
+                  <span className="text-xs bg-[#6c4d39]/15 text-[#563e2c] px-2.5 py-1 rounded-full font-semibold">
+                    Max bid active
                   </span>
                 )}
               </div>
-            </div>
+            )}
 
             {biddingLocked ? (
               <div className="bg-[#efe3d0] rounded-xl px-4 py-3 text-center text-[#6f5b46]">
@@ -940,7 +938,7 @@ export default function ItemPage() {
                     </div>
                   )}
 
-                  {isWinning ? (
+                  {showWinning ? (
                     /* You can't outbid yourself — say so rather than taking the money. */
                     <div className="rounded-2xl bg-green-50 border-2 border-green-200 px-4 py-5 text-center">
                       <div className="text-2xl mb-1">🎉</div>
@@ -995,11 +993,10 @@ export default function ItemPage() {
                         )}
                       </button>
 
-                      <p className="text-center text-xs text-[#8a7559] mt-2">
-                        {item.currentBid > 0
-                          ? `Next bid up from $${item.currentBid.toLocaleString()}`
-                          : "Be the first bidder"}
-                      </p>
+                      {/* Removed the "Next bid up from $X" line that used to sit here:
+                          it restated the current bid already shown large at the top of
+                          the page, and read as an orphan sentence floating between the
+                          button and the total box. */}
                     </>
                   )}
 
@@ -1014,32 +1011,44 @@ export default function ItemPage() {
                     const totalCents = bidCents + feeCents + taxCents;
                     const fmt = (c: number) =>
                       (c / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    // Headline total stays visible; the fee/tax maths goes behind a
+                    // disclosure. Four always-open rows of small print sat directly
+                    // under the bid button competing with it — and when someone typed
+                    // a max bid above, TWO different "total" figures were on screen at
+                    // once. Now there's one number, and the breakdown is one tap away.
                     return (
-                      <div className="mt-3 bg-[#efe3d0]/60 border border-[#cdbda3]/60 rounded-xl px-4 py-3 text-xs space-y-1">
-                        <div className="flex justify-between text-[#6f5b46]">
-                          <span>Your bid</span>
-                          <span className="tabular-nums">${fmt(bidCents)}</span>
-                        </div>
-                        {feePct > 0 && (
+                      <details className="group mt-3 bg-[#efe3d0]/60 border border-[#cdbda3]/60 rounded-xl overflow-hidden">
+                        <summary className="flex items-center justify-between gap-2 px-4 py-2.5 cursor-pointer list-none">
+                          <span className="text-xs text-[#6f5b46]">
+                            Total if you win{" "}
+                            <span className="font-bold text-[#241a12] tabular-nums">${fmt(totalCents)}</span>
+                          </span>
+                          <span className="text-[#8a7559] transition-transform group-open:rotate-180 shrink-0">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4" /></svg>
+                          </span>
+                        </summary>
+                        <div className="px-4 pb-3 text-xs space-y-1 border-t border-[#cdbda3]/50 pt-2">
                           <div className="flex justify-between text-[#6f5b46]">
-                            <span>Buyer&apos;s premium ({feePct}%)</span>
-                            <span className="tabular-nums">${fmt(feeCents)}</span>
+                            <span>Your bid</span>
+                            <span className="tabular-nums">${fmt(bidCents)}</span>
                           </div>
-                        )}
-                        {taxPct > 0 && (
-                          <div className="flex justify-between text-[#6f5b46]">
-                            <span>Tax ({taxPct}%)</span>
-                            <span className="tabular-nums">${fmt(taxCents)}</span>
-                          </div>
-                        )}
-                        <div className="flex justify-between text-[#241a12] font-bold border-t border-[#cdbda3]/60 pt-1.5 mt-1.5">
-                          <span>Total if you win</span>
-                          <span className="tabular-nums">${fmt(totalCents)}</span>
+                          {feePct > 0 && (
+                            <div className="flex justify-between text-[#6f5b46]">
+                              <span>Buyer&apos;s premium ({feePct}%)</span>
+                              <span className="tabular-nums">${fmt(feeCents)}</span>
+                            </div>
+                          )}
+                          {taxPct > 0 && (
+                            <div className="flex justify-between text-[#6f5b46]">
+                              <span>Tax ({taxPct}%)</span>
+                              <span className="tabular-nums">${fmt(taxCents)}</span>
+                            </div>
+                          )}
+                          <p className="text-[#8a7559] pt-1">
+                            Charged automatically to your card on file when the auction closes.
+                          </p>
                         </div>
-                        <p className="text-[#8a7559] pt-0.5">
-                          Charged automatically to your card on file when the auction closes.
-                        </p>
-                      </div>
+                      </details>
                     );
                   })()}
                 </div>
@@ -1071,15 +1080,54 @@ export default function ItemPage() {
             )}
           </div>
 
+          {/* ── 5. Details ──
+              Everything you'd read AFTER deciding you're interested: the description
+              and where you collect it. Deliberately below the bid box — it used to sit
+              between the title and the price, pushing the actual price off screen on a
+              phone. The pickup facts are one tidy list rather than pills and a loose
+              sentence floating beside them. */}
+          {(item.description || item.locationName || item.transferable === false || item.taxDeductible) && (
+            <div className="bg-white border border-[#e3d6bf] rounded-2xl p-4 sm:p-5 mb-6">
+              <h3 className="font-bold text-base text-[#241a12] mb-2">Details</h3>
+
+              {item.description && <ExpandableDescription text={item.description} />}
+
+              <dl className="mt-3 divide-y divide-[#efe3d0] border-t border-[#efe3d0]">
+                {item.locationName && (
+                  <div className="flex items-start justify-between gap-3 py-2.5">
+                    <dt className="text-sm text-[#8a7559] shrink-0">Located at</dt>
+                    <dd className="text-sm font-semibold text-[#241a12] text-right break-words min-w-0">{item.locationName}</dd>
+                  </div>
+                )}
+                <div className="flex items-start justify-between gap-3 py-2.5">
+                  <dt className="text-sm text-[#8a7559] shrink-0">Collection</dt>
+                  <dd className="text-sm font-semibold text-right">
+                    {item.transferable === false ? (
+                      <span className="text-[#8a5a2b]">Pickup at this location only</span>
+                    ) : (
+                      <span className="text-[#4a7c59]">Can transfer to your usual spot</span>
+                    )}
+                  </dd>
+                </div>
+                {item.taxDeductible && (
+                  <div className="flex items-start justify-between gap-3 py-2.5">
+                    <dt className="text-sm text-[#8a7559] shrink-0">Tax</dt>
+                    <dd className="text-sm font-semibold text-[#241a12] text-right">Tax deductible</dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          )}
+
           {/* Max Bid explainer modal */}
           {showMaxBidExplainer && (
             <MaxBidExplainerModal onClose={() => setShowMaxBidExplainer(false)} />
           )}
 
-          {/* Bid history — Fix #1: capped at 5 via state */}
+          {/* Last 5 bids */}
           {liveBids.length > 0 && (
             <div>
-              <h3 className="font-semibold mb-3">Recent Bids</h3>
+              <h3 className="font-bold text-base text-[#241a12] mb-3">Recent bids</h3>
               <div className="space-y-2">
                 {liveBids.map((bid, i) => (
                   <div key={i} className="flex items-center justify-between bg-white rounded-lg px-4 py-3">
