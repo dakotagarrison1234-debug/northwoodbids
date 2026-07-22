@@ -37,6 +37,28 @@ html, body {
   max-width: 100%;
 }
 
+/* ── Stop iOS Safari auto-zooming on focus ──
+   iOS zooms the whole page whenever you tap a form field whose font-size is under
+   16px, and it does NOT zoom back out afterwards — you're left pinching to recover
+   after every single input. It's hardcoded Safari behaviour, not a user setting.
+
+   16px is the exact threshold. Rather than annotating ~70 individual fields (and
+   re-breaking it the next time someone adds one), this enforces the floor once for
+   every text-entry control.
+
+   Scoped to `pointer: coarse` so it only applies to touch devices — desktop keeps
+   its own sizing. Nothing shrinks: no field in the app is larger than 16px.
+   Deliberately NOT solved with `maximum-scale=1` on the viewport, which would fix
+   the zoom by disabling pinch-to-zoom entirely — that breaks accessibility for
+   anyone who needs to magnify the page. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 /* ── Safe-area helpers (installed/standalone app on notched phones) ──
    With viewport-fit=cover the app draws edge-to-edge; these keep bars and
    content clear of the notch, status bar, and home indicator. */
