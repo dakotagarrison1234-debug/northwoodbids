@@ -339,22 +339,6 @@ export default function EditItemPage() {
                 <input name="size" value={formData.size} onChange={handleChange}
                   placeholder="Medium, Size 8, One Size Fits All…"
                   className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]" />
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {["S", "M", "L", "XL", "2XL", "One Size"].map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setFormData((prev) => ({ ...prev, size: prev.size === s ? "" : s }))}
-                      className={`px-3 py-2 rounded-lg text-sm font-bold border transition-colors ${
-                        formData.size === s
-                          ? "bg-[#c47b3e] text-white border-[#c47b3e]"
-                          : "bg-white text-[#4a3a2b] border-[#cdbda3]"
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
               </div>
 
               <div>

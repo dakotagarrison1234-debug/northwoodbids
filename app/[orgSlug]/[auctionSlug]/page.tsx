@@ -263,10 +263,9 @@ export default async function AuctionPage({ params }: Props) {
               const priceValue = isUpcoming ? Number(item.startingBid) : Number(item.currentBid);
 
               // One meta line, always rendered so card heights can't diverge.
-              const metaBits = [
-                item.condition.replace("_", " ").toLowerCase(),
-                item.size || null,
-              ].filter(Boolean);
+              // Size is NOT here — it gets its own badge on the photo, because a bare
+              // "M" in 11px grey text was effectively invisible.
+              const metaBits = [item.condition.replace("_", " ").toLowerCase()].filter(Boolean);
 
               const primaryPhoto = item.photos.find(p => p.isPrimary)?.url || item.photos[0]?.url;
 
@@ -361,6 +360,17 @@ export default async function AuctionPage({ params }: Props) {
                     {isCombo && (
                       <div className="absolute bottom-2.5 left-2.5 bg-[#241a12]/85 text-white text-[11px] px-2.5 py-1 rounded-full font-bold shadow-sm z-10">
                         {packSize}-Pack
+                      </div>
+                    )}
+
+                    {/* Size sits ON the photo, bottom-right — the one free corner.
+                        Buried in the grey meta line a bare "M" was invisible, and for
+                        apparel size is the single attribute that decides whether the
+                        listing is even worth opening. Solid dark chip so it reads
+                        against any photo. */}
+                    {item.size && (
+                      <div className="absolute bottom-2.5 right-2.5 z-10 bg-white text-[#241a12] text-xs px-2.5 py-1 rounded-lg font-extrabold uppercase tracking-wide shadow-md max-w-[70%] truncate">
+                        {item.size}
                       </div>
                     )}
                   </div>

@@ -679,8 +679,10 @@ export default function ItemPage() {
             {(item.packSize ?? 0) > 1 && (
               <span className="text-xs text-white bg-[#241a12] px-2.5 py-1 rounded-full font-bold">{item.packSize}-Pack lot</span>
             )}
+            {/* Bigger and darker than the other pills — a lone "M" gets lost at the
+                same weight as "good" and "Apparel". */}
             {item.size && (
-              <span className="text-xs text-white bg-[#6c4d39] px-2.5 py-1 rounded-full font-bold">
+              <span className="text-sm text-white bg-[#241a12] px-3 py-1.5 rounded-lg font-extrabold uppercase tracking-wide">
                 Size {item.size}
               </span>
             )}

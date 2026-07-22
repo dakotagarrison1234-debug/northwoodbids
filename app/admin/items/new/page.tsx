@@ -1068,22 +1068,6 @@ function NewItemForm() {
                   placeholder="Medium, Size 8, One Size Fits All…"
                   className={inputCls}
                 />
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {["S", "M", "L", "XL", "2XL", "One Size"].map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setFormData((prev) => ({ ...prev, size: prev.size === s ? "" : s }))}
-                      className={`px-3 py-2 rounded-lg text-sm font-bold border transition-colors ${
-                        formData.size === s
-                          ? "bg-[#c47b3e] text-white border-[#c47b3e]"
-                          : "bg-[#faf5ea] text-[#4a3a2b] border-[#cdbda3]"
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
               </div>
 
               <button
