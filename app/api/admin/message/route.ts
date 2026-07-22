@@ -66,6 +66,16 @@ export async function POST(req: NextRequest) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        // TOP-LEVEL email/phone/name are required, not optional decoration: GHL's
+        // "Create contact" step maps from these standard keys. Sending only the
+        // bidder* variants makes that step error, which in turn SKIPS the SMS —
+        // the workflow reports a clean run and nothing is delivered. Every other
+        // webhook in this codebase sends both shapes; this one must match.
+        email: profile.email ?? "",
+        phone: profile.phone,
+        name,
+        firstName: name.split(" ")[0] || name,
+        lastName: name.split(" ").slice(1).join(" ") || "",
         event: "custom_message",
         // The admin's text goes out verbatim. No "Northwood Bids:" prefix is forced —
         // they can write it however they want.
@@ -73,8 +83,6 @@ export async function POST(req: NextRequest) {
         bidderEmail: profile.email ?? "",
         bidderPhone: profile.phone,
         bidderName: name,
-        firstName: name.split(" ")[0] || name,
-        lastName: name.split(" ").slice(1).join(" ") || "",
         orgName: membership.organization?.name ?? "Northwood Bids",
       }),
     });
