@@ -617,6 +617,7 @@ function NewItemForm() {
     title: searchParams.get("title") || "",
     description: searchParams.get("description") || "",
     condition: searchParams.get("condition") || "NEW",
+    size: searchParams.get("size") || "",
     retailValue: searchParams.get("retailValue") || "",
     startingBid: searchParams.get("startingBid") || "2",
     reservePrice: searchParams.get("reservePrice") || "",
@@ -768,6 +769,7 @@ function NewItemForm() {
       title: "",
       description: "",
       condition: "NEW",
+      size: "",
       retailValue: "",
       startingBid: "2",
       reservePrice: "",
@@ -1052,6 +1054,38 @@ function NewItemForm() {
                   ))}
                 </div>
               </div>
+              {/* Size sits with Condition — both are "what is this thing", and both
+                  show on the bidder's card. Free text, because clothing, shoes and
+                  bras don't share a scale; the chips just save typing on common ones. */}
+              <div>
+                <label className="text-sm font-semibold text-[#6f5b46] mb-1.5 block">
+                  Size <span className="font-normal text-[#8a7559]">(optional)</span>
+                </label>
+                <input
+                  name="size"
+                  value={formData.size}
+                  onChange={handleChange}
+                  placeholder="Medium, Size 8, One Size Fits All…"
+                  className={inputCls}
+                />
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {["S", "M", "L", "XL", "2XL", "One Size"].map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, size: prev.size === s ? "" : s }))}
+                      className={`px-3 py-2 rounded-lg text-sm font-bold border transition-colors ${
+                        formData.size === s
+                          ? "bg-[#c47b3e] text-white border-[#c47b3e]"
+                          : "bg-[#faf5ea] text-[#4a3a2b] border-[#cdbda3]"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <button
                 type="button"
                 onClick={() => setFormData((prev) => ({ ...prev, isPremium: !prev.isPremium }))}

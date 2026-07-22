@@ -179,6 +179,7 @@ export async function PATCH(
       ...(body.title !== undefined && { title: body.title }),
       ...(body.description !== undefined && { description: body.description || null }),
       ...(body.condition !== undefined && { condition: body.condition || "GOOD" }),
+      ...(body.size !== undefined && { size: String(body.size ?? "").trim() || null }),
       ...(body.category !== undefined && { category: body.category || null }),
       ...(body.retailValue !== undefined && {
         retailValue: body.retailValue ? parseFloat(body.retailValue) : null,

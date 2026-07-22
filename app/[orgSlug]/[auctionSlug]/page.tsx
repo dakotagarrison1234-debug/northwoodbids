@@ -361,11 +361,21 @@ export default async function AuctionPage({ params }: Props) {
                       <span className={bidClass}>{bidLabel}</span>
                     </div>
                     <div className="flex items-center justify-between gap-2 text-[10px] mt-1.5">
-                      <span className="text-[#6c4d39] font-semibold capitalize">{item.condition.replace("_", " ").toLowerCase()}</span>
+                      <span className="text-[#6c4d39] font-semibold capitalize min-w-0 truncate">{item.condition.replace("_", " ").toLowerCase()}</span>
                       {Number(item.retailValue) > 0 && (
                         <span className="text-[#8a7559] shrink-0">MSRP <span className="text-[#a32d2d] font-semibold">${Number(item.retailValue).toLocaleString()}</span></span>
                       )}
                     </div>
+                    {/* Size on its own line, as a chip. Clothing shoppers filter on this
+                        before anything else, so it can't be buried inside the listing —
+                        but it only appears when set, so non-apparel cards are unchanged. */}
+                    {item.size && (
+                      <div className="mt-1.5">
+                        <span className="inline-block bg-[#6c4d39]/10 text-[#6c4d39] border border-[#6c4d39]/25 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide max-w-full truncate">
+                          {item.size}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </Link>
                 </div>

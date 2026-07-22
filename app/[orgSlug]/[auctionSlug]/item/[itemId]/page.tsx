@@ -18,6 +18,7 @@ interface Item {
   title: string;
   description: string | null;
   condition: string;
+  size?: string | null;
   category: string | null;
   retailValue: number | null;
   startingBid: number;
@@ -635,6 +636,13 @@ export default function ItemPage() {
             <span className="text-xs text-[#6f5b46] bg-[#efe3d0] border border-[#e3d6bf] px-2.5 py-1 rounded-full capitalize font-medium">
               {item.condition.replace("_", " ").toLowerCase()}
             </span>
+            {/* Size gets the strongest badge of the row — it's the detail that decides
+                whether the item is even relevant to this bidder. */}
+            {item.size && (
+              <span className="text-xs text-white bg-[#6c4d39] px-2.5 py-1 rounded-full font-bold">
+                Size {item.size}
+              </span>
+            )}
             {item.taxDeductible && (
               <span className="text-xs text-[#6c4d39] bg-[#6c4d39]/10 border border-[#6c4d39]/20 px-2.5 py-1 rounded-full font-medium">Tax Deductible</span>
             )}

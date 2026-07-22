@@ -123,6 +123,9 @@ enum AuctionStatus {
   proxyBids       ProxyBid[]
   outbidAlerts    OutbidAlert[]
   pickedUpAt          DateTime?
+  /// Free-text size, shown to bidders on the card and the listing. Deliberately not
+  /// an enum: "Medium", "One Size Fits All", "Size 8" and "D Cup" all need to fit.
+  size                String?
   /// Ticked off the gather list while staff walk the warehouse collecting an order.
   /// Stored (not local state) so progress survives a refresh and two people can
   /// gather the same order together. Cleared when the order is staged or collected.

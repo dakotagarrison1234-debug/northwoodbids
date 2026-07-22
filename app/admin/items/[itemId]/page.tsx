@@ -18,7 +18,7 @@ export default function EditItemPage() {
   const [auctions, setAuctions] = useState<{ id: string; title: string }[]>([]);
   const [pickupLocations, setPickupLocations] = useState<{ id: string; name: string }[]>([]);
   const [formData, setFormData] = useState({
-    title: "", description: "", condition: "GOOD", category: "",
+    title: "", description: "", condition: "GOOD", size: "", category: "",
     retailValue: "", startingBid: "", reservePrice: "", donorName: "",
     taxDeductible: false, itemCode: "", storageLocation: "", locationId: "", notes: "", auctionId: "",
     isPremium: false, packSize: 0, transferable: true,
@@ -39,7 +39,7 @@ export default function EditItemPage() {
         const item = d.item;
         setFormData({
           title: item.title || "", description: item.description || "",
-          condition: item.condition || "GOOD", category: item.category || "",
+          condition: item.condition || "GOOD", size: item.size || "", category: item.category || "",
           retailValue: item.retailValue?.toString() || "",
           startingBid: item.startingBid?.toString() || "",
           reservePrice: item.reservePrice?.toString() || "",
@@ -330,6 +330,33 @@ export default function EditItemPage() {
                   <option value="POOR">Poor</option>
                 </select>
               </div>
+              {/* Size lives with Condition — same kind of "what is this" attribute,
+                  and both appear on the bidder's card. */}
+              <div>
+                <label className="text-base text-[#6f5b46] mb-1.5 block">
+                  Size <span className="text-[#8a7559]">(optional)</span>
+                </label>
+                <input name="size" value={formData.size} onChange={handleChange}
+                  placeholder="Medium, Size 8, One Size Fits All…"
+                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]" />
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {["S", "M", "L", "XL", "2XL", "One Size"].map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, size: prev.size === s ? "" : s }))}
+                      className={`px-3 py-2 rounded-lg text-sm font-bold border transition-colors ${
+                        formData.size === s
+                          ? "bg-[#c47b3e] text-white border-[#c47b3e]"
+                          : "bg-white text-[#4a3a2b] border-[#cdbda3]"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div>
                 <label className="text-base text-[#6f5b46] mb-1.5 block">Featured</label>
                 <button
