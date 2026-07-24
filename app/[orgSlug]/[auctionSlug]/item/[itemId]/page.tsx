@@ -581,9 +581,12 @@ export default function ItemPage() {
       <div className="max-w-6xl mx-auto px-6 sm:px-8 py-6 sm:py-10 grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-12">
         {/* Left: photos */}
         <div>
-          {/* Main photo with swipe support */}
+          {/* Main photo with swipe support. Capped to ~44vh on MOBILE so it doesn't
+              eat the whole first screen — a full-width square pushed the entire bid
+              box below the fold. Full square returns on desktop (lg) where the layout
+              is two columns and vertical space isn't the constraint. */}
           <div
-            className="w-full aspect-square bg-white rounded-2xl overflow-hidden mb-3 flex items-center justify-center relative select-none"
+            className="w-full h-[44vh] lg:h-auto lg:aspect-square bg-white rounded-2xl overflow-hidden mb-3 flex items-center justify-center relative select-none"
             onTouchStart={(e) => { touchStartXRef.current = e.touches[0].clientX; }}
             onTouchEnd={(e) => {
               if (touchStartXRef.current === null || item.photos.length < 2) return;
@@ -726,7 +729,7 @@ export default function ItemPage() {
               ) : null}
             </div>
 
-            {/* ── 3. Urgency — attached to the price, not floating in its own card ── */}
+            {/* ── 3. Urgency — inside the same card, hairline-divided ── */}
             {effectiveEndAt && !auctionClosed && !itemSold && !itemNotActive && (
               <div className={`px-4 py-2.5 flex items-center justify-between gap-3 border-t ${
                 biddingEnded ? "bg-white border-[#e3d6bf]" : "bg-[#f6ecda] border-[#6c4d39]/20"
@@ -741,12 +744,11 @@ export default function ItemPage() {
                 )}
               </div>
             )}
-          </div>
 
-          {/* ── Bidding. Flattened: no outer card, the two methods sit as tight
-              sibling blocks so both fit above the fold on a phone with minimal
-              scrolling. Status strip only appears when it has something to say. ── */}
-          <div className="mt-3 mb-5">
+          {/* ── 4. Bidding — SAME card, divided by a hairline. One unified surface
+              (price → time → bid) instead of separate floating boxes, so it reads as
+              one tool and both bid methods sit right under the price. ── */}
+          <div className="border-t border-[#e3d6bf] p-3">
 
             {(showWinning || hasActiveProxy) && (
               <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -1045,32 +1047,36 @@ export default function ItemPage() {
                   })()}
                 </div>
 
-                {/* Payment method indicator (shared) */}
-                {item.org?.stripeChargesEnabled && hasCard !== null && (
-                  <div className="flex items-center justify-between mt-4 px-1">
-                    <div className="flex items-center gap-1.5 text-xs text-[#8a7559]">
-                      <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
-                        <rect x="2" y="5" width="16" height="12" rx="2" />
-                        <path d="M2 9h16" />
-                      </svg>
-                      {hasCard
-                        ? cardBrand
-                          ? <span className="text-[#6f5b46]">{cardBrand.charAt(0).toUpperCase() + cardBrand.slice(1)} ···· {cardLast4}</span>
-                          : <span className="text-[#6f5b46]">Card on file</span>
-                        : <span className="text-amber-600 font-medium">No card on file — add one to bid</span>
-                      }
-                    </div>
-                    <button
-                      onClick={() => setShowCardModal(true)}
-                      className="text-xs text-[#6c4d39] hover:text-[#c47b3e] font-medium transition-colors"
-                    >
-                      {hasCard ? "Update card" : "Add card"}
-                    </button>
-                  </div>
-                )}
               </>
             )}
           </div>
+          </div>{/* ── close unified price + bid card ── */}
+
+          {/* Payment method line — barely-used reassurance, so it sits BELOW the card
+              rather than adding height inside the bid area. Only the "no card" warning
+              is loud, since that one blocks bidding. */}
+          {item.org?.stripeChargesEnabled && hasCard !== null && (
+            <div className="flex items-center justify-between mt-2 px-1">
+              <div className="flex items-center gap-1.5 text-xs text-[#8a7559]">
+                <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
+                  <rect x="2" y="5" width="16" height="12" rx="2" />
+                  <path d="M2 9h16" />
+                </svg>
+                {hasCard
+                  ? cardBrand
+                    ? <span className="text-[#6f5b46]">{cardBrand.charAt(0).toUpperCase() + cardBrand.slice(1)} ···· {cardLast4}</span>
+                    : <span className="text-[#6f5b46]">Card on file</span>
+                  : <span className="text-amber-600 font-medium">No card on file — add one to bid</span>
+                }
+              </div>
+              <button
+                onClick={() => setShowCardModal(true)}
+                className="text-xs text-[#6c4d39] hover:text-[#c47b3e] font-medium transition-colors"
+              >
+                {hasCard ? "Update card" : "Add card"}
+              </button>
+            </div>
+          )}
 
           {/* ── 5. Details ──
               Everything you'd read AFTER deciding you're interested: the description
