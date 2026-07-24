@@ -549,6 +549,16 @@ export default function ItemPage() {
   // Fix #4: determine if current user is winning (only show when signed in)
   const showWinning = isSignedIn && isLoaded && isWinning && !biddingEnded;
 
+  // Colour the current bid by YOUR standing: green when you're the top bidder, red
+  // when someone's ahead of you, neutral brown otherwise (logged out, no bids yet,
+  // or bidding closed). A signed-in bidder can tell at a glance whether they need to
+  // act just from the price colour.
+  const priceColor = showWinning
+    ? "text-[#4a7c59]"
+    : isSignedIn && isLoaded && !isWinning && !biddingLocked && item.currentBid > 0
+    ? "text-[#a32d2d]"
+    : "text-[#6c4d39]";
+
   return (
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
       {/* Transient "you've been outbid" flash */}
@@ -711,7 +721,7 @@ export default function ItemPage() {
                 <div className="text-[#8a7559] text-xs font-semibold uppercase tracking-wide">
                   {item.currentBid > 0 ? "Current bid" : "Starting bid"}
                 </div>
-                <div className="text-[#6c4d39] font-extrabold text-3xl leading-tight tabular-nums mt-0.5 truncate">
+                <div className={`font-extrabold text-3xl leading-tight tabular-nums mt-0.5 truncate ${priceColor}`}>
                   ${currentBid.toLocaleString()}
                 </div>
                 <div className="text-xs text-[#8a7559] mt-0.5">
