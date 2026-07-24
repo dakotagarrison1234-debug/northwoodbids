@@ -578,7 +578,9 @@ export default function ItemPage() {
         )}
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 sm:px-8 py-6 sm:py-10 grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-12">
+      {/* Small mobile gap so the title sits close under the photo; the big gap only
+          applies on lg, where it's the horizontal gutter between the two columns. */}
+      <div className="max-w-6xl mx-auto px-6 sm:px-8 py-4 sm:py-8 grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-12">
         {/* Left: photos */}
         <div>
           {/* Main photo with swipe support. Capped to ~44vh on MOBILE so it doesn't
@@ -676,9 +678,11 @@ export default function ItemPage() {
               Title leads. The badge row used to sit ABOVE the title, so the first
               thing you read was "Good · Medium" rather than the product. Now the
               attributes sit under the name, as a supporting line. */}
-          <h1 className="font-display text-2xl sm:text-3xl font-bold leading-tight">{item.title}</h1>
+          {/* Smaller + tighter line-height so a long title stays 1-2 lines instead of
+              eating vertical space. font-sans (not display) is narrower per glyph. */}
+          <h1 className="text-lg sm:text-xl font-bold leading-snug">{item.title}</h1>
 
-          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
             {(item.packSize ?? 0) > 1 && (
               <span className="text-xs text-white bg-[#241a12] px-2.5 py-1 rounded-full font-bold">{item.packSize}-Pack lot</span>
             )}
@@ -701,7 +705,7 @@ export default function ItemPage() {
               Price and retail side by side in one block. Retail used to live in a
               `grid-cols-2` containing a single child, which left a literal empty
               half-width hole beside it. */}
-          <div className="mt-3 rounded-2xl border border-[#e3d6bf] bg-white overflow-hidden">
+          <div className="mt-2 rounded-2xl border border-[#e3d6bf] bg-white overflow-hidden">
             <div className="flex items-stretch divide-x divide-[#e3d6bf]">
               <div className="flex-1 px-4 py-3 min-w-0">
                 <div className="text-[#8a7559] text-xs font-semibold uppercase tracking-wide">
