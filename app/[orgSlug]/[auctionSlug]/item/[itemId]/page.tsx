@@ -825,6 +825,12 @@ export default function ItemPage() {
                     </span>
                   </div>
 
+                  {/* Plain-English one-liner, always visible. The "?" still opens the
+                      full walkthrough, but nobody should have to tap to grasp the gist. */}
+                  <p className="text-xs text-[#6f5b46] leading-snug mb-2.5">
+                    Enter the most you&apos;d pay. We bid just enough to keep you on top — and never more than this.
+                  </p>
+
                   {proxyMessage && (
                     <div className={`text-sm mb-2.5 px-3 py-2 rounded-lg ${
                       proxyMessage.type === "success" ? "bg-[#6c4d39]/20 text-[#6c4d39]" : "bg-red-500/20 text-red-600"
