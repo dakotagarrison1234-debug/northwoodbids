@@ -2,8 +2,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
-import LocalDate from "./components/LocalDate";
-import AuctionPreviewThumbs from "./components/AuctionPreviewThumbs";
+import AuctionCard from "./components/AuctionCard";
 import SiteFooter from "./components/SiteFooter";
 import PusherRefresh from "./components/PusherRefresh";
 import { PineRidge, MountainRange, WoodenCrate, BranchDivider } from "./components/Illustrations";
@@ -64,40 +63,8 @@ function IconShield() {
   );
 }
 
-/**
- * Compute a rustic "closing soon / ends in Xh" urgency pill from endAt.
- * Returns null when the auction isn't within the urgency window (>48h out)
- * or has already closed.
- */
-function endsSoon(endAt: Date, now: Date): { label: string; tone: "urgent" | "soon" } | null {
-  const ms = endAt.getTime() - now.getTime();
-  if (ms <= 0) return null;
-  const mins = Math.round(ms / 60000);
-  const hours = Math.floor(mins / 60);
-  if (mins <= 60) return { label: mins <= 1 ? "Closing now" : `Ends in ${mins}m`, tone: "urgent" };
-  if (hours < 12) return { label: `Ends in ${hours}h`, tone: "urgent" };
-  if (hours < 48) return { label: `Ends in ${hours}h`, tone: "soon" };
-  return null;
-}
-
-function UrgencyPill({ endAt, now }: { endAt: Date; now: Date }) {
-  const u = endsSoon(endAt, now);
-  if (!u) return null;
-  return (
-    <span
-      className={`text-xs px-2.5 py-1 rounded-full shrink-0 font-bold whitespace-nowrap inline-flex items-center gap-1 ${
-        u.tone === "urgent"
-          ? "bg-red-50 text-red-600 border border-red-200"
-          : "bg-amber-50 text-amber-600 border border-amber-200"
-      }`}
-    >
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" />
-      </svg>
-      {u.label}
-    </span>
-  );
-}
+// (Urgency pill removed — AuctionCard now carries a live ticking AuctionCountdown
+//  that shows regardless of how far out the date is.)
 
 export default async function HomePage() {
   const { userId } = await auth();
@@ -112,11 +79,10 @@ export default async function HomePage() {
         items: {
           where: { status: "ACTIVE" },
           orderBy: [{ bids: { _count: "desc" } }, { currentBid: "desc" }],
-          take: 6,
+          take: 8,
           select: {
             id: true,
             photos: { take: 1, orderBy: [{ isPrimary: "desc" }, { order: "asc" }], select: { url: true } },
-            _count: { select: { bids: true } },
           },
         },
       },
@@ -129,12 +95,11 @@ export default async function HomePage() {
         organization: true,
         _count: { select: { items: true } },
         items: {
-          take: 6,
+          take: 8,
           orderBy: { createdAt: "desc" },
           select: {
             id: true,
             photos: { take: 1, orderBy: [{ isPrimary: "desc" }, { order: "asc" }], select: { url: true } },
-            _count: { select: { bids: true } },
           },
         },
       },
@@ -143,26 +108,16 @@ export default async function HomePage() {
     }),
   ]);
 
-  // Per-auction "raised" (sum of every item's current bid) and "active items" count,
-  // computed in the DB via groupBy instead of pulling every item row into JS.
+  // Active-item count per auction (auction dollar totals are admin-only, never shown
+  // on public cards) — one grouped query rather than loading every item row.
   const activeAuctionIds = activeAuctions.map((a) => a.id);
-  const [raisedByAuction, activeItemsByAuction] = activeAuctionIds.length
-    ? await Promise.all([
-        prisma.item.groupBy({
-          by: ["auctionId"],
-          where: { auctionId: { in: activeAuctionIds } },
-          _sum: { currentBid: true },
-        }),
-        prisma.item.groupBy({
-          by: ["auctionId"],
-          where: { auctionId: { in: activeAuctionIds }, status: "ACTIVE" },
-          _count: { _all: true },
-        }),
-      ])
-    : [[], []];
-  const raisedMap = new Map(
-    raisedByAuction.map((r) => [r.auctionId, Number(r._sum.currentBid ?? 0)])
-  );
+  const activeItemsByAuction = activeAuctionIds.length
+    ? await prisma.item.groupBy({
+        by: ["auctionId"],
+        where: { auctionId: { in: activeAuctionIds }, status: "ACTIVE" },
+        _count: { _all: true },
+      })
+    : [];
   const activeItemsMap = new Map(
     activeItemsByAuction.map((r) => [r.auctionId, r._count._all])
   );
@@ -220,32 +175,28 @@ export default async function HomePage() {
           )}
         </div>
         {activeAuctions.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {activeAuctions.map((auction) => {
-              const raised = raisedMap.get(auction.id) ?? 0;
-              const activeItems = activeItemsMap.get(auction.id) ?? 0;
-              return (
-                <Link key={auction.id} href={`/${auction.organization.slug}/${auction.slug}`}
-                  className="cv-card bg-white border border-[#e3d6bf] hover:border-[#6c4d39]/40 rounded-2xl p-6 transition-all hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] group shadow-sm">
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <div className="min-w-0">
-                      <h3 className="font-bold text-base group-hover:text-[#6c4d39] transition-colors leading-snug text-[#241a12]">{auction.title}</h3>
-                    </div>
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <span className="text-xs bg-[#6c4d39]/10 text-[#6c4d39] border border-[#6c4d39]/20 px-2.5 py-1 rounded-full font-bold whitespace-nowrap">Live</span>
-                      <UrgencyPill endAt={auction.endAt} now={now} />
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[#8a7559] mb-2">
-                    <span>{activeItems} item{activeItems !== 1 ? "s" : ""}</span>
-                  </div>
-                  <AuctionPreviewThumbs items={auction.items} />
-                  <div className="text-xs text-[#b3a085] mt-3 border-t border-[#efe3d0] pt-3">
-                    Closes <LocalDate iso={auction.endAt.toISOString()} />
-                  </div>
-                </Link>
-              );
-            })}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
+            {activeAuctions.map((auction) => (
+              <AuctionCard
+                key={auction.id}
+                mode="live"
+                auction={{
+                  id: auction.id,
+                  title: auction.title,
+                  slug: auction.slug,
+                  status: auction.status,
+                  startAtIso: auction.startAt.toISOString(),
+                  endAtIso: auction.endAt.toISOString(),
+                  itemCount: activeItemsMap.get(auction.id) ?? 0,
+                  org: {
+                    name: auction.organization.name,
+                    slug: auction.organization.slug,
+                    logoUrl: auction.organization.logoUrl,
+                  },
+                  items: auction.items,
+                }}
+              />
+            ))}
           </div>
         ) : (
           <div className="text-center py-16 bg-white rounded-2xl border border-[#e3d6bf] shadow-sm">
@@ -264,23 +215,27 @@ export default async function HomePage() {
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#241a12]">Coming Soon</h2>
             <span className="text-[#8a7559] text-sm font-medium">({upcomingAuctions.length})</span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
             {upcomingAuctions.map((auction) => (
-              <Link key={auction.id} href={`/${auction.organization.slug}/${auction.slug}`}
-                className="cv-card bg-white border border-[#e3d6bf] hover:border-[#cdbda3] rounded-2xl p-6 transition-all group shadow-sm">
-                <div className="flex items-start justify-between gap-2 mb-3">
-                  <div className="min-w-0">
-                    <h3 className="font-bold text-base leading-snug text-[#2c2317]">{auction.title}</h3>
-                  </div>
-                  <span className="text-xs bg-[#efe3d0] text-[#8a7559] border border-[#e3d6bf] px-2.5 py-1 rounded-full shrink-0 font-semibold">Upcoming</span>
-                </div>
-                <div className="text-sm text-[#8a7559] mb-2">{auction._count.items} item{auction._count.items !== 1 ? "s" : ""}</div>
-                <AuctionPreviewThumbs items={auction.items} />
-                <div className="text-xs text-[#6c4d39] font-medium mt-3 border-t border-[#efe3d0] pt-3 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#6c4d39]/60 inline-block" />
-                  Opens <LocalDate iso={auction.startAt!.toISOString()} />
-                </div>
-              </Link>
+              <AuctionCard
+                key={auction.id}
+                mode="upcoming"
+                auction={{
+                  id: auction.id,
+                  title: auction.title,
+                  slug: auction.slug,
+                  status: auction.status,
+                  startAtIso: auction.startAt.toISOString(),
+                  endAtIso: auction.endAt.toISOString(),
+                  itemCount: auction._count.items,
+                  org: {
+                    name: auction.organization.name,
+                    slug: auction.organization.slug,
+                    logoUrl: auction.organization.logoUrl,
+                  },
+                  items: auction.items,
+                }}
+              />
             ))}
           </div>
         </section>
