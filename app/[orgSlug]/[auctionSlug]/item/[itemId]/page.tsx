@@ -698,9 +698,9 @@ export default function ItemPage() {
               Price and retail side by side in one block. Retail used to live in a
               `grid-cols-2` containing a single child, which left a literal empty
               half-width hole beside it. */}
-          <div className="mt-4 rounded-2xl border border-[#e3d6bf] bg-white overflow-hidden">
+          <div className="mt-3 rounded-2xl border border-[#e3d6bf] bg-white overflow-hidden">
             <div className="flex items-stretch divide-x divide-[#e3d6bf]">
-              <div className="flex-1 px-4 py-3.5 min-w-0">
+              <div className="flex-1 px-4 py-3 min-w-0">
                 <div className="text-[#8a7559] text-xs font-semibold uppercase tracking-wide">
                   {item.currentBid > 0 ? "Current bid" : "Starting bid"}
                 </div>
@@ -712,7 +712,7 @@ export default function ItemPage() {
                 </div>
               </div>
               {item.retailValue ? (
-                <div className="px-4 py-3.5 shrink-0 flex flex-col justify-center bg-[#faf5ea]">
+                <div className="px-4 py-3 shrink-0 flex flex-col justify-center bg-[#faf5ea]">
                   <div className="text-[#8a7559] text-xs font-semibold uppercase tracking-wide">Retail</div>
                   <div className="text-[#a32d2d] font-extrabold text-xl leading-tight tabular-nums mt-0.5">
                     ${item.retailValue.toLocaleString()}
@@ -743,15 +743,13 @@ export default function ItemPage() {
             )}
           </div>
 
+          {/* ── Bidding. Flattened: no outer card, the two methods sit as tight
+              sibling blocks so both fit above the fold on a phone with minimal
+              scrolling. Status strip only appears when it has something to say. ── */}
+          <div className="mt-3 mb-5">
 
-          {/* ── Unified bidding card: Max Bid (primary) + manual bid (secondary) ── */}
-          <div className="bg-white border border-[#e3d6bf] rounded-2xl p-4 sm:p-6 mb-6 shadow-[0_0_25px_rgba(108,77,57,0.04)]">
-
-            {/* Status strip — price and bid count now live in the block above, so this
-                only carries state the bidder needs while deciding: am I winning, and
-                is my max still armed. No duplicated numbers. */}
             {(showWinning || hasActiveProxy) && (
-              <div className="flex flex-wrap items-center gap-2 mb-4">
+              <div className="flex flex-wrap items-center gap-2 mb-2">
                 {showWinning && (
                   <span className="inline-flex items-center gap-1.5 text-xs bg-[#4a7c59] text-white px-2.5 py-1 rounded-full font-bold">
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
@@ -792,29 +790,27 @@ export default function ItemPage() {
                 {/* ═══════════════════════════════════════════════════════════
                     MAX BID — PRIMARY option
                 ═══════════════════════════════════════════════════════════ */}
-                <div className="bg-[#f6ecda] border-2 border-[#6c4d39]/30 rounded-2xl p-4 mb-5">
-                  {/* section header */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-1.5">
-                      <div>
-                        <h3 className="font-bold text-sm text-[#241a12]">Set a Max Bid</h3>
-                        <p className="text-[10px] text-[#8a7559] leading-tight mt-0.5">We auto-bid for you up to your limit</p>
-                      </div>
+                <div className="bg-[#f6ecda] border-2 border-[#6c4d39]/30 rounded-2xl p-3">
+                  {/* One-line header — title, ? and the Recommended tag on a single row
+                      instead of a title + subtitle + tag stack. */}
+                  <div className="flex items-center justify-between gap-2 mb-2.5">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <h3 className="font-bold text-sm text-[#241a12] shrink-0">Set a max bid</h3>
                       <button
                         onClick={() => setShowMaxBidExplainer(true)}
                         aria-label="Learn how max bidding works"
-                        className="w-5 h-5 rounded-full bg-[#6c4d39]/20 text-[#6c4d39] text-xs font-bold flex items-center justify-center hover:bg-[#6c4d39]/35 transition-colors leading-none shrink-0"
+                        className="w-4 h-4 rounded-full bg-[#6c4d39]/20 text-[#6c4d39] text-[10px] font-bold flex items-center justify-center hover:bg-[#6c4d39]/35 transition-colors leading-none shrink-0"
                       >
                         ?
                       </button>
                     </div>
-                    <span className="text-[11px] font-semibold text-[#6c4d39] bg-[#6c4d39]/10 px-2 py-0.5 rounded-full shrink-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-[#6c4d39] bg-[#6c4d39]/10 px-2 py-0.5 rounded-full shrink-0">
                       Recommended
                     </span>
                   </div>
 
                   {proxyMessage && (
-                    <div className={`text-sm mb-3 px-3 py-2 rounded-lg ${
+                    <div className={`text-sm mb-2.5 px-3 py-2 rounded-lg ${
                       proxyMessage.type === "success" ? "bg-[#6c4d39]/20 text-[#6c4d39]" : "bg-red-500/20 text-red-600"
                     }`}>
                       {proxyMessage.text}
@@ -851,17 +847,18 @@ export default function ItemPage() {
                     /* Set max bid form */
                     <div>
                       {proxyWasBeaten && (
-                        <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3 text-xs text-red-600">
+                        <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-2.5 text-xs text-red-600">
                           Your max bid was outbid. Set a new maximum to get back in the lead.
                         </div>
                       )}
-                      <p className="text-[#8a7559] text-xs mb-2">Quick picks:</p>
-                      <div className="flex gap-1.5 mb-3 flex-wrap">
+                      {/* Quick-pick chips — no "Quick picks:" label; the chips are
+                          self-explanatory and the label was a whole wasted line. */}
+                      <div className="flex gap-1.5 mb-2 flex-wrap">
                         {proxySuggestions.map(s => (
                           <button
                             key={s}
                             onClick={() => setProxyAmount(String(s))}
-                            className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
+                            className={`text-sm px-3 py-1.5 rounded-lg border font-semibold transition-colors ${
                               proxyAmount === String(s)
                                 ? "bg-[#6c4d39] border-[#6c4d39] text-white"
                                 : "bg-white border-[#cdbda3] text-[#4a3a2b] hover:bg-[#efe3d0]"
@@ -913,27 +910,19 @@ export default function ItemPage() {
                   )}
                 </div>
 
-                {/* ═══════════════════════════════════════════════════════════
-                    Divider
-                ═══════════════════════════════════════════════════════════ */}
-                <div className="flex items-center gap-3 mb-5">
+                {/* Slim divider — tight margins so the quick bid stays above the fold. */}
+                <div className="flex items-center gap-3 my-2.5">
                   <div className="flex-1 h-px bg-[#e3d6bf]" />
-                  <span className="text-xs text-[#b3a085]">or just take the lead</span>
+                  <span className="text-[11px] text-[#b3a085] uppercase tracking-wide">or take the lead now</span>
                   <div className="flex-1 h-px bg-[#e3d6bf]" />
                 </div>
 
-                {/* ═══════════════════════════════════════════════════════════
-                    QUICK BID — double tap to bid the next increment.
-
-                    Replaces the old "type an amount" box. Nobody types $17 into a
-                    field; they either set a max, or they want to nudge it up one
-                    increment right now. Double-tap (rather than a single tap) is the
-                    guard against a mis-tap costing real money — no modal, no extra
-                    screen, but still deliberate.
-                ═══════════════════════════════════════════════════════════ */}
-                <div className="bg-white border border-[#e3d6bf] rounded-2xl p-4">
+                {/* QUICK BID — double tap for the next increment. No wrapper card; it
+                    sits flush as a sibling of the max-bid box, so the two methods are
+                    one tight unit rather than two nested cards with double gutters. */}
+                <div>
                   {message && (
-                    <div className={`text-sm mb-3 px-3 py-2 rounded-lg ${
+                    <div className={`text-sm mb-2 px-3 py-2 rounded-lg ${
                       message.type === "success" ? "bg-green-100 text-green-800" : "bg-red-500/20 text-red-600"
                     }`}>
                       {message.text}
@@ -941,12 +930,13 @@ export default function ItemPage() {
                   )}
 
                   {showWinning ? (
-                    /* You can't outbid yourself — say so rather than taking the money. */
-                    <div className="rounded-2xl bg-green-50 border-2 border-green-200 px-4 py-5 text-center">
-                      <div className="text-2xl mb-1">🎉</div>
-                      <p className="text-lg font-extrabold text-green-800">You&apos;re the top bid</p>
-                      <p className="text-sm text-green-700 mt-0.5">
-                        No need to bid again — we&apos;ll alert you if someone passes you.
+                    /* You can't outbid yourself. One tidy line, not a 5-line hero —
+                       the pill above already flags the winning state. */
+                    <div className="rounded-xl bg-green-50 border-2 border-green-200 px-4 py-3 flex items-center gap-2.5">
+                      <span className="text-lg shrink-0">🎉</span>
+                      <p className="text-sm text-green-800">
+                        <span className="font-extrabold">You&apos;re the top bid.</span>{" "}
+                        We&apos;ll alert you if someone passes you.
                       </p>
                     </div>
                   ) : (
