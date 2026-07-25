@@ -216,7 +216,7 @@ export default function AuctionItemsView({
                 }`}
               >
                 {/* Thumb — framed, self-centered, whole product shown */}
-                <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 self-center rounded-xl overflow-hidden bg-[#faf6ec] ring-1 ring-[#efe0c9] flex items-center justify-center">
+                <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 self-center rounded-xl overflow-hidden bg-white ring-1 ring-[#efe0c9] flex items-center justify-center">
                   {item.isCombo && item.collage.length > 1 ? (
                     <div className={`absolute inset-0 grid gap-px ${item.collage.length === 2 ? "grid-cols-2 grid-rows-1" : "grid-cols-2 grid-rows-2"}`}>
                       {item.collage.map((url, i) => (
