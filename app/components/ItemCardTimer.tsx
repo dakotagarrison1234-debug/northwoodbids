@@ -30,9 +30,10 @@ function getPusher(): Pusher {
 interface Props {
   itemId: string;
   endAt: string; // ISO — item.itemEndAt ?? auction.endAt
+  inline?: boolean; // list-row variant: no absolute positioning, sits in a text row
 }
 
-export default function ItemCardTimer({ itemId, endAt: initialEndAt }: Props) {
+export default function ItemCardTimer({ itemId, endAt: initialEndAt, inline }: Props) {
   const [endAt, setEndAt] = useState(initialEndAt);
   const [remaining, setRemaining] = useState<number>(
     () => new Date(initialEndAt).getTime() - Date.now()
@@ -73,9 +74,15 @@ export default function ItemCardTimer({ itemId, endAt: initialEndAt }: Props) {
   // Past zero: closing is handled by the cron within ~a minute
   if (remaining <= 0) {
     return (
-      <div className="absolute top-2.5 left-2.5 bg-[#f1e7d5]/85 backdrop-blur-sm text-[#6f5b46] text-xs px-2.5 py-1 rounded-full font-semibold">
+      <span
+        className={
+          inline
+            ? "inline-flex items-center bg-[#f1e7d5] text-[#6f5b46] text-[10px] px-2 py-0.5 rounded-full font-semibold"
+            : "absolute top-2.5 left-2.5 bg-[#f1e7d5]/85 backdrop-blur-sm text-[#6f5b46] text-xs px-2.5 py-1 rounded-full font-semibold"
+        }
+      >
         Ending…
-      </div>
+      </span>
     );
   }
 
@@ -83,8 +90,14 @@ export default function ItemCardTimer({ itemId, endAt: initialEndAt }: Props) {
   const s = Math.floor((remaining % 60000) / 1000);
 
   return (
-    <div className="absolute top-2.5 left-2.5 bg-red-500/90 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-full font-bold animate-pulse tabular-nums">
+    <span
+      className={
+        inline
+          ? "inline-flex items-center bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold animate-pulse tabular-nums"
+          : "absolute top-2.5 left-2.5 bg-red-500/90 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-full font-bold animate-pulse tabular-nums"
+      }
+    >
       {m}:{s.toString().padStart(2, "0")} left
-    </div>
+    </span>
   );
 }
