@@ -14,7 +14,7 @@ export type MotionItem = {
   bidCount: number;
 };
 
-type Scene = { type: "intro" | "item" | "outro"; item?: MotionItem; ms: number };
+type Scene = { type: "intro" | "item" | "outro"; items?: MotionItem[]; ms: number };
 
 /**
  * Looping, fast-paced 1080×1080 motion graphic for social, built to be SCREEN-RECORDED.
@@ -37,11 +37,18 @@ export default function FlyerMotion({
   auction: { title: string; closes: string };
   logo: string;
 }) {
-  const scenes: Scene[] = useMemo(() => [
-    { type: "intro", ms: 2200 },
-    ...items.slice(0, 10).map((item) => ({ type: "item" as const, item, ms: 1350 })),
-    { type: "outro", ms: 2600 },
-  ], [items]);
+  const scenes: Scene[] = useMemo(() => {
+    // Two lots per scene, in loudest-first order. Each pair holds ~2.6s — longer than
+    // a single item did, so both are readable before the next set flashes in.
+    const pool = items.slice(0, 12);
+    const pairs: MotionItem[][] = [];
+    for (let i = 0; i < pool.length; i += 2) pairs.push(pool.slice(i, i + 2));
+    return [
+      { type: "intro", ms: 2200 },
+      ...pairs.map((pair) => ({ type: "item" as const, items: pair, ms: 2600 })),
+      { type: "outro", ms: 2600 },
+    ];
+  }, [items]);
 
   const totalMs = useMemo(() => scenes.reduce((s, x) => s + x.ms, 0), [scenes]);
 
@@ -310,41 +317,57 @@ function SceneContent({ scene, auction, logo }: { scene: Scene; auction: { title
       </div>
     );
   }
-  // item
-  const item = scene.item!;
+  // item — two lots side by side (or one centered if it's the odd last).
+  const pair = scene.items ?? [];
+  const single = pair.length === 1;
+  return (
+    <div style={{ flex: 1, display: "flex", gap: 26, padding: "14px 40px 4px", minHeight: 0, justifyContent: single ? "center" : "stretch" }}>
+      {pair.map((item, i) => (
+        <div key={item.id} style={{ flex: single ? "0 0 62%" : 1, minWidth: 0 }}>
+          <ItemTile item={item} delay={i * 0.12} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** One product tile, sized for the two-up layout. */
+function ItemTile({ item, delay }: { item: MotionItem; delay: number }) {
   const pctOff = item.retail > 0 && item.price < item.retail ? Math.round((1 - item.price / item.retail) * 100) : 0;
   const hot = item.bidCount >= 3;
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "12px 44px 0", minHeight: 0 }}>
-      <div style={{ flex: 1, minHeight: 0, position: "relative", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", minHeight: 0, animation: `fm-pop .5s ${delay}s both` }}>
+      {/* Photo */}
+      <div style={{ flex: 1, minHeight: 0, position: "relative", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "#fff", border: "2px solid #e3d6bf", borderRadius: 20, padding: 14 }}>
         {item.photo ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.photo} alt="" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", animation: "fm-zoom .6s both", filter: "drop-shadow(0 14px 28px rgba(0,0,0,.2))" }} />
+          <img src={item.photo} alt="" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", animation: `fm-zoom .6s ${delay}s both`, filter: "drop-shadow(0 10px 20px rgba(0,0,0,.16))" }} />
         ) : (
-          <div style={{ color: "#b3a085", fontSize: 30 }}>No photo</div>
+          <div style={{ color: "#b3a085", fontSize: 24 }}>No photo</div>
         )}
         {hot && (
-          <div style={{ position: "absolute", top: 6, left: 6, background: "#c0392b", color: "#fff", fontSize: 28, fontWeight: 900, padding: "9px 20px", borderRadius: 16, animation: "fm-pop .4s .1s both" }}>
-            🔥 {item.bidCount} bids
+          <div style={{ position: "absolute", top: 10, left: 10, background: "#c0392b", color: "#fff", fontSize: 24, fontWeight: 900, padding: "7px 15px", borderRadius: 13, animation: `fm-pop .4s ${delay + 0.15}s both` }}>
+            🔥 {item.bidCount}
           </div>
         )}
         {pctOff >= 20 && (
-          <div style={{ position: "absolute", top: 6, right: 6, background: "#a32d2d", color: "#fff", fontSize: 44, fontWeight: 900, padding: "13px 24px", borderRadius: 20, transform: "rotate(-8deg)", animation: "fm-burst .55s .2s both", boxShadow: "0 10px 24px rgba(163,45,45,.4)" }}>
+          <div style={{ position: "absolute", top: 10, right: 10, background: "#a32d2d", color: "#fff", fontSize: 34, fontWeight: 900, padding: "9px 16px", borderRadius: 15, transform: "rotate(-8deg)", animation: `fm-burst .55s ${delay + 0.2}s both`, boxShadow: "0 8px 18px rgba(163,45,45,.4)" }}>
             {pctOff}% OFF
           </div>
         )}
       </div>
-      <div style={{ flexShrink: 0, background: "#fff", border: "3px solid #6c4d39", borderRadius: 24, padding: "20px 28px", marginBottom: 6, animation: "fm-slideup .5s .15s both" }}>
-        <div style={{ fontSize: 32, fontWeight: 800, color: "#241a12", lineHeight: 1.15, height: 76, overflow: "hidden" }}>{item.title}</div>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 18, marginTop: 10 }}>
-          <div>
-            <div style={{ fontSize: 21, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#8a7559" }}>{item.priceLabel}</div>
-            <div style={{ fontSize: 72, fontWeight: 900, color: "#6c4d39", lineHeight: 1 }}>${item.price.toLocaleString()}</div>
+      {/* Info */}
+      <div style={{ flexShrink: 0, background: "#fff", border: "3px solid #6c4d39", borderRadius: 20, padding: "16px 20px", marginTop: 12, animation: `fm-slideup .5s ${delay + 0.12}s both` }}>
+        <div style={{ fontSize: 26, fontWeight: 800, color: "#241a12", lineHeight: 1.15, height: 60, overflow: "hidden" }}>{item.title}</div>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, marginTop: 8 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 17, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "#8a7559" }}>{item.priceLabel}</div>
+            <div style={{ fontSize: 52, fontWeight: 900, color: "#6c4d39", lineHeight: 1 }}>${item.price.toLocaleString()}</div>
           </div>
           {item.retail > 0 && (
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 21, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#8a7559" }}>Retail</div>
-              <div style={{ fontSize: 44, fontWeight: 900, color: "#a32d2d", lineHeight: 1 }}>${item.retail.toLocaleString()}</div>
+            <div style={{ textAlign: "right", flexShrink: 0 }}>
+              <div style={{ fontSize: 17, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "#8a7559" }}>Retail</div>
+              <div style={{ fontSize: 32, fontWeight: 900, color: "#a32d2d", lineHeight: 1 }}>${item.retail.toLocaleString()}</div>
             </div>
           )}
         </div>
