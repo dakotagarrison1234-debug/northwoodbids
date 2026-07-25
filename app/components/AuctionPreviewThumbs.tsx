@@ -30,14 +30,16 @@ export default function AuctionPreviewThumbs({
         return (
           <div
             key={it.id}
-            className="relative aspect-square rounded-lg overflow-hidden bg-[#efe3d0] border border-[#e3d6bf]"
+            className="relative aspect-square rounded-lg overflow-hidden bg-white border border-[#e3d6bf]"
           >
+            {/* contain, not cover — these small thumbs cropped product shots hardest.
+                White tile + a little padding letterboxes cleanly. */}
             <Image
               src={it.photos[0].url}
               alt=""
               fill
               sizes="(max-width:640px) 22vw, 90px"
-              className="object-cover"
+              className="object-contain p-1"
             />
             {isMoreTile && (
               <div className="absolute inset-0 bg-[#241a12]/62 flex items-center justify-center">

@@ -301,8 +301,11 @@ export default async function AuctionPage({ params }: Props) {
                       : "border-[#e3d6bf] hover:border-[#6c4d39]/40 hover:shadow-[0_0_25px_rgba(108,77,57,0.06)]"
                   }`}
                 >
-                  {/* Photo */}
-                  <div className="w-full aspect-square bg-[#efe3d0] flex items-center justify-center text-[#8a7559] overflow-hidden relative">
+                  {/* Photo — white tile + object-contain so the WHOLE product shows,
+                      never cropped/zoomed. (cover cropped tall or wide items — the
+                      "funky/zoomed" look. Same treatment as the item page.) The combo
+                      collage stays cover: it's a deliberate seamless mosaic. */}
+                  <div className="w-full aspect-square bg-white flex items-center justify-center text-[#8a7559] overflow-hidden relative">
                     {isCombo && collage.length > 1 ? (
                       <div className={`absolute inset-0 grid gap-0.5 ${collage.length === 2 ? "grid-cols-2 grid-rows-1" : "grid-cols-2 grid-rows-2"}`}>
                         {collage.map((url, i) => (
@@ -317,7 +320,7 @@ export default async function AuctionPage({ params }: Props) {
                         alt={item.title}
                         fill
                         sizes="(max-width:640px) 50vw, 25vw"
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="object-contain p-2 group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
                       <div className="flex flex-col items-center gap-2 text-[#b3a085]">
