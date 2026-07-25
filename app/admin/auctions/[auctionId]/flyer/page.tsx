@@ -2,8 +2,8 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireUserOrg } from "@/lib/auth";
-import DownloadFlyerButton from "./DownloadFlyerButton";
-import FlyerStage from "./FlyerStage";
+import FlyerStudio from "./FlyerStudio";
+import type { MotionItem } from "./FlyerMotion";
 
 const LOGO_URL =
   "https://assets.cdn.filesafe.space/TwuL7EwKfW8oGIV0Zo5q/media/6a373b261c5d711b35bf4e56.png";
@@ -40,10 +40,10 @@ export default async function FlyerPage({ params }: Props) {
     include: {
       items: {
         where: { status: { in: ["ACTIVE", "DRAFT"] } },
-        // Best items first: premium, then most action, then highest value.
-        orderBy: [{ isPremium: "desc" }, { currentBid: "desc" }, { retailValue: "desc" }],
+        // Loudest lots lead: most bids, then highest MSRP, then current price.
+        orderBy: [{ bids: { _count: "desc" } }, { retailValue: "desc" }, { currentBid: "desc" }, { isPremium: "desc" }],
         take: 60,   // wide enough that a photographed item never falls outside the pool
-        include: { photos: true },
+        include: { photos: true, _count: { select: { bids: true } } },
       },
     },
   });
@@ -67,12 +67,28 @@ export default async function FlyerPage({ params }: Props) {
   const withoutPhoto = auction.items.filter((i) => i.photos.length === 0);
   const chosen = [...withPhoto, ...withoutPhoto].slice(0, 6);
 
-  const priceOf = (i: (typeof chosen)[number]) => {
+  const priceOf = (i: { currentBid: unknown; startingBid: unknown }) => {
     const cur = Number(i.currentBid);
     return cur > 0
       ? { label: "Current bid", value: cur }
       : { label: "Starts at", value: Number(i.startingBid) };
   };
+
+  // Motion items — up to 12 photographed lots, already in loudest-first order, with
+  // pre-proxied photo URLs so the client component can render them directly.
+  const motionItems: MotionItem[] = withPhoto.slice(0, 12).map((i) => {
+    const p = priceOf(i);
+    return {
+      id: i.id,
+      title: i.title,
+      price: p.value,
+      priceLabel: p.label,
+      retail: Number(i.retailValue),
+      photo: proxied(i.photos.find((ph) => ph.isPrimary)?.url ?? i.photos[0]?.url ?? ""),
+      isPremium: i.isPremium,
+      bidCount: i._count.bids,
+    };
+  });
 
   return (
     <>
@@ -80,21 +96,17 @@ export default async function FlyerPage({ params }: Props) {
         <div className="flex items-center gap-2 min-w-0">
           <Link href={`/admin/auctions/${auction.id}`} className="text-[#6f5b46] hover:text-[#241a12] text-base font-semibold shrink-0">← Auction</Link>
           <span className="text-[#8a7559]">/</span>
-          <h1 className="text-2xl sm:text-3xl font-semibold truncate">Social flyer</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold truncate">Social post</h1>
         </div>
-        <DownloadFlyerButton />
       </header>
 
       <div className="px-6 sm:px-8 py-6">
-        <p className="text-base text-[#6f5b46] mb-4 max-w-xl">
-          Your top 6 items with live prices, sized 1080×1080 for Facebook and Instagram.
-          Tap <strong>Download image</strong> — or screenshot the flyer below, it&apos;s fully on screen.
-        </p>
-
-        {/* Built at the true 1080×1080 export size, displayed shrunk to fit. Every
-            dimension below is a hard pixel value: no aspect-ratio, no overlays, no
-            outer shadow on #flyer — all things html2canvas mangles. */}
-        <FlyerStage>
+        <FlyerStudio
+          items={motionItems}
+          auction={{ title: auction.title, closes: fmtCloses(auction.endAt) }}
+          logo={proxied(LOGO_URL)}
+        >
+          {/* ── Static image flyer (Image tab). Built at true 1080×1080. ── */}
           <div
             id="flyer"
             style={{ width: 1080, height: 1080, display: "flex", flexDirection: "column", background: "#ffffff" }}
@@ -164,7 +176,7 @@ export default async function FlyerPage({ params }: Props) {
               <div style={{ color: "#e8d9c2", fontSize: 18, marginTop: 6 }}>New auctions every week — sign up free and start bidding.</div>
             </div>
           </div>
-        </FlyerStage>
+        </FlyerStudio>
 
         {chosen.length === 0 && (
           <p className="text-base text-[#8a7559] mt-4">This auction has no items with photos yet — add some items first.</p>
