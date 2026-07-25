@@ -45,15 +45,15 @@ export default function FlyerStudio({
 
       {tab === "video" ? (
         <div>
-          <div className="mb-4 rounded-xl bg-[#f6ecda] border border-[#e3c9a3] px-4 py-3 max-w-xl">
-            <p className="text-base text-[#4a3a2b] font-semibold">How to post it</p>
+          <div className="mb-4 rounded-xl bg-[#f6ecda] border border-[#e3c9a3] px-4 py-3 max-w-md">
+            <p className="text-base text-[#4a3a2b] font-semibold">Post it in 3 steps</p>
             <ol className="text-sm text-[#6f5b46] mt-1 list-decimal pl-5 space-y-0.5">
-              <li>Tap <strong>Fullscreen</strong>, then <strong>Restart</strong>.</li>
-              <li>Screen-record your phone (or Mac) while it plays through once.</li>
-              <li>Trim the ends, post the clip to Facebook or Instagram.</li>
+              <li>Open your phone&apos;s screen recorder (Control Center / quick settings).</li>
+              <li>Tap <strong>Play &amp; record</strong> below — start the recording as the 3-2-1 counts down.</li>
+              <li>Let it run one full loop (the bar fills, a green ✓ appears), stop, trim, post.</li>
             </ol>
             <p className="text-xs text-[#8a7559] mt-2">
-              Screen recording gives a clean MP4 that uploads perfectly — no file to download.
+              A screen recording is a clean MP4 that uploads perfectly to Facebook &amp; Instagram — nothing to download.
             </p>
           </div>
           {items.length === 0 ? (
