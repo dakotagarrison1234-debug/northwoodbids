@@ -207,28 +207,28 @@ export default function AuctionItemsView({
             <div key={item.id} className="flex flex-col">
               <Link
                 href={item.href}
-                className={`group flex items-center gap-3 bg-white border rounded-xl overflow-hidden transition-all pr-3 ${
+                className={`group flex items-stretch gap-3 sm:gap-4 bg-white border rounded-2xl p-2.5 sm:p-3 transition-all ${
                   item.isPremium
                     ? "nb-premium border-2"
                     : item.winning
-                    ? "border-[#6c4d39]/50"
-                    : "border-[#e3d6bf] hover:border-[#6c4d39]/40 hover:shadow-[0_0_18px_rgba(108,77,57,0.06)]"
+                    ? "border-[#6c4d39]/50 shadow-[0_0_0_1px_rgba(108,77,57,0.12)]"
+                    : "border-[#e3d6bf] hover:border-[#6c4d39]/40 hover:shadow-[0_4px_20px_rgba(108,77,57,0.08)]"
                 }`}
               >
-                {/* Thumb */}
-                <div className="relative w-20 h-20 sm:w-[88px] sm:h-[88px] shrink-0 bg-white flex items-center justify-center overflow-hidden">
+                {/* Thumb — framed, self-centered, whole product shown */}
+                <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 self-center rounded-xl overflow-hidden bg-[#faf6ec] ring-1 ring-[#efe0c9] flex items-center justify-center">
                   {item.isCombo && item.collage.length > 1 ? (
                     <div className={`absolute inset-0 grid gap-px ${item.collage.length === 2 ? "grid-cols-2 grid-rows-1" : "grid-cols-2 grid-rows-2"}`}>
                       {item.collage.map((url, i) => (
                         <div key={i} className={`relative bg-[#efe3d0] overflow-hidden ${item.collage.length === 3 && i === 0 ? "row-span-2" : ""}`}>
-                          <Image src={url} alt="" fill sizes="88px" className="object-cover" />
+                          <Image src={url} alt="" fill sizes="112px" className="object-cover" />
                         </div>
                       ))}
                     </div>
                   ) : item.primaryPhoto ? (
-                    <Image src={item.primaryPhoto} alt={item.title} fill sizes="88px" className="object-contain p-1" />
+                    <Image src={item.primaryPhoto} alt={item.title} fill sizes="112px" className="object-contain p-1.5" />
                   ) : (
-                    <svg className="w-7 h-7 text-[#b3a085]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <svg className="w-8 h-8 text-[#b3a085]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <rect x="3" y="3" width="18" height="18" rx="3" />
                       <circle cx="8.5" cy="8.5" r="2" />
                       <path d="m21 15-5-5L5 21" />
@@ -241,49 +241,52 @@ export default function AuctionItemsView({
                   )}
                 </div>
 
-                {/* Middle: title + meta */}
-                <div className="min-w-0 flex-1 py-2">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-sm leading-snug line-clamp-1 group-hover:text-[#6c4d39] transition-colors break-words">
+                {/* Content — title/meta on top, price + CTA on a shared baseline below */}
+                <div className="flex-1 min-w-0 flex flex-col justify-between gap-2 py-0.5">
+                  <div className="min-w-0">
+                    {(item.badge || item.isItemLive) && (
+                      <div className="flex items-center gap-1.5 mb-1">
+                        {item.badge && (
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${item.badge.cls}`}>
+                            {item.badge.text}
+                          </span>
+                        )}
+                        {item.isItemLive && (
+                          <ItemCardTimer itemId={item.id} endAt={item.itemEndAtIso} inline />
+                        )}
+                      </div>
+                    )}
+                    <h3 className="font-bold text-[15px] sm:text-base leading-snug line-clamp-2 group-hover:text-[#6c4d39] transition-colors break-words">
                       {item.title}
                     </h3>
-                    {item.badge && (
-                      <span className={`shrink-0 text-[10px] px-2 py-0.5 rounded-full font-bold ${item.badge.cls}`}>
-                        {item.badge.text}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5 text-[11px] text-[#8a7559]">
-                    {item.condition && <span className="capitalize truncate">{item.condition}</span>}
-                    {item.size && (
-                      <span className="shrink-0 bg-[#efe3d0] border border-[#cdbda3] text-[#241a12] rounded px-1.5 py-0.5">
-                        Size <span className="font-extrabold">{item.size}</span>
-                      </span>
-                    )}
-                    {item.isItemLive && (
-                      <span className="shrink-0">
-                        <ItemCardTimer itemId={item.id} endAt={item.itemEndAtIso} inline />
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Right: price + CTA */}
-                <div className="shrink-0 text-right py-2 flex flex-col items-end gap-1.5">
-                  <div>
-                    <div className="text-[9px] text-[#8a7559] uppercase tracking-wide leading-none">{item.priceLabel}</div>
-                    <div className="flex items-baseline gap-1.5 justify-end">
-                      <span className={`font-extrabold text-base leading-tight tabular-nums ${item.isItemUnsold ? "text-[#8a7559]" : "text-[#6c4d39]"}`}>
-                        ${item.priceValue.toLocaleString()}
-                      </span>
-                      {item.retailValue > 0 && (
-                        <span className="text-[11px] font-bold text-[#a32d2d] tabular-nums">
-                          retail ${item.retailValue.toLocaleString()}
+                    <div className="flex items-center gap-2 mt-1 text-[11px] sm:text-xs text-[#8a7559]">
+                      {item.condition && <span className="capitalize truncate">{item.condition}</span>}
+                      {item.size && (
+                        <span className="shrink-0 bg-[#efe3d0] border border-[#cdbda3] text-[#241a12] rounded-md px-1.5 py-0.5">
+                          Size <span className="font-extrabold">{item.size}</span>
                         </span>
                       )}
                     </div>
                   </div>
-                  <span className={`${item.bidClass} !w-auto px-3`}>{item.bidLabel}</span>
+
+                  <div className="flex items-end justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-[10px] text-[#8a7559] uppercase tracking-wide leading-none mb-1">
+                        {item.priceLabel}
+                      </div>
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <span className={`font-extrabold text-xl sm:text-2xl leading-none tabular-nums ${item.isItemUnsold ? "text-[#8a7559]" : "text-[#6c4d39]"}`}>
+                          ${item.priceValue.toLocaleString()}
+                        </span>
+                        {item.retailValue > 0 && (
+                          <span className="text-[11px] font-semibold text-[#a32d2d] tabular-nums">
+                            retail ${item.retailValue.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <span className={`${item.bidClass} !w-auto shrink-0 px-4 py-2.5 self-end`}>{item.bidLabel}</span>
+                  </div>
                 </div>
               </Link>
 
