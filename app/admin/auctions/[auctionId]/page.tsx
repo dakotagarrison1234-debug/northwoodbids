@@ -197,6 +197,23 @@ export default async function ManageAuctionPage({ params }: Props) {
       : [];
     const winById = new Map(winnerProfiles.map((p) => [p.clerkUserId, p]));
 
+    // Earliest upcoming pickup appointment per winner — powers the "scheduled"
+    // grouping. Appointments are per-customer (not per-auction), so any SCHEDULED
+    // appt means their winnings have a collection time.
+    const scheduledAppts = winnerIds.length
+      ? await prisma.pickupAppointment.findMany({
+          where: { organizationId: auction.organizationId, clerkUserId: { in: winnerIds }, status: "SCHEDULED" },
+          orderBy: { startsAt: "asc" },
+          select: { clerkUserId: true, startsAt: true, location: { select: { name: true } } },
+        })
+      : [];
+    const apptByUser = new Map<string, { startsAt: Date; locationName: string | null }>();
+    for (const a of scheduledAppts) {
+      if (!apptByUser.has(a.clerkUserId)) {
+        apptByUser.set(a.clerkUserId, { startsAt: a.startsAt, locationName: a.location?.name ?? null });
+      }
+    }
+
     // Group sold items into per-winner orders.
     const orderMap = new Map<string, ResultOrder>();
     for (const item of auction.items) {
@@ -214,12 +231,15 @@ export default async function ManageAuctionPage({ params }: Props) {
       const amount = Number(item.currentBid);
       let order = orderMap.get(winnerId);
       if (!order) {
+        const appt = apptByUser.get(winnerId);
         order = {
           clerkUserId: winnerId,
           name: prof?.name || prof?.email || "Bidder",
           email: prof?.email ?? null,
           phone: prof?.phone ?? null,
           preferredLocationId: prof?.preferredPickupLocationId ?? null,
+          scheduledFor: appt ? appt.startsAt.toISOString() : null,
+          scheduledLocation: appt ? appt.locationName : null,
           total: 0,
           items: [],
         };
