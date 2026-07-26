@@ -792,7 +792,10 @@ export async function notifyAuctionStartedToFollowers(
 /**
  * Finds OPEN auctions closing within the next 60 minutes that haven't sent an
  * "ending soon" notification yet. Fires GHL_AUCTION_ENDING_WEBHOOK once per
- * active bidder, then stamps endingSoonNotifiedAt so it never fires again.
+ * REGISTERED USER of the org — the same audience as the "auction is live" blast
+ * (preferredOrgId = this org, or unclaimed/null) — not just the handful of people
+ * currently winning an item. Bidders who ARE winning still get a stronger,
+ * personalised line. Stamps endingSoonNotifiedAt so it never fires again.
  */
 export async function notifyAuctionEndingSoon(): Promise<{ notifiedAuctions: number }> {
   if (!process.env.GHL_AUCTION_ENDING_WEBHOOK) return { notifiedAuctions: 0 };
@@ -834,8 +837,9 @@ export async function notifyAuctionEndingSoon(): Promise<{ notifiedAuctions: num
     // close this very tick (>= ~3 min out) — avoids a contradictory last-chance text.
     if (!(effectiveEnd >= soonestToWarn && effectiveEnd <= inOneHour)) continue;
 
-    // Find all unique bidders currently winning items in this auction
-    const activeBids = await prisma.bid.findMany({
+    // Who's currently winning at least one active item — used only to personalise
+    // the copy, NOT to gate who gets a text.
+    const winningBids = await prisma.bid.findMany({
       where: {
         item: { auctionId: auction.id, status: "ACTIVE" },
         status: "ACTIVE",
@@ -843,44 +847,68 @@ export async function notifyAuctionEndingSoon(): Promise<{ notifiedAuctions: num
       select: { clerkUserId: true },
       distinct: ["clerkUserId"],
     });
+    const winnerIds = new Set(winningBids.map((b) => b.clerkUserId));
 
-    if (activeBids.length > 0) {
-      const bidderIds = activeBids.map((b) => b.clerkUserId);
-      const profiles = await prisma.bidderProfile.findMany({
-        where: { clerkUserId: { in: bidderIds } },
-        select: { clerkUserId: true, email: true, phone: true, name: true },
-      });
-      const profileMap = new Map(profiles.map((p) => [p.clerkUserId, p]));
+    // Recipients = every registered user of this org (same audience as the "live"
+    // blast): claimed by this org OR unclaimed (preferredOrgId null), with contact
+    // details. This is what turns a "handful" into the whole list.
+    const registered = await prisma.bidderProfile.findMany({
+      where: {
+        OR: [{ preferredOrgId: auction.organization.id }, { preferredOrgId: null }],
+        NOT: [{ phone: null, email: null }],
+      },
+      select: { clerkUserId: true, email: true, phone: true, name: true },
+    });
 
-      const auctionUrl = `${process.env.NEXT_PUBLIC_APP_URL}/${auction.organization.slug}/${auction.slug}`;
+    const auctionUrl = `${process.env.NEXT_PUBLIC_APP_URL}/${auction.organization.slug}/${auction.slug}`;
 
-      for (const { clerkUserId } of activeBids) {
-        const profile = profileMap.get(clerkUserId);
-        const email = profile?.email ?? "";
-        const phone = profile?.phone ?? "";
-        const name = profile?.name ?? "Bidder";
-        fetch(process.env.GHL_AUCTION_ENDING_WEBHOOK!, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email,
-            phone,
-            name,
-            firstName: name.split(" ")[0] || name,
-            lastName: name.split(" ").slice(1).join(" ") || "",
-            event: "auction_ending_soon",
-            smsMessage: `Northwood Bids: ${auction.title} closes within the hour and you're winning items — last chance: ${auctionUrl}`,
-            bidderEmail: email,
-            bidderPhone: phone,
-            bidderName: name,
-            auctionName: auction.title,
-            auctionUrl,
-            orgName: auction.organization.name,
-            endsAt: effectiveEnd.toISOString(),
-          }),
-        }).catch((err) => console.error("GHL auction-ending-soon webhook failed:", err));
-      }
+    // Dedupe by contact so a duplicate profile row can't double-text someone.
+    const seen = new Set<string>();
+    const recipients: { email: string; phone: string; name: string; winning: boolean }[] = [];
+    for (const r of registered) {
+      const email = r.email ?? "";
+      const phone = r.phone ?? "";
+      const key = (phone || email).trim().toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      recipients.push({ email, phone, name: r.name ?? "Bidder", winning: winnerIds.has(r.clerkUserId) });
     }
+
+    // AWAIT every send (pooled). Fire-and-forget dies the instant a serverless
+    // function returns — with a real list, none of the requests would go out.
+    await runPooled(
+      recipients,
+      async ({ email, phone, name, winning }) => {
+        const smsMessage = winning
+          ? `Northwood Bids: ${auction.title} closes within the hour and you're winning items — last chance: ${auctionUrl}`
+          : `Northwood Bids: ${auction.title} closes within the hour — last chance to bid: ${auctionUrl}`;
+        try {
+          await fetch(process.env.GHL_AUCTION_ENDING_WEBHOOK!, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email,
+              phone,
+              name,
+              firstName: name.split(" ")[0] || name,
+              lastName: name.split(" ").slice(1).join(" ") || "",
+              event: "auction_ending_soon",
+              smsMessage,
+              bidderEmail: email,
+              bidderPhone: phone,
+              bidderName: name,
+              auctionName: auction.title,
+              auctionUrl,
+              orgName: auction.organization.name,
+              endsAt: effectiveEnd.toISOString(),
+            }),
+          });
+        } catch (err) {
+          console.error("GHL auction-ending-soon webhook failed:", err);
+        }
+      },
+      5
+    );
 
     // Stamp so this auction never triggers again even if no active bidders
     await prisma.auction.update({
