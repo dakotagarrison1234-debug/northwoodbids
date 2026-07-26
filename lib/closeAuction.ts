@@ -607,6 +607,11 @@ export async function chargeUnchargedWinners(): Promise<{ chargedWinners: number
   const orgMap = new Map(orgs.map((o) => [o.id, o]));
 
   let chargedWinners = 0;
+  // Winners this pass is seeing for the FIRST time (no prior payment row) — i.e. a
+  // genuine fresh close, not a retry of a declined card. Gate the transfer summary
+  // on this so a permanently-failing card doesn't re-fire the summary every cron
+  // tick (that's what texted the owner once a minute).
+  let freshlyProcessed = 0;
   const toNotify = new Map<string, WinnerEntry>();
   await runPooled(
     groupList,
@@ -621,6 +626,7 @@ export async function chargeUnchargedWinners(): Promise<{ chargedWinners: number
       // notifyWinners), send their "you won" now — winners who failed+were notified
       // at close already have a payment row, so this won't double-notify them.
       if (!g.everProcessed) {
+        freshlyProcessed++;
         const paid = await prisma.payment.count({
           where: { clerkUserId: g.winner.clerkUserId, itemId: { in: g.winner.items.map((i) => i.id) }, status: "PAID" },
         });
@@ -632,10 +638,10 @@ export async function chargeUnchargedWinners(): Promise<{ chargedWinners: number
 
   if (toNotify.size > 0) await notifyWinners(toNotify);
 
-  // One batched "check transfers" text per org instead of a per-winner flood. Only
-  // when this pass actually charged winners (a fresh close wave); idempotent reruns
-  // charge nobody, so no duplicate summary. Count = transfers still needing a move.
-  if (chargedWinners > 0) {
+  // One batched "check transfers" text per org — but ONLY on a fresh close wave
+  // (winners seen for the first time). Retry ticks re-attempt failed cards without
+  // any first-time winner, so freshlyProcessed is 0 and no duplicate summary fires.
+  if (freshlyProcessed > 0) {
     for (const orgId of orgIds) {
       const pending = await prisma.transferRequest.count({
         where: { organizationId: orgId, status: "REQUESTED", items: { some: {} } },
@@ -644,6 +650,9 @@ export async function chargeUnchargedWinners(): Promise<{ chargedWinners: number
         console.error("notifyTransfersSummary failed:", e)
       );
     }
+  }
+
+  if (chargedWinners > 0) {
     console.log(`[resumable] Attempted charge for ${chargedWinners} uncharged winner(s)`);
   }
   return { chargedWinners };
