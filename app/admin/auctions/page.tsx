@@ -23,9 +23,13 @@ export default async function AuctionsPage() {
         _count: { select: { items: true } },
       },
     }),
+    // Sum current bids across items that currently carry value: still-live ACTIVE
+    // items (so a LIVE auction shows its running "bid so far" total) AND already-sold
+    // items (so a CLOSED auction shows what it made). Without ACTIVE here, a live
+    // auction always read $0 because none of its items are sold yet.
     prisma.item.groupBy({
       by: ["auctionId"],
-      where: { organizationId: orgId, status: { in: [...SOLD_STATUSES] } },
+      where: { organizationId: orgId, status: { in: [...SOLD_STATUSES, "ACTIVE"] } },
       _sum: { currentBid: true },
     }),
     prisma.bid.groupBy({
