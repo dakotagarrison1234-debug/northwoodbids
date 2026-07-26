@@ -735,24 +735,15 @@ export default function PickupPage() {
                   {/* Order is boxed and waiting — the single most useful thing we can
                       tell them, so it sits above everything else. */}
                   {appointment.stagedSpot && (
-                    <div className="bg-[#5f7a45] text-white px-6 py-5">
-                      <div className="flex items-center gap-3">
-                        <span className="w-11 h-11 rounded-2xl bg-white/20 grid place-items-center shrink-0">
-                          <svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 5.5h12v8H2zM2 5.5 4 2.5h8l2 3M8 2.5v11" /></svg>
-                        </span>
-                        <div className="min-w-0">
-                          <div className="text-sm font-bold uppercase tracking-wider text-[#d8e6c8]">
-                            Your order is boxed &amp; ready
-                          </div>
-                          <div className="text-2xl font-extrabold leading-tight mt-0.5">
-                            {appointment.stagedSpot}
-                          </div>
-                        </div>
+                    <div className="bg-[#5f7a45] text-white px-6 py-7 text-center">
+                      <div className="text-sm font-bold uppercase tracking-[0.15em] text-[#d8e6c8]">
+                        Your Pick Up Is Staged
                       </div>
-                      <p className="text-base text-[#d8e6c8] mt-3">
-                        Everything below is packed together and labeled{" "}
-                        <strong className="text-white">{appointment.stagedSpot}</strong>. Come to{" "}
-                        {appointment.location.name} and it&apos;ll be waiting for you.
+                      <div className="text-5xl sm:text-6xl font-extrabold leading-none mt-2 mb-1 break-words">
+                        {appointment.stagedSpot}
+                      </div>
+                      <p className="text-lg text-white font-semibold mt-3">
+                        Look for it when you arrive at {appointment.location.name}.
                       </p>
                     </div>
                   )}
