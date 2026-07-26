@@ -166,6 +166,7 @@ function BidderDashboardInner() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMsg, setProfileMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [retryingItemId, setRetryingItemId] = useState<string | null>(null);
+  const [retryingAll, setRetryingAll] = useState(false);
   const [retryMsg, setRetryMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [cardModal, setCardModal] = useState<{ orgId: string; stripeAccountId: string } | null>(null);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -347,6 +348,54 @@ function BidderDashboardInner() {
       setRetryMsg({ text: "Something went wrong. Please try again.", ok: false });
     } finally {
       setRetryingItemId(null);
+    }
+  };
+
+  // Pay ALL unpaid wins in one charge (one card approval, one Stripe fee).
+  const retryAll = async () => {
+    setRetryingAll(true);
+    setRetryMsg(null);
+    try {
+      const res = await fetch("/api/retry-payment/all", { method: "POST" });
+      const d = await res.json();
+      if (d.success) {
+        setRetryMsg({ text: "Payment successful! Your items are ready for pickup.", ok: true });
+        load();
+      } else if (d.requiresAction && d.clientSecret) {
+        const { loadStripe } = await import("@stripe/stripe-js");
+        const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+        if (!stripe) {
+          setRetryMsg({ text: "Could not load payment form. Please try again.", ok: false });
+          return;
+        }
+        const result = await stripe.confirmCardPayment(d.clientSecret);
+        if (result.error) {
+          setRetryMsg({ text: result.error.message || "Authentication failed. Please try again.", ok: false });
+          return;
+        }
+        if (result.paymentIntent?.status === "succeeded" || result.paymentIntent?.status === "processing") {
+          const c = await fetch("/api/retry-payment/all/confirm", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ paymentIntentId: result.paymentIntent.id }),
+          });
+          const cd = await c.json();
+          if (cd.success) {
+            setRetryMsg({ text: "Payment successful! Your items are ready for pickup.", ok: true });
+            load();
+          } else {
+            setRetryMsg({ text: cd.error || "Payment went through but we couldn't confirm it. Refresh in a minute.", ok: false });
+          }
+        } else {
+          setRetryMsg({ text: "Payment did not complete. Please try a different card.", ok: false });
+        }
+      } else {
+        setRetryMsg({ text: d.error || "Payment failed. Please update your card in Account.", ok: false });
+      }
+    } catch {
+      setRetryMsg({ text: "Something went wrong. Please try again.", ok: false });
+    } finally {
+      setRetryingAll(false);
     }
   };
 
@@ -538,6 +587,19 @@ function BidderDashboardInner() {
               </p>
             )}
 
+            {/* One-tap pay everything owed — a single charge instead of item by item. */}
+            {failedWins.length > 1 && (
+              <button
+                onClick={retryAll}
+                disabled={retryingAll || retryingItemId !== null}
+                className="ml-7 mb-1 inline-flex items-center gap-2 bg-[#5f7a45] hover:bg-[#4e6538] disabled:opacity-50 text-white font-bold text-sm px-5 py-2.5 rounded-xl transition-colors"
+              >
+                {retryingAll
+                  ? "Processing…"
+                  : `Pay all ${failedWins.length} items · ${money(failedWins.reduce((s, w) => s + (w.totalDue ?? w.amountOwed), 0))}`}
+              </button>
+            )}
+
             <div className="mt-3 space-y-2">
               {failedWins.map((w) => {
                 const due = w.totalDue ?? w.amountOwed;
@@ -558,10 +620,10 @@ function BidderDashboardInner() {
                     </div>
                     <button
                       onClick={() => retryPayment(w.itemId)}
-                      disabled={retrying}
+                      disabled={retrying || retryingAll}
                       className="shrink-0 bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white font-semibold text-sm px-4 py-2 rounded-xl transition-colors"
                     >
-                      {retrying ? "Processing…" : "Try card on file again"}
+                      {retrying ? "Processing…" : "Pay this one"}
                     </button>
                   </div>
                 );
