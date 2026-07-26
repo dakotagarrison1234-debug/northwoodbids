@@ -66,6 +66,41 @@ export async function notifyTransferRequested(transferId: string): Promise<void>
 }
 
 /**
+ * TEAM alert (batched): one summary instead of a flood. When an auction closes it
+ * auto-creates a transfer per winner whose items sit at another warehouse — that
+ * used to fire one team text each (20–30 after a big auction). This sends a SINGLE
+ * "you have N transfers to move" text after the close charge pass. Individual
+ * customer-initiated transfers during the week still text one at a time.
+ */
+export async function notifyTransfersSummary(pendingCount: number): Promise<void> {
+  if (!process.env.GHL_TRANSFER_REQUESTED_WEBHOOK) return;
+  if (pendingCount <= 0) return;
+
+  const board = `${process.env.NEXT_PUBLIC_APP_URL}/admin/pickup`;
+  try {
+    await fetch(process.env.GHL_TRANSFER_REQUESTED_WEBHOOK, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        // Same webhook the team already receives; blank contact = routes to the
+        // workflow's staff recipient, no per-bidder lookup.
+        email: "",
+        phone: "",
+        name: "Team",
+        firstName: "Team",
+        lastName: "",
+        event: "transfer_requested",
+        smsMessage: `Northwood Bids: auction ended — ${pendingCount} transfer${pendingCount !== 1 ? "s" : ""} to move. Check the Transfers board: ${board}`,
+        itemCount: pendingCount,
+        summary: true,
+      }),
+    });
+  } catch (err) {
+    console.error("GHL transfers-summary webhook failed:", err);
+  }
+}
+
+/**
  * BIDDER alert: the transferred items have arrived at the destination.
  *
  * IMPORTANT: this is called by the admin PATCH BEFORE the items are detached

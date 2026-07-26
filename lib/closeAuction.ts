@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import Stripe from "stripe";
 import { triggerAuctionUpdated, triggerItemClosed } from "@/lib/pusherServer";
 import { autoAttachPaidItems } from "@/lib/pickup";
+import { notifyTransfersSummary } from "@/lib/transferNotify";
 import { notifyPaymentFailed, notifyPaymentReceipt } from "@/lib/paymentNotify";
 import {
   reserveReferralCredit,
@@ -248,7 +249,7 @@ async function chargeOneWinner(
       moveItemsToPendingPickup: true,
       comped: true,
     });
-    await autoAttachPaidItems(clerkUserId, org.id);
+    await autoAttachPaidItems(clerkUserId, org.id, { notifyTeam: false });
     console.log(`Auto-charge: COMPED admin win for ${clerkUserId} (${itemIds.length} item(s)) — no charge`);
     return;
   }
@@ -291,7 +292,7 @@ async function chargeOneWinner(
       creditAppliedCents: discountCents,
       moveItemsToPendingPickup: true,
     });
-    await autoAttachPaidItems(clerkUserId, org.id);
+    await autoAttachPaidItems(clerkUserId, org.id, { notifyTeam: false });
     // NOTE: vesting the inviter's reward is deliberately done AFTER the whole
     // charge pass (see vestWinners), so credit earned in an auction is never
     // spent on that same auction's bill — it always lands on the NEXT bill.
@@ -361,7 +362,7 @@ async function chargeOneWinner(
       moveItemsToPendingPickup: true,
     });
     // Fold newly-won items into any upcoming pickup appointment.
-    await autoAttachPaidItems(clerkUserId, org.id);
+    await autoAttachPaidItems(clerkUserId, org.id, { notifyTeam: false });
     // Vesting happens AFTER the full charge pass (see vestWinners) so this
     // auction's credit can't be applied to this auction's own bills.
     notifyPaymentReceipt({
@@ -631,7 +632,18 @@ export async function chargeUnchargedWinners(): Promise<{ chargedWinners: number
 
   if (toNotify.size > 0) await notifyWinners(toNotify);
 
+  // One batched "check transfers" text per org instead of a per-winner flood. Only
+  // when this pass actually charged winners (a fresh close wave); idempotent reruns
+  // charge nobody, so no duplicate summary. Count = transfers still needing a move.
   if (chargedWinners > 0) {
+    for (const orgId of orgIds) {
+      const pending = await prisma.transferRequest.count({
+        where: { organizationId: orgId, status: "REQUESTED", items: { some: {} } },
+      });
+      await notifyTransfersSummary(pending).catch((e) =>
+        console.error("notifyTransfersSummary failed:", e)
+      );
+    }
     console.log(`[resumable] Attempted charge for ${chargedWinners} uncharged winner(s)`);
   }
   return { chargedWinners };

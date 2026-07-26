@@ -195,8 +195,10 @@ export async function attachToPendingTransfers(
  */
 export async function autoTransferToPreferred(
   clerkUserId: string,
-  organizationId: string
+  organizationId: string,
+  opts: { notifyTeam?: boolean } = {}
 ): Promise<{ added: number; toLocationName: string | null }> {
+  const notifyTeam = opts.notifyTeam !== false; // default true
   const profile = await prisma.bidderProfile.findUnique({
     where: { clerkUserId },
     select: { preferredPickupLocationId: true },
@@ -253,7 +255,7 @@ export async function autoTransferToPreferred(
 
   // Team alert (fire-and-forget) — only worth pinging when it's a fresh transfer
   // or items were added.
-  if (created || elsewhere.length > 0) {
+  if (notifyTeam && (created || elsewhere.length > 0)) {
     notifyTransferRequested(transfer.id).catch((e) =>
       console.error("notifyTransferRequested (auto) failed:", e)
     );
@@ -270,12 +272,15 @@ export async function autoTransferToPreferred(
  */
 export async function autoAttachPaidItems(
   clerkUserId: string,
-  organizationId: string
+  organizationId: string,
+  opts: { notifyTeam?: boolean } = {}
 ): Promise<void> {
   await attachToUpcomingAppointment(clerkUserId, organizationId);
   await attachToPendingTransfers(clerkUserId, organizationId);
   try {
-    await autoTransferToPreferred(clerkUserId, organizationId);
+    // At auction close we suppress the per-winner team text and send ONE summary
+    // afterward (see chargeUnchargedWinners) — otherwise a big auction fires 20–30.
+    await autoTransferToPreferred(clerkUserId, organizationId, { notifyTeam: opts.notifyTeam });
   } catch (e) {
     console.error("autoTransferToPreferred failed:", e);
   }
