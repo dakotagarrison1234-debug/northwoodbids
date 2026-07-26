@@ -20,6 +20,7 @@ function AdminNavIcon({ name }: { name: string }) {
   if (name === "mybids") return <svg {...s}><path d="M8 2v4l3 3"/><circle cx="8" cy="8" r="6"/></svg>;
   if (name === "chart") return <svg {...s}><path d="M2 2v12h12"/><path d="M5 11V8M8 11V5M11 11V9"/></svg>;
   if (name === "gift") return <svg {...s}><rect x="2" y="6" width="12" height="8" rx="1"/><path d="M2 9h12M8 6v8"/><path d="M8 6S6.5 2.5 4.5 3.5 6 6 8 6zM8 6s1.5-3.5 3.5-2.5S10 6 8 6z"/></svg>;
+  if (name === "refresh") return <svg {...s}><path d="M13.5 7a5.5 5.5 0 1 0-.7 3.5"/><path d="M13.5 3v4h-4"/></svg>;
   return null;
 }
 
@@ -73,6 +74,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Auctions", href: "/admin/auctions", icon: "gavel" },
     ...(isOwnerOrAdmin ? [{ label: "Winners & Payments", href: "/admin/winners", icon: "trophy" }] : []),
     { label: "Pickup", href: "/admin/pickup", icon: "package" },
+    ...(isOwnerOrAdmin ? [{ label: "Unsold / Relist", href: "/admin/unsold", icon: "refresh" }] : []),
     ...(isOwnerOrAdmin ? [{ label: "Reports", href: "/admin/reports", icon: "chart" }] : []),
     ...(isOwnerOrAdmin ? [{ label: "Bidders", href: "/admin/bidders", icon: "users" }] : []),
     ...(isOwnerOrAdmin ? [{ label: "Referrals", href: "/admin/referrals", icon: "gift" }] : []),

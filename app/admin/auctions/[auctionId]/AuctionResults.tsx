@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import RelistControl, { type RelistTarget } from "../../RelistControl";
 
 export interface ResultItem {
   id: string;
@@ -28,6 +29,8 @@ export interface ResultUnsold {
   title: string;
   photo: string | null;
   highBid: number;
+  warehouse: string | null;
+  storageLocation: string | null;
 }
 
 type Bucket = "scheduled" | "no_pickup" | "no_location";
@@ -72,11 +75,13 @@ export default function AuctionResults({
   orders: initialOrders,
   unsold,
   locations,
+  relistTargets,
 }: {
   auctionId: string;
   orders: ResultOrder[];
   unsold: ResultUnsold[];
   locations: { id: string; name: string }[];
+  relistTargets: RelistTarget[];
 }) {
   const [orders, setOrders] = useState(initialOrders);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -331,15 +336,18 @@ export default function AuctionResults({
         })
       )}
 
-      {/* Unsold */}
+      {/* Unsold — where each sits + relist it straight into another auction */}
       {unsold.length > 0 && (
         <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-100">
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3">
             <h2 className="text-base font-bold text-slate-900">Didn&apos;t sell ({unsold.length})</h2>
+            <Link href="/admin/unsold" className="text-xs font-bold text-[#6c4d39] hover:underline">
+              All unsold →
+            </Link>
           </div>
           <ul className="divide-y divide-slate-100">
             {unsold.map((u) => (
-              <li key={u.id} className="flex items-center gap-3 px-4 py-2.5">
+              <li key={u.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
                 {u.photo ? (
                   <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-white ring-1 ring-slate-200">
                     <Image src={u.photo} alt="" fill sizes="40px" className="object-contain p-0.5" />
@@ -349,9 +357,15 @@ export default function AuctionResults({
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium text-slate-900 truncate">{u.title}</div>
-                  <div className="text-xs text-slate-400">No sale{u.highBid > 0 ? ` · high bid ${money(u.highBid)}` : ""}</div>
+                  <div className="text-xs text-slate-400 truncate">
+                    {(u.warehouse || u.storageLocation)
+                      ? `📍 ${[u.warehouse, u.storageLocation].filter(Boolean).join(" · ")}`
+                      : "No location set"}
+                    {u.highBid > 0 ? ` · high bid ${money(u.highBid)}` : ""}
+                  </div>
                 </div>
-                <Link href={`/admin/items/${u.id}`} className="shrink-0 text-xs font-bold text-[#6c4d39] px-2 py-1">
+                <RelistControl itemId={u.id} targets={relistTargets} />
+                <Link href={`/admin/items/${u.id}`} className="shrink-0 text-xs font-bold text-[#6c4d39] px-1">
                   Edit
                 </Link>
               </li>

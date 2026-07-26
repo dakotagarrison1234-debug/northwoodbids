@@ -174,6 +174,7 @@ export default async function ManageAuctionPage({ params }: Props) {
   let resultOrders: ResultOrder[] = [];
   let resultUnsold: ResultUnsold[] = [];
   let pickupLocations: { id: string; name: string }[] = [];
+  let relistTargets: { id: string; title: string; status: string }[] = [];
   if (isEnded) {
     const [payments, locs] = await Promise.all([
       prisma.payment.findMany({
@@ -257,7 +258,16 @@ export default async function ManageAuctionPage({ params }: Props) {
         title: i.title,
         photo: i.photos.find((p) => p.isPrimary)?.url ?? i.photos[0]?.url ?? null,
         highBid: Number(i.currentBid),
+        warehouse: i.location?.name ?? null,
+        storageLocation: i.storageLocation ?? null,
       }));
+
+    // Auctions this item could be relisted into — anything not already ended.
+    relistTargets = await prisma.auction.findMany({
+      where: { organizationId: auction.organizationId, status: { in: ["DRAFT", "OPEN", "CLOSING"] } },
+      orderBy: [{ startAt: "asc" }],
+      select: { id: true, title: true, status: true },
+    });
   }
 
   return (
@@ -402,6 +412,7 @@ export default async function ManageAuctionPage({ params }: Props) {
               orders={resultOrders}
               unsold={resultUnsold}
               locations={pickupLocations}
+              relistTargets={relistTargets}
             />
           </>
         ) : (
