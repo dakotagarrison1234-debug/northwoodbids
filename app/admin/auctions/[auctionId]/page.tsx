@@ -10,6 +10,8 @@ import StatusPill from "@/app/components/StatusPill";
 import { money } from "@/lib/format";
 import DeleteAuctionButton from "./DeleteAuctionButton";
 import EditAuction from "./EditAuction";
+import AuctionResults, { type ResultOrder, type ResultUnsold } from "./AuctionResults";
+import AuctionStatusButtons from "@/app/components/AuctionStatusButtons";
 import PusherRefresh from "@/app/components/PusherRefresh";
 import { Pill } from "../../ui";
 
@@ -166,6 +168,78 @@ export default async function ManageAuctionPage({ params }: Props) {
     }));
   }
 
+  // ── Completed-auction data. Once an auction has ended the page is a fulfillment
+  // board, not an editor: who won what, who's paid, where they pick up, and whether
+  // it's been collected. Only fetched when ended so live auctions pay nothing. ──
+  let resultOrders: ResultOrder[] = [];
+  let resultUnsold: ResultUnsold[] = [];
+  let pickupLocations: { id: string; name: string }[] = [];
+  if (isEnded) {
+    const [payments, locs] = await Promise.all([
+      prisma.payment.findMany({
+        where: { item: { auctionId } },
+        select: { itemId: true, clerkUserId: true, status: true, comped: true },
+      }),
+      prisma.pickupLocation.findMany({
+        where: { organizationId: auction.organizationId, isActive: true },
+        orderBy: { createdAt: "asc" },
+        select: { id: true, name: true },
+      }),
+    ]);
+    pickupLocations = locs;
+    const payByItem = new Map(payments.map((p) => [p.itemId, p]));
+    const winnerIds = [...new Set(payments.map((p) => p.clerkUserId))];
+    const winnerProfiles = winnerIds.length
+      ? await prisma.bidderProfile.findMany({
+          where: { clerkUserId: { in: winnerIds } },
+          select: { clerkUserId: true, name: true, email: true, phone: true, preferredPickupLocationId: true },
+        })
+      : [];
+    const winById = new Map(winnerProfiles.map((p) => [p.clerkUserId, p]));
+
+    // Group sold items into per-winner orders.
+    const orderMap = new Map<string, ResultOrder>();
+    for (const item of auction.items) {
+      if (!SOLD_STATUSES.includes(item.status)) continue;
+      const pay = payByItem.get(item.id);
+      const winnerId = pay?.clerkUserId;
+      if (!winnerId) continue; // no payment/winner record yet — skip (rare)
+      const prof = winById.get(winnerId);
+      const paidState: "paid" | "comped" | "unpaid" = pay?.comped
+        ? "comped"
+        : pay?.status === "PAID"
+        ? "paid"
+        : "unpaid";
+      const photo = item.photos.find((p) => p.isPrimary)?.url ?? item.photos[0]?.url ?? null;
+      const amount = Number(item.currentBid);
+      let order = orderMap.get(winnerId);
+      if (!order) {
+        order = {
+          clerkUserId: winnerId,
+          name: prof?.name || prof?.email || "Bidder",
+          email: prof?.email ?? null,
+          phone: prof?.phone ?? null,
+          preferredLocationId: prof?.preferredPickupLocationId ?? null,
+          total: 0,
+          items: [],
+        };
+        orderMap.set(winnerId, order);
+      }
+      order.total += amount;
+      order.items.push({ id: item.id, title: item.title, photo, amount, paidState, pickedUp: item.status === "PICKED_UP" });
+    }
+    resultOrders = [...orderMap.values()].sort((a, b) => b.total - a.total);
+
+    resultUnsold = auction.items
+      .filter((i) => i.status === "UNSOLD")
+      .map((i) => ({
+        id: i.id,
+        title: i.title,
+        photo: i.photos.find((p) => p.isPrimary)?.url ?? i.photos[0]?.url ?? null,
+        highBid: Number(i.currentBid),
+      }));
+  }
+
   return (
     <>
       <PusherRefresh channel="auctions" event="auction-updated" />
@@ -285,6 +359,33 @@ export default async function ManageAuctionPage({ params }: Props) {
           )}
         </div>
 
+        {isEnded ? (
+          <>
+            {/* Ended → fulfillment board, not an editor. No name/time editing, no
+                recent-bids feed, no add-item. Just settle + the results below. */}
+            <div className="bg-white border border-[#e3d6bf] rounded-xl px-5 sm:px-6 py-4 flex flex-wrap items-center gap-3">
+              <div className="min-w-0">
+                <div className="text-base font-semibold text-[#241a12]">This auction has ended</div>
+                <div className="text-sm text-[#8a7559]">Bidding is closed — manage collection below.</div>
+              </div>
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                <AuctionStatusButtons
+                  auctionId={auction.id}
+                  status={auction.status}
+                  liveNotifiedAtISO={auction.liveNotifiedAt ? auction.liveNotifiedAt.toISOString() : null}
+                />
+              </div>
+            </div>
+
+            <AuctionResults
+              auctionId={auction.id}
+              orders={resultOrders}
+              unsold={resultUnsold}
+              locations={pickupLocations}
+            />
+          </>
+        ) : (
+          <>
         {/* One control board: details, actions (silent open / send live text / closing
             soon / settle), the social flyer, and the private Active Max Bids panel. */}
         <EditAuction
@@ -389,6 +490,8 @@ export default async function ManageAuctionPage({ params }: Props) {
             </p>
             <DeleteAuctionButton auctionId={auction.id} />
           </div>
+        )}
+          </>
         )}
       </div>
     </>
