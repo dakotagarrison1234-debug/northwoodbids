@@ -11,7 +11,7 @@ const fmtDateTime = (d: Date | null | undefined) =>
   d ? d.toLocaleString("en-US", { timeZone: "America/Detroit", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
 
 interface Props {
-  searchParams: Promise<{ type?: string; auction?: string; user?: string; transfer?: string }>;
+  searchParams: Promise<{ type?: string; auction?: string; user?: string; transfer?: string; appt?: string }>;
 }
 
 // Shared print styles — @page pins the sheet to 4x6 so a thermal printer lays it
@@ -102,6 +102,66 @@ export default async function LabelPage({ searchParams }: Props) {
             <div className="lbl-count">{t.items.length} item{t.items.length !== 1 ? "s" : ""}</div>
             <ul className="lbl-items">
               {t.items.map((i, idx) => (
+                <li key={idx}>• {i.title}{i.storageLocation ? ` (${i.storageLocation})` : ""}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <AutoPrint />
+      </>
+    );
+  }
+
+  // ── APPOINTMENT LABEL (after staging) ───────────────────────────────────────
+  // A booked appointment can hold items from several auctions, so this label prints
+  // the WHOLE staged order, not one auction's slice.
+  if (sp.type === "appointment" && sp.appt) {
+    const appt = await prisma.pickupAppointment.findUnique({
+      where: { id: sp.appt },
+      select: {
+        organizationId: true,
+        startsAt: true,
+        stagedSpot: true,
+        clerkUserId: true,
+        location: { select: { name: true } },
+        items: {
+          select: {
+            title: true,
+            storageLocation: true,
+            auction: { select: { title: true } },
+          },
+        },
+      },
+    });
+    if (!appt || appt.organizationId !== orgId) {
+      return <div style={{ padding: 24, fontFamily: "sans-serif" }}>Appointment not found.</div>;
+    }
+    const profile = await prisma.bidderProfile.findUnique({
+      where: { clerkUserId: appt.clerkUserId },
+      select: { name: true, phone: true },
+    });
+    const auctions = [...new Set(appt.items.map((i) => i.auction?.title).filter(Boolean))] as string[];
+
+    return (
+      <>
+        <PrintStyles />
+        <div className="sheet">
+          <div className="label">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <span className="lbl-brand">NORTHWOOD BIDS</span>
+              <span className="lbl-kind">Pickup</span>
+            </div>
+            <div className="lbl-big">{profile?.name ?? "Bidder"}</div>
+            {profile?.phone && <div className="lbl-sub">{profile.phone}</div>}
+            <div className="lbl-rule" />
+            <div className="lbl-row"><span>Pick up at</span><b style={{ textAlign: "right" }}>{appt.location?.name ?? "—"}</b></div>
+            <div className="lbl-row"><span>Appointment</span><b>{fmtDateTime(appt.startsAt)}</b></div>
+            {appt.stagedSpot && <div className="lbl-row"><span>Staged in</span><b style={{ fontSize: 18 }}>{appt.stagedSpot}</b></div>}
+            <div className="lbl-row"><span>Auction{auctions.length !== 1 ? "s" : ""}</span><b style={{ textAlign: "right" }}>{auctions.join(", ") || "—"}</b></div>
+            <div className="lbl-rule" />
+            <div className="lbl-count">{appt.items.length} item{appt.items.length !== 1 ? "s" : ""}</div>
+            <ul className="lbl-items">
+              {appt.items.map((i, idx) => (
                 <li key={idx}>• {i.title}{i.storageLocation ? ` (${i.storageLocation})` : ""}</li>
               ))}
             </ul>
