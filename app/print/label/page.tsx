@@ -41,10 +41,62 @@ function PrintStyles() {
       .lbl-rule { border-top: 2px solid #000; margin: 8px 0; }
       .lbl-row { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; margin-top: 2px; }
       .lbl-row b { font-weight: 800; }
-      .lbl-items { margin-top: 6px; overflow: hidden; flex: 1; }
-      .lbl-items li { font-size: 13px; line-height: 1.35; list-style: none; padding: 1px 0; border-bottom: 1px dotted #999; }
+      .lbl-items { margin-top: 4px; overflow: hidden; flex: 1; }
       .lbl-count { font-size: 15px; font-weight: 900; }
+      .grp { margin-top: 6px; }
+      .grp-h { font-size: 11px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; background: #000; color: #fff; padding: 2px 5px; border-radius: 2px; }
+      .grp ul { margin: 2px 0 0; padding: 0; }
+      .grp li { font-size: 12px; line-height: 1.3; list-style: none; display: flex; gap: 5px; align-items: baseline; padding: 1.5px 0; border-bottom: 1px dotted #bbb; }
+      .code { font-weight: 900; font-family: ui-monospace, "SF Mono", Menlo, monospace; white-space: nowrap; }
+      .ttl { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+      .shelf { font-weight: 800; white-space: nowrap; font-size: 11px; }
     `}</style>
+  );
+}
+
+// Titles run long; on a 4x6 the code + shelf matter more, so we clip the title.
+function shortTitle(t: string, n = 24): string {
+  return t.length > n ? t.slice(0, n - 1).trimEnd() + "…" : t;
+}
+
+/**
+ * The item list, grouped by warehouse so a picker works one location at a time.
+ * Each line leads with the item code (the thing you actually match to a tag),
+ * then a clipped title, then the shelf/bin on the right.
+ */
+function ItemGroups({
+  items,
+}: {
+  items: { code?: string | null; title: string; shelf?: string | null; warehouse?: string | null }[];
+}) {
+  const groups = new Map<string, typeof items>();
+  for (const it of items) {
+    const key = it.warehouse || "Unassigned";
+    const arr = groups.get(key) ?? [];
+    arr.push(it);
+    groups.set(key, arr);
+  }
+  const entries = [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  return (
+    <div className="lbl-items">
+      {entries.map(([wh, its]) => (
+        <div key={wh} className="grp">
+          <div className="grp-h">{wh} · {its.length}</div>
+          <ul>
+            {its
+              .slice()
+              .sort((a, b) => (a.shelf || "").localeCompare(b.shelf || ""))
+              .map((i, idx) => (
+                <li key={idx}>
+                  {i.code ? <span className="code">{i.code}</span> : null}
+                  <span className="ttl">{shortTitle(i.title)}</span>
+                  {i.shelf ? <span className="shelf">{i.shelf}</span> : null}
+                </li>
+              ))}
+          </ul>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -65,6 +117,7 @@ export default async function LabelPage({ searchParams }: Props) {
         items: {
           select: {
             title: true,
+            itemCode: true,
             storageLocation: true,
             location: { select: { name: true } },
             auction: { select: { title: true } },
@@ -99,12 +152,10 @@ export default async function LabelPage({ searchParams }: Props) {
             <div className="lbl-row"><span>Requested</span><b>{fmtDate(t.createdAt)}</b></div>
             <div className="lbl-row"><span>Auction{auctions.length !== 1 ? "s" : ""}</span><b style={{ textAlign: "right" }}>{auctions.join(", ") || "—"}</b></div>
             <div className="lbl-rule" />
-            <div className="lbl-count">{t.items.length} item{t.items.length !== 1 ? "s" : ""}</div>
-            <ul className="lbl-items">
-              {t.items.map((i, idx) => (
-                <li key={idx}>• {i.title}{i.storageLocation ? ` (${i.storageLocation})` : ""}</li>
-              ))}
-            </ul>
+            <div className="lbl-count">{t.items.length} item{t.items.length !== 1 ? "s" : ""} · grab from</div>
+            <ItemGroups
+              items={t.items.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name }))}
+            />
           </div>
         </div>
         <AutoPrint />
@@ -127,7 +178,9 @@ export default async function LabelPage({ searchParams }: Props) {
         items: {
           select: {
             title: true,
+            itemCode: true,
             storageLocation: true,
+            location: { select: { name: true } },
             auction: { select: { title: true } },
           },
         },
@@ -160,11 +213,9 @@ export default async function LabelPage({ searchParams }: Props) {
             <div className="lbl-row"><span>Auction{auctions.length !== 1 ? "s" : ""}</span><b style={{ textAlign: "right" }}>{auctions.join(", ") || "—"}</b></div>
             <div className="lbl-rule" />
             <div className="lbl-count">{appt.items.length} item{appt.items.length !== 1 ? "s" : ""}</div>
-            <ul className="lbl-items">
-              {appt.items.map((i, idx) => (
-                <li key={idx}>• {i.title}{i.storageLocation ? ` (${i.storageLocation})` : ""}</li>
-              ))}
-            </ul>
+            <ItemGroups
+              items={appt.items.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name }))}
+            />
           </div>
         </div>
         <AutoPrint />
@@ -184,7 +235,7 @@ export default async function LabelPage({ searchParams }: Props) {
     // The customer's won items in this auction.
     const wonBids = await prisma.bid.findMany({
       where: { clerkUserId: sp.user, status: "WON", item: { auctionId: sp.auction, status: { in: [...SOLD_STATUSES] } } },
-      select: { item: { select: { title: true, storageLocation: true, location: { select: { name: true } } } } },
+      select: { item: { select: { title: true, itemCode: true, storageLocation: true, location: { select: { name: true } } } } },
     });
     const items = wonBids.map((b) => b.item).filter(Boolean);
     const profile = await prisma.bidderProfile.findUnique({
@@ -226,11 +277,9 @@ export default async function LabelPage({ searchParams }: Props) {
             <div className="lbl-row"><span>Closed</span><b>{fmtDate(auction.endAt)}</b></div>
             <div className="lbl-rule" />
             <div className="lbl-count">{items.length} item{items.length !== 1 ? "s" : ""}</div>
-            <ul className="lbl-items">
-              {items.map((i, idx) => (
-                <li key={idx}>• {i.title}{i.storageLocation ? ` (${i.storageLocation})` : ""}</li>
-              ))}
-            </ul>
+            <ItemGroups
+              items={items.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name }))}
+            />
           </div>
         </div>
         <AutoPrint />
