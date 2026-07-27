@@ -94,13 +94,16 @@ export async function GET(req: NextRequest) {
     if (!t || t.organizationId !== orgId) return new Response("Transfer not found", { status: 404 });
     const profile = await prisma.bidderProfile.findUnique({ where: { clerkUserId: t.clerkUserId }, select: { name: true, phone: true } });
     const auctions = [...new Set(t.items.map((i) => i.auction?.title).filter(Boolean))] as string[];
+    const statusWord = t.status === "LOADED" ? "Loaded — in transit" : t.stagedSpot ? "Staged — not loaded" : "Not loaded";
     const rows =
+      (t.stagedSpot ? `<div class="row"><span>Staged in</span><b>${esc(t.stagedSpot)}</b></div>` : "") +
+      `<div class="row"><span>Status</span><b>${esc(statusWord)}</b></div>` +
       `<div class="row"><span>Requested</span><b>${esc(fmtDate(t.createdAt))}</b></div>` +
       `<div class="row"><span>Auction${auctions.length !== 1 ? "s" : ""}</span><b>${esc(auctions.join(", ") || "—")}</b></div>` +
       (profile?.phone ? `<div class="row"><span>Phone</span><b>${esc(profile.phone)}</b></div>` : "");
     const items: LItem[] = t.items.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name }));
     return new Response(
-      doc("Transfer", rows, t.items.length, " · grab from", items, `→ ${t.toLocation?.name ?? "Destination"}`, `For: ${profile?.name ?? "Bidder"}`),
+      doc(t.stagedSpot ? "Transfer · Staged" : "Transfer", rows, t.items.length, " · grab from", items, `→ ${t.toLocation?.name ?? "Destination"}`, `For: ${profile?.name ?? "Bidder"}`),
       { headers: htmlHeaders }
     );
   }

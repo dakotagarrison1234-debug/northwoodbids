@@ -83,12 +83,15 @@ interface Appointment {
 interface TransferItem {
   id: string;
   title: string;
+  itemCode: string | null;
+  grabbed: boolean;
   fromLocationName: string | null;
   storageLocation: string | null;
 }
 interface Transfer {
   id: string;
   status: "REQUESTED" | "LOADED" | "COMPLETED" | "CANCELLED";
+  stagedSpot: string | null;
   createdAt: string;
   completedAt: string | null;
   clerkUserId: string;
@@ -192,6 +195,9 @@ export default function AdminPickupPage() {
   // Order staging: box the whole order up and label it once ("Box 4").
   const [stagingApptId, setStagingApptId] = useState<string | null>(null);
   const [stageSpot, setStageSpot] = useState("");
+  // Transfer staging: gather + bundle a transfer's items in a spot before load day.
+  const [stagingTransferId, setStagingTransferId] = useState<string | null>(null);
+  const [transferStageSpot, setTransferStageSpot] = useState("");
   // Which warehouse's pickups to show ("all" = both). You work one building at a time.
   const [apptLocationId, setApptLocationId] = useState<string>("all");
   const [showAddLoc, setShowAddLoc] = useState(false);
@@ -306,6 +312,46 @@ export default function AdminPickupPage() {
         )
       );
       flash("Couldn't save that. Try again.", false);
+    }
+  };
+
+  // Gather-checklist toggle for a transfer's items (optimistic), same endpoint as
+  // appointment gathering.
+  const toggleTransferGrab = async (transferId: string, itemId: string, next: boolean) => {
+    setTransfers((prev) =>
+      prev.map((t) => (t.id === transferId ? { ...t, items: t.items.map((i) => (i.id === itemId ? { ...i, grabbed: next } : i)) } : t))
+    );
+    try {
+      const res = await fetch(`/api/admin/pickup/items/${itemId}/grab`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ grabbed: next }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      setTransfers((prev) =>
+        prev.map((t) => (t.id === transferId ? { ...t, items: t.items.map((i) => (i.id === itemId ? { ...i, grabbed: !next } : i)) } : t))
+      );
+      flash("Couldn't update the gather list.", false);
+    }
+  };
+
+  // Stage a transfer into a spot (or clear it). Mirrors appointment staging.
+  const saveTransferStage = async (id: string, spot: string) => {
+    try {
+      const res = await fetch(`/api/admin/pickup/transfers/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stagedSpot: spot }),
+      });
+      const d = await res.json();
+      if (d.success) {
+        setStagingTransferId(null);
+        flash(spot.trim() ? `Transfer staged in ${spot.trim()}.` : "Transfer un-staged.", true);
+        loadTransfers();
+      } else flash(d.error || "Could not stage the transfer.", false);
+    } catch {
+      flash("Could not stage the transfer.", false);
     }
   };
 
@@ -1339,31 +1385,76 @@ export default function AdminPickupPage() {
                       </div>
                       <div className="text-sm text-[#8a7559] mt-1">Requested {fmtDateTime(t.createdAt)}</div>
 
+                      {/* Staged banner — gathered & set aside, not loaded yet. */}
+                      {t.stagedSpot && (
+                        <div className="mt-3 rounded-xl bg-[#5f7a45] text-white px-4 py-3">
+                          <div className="text-sm font-bold uppercase tracking-wider text-[#d8e6c8]">Staged — not loaded</div>
+                          <div className="text-xl font-extrabold leading-tight mt-0.5">{t.stagedSpot}</div>
+                          <p className="text-sm text-[#d8e6c8] mt-1">Gathered &amp; set aside. Load &amp; drop off on transfer day.</p>
+                        </div>
+                      )}
+
                       <div className="mt-3">
                         <div className="text-sm font-semibold text-[#8a7559] uppercase tracking-wide mb-2">
                           {t.items.length} item{t.items.length !== 1 ? "s" : ""} to gather
                         </div>
                         <ul className="space-y-2">
                           {t.items.map((it) => (
-                            <li key={it.id} className="flex items-start gap-2 bg-[#f1e7d5] rounded-xl px-4 py-2.5">
-                              <span className="text-[#5f7a45] mt-0.5">☐</span>
-                              <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-base text-[#241a12]">
-                                <span className="font-semibold">{it.title}</span>
-                                <span className="text-[#6f5b46]">— now at</span>
-                                <LocationBadge name={it.fromLocationName || "Unassigned"} size="sm" />
-                                <span className="text-[#6f5b46]">· {it.storageLocation || "no spot"}</span>
-                              </span>
+                            <li key={it.id}>
+                              <button
+                                type="button"
+                                onClick={() => toggleTransferGrab(t.id, it.id, !it.grabbed)}
+                                className={`w-full flex items-start gap-2.5 rounded-xl px-4 py-2.5 text-left transition-colors ${it.grabbed ? "bg-[#5f7a45]/12" : "bg-[#f1e7d5] hover:bg-[#e9dcc4]"}`}
+                              >
+                                <span className={`mt-0.5 w-5 h-5 rounded-md border-2 grid place-items-center shrink-0 ${it.grabbed ? "bg-[#5f7a45] border-[#5f7a45] text-white" : "border-[#cdbda3] text-transparent"}`}>
+                                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6l3 3 5-6" /></svg>
+                                </span>
+                                <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-base text-[#241a12] min-w-0">
+                                  {it.itemCode && <span className="font-mono font-extrabold text-[#6c4d39]">{it.itemCode}</span>}
+                                  <span className={`font-semibold ${it.grabbed ? "line-through text-[#6f5b46]" : ""}`}>{it.title}</span>
+                                  <span className="text-[#6f5b46]">— now at</span>
+                                  <LocationBadge name={it.fromLocationName || "Unassigned"} size="sm" />
+                                  <span className="text-[#6f5b46]">· {it.storageLocation || "no spot"}</span>
+                                </span>
+                              </button>
                             </li>
                           ))}
                         </ul>
                       </div>
 
-                      <div className="mt-3">
+                      {/* Print + Stage */}
+                      <div className="mt-3 flex flex-wrap gap-2">
                         <PrintLabelButton
                           href={`/api/admin/label?type=transfer&transfer=${t.id}`}
-                          label="Print 4×6 transfer label"
-                          className="inline-flex items-center gap-1.5 text-sm font-bold px-4 py-2 rounded-xl border-2 border-[#cdbda3] bg-white text-[#6c4d39] hover:bg-[#efe3d0] transition-colors disabled:opacity-50"
+                          label="Print 4×6 label"
+                          className="inline-flex items-center gap-1.5 text-sm font-bold px-4 py-2.5 rounded-xl border-2 border-[#cdbda3] bg-white text-[#6c4d39] hover:bg-[#efe3d0] transition-colors disabled:opacity-50"
                         />
+                        {stagingTransferId === t.id ? (
+                          <div className="flex flex-wrap items-center gap-2 w-full">
+                            <input
+                              autoFocus
+                              value={transferStageSpot}
+                              onChange={(e) => setTransferStageSpot(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === "Enter") saveTransferStage(t.id, transferStageSpot); }}
+                              placeholder="Spot — e.g. Bay 3"
+                              className="flex-1 min-w-[130px] bg-white border border-[#cdbda3] rounded-xl px-3 py-2.5 text-base focus:outline-none focus:border-[#6c4d39]"
+                            />
+                            <button onClick={() => saveTransferStage(t.id, transferStageSpot)} className="bg-[#8a5a2b] text-white font-semibold text-base px-4 py-2.5 rounded-xl">
+                              {t.stagedSpot ? "Update spot" : "Stage"}
+                            </button>
+                            <button onClick={() => setStagingTransferId(null)} className="bg-white border border-[#cdbda3] text-[#6f5b46] font-semibold text-base px-4 py-2.5 rounded-xl">Cancel</button>
+                            {t.stagedSpot && (
+                              <button onClick={() => saveTransferStage(t.id, "")} className="text-red-600 font-semibold text-base px-3 py-2.5">Un-stage</button>
+                            )}
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => { setStagingTransferId(t.id); setTransferStageSpot(t.stagedSpot ?? ""); }}
+                            className={`font-semibold text-sm px-4 py-2.5 rounded-xl border ${t.stagedSpot ? "bg-[#efe3d0] border-[#cdbda3] text-[#6c4d39]" : "bg-[#8a5a2b] border-[#8a5a2b] text-white"}`}
+                          >
+                            {t.stagedSpot ? `Staged in ${t.stagedSpot}` : "Stage transfer"}
+                          </button>
+                        )}
                       </div>
                       <div className="mt-3 flex flex-col sm:flex-row gap-3">
                         {t.status === "REQUESTED" && (

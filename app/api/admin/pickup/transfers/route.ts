@@ -15,6 +15,8 @@ export async function GET() {
         select: {
           id: true,
           title: true,
+          itemCode: true,
+          grabbedAt: true,
           storageLocation: true,
           location: { select: { name: true } },
         },
@@ -54,6 +56,7 @@ export async function GET() {
     const result = transfers.map((t) => ({
       id: t.id,
       status: t.status,
+      stagedSpot: t.stagedSpot,
       createdAt: t.createdAt.toISOString(),
       completedAt: t.completedAt ? t.completedAt.toISOString() : null,
       clerkUserId: t.clerkUserId,
@@ -62,6 +65,8 @@ export async function GET() {
       items: t.items.map((it) => ({
         id: it.id,
         title: it.title,
+        itemCode: it.itemCode,
+        grabbed: it.grabbedAt != null,
         fromLocationName: it.location?.name ?? "Unassigned",
         storageLocation: it.storageLocation,
       })),

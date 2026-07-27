@@ -256,6 +256,7 @@ export default async function ManageAuctionPage({ params }: Props) {
       order.items.push({
         id: item.id,
         title: item.title,
+        code: item.itemCode ?? null,
         photo,
         amount,
         paidState,
@@ -273,6 +274,7 @@ export default async function ManageAuctionPage({ params }: Props) {
       .map((i) => ({
         id: i.id,
         title: i.title,
+        code: i.itemCode ?? null,
         photo: i.photos.find((p) => p.isPrimary)?.url ?? i.photos[0]?.url ?? null,
         highBid: Number(i.currentBid),
         warehouse: i.location?.name ?? null,

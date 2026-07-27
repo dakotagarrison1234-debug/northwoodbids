@@ -9,6 +9,7 @@ import PrintLabelButton from "../../PrintLabelButton";
 export interface ResultItem {
   id: string;
   title: string;
+  code: string | null;
   photo: string | null;
   amount: number;
   paidState: "paid" | "comped" | "unpaid";
@@ -32,6 +33,7 @@ export interface ResultOrder {
 export interface ResultUnsold {
   id: string;
   title: string;
+  code: string | null;
   photo: string | null;
   highBid: number;
   warehouse: string | null;
@@ -340,7 +342,10 @@ export default function AuctionResults({
                     <div className="w-10 h-10 rounded-lg bg-slate-100 shrink-0" />
                   )}
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium text-slate-900 truncate">{it.title}</div>
+                    <div className="text-sm font-medium text-slate-900 truncate">
+                      {it.code && <span className="font-mono font-bold text-[#6c4d39] mr-1.5">{it.code}</span>}
+                      {it.title}
+                    </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-sm font-bold text-green-700 tabular-nums">{money(it.amount)}</span>
                       <PaidPill state={it.paidState} />
@@ -509,7 +514,10 @@ export default function AuctionResults({
                   <div className="w-10 h-10 rounded-lg bg-slate-100 shrink-0" />
                 )}
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-slate-900 truncate">{u.title}</div>
+                  <div className="text-sm font-medium text-slate-900 truncate">
+                    {u.code && <span className="font-mono font-bold text-[#6c4d39] mr-1.5">{u.code}</span>}
+                    {u.title}
+                  </div>
                   <div className="text-xs text-slate-400 truncate">
                     {(u.warehouse || u.storageLocation)
                       ? `📍 ${[u.warehouse, u.storageLocation].filter(Boolean).join(" · ")}`

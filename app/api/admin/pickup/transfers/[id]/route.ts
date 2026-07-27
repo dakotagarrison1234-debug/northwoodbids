@@ -23,7 +23,24 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    const { status } = await request.json();
+    const { status, stagedSpot } = await request.json();
+
+    // ── STAGE (no status change) ─────────────────────────────────────────────
+    // Gather the transfer's items and set them aside in a spot before load/drop-off
+    // day — same as staging a pickup. Staging clears the gather checklist (the items
+    // are now bundled together in the staged spot).
+    if (stagedSpot !== undefined && status === undefined) {
+      const spot = String(stagedSpot ?? "").trim();
+      const stagePatch = spot
+        ? { stagedSpot: spot, stagedAt: new Date() }
+        : { stagedSpot: null, stagedAt: null };
+      await prisma.$transaction([
+        prisma.transferRequest.update({ where: { id }, data: stagePatch }),
+        ...(spot ? [prisma.item.updateMany({ where: { transferRequestId: id }, data: { grabbedAt: null } })] : []),
+      ]);
+      return NextResponse.json({ success: true });
+    }
+
     if (!["LOADED", "COMPLETED", "CANCELLED"].includes(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
@@ -105,7 +122,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       });
       await prisma.transferRequest.update({
         where: { id },
-        data: { status: "COMPLETED", completedAt: new Date(), revertSnapshot: snapshot },
+        data: { status: "COMPLETED", completedAt: new Date(), revertSnapshot: snapshot, stagedSpot: null, stagedAt: null },
       });
 
       // Fold the arrived items into the bidder's upcoming appointment at this
@@ -119,7 +136,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       });
       await prisma.transferRequest.update({
         where: { id },
-        data: { status: "CANCELLED" },
+        data: { status: "CANCELLED", stagedSpot: null, stagedAt: null },
       });
     }
 

@@ -250,6 +250,10 @@ model TransferRequest {
   toLocationId   String
   status         TransferStatus @default(REQUESTED)
   notes          String?
+  // Staged early: gather the items and set them aside in a spot until load/drop-off
+  // day. Same idea as an appointment's stagedSpot — a transfer isn't loaded yet.
+  stagedSpot     String?
+  stagedAt       DateTime?
   createdAt      DateTime       @default(now())
   completedAt    DateTime?
   /// Snapshot taken at drop-off: [{ itemId, locationId }] — where each item lived
