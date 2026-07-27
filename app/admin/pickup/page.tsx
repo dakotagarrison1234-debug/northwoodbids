@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import LocationBadge from "@/app/components/LocationBadge";
 import MessageSheet, { type MessageTarget } from "../MessageSheet";
+import PrintLabelButton from "../PrintLabelButton";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Window {
@@ -745,15 +746,11 @@ export default function AdminPickupPage() {
         >
           {a.stagedSpot ? `Staged in ${a.stagedSpot}` : "Stage order"}
         </button>
-        <a
-          href={`/print/label?type=appointment&appt=${a.id}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 bg-white border border-[#cdbda3] text-[#6c4d39] hover:bg-[#efe3d0] font-semibold text-base px-4 py-2.5 rounded-xl"
-        >
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="7" width="10" height="6" rx="1"/><path d="M4 7V3h8v4M5 10h6"/></svg>
-          Print label
-        </a>
+        <PrintLabelButton
+          href={`/api/admin/label?type=appointment&appt=${a.id}`}
+          label="Print label"
+          className="inline-flex items-center gap-1.5 bg-white border border-[#cdbda3] text-[#6c4d39] hover:bg-[#efe3d0] font-semibold text-base px-4 py-2.5 rounded-xl disabled:opacity-50"
+        />
         <button
           onClick={() => startEdit(a)}
           className="bg-white border border-[#cdbda3] text-[#6f5b46] hover:bg-[#efe3d0] font-semibold text-base px-4 py-2.5 rounded-xl"
@@ -1362,15 +1359,11 @@ export default function AdminPickupPage() {
                       </div>
 
                       <div className="mt-3">
-                        <a
-                          href={`/print/label?type=transfer&transfer=${t.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-sm font-bold px-4 py-2 rounded-xl border-2 border-[#cdbda3] bg-white text-[#6c4d39] hover:bg-[#efe3d0] transition-colors"
-                        >
-                          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="7" width="10" height="6" rx="1"/><path d="M4 7V3h8v4M5 10h6"/></svg>
-                          Print 4×6 transfer label
-                        </a>
+                        <PrintLabelButton
+                          href={`/api/admin/label?type=transfer&transfer=${t.id}`}
+                          label="Print 4×6 transfer label"
+                          className="inline-flex items-center gap-1.5 text-sm font-bold px-4 py-2 rounded-xl border-2 border-[#cdbda3] bg-white text-[#6c4d39] hover:bg-[#efe3d0] transition-colors disabled:opacity-50"
+                        />
                       </div>
                       <div className="mt-3 flex flex-col sm:flex-row gap-3">
                         {t.status === "REQUESTED" && (

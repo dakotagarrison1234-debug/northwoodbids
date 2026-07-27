@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import RelistControl, { type RelistTarget } from "../../RelistControl";
+import PrintLabelButton from "../../PrintLabelButton";
 
 export interface ResultItem {
   id: string;
@@ -179,7 +180,7 @@ export default function AuctionResults({
     const orderUnpaid = order.items.filter((i) => i.paidState === "unpaid").length;
     const orderPicked = order.items.filter((i) => i.pickedUp).length;
     const chosenLocation = order.preferredLocationId ? locName.get(order.preferredLocationId) ?? null : null;
-    const labelHref = `/print/label?type=pickup&auction=${auctionId}&user=${encodeURIComponent(order.clerkUserId)}`;
+    const labelHref = `/api/admin/label?type=pickup&auction=${auctionId}&user=${encodeURIComponent(order.clerkUserId)}`;
 
     return (
       <div
@@ -246,15 +247,11 @@ export default function AuctionResults({
         {/* Gather & label — clear this order out of storage now, booked or not. */}
         {!done && (
           <div className="px-4 py-2.5 border-t border-slate-100 flex flex-wrap items-center gap-2">
-            <a
+            <PrintLabelButton
               href={labelHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg bg-[#6c4d39] text-white hover:bg-[#563e2c]"
-            >
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="7" width="10" height="6" rx="1"/><path d="M4 7V3h8v4M5 10h6"/></svg>
-              Print 4×6 label
-            </a>
+              label="Print 4×6 label"
+              className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg bg-[#6c4d39] text-white hover:bg-[#563e2c] disabled:opacity-50"
+            />
             <button
               onClick={() => toggleOrderGathered(order, !allGathered)}
               disabled={busyGather === order.clerkUserId}
