@@ -44,6 +44,9 @@ export default async function ManageAuctionPage({ params }: Props) {
           photos: true,
           // Which warehouse each item sits in — powers the per-warehouse split below.
           location: { select: { id: true, name: true } },
+          // Active transfer (if any) so the fulfillment board can show what's moving
+          // and where — vs what's sitting at a warehouse ready to gather.
+          transferRequest: { select: { status: true, toLocation: { select: { name: true } } } },
           // Single top ACTIVE bid (uses [itemId, status, amount] index) instead of full history.
           bids: { where: { status: "ACTIVE" }, orderBy: { amount: "desc" }, take: 1 },
           // Total bid count is shown in the table — get it from the DB, not by loading rows.
@@ -247,6 +250,8 @@ export default async function ManageAuctionPage({ params }: Props) {
         };
         orderMap.set(winnerId, order);
       }
+      const tr = item.transferRequest;
+      const transferring = !!tr && (tr.status === "REQUESTED" || tr.status === "LOADED");
       order.total += amount;
       order.items.push({
         id: item.id,
@@ -256,6 +261,9 @@ export default async function ManageAuctionPage({ params }: Props) {
         paidState,
         pickedUp: item.status === "PICKED_UP",
         gathered: item.grabbedAt != null,
+        warehouse: item.location?.name ?? null,
+        transferring,
+        transferTo: transferring ? tr?.toLocation?.name ?? null : null,
       });
     }
     resultOrders = [...orderMap.values()].sort((a, b) => b.total - a.total);

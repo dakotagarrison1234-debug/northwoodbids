@@ -14,6 +14,9 @@ export interface ResultItem {
   paidState: "paid" | "comped" | "unpaid";
   pickedUp: boolean;
   gathered: boolean;
+  warehouse: string | null; // where the item currently sits
+  transferring: boolean; // has an active (requested/loaded) transfer
+  transferTo: string | null; // transfer destination
 }
 export interface ResultOrder {
   clerkUserId: string;
@@ -182,6 +185,17 @@ export default function AuctionResults({
     const chosenLocation = order.preferredLocationId ? locName.get(order.preferredLocationId) ?? null : null;
     const labelHref = `/api/admin/label?type=pickup&auction=${auctionId}&user=${encodeURIComponent(order.clerkUserId)}`;
 
+    // Where this person's not-yet-collected items physically are: sitting at a
+    // warehouse (ready to gather) vs. on an active transfer (moving / to be moved).
+    const active = order.items.filter((i) => !i.pickedUp);
+    const transferringItems = active.filter((i) => i.transferring);
+    const hereByWarehouse = new Map<string, number>();
+    for (const i of active.filter((i) => !i.transferring)) {
+      const w = i.warehouse || "No warehouse";
+      hereByWarehouse.set(w, (hereByWarehouse.get(w) ?? 0) + 1);
+    }
+    const transferDests = [...new Set(transferringItems.map((i) => i.transferTo).filter(Boolean))] as string[];
+
     return (
       <div
         key={order.clerkUserId}
@@ -217,6 +231,22 @@ export default function AuctionResults({
                 </>
               )}
             </div>
+
+            {/* Where their stuff is — at a warehouse (ready to gather) vs transferring. */}
+            {!done && (hereByWarehouse.size > 0 || transferringItems.length > 0) && (
+              <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-[11px]">
+                {[...hereByWarehouse.entries()].map(([w, n]) => (
+                  <span key={w} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-green-100 text-green-800 font-bold">
+                    📍 {w} ×{n}
+                  </span>
+                ))}
+                {transferringItems.length > 0 && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold">
+                    🚚 {transferringItems.length} transferring{transferDests.length ? ` → ${transferDests.join(", ")}` : ""}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           <div className="text-right shrink-0">
             <div className={`text-lg font-extrabold tabular-nums ${done ? "text-green-700" : "text-green-700"}`}>{money(order.total)}</div>
@@ -284,6 +314,17 @@ export default function AuctionResults({
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-sm font-bold text-green-700 tabular-nums">{money(it.amount)}</span>
                       <PaidPill state={it.paidState} />
+                    </div>
+                    <div className="text-[11px] mt-0.5 font-semibold">
+                      {it.pickedUp ? (
+                        <span className="text-green-700">✓ Picked up</span>
+                      ) : it.transferring ? (
+                        <span className="text-amber-700">🚚 Transferring{it.transferTo ? ` → ${it.transferTo}` : ""}</span>
+                      ) : it.warehouse ? (
+                        <span className="text-slate-500">📍 {it.warehouse} · ready to gather</span>
+                      ) : (
+                        <span className="text-slate-400">No warehouse set</span>
+                      )}
                     </div>
                   </div>
                   <button
