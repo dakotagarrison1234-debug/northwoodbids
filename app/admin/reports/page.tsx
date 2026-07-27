@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Split { label: string; net: number }
@@ -56,11 +57,6 @@ function Scope({ items }: { items: { label: string; on: boolean }[] }) {
 // The three inclusions that change what a money figure means.
 const SCOPE_NET = [
   { label: "Premium", on: true },
-  { label: "Tax", on: false },
-  { label: "Your wins", on: false },
-];
-const SCOPE_HAMMER = [
-  { label: "Premium", on: false },
   { label: "Tax", on: false },
   { label: "Your wins", on: false },
 ];
@@ -156,45 +152,65 @@ function MoneyBar({ t }: { t: Report["totals"] }) {
   );
 }
 
-/** A ranked earner card — used for both auctions and warehouses. */
+/**
+ * A ranked earner card. For auctions we pass `href` so the whole card links to the
+ * full per-auction report. For warehouses (no href) it stays an expandable inline
+ * breakdown.
+ */
 function EarnerCard({
-  rank, label, when, net, share, items, hammer, premium, fees, avgItem, splitTitle, split, color,
+  rank, label, when, net, share, items, hammer, premium, fees, avgItem, splitTitle, split, color, href,
 }: {
   rank: number; label: string; when?: string | null; net: number; share: number;
   items: number; hammer: number; premium: number; fees: number; avgItem: number;
-  splitTitle: string; split: Split[]; color: string;
+  splitTitle: string; split: Split[]; color: string; href?: string;
 }) {
   const [open, setOpen] = useState(false);
+
+  const summary = (
+    <>
+      <div className="flex items-start gap-3">
+        <span
+          className="w-7 h-7 shrink-0 rounded-full grid place-items-center text-sm font-extrabold text-white mt-0.5"
+          style={{ background: color }}
+        >
+          {rank}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="font-bold text-[#241a12] leading-snug break-words">{label}</div>
+          <div className="text-sm text-[#8a7559] mt-0.5">
+            {items} item{items !== 1 ? "s" : ""}
+            {when ? ` · ${shortDate(when)}` : ""}
+            {avgItem > 0 ? ` · ${money0(avgItem)} avg` : ""}
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          <div className="text-2xl font-extrabold text-[#5f7a45] tabular-nums leading-none">{money0(net)}</div>
+          <div className="text-[11px] font-bold text-[#8a7559] uppercase tracking-wide mt-1">
+            {href ? "Full report ›" : "You made"}
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 h-2 rounded-full bg-[#efe3d0] overflow-hidden">
+        <div className="h-full rounded-full" style={{ width: `${Math.max(2, share * 100)}%`, background: color }} />
+      </div>
+    </>
+  );
+
+  // Auctions: whole card links to the full breakdown page.
+  if (href) {
+    return (
+      <Link href={href} className="block bg-white border border-[#e3d6bf] rounded-2xl p-4 hover:bg-[#faf5ea] hover:border-[#6c4d39]/40 transition-colors">
+        {summary}
+      </Link>
+    );
+  }
+
+  // Warehouses: expandable inline breakdown.
   return (
     <div className="bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden">
       <button type="button" onClick={() => setOpen((v) => !v)} className="w-full text-left p-4 hover:bg-[#faf5ea] transition-colors">
-        <div className="flex items-start gap-3">
-          <span
-            className="w-7 h-7 shrink-0 rounded-full grid place-items-center text-sm font-extrabold text-white mt-0.5"
-            style={{ background: color }}
-          >
-            {rank}
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="font-bold text-[#241a12] leading-snug break-words">{label}</div>
-            <div className="text-sm text-[#8a7559] mt-0.5">
-              {items} item{items !== 1 ? "s" : ""}
-              {when ? ` · ${shortDate(when)}` : ""}
-              {avgItem > 0 ? ` · ${money0(avgItem)} avg` : ""}
-            </div>
-          </div>
-          <div className="text-right shrink-0">
-            <div className="text-2xl font-extrabold text-[#5f7a45] tabular-nums leading-none">{money0(net)}</div>
-            <div className="text-[11px] font-bold text-[#8a7559] uppercase tracking-wide mt-1">You made</div>
-          </div>
-        </div>
-
-        {/* Relative size — instantly shows which auctions carried the month. */}
-        <div className="mt-3 h-2 rounded-full bg-[#efe3d0] overflow-hidden">
-          <div className="h-full rounded-full" style={{ width: `${Math.max(2, share * 100)}%`, background: color }} />
-        </div>
+        {summary}
       </button>
-
       {open && (
         <div className="px-4 pb-4 border-t border-[#efe3d0] pt-3 space-y-3">
           <div className="grid grid-cols-3 gap-2">
@@ -322,34 +338,6 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        {/* ── Money left on the table ── */}
-        {d.headroom.items > 0 && (
-          <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-sm font-bold uppercase tracking-wide text-amber-800">
-                  Left on the table
-                </div>
-                <div className="text-3xl font-extrabold text-amber-700 tabular-nums mt-0.5">
-                  {money0(d.headroom.total)}
-                </div>
-              </div>
-              <span className="text-3xl shrink-0">📉</span>
-            </div>
-            <p className="text-base text-amber-900 mt-2 leading-snug">
-              On <strong>{d.headroom.items}</strong> item{d.headroom.items !== 1 ? "s" : ""} the winner
-              had set a max bid <em>higher</em> than what they ended up paying — the item stopped one
-              increment above the runner-up. That gap averaged <strong>{money0(d.headroom.avg)}</strong>,
-              biggest was <strong>{money0(d.headroom.biggest)}</strong>.
-            </p>
-            <p className="text-sm text-amber-800 mt-2 leading-snug">
-              This is demand you had but didn&apos;t capture. A big number usually means too few
-              bidders competing on those lots — not that anything is broken.
-            </p>
-            <Scope items={SCOPE_HAMMER} />
-          </div>
-        )}
-
         {/* ── Best auction callout ── */}
         {best && best.net > 0 && (
           <div className="rounded-2xl bg-[#f6ecda] border border-[#e3c9a3] p-4 flex items-center gap-4">
@@ -395,6 +383,7 @@ export default function ReportsPage() {
                   splitTitle="By warehouse"
                   split={a.split}
                   color="#6c4d39"
+                  href={`/admin/reports/${a.key}`}
                 />
               ))}
               {auctions.length > 5 && (
