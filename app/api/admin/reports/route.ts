@@ -70,7 +70,8 @@ export async function GET(req: NextRequest) {
     where: {
       status: "PAID",
       comped: false,
-      item: { organizationId: orgId },
+      // Exclude archived (test/junk) auctions. Items with no auction still count.
+      item: { organizationId: orgId, OR: [{ auction: { archived: false } }, { auctionId: null }] },
       ...(from ? { createdAt: { gte: from } } : {}),
     },
     select: {
@@ -174,7 +175,7 @@ export async function GET(req: NextRequest) {
   const wonBids = await prisma.bid.findMany({
     where: {
       status: "WON",
-      item: { organizationId: orgId },
+      item: { organizationId: orgId, OR: [{ auction: { archived: false } }, { auctionId: null }] },
       ...(from ? { placedAt: { gte: from } } : {}),
     },
     select: { itemId: true, clerkUserId: true, amount: true },
@@ -207,7 +208,7 @@ export async function GET(req: NextRequest) {
     where: {
       status: { in: ["PENDING", "FAILED"] },
       comped: false,
-      item: { organizationId: orgId },
+      item: { organizationId: orgId, OR: [{ auction: { archived: false } }, { auctionId: null }] },
     },
     select: {
       clerkUserId: true, amount: true, applicationFeeAmount: true, taxAmount: true,

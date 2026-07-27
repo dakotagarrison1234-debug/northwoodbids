@@ -7,7 +7,7 @@ import { PineRidge, MountainRange, GavelEmblem, WoodenCrate } from "@/app/compon
 
 export default async function AuctionsPage() {
   const auctions = await prisma.auction.findMany({
-    where: { status: "OPEN" },
+    where: { status: "OPEN", archived: false },
     include: {
       organization: { select: { id: true, name: true, slug: true, logoUrl: true } },
       // Preview the most-active lots (most bids first).

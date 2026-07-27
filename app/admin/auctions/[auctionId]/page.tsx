@@ -11,6 +11,7 @@ import { money } from "@/lib/format";
 import DeleteAuctionButton from "./DeleteAuctionButton";
 import EditAuction from "./EditAuction";
 import AuctionResults, { type ResultOrder, type ResultUnsold } from "./AuctionResults";
+import ArchiveButton from "./ArchiveButton";
 import AuctionStatusButtons from "@/app/components/AuctionStatusButtons";
 import PusherRefresh from "@/app/components/PusherRefresh";
 import { Pill } from "../../ui";
@@ -290,6 +291,7 @@ export default async function ManageAuctionPage({ params }: Props) {
             {isScheduled ? "Scheduled" : auction.status.toLowerCase()}
           </Pill>
           {isPastStart && <Pill tone="amber">Starting shortly</Pill>}
+          {auction.archived && <Pill tone="slate">Archived · hidden</Pill>}
           <Link
             href={`/${auction.organization.slug}/${auction.slug}`}
             target="_blank"
@@ -524,6 +526,11 @@ export default async function ManageAuctionPage({ params }: Props) {
         )}
           </>
         )}
+
+        {/* Archive — get a test/junk auction out of reports, winners and the site. */}
+        <div className="pt-1">
+          <ArchiveButton auctionId={auction.id} archived={auction.archived} />
+        </div>
       </div>
     </>
   );

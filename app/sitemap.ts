@@ -18,7 +18,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let auctionUrls: MetadataRoute.Sitemap = [];
   try {
     const auctions = await prisma.auction.findMany({
-      where: { status: { in: ["OPEN", "CLOSING"] } },
+      where: { status: { in: ["OPEN", "CLOSING"] }, archived: false },
       select: { slug: true, updatedAt: true, organization: { select: { slug: true } } },
       take: 1000,
     });

@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     prisma.item.findMany({
       where: {
         status: "ACTIVE",
-        auction: { status: "OPEN" },
+        auction: { status: "OPEN", archived: false },
         OR: [
           { title: { contains: q, mode: "insensitive" } },
           { category: { contains: q, mode: "insensitive" } },
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
         logoUrl: true,
         _count: { select: { auctions: true } },
         auctions: {
-          where: { status: "OPEN" },
+          where: { status: "OPEN", archived: false },
           select: { id: true },
         },
       },

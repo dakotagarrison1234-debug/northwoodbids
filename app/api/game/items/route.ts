@@ -9,7 +9,7 @@ export async function GET() {
     const items = await prisma.item.findMany({
       where: {
         status: "ACTIVE",
-        auction: { status: { in: ["OPEN", "CLOSING"] } },
+        auction: { status: { in: ["OPEN", "CLOSING"] }, archived: false },
         photos: { some: {} },
       },
       take: 60,

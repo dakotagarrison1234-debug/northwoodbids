@@ -34,7 +34,7 @@ export default async function SearchPage({ searchParams }: Props) {
     prisma.item.findMany({
       where: {
         status: "ACTIVE",
-        auction: { status: "OPEN" },
+        auction: { status: "OPEN", archived: false },
         OR: [
           { title: { contains: query, mode: "insensitive" } },
           { category: { contains: query, mode: "insensitive" } },
@@ -67,7 +67,7 @@ export default async function SearchPage({ searchParams }: Props) {
         slug: true,
         logoUrl: true,
         _count: { select: { auctions: true } },
-        auctions: { where: { status: "OPEN" }, select: { id: true } },
+        auctions: { where: { status: "OPEN", archived: false }, select: { id: true } },
       },
     }),
   ]);

@@ -17,7 +17,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     }
 
     const { auctionId } = await params;
-    const { status, endAt, startAt, title, description } = await request.json();
+    const { status, endAt, startAt, title, description, archived } = await request.json();
 
     // Verify the user belongs to the org that owns this auction
     const auction = await prisma.auction.findUnique({
@@ -53,6 +53,12 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     if (description !== undefined) {
       const d = String(description ?? "").trim();
       editData.description = d || null;
+    }
+
+    // Archive / un-archive — allowed in any status. Hides the auction from reports,
+    // winners, the public site and the main admin list without deleting anything.
+    if (archived !== undefined) {
+      editData.archived = !!archived;
     }
 
     if (startAt !== undefined) {

@@ -66,7 +66,7 @@ export default async function AdminDashboard() {
   const [liveAuctions, todayAppts, unpaidRows, readyNoAppt, activeTransfers, weekAgg] =
     await Promise.all([
       prisma.auction.findMany({
-        where: { organizationId: orgId, status: { in: ["OPEN", "CLOSING"] } },
+        where: { organizationId: orgId, status: { in: ["OPEN", "CLOSING"] }, archived: false },
         orderBy: { endAt: "asc" },
         include: { _count: { select: { items: true } } },
       }),

@@ -8,6 +8,7 @@ export type AuctionSummary = {
   id: string;
   title: string;
   status: string;
+  archived: boolean;
   isScheduled: boolean;
   itemsCount: number;
   raised: number;
@@ -101,10 +102,11 @@ function GroupToggle({
 }
 
 export default function AuctionsList({
-  live, upcoming, closed,
-}: { live: AuctionSummary[]; upcoming: AuctionSummary[]; closed: AuctionSummary[] }) {
+  live, upcoming, closed, archived = [],
+}: { live: AuctionSummary[]; upcoming: AuctionSummary[]; closed: AuctionSummary[]; archived?: AuctionSummary[] }) {
   const [showUpcoming, setShowUpcoming] = useState(false);
   const [showClosed, setShowClosed] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const [closedLimit, setClosedLimit] = useState(CLOSED_SHOWN);
 
   return (
@@ -150,6 +152,13 @@ export default function AuctionsList({
               )}
             </>
           )}
+        </section>
+      )}
+
+      {archived.length > 0 && (
+        <section className="space-y-2.5">
+          <GroupToggle label="Archived (hidden)" count={archived.length} open={showArchived} onClick={() => setShowArchived((v) => !v)} />
+          {showArchived && archived.map((a) => <AuctionCard key={a.id} a={a} mode="closed" />)}
         </section>
       )}
     </div>

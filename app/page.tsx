@@ -72,7 +72,7 @@ export default async function HomePage() {
 
   const [activeAuctions, upcomingAuctions] = await Promise.all([
     prisma.auction.findMany({
-      where: { status: "OPEN" },
+      where: { status: "OPEN", archived: false },
       include: {
         organization: true,
         // Preview the most-popular items (most bids first; any items if none have bids).

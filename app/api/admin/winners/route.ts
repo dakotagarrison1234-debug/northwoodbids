@@ -30,7 +30,10 @@ export async function GET(req: NextRequest) {
   const skip = Math.max(0, Number(url.get("skip") ?? 0));
   const filter = url.get("filter") ?? "all"; // all | unpaid | paid
 
-  const itemScope = { item: { organizationId: orgId } };
+  // Every aggregation below spreads this, so archived (test/junk) auctions are
+  // excluded from winners, leaderboards and who-owes in one place. Items with no
+  // auction still count.
+  const itemScope = { item: { organizationId: orgId, OR: [{ auction: { archived: false } }, { auctionId: null }] } };
 
   // ── Search: resolve matching bidders first (bids have no name to match on) ──
   let searchUserIds: string[] | null = null;

@@ -19,7 +19,7 @@ export default async function AuctionsPage() {
       where: { organizationId: orgId },
       orderBy: { createdAt: "desc" },
       select: {
-        id: true, title: true, status: true, startAt: true, endAt: true,
+        id: true, title: true, status: true, startAt: true, endAt: true, archived: true,
         _count: { select: { items: true } },
       },
     }),
@@ -59,6 +59,7 @@ export default async function AuctionsPage() {
     id: a.id,
     title: a.title,
     status: a.status,
+    archived: a.archived,
     isScheduled: a.status === "DRAFT" && a.startAt > now,
     itemsCount: a._count.items,
     raised: raisedBy.get(a.id) ?? 0,
@@ -67,13 +68,19 @@ export default async function AuctionsPage() {
     endAtIso: a.endAt.toISOString(),
   }));
 
-  const live = summaries
+  // Archived (test/junk) auctions get their own collapsed group and are pulled out
+  // of the working live/upcoming/closed lists.
+  const active = summaries.filter((a) => !a.archived);
+  const archived = summaries
+    .filter((a) => a.archived)
+    .sort((a, b) => b.endAtIso.localeCompare(a.endAtIso));
+  const live = active
     .filter((a) => a.status === "OPEN" || a.status === "CLOSING")
     .sort((a, b) => a.endAtIso.localeCompare(b.endAtIso));
-  const upcoming = summaries
+  const upcoming = active
     .filter((a) => a.status === "DRAFT")
     .sort((a, b) => a.startAtIso.localeCompare(b.startAtIso));
-  const closed = summaries
+  const closed = active
     .filter((a) => a.status !== "OPEN" && a.status !== "CLOSING" && a.status !== "DRAFT")
     .sort((a, b) => b.endAtIso.localeCompare(a.endAtIso));
 
@@ -102,7 +109,7 @@ export default async function AuctionsPage() {
             </Link>
           </div>
         ) : (
-          <AuctionsList live={live} upcoming={upcoming} closed={closed} />
+          <AuctionsList live={live} upcoming={upcoming} closed={closed} archived={archived} />
         )}
       </div>
     </>

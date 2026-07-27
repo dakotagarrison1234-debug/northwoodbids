@@ -70,6 +70,10 @@ enum OrgRole {
   // When the manual "auction is live" blast was sent. Set once — the button greys
   // out afterwards so nobody double-texts the whole bidder list.
   liveNotifiedAt       DateTime?
+  // Test/junk auctions the owner hides. Archived auctions are excluded from reports,
+  // winners, the public site and the main admin list — but kept (with their bids and
+  // payments) so nothing is destroyed and it can be un-archived.
+  archived             Boolean       @default(false)
   createdAt            DateTime      @default(now())
   updatedAt            DateTime      @updatedAt
   organization         Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -79,6 +83,7 @@ enum OrgRole {
   @@index([status])
   @@index([organizationId, status])
   @@index([status, endAt])
+  @@index([organizationId, archived])
 }
 
 enum AuctionStatus {

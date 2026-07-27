@@ -9,7 +9,7 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   try {
     const auctions = await prisma.auction.findMany({
-      where: { status: "OPEN" },
+      where: { status: "OPEN", archived: false },
       include: {
         organization: { select: { id: true, name: true, slug: true, logoUrl: true } },
         _count: { select: { items: { where: { status: "ACTIVE" } } } },
