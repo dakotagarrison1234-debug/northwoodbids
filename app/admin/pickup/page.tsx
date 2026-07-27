@@ -1352,7 +1352,18 @@ export default function AdminPickupPage() {
                         </ul>
                       </div>
 
-                      <div className="mt-4 flex flex-col sm:flex-row gap-3">
+                      <div className="mt-3">
+                        <a
+                          href={`/print/label?type=transfer&transfer=${t.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-sm font-bold px-4 py-2 rounded-xl border-2 border-[#cdbda3] bg-white text-[#6c4d39] hover:bg-[#efe3d0] transition-colors"
+                        >
+                          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="7" width="10" height="6" rx="1"/><path d="M4 7V3h8v4M5 10h6"/></svg>
+                          Print 4×6 transfer label
+                        </a>
+                      </div>
+                      <div className="mt-3 flex flex-col sm:flex-row gap-3">
                         {t.status === "REQUESTED" && (
                           <button
                             onClick={() => setTransferStatus(t.id, "LOADED", t.toLocation.name)}

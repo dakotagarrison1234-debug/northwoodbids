@@ -12,6 +12,7 @@ export interface ResultItem {
   amount: number;
   paidState: "paid" | "comped" | "unpaid";
   pickedUp: boolean;
+  gathered: boolean;
 }
 export interface ResultOrder {
   clerkUserId: string;
@@ -73,6 +74,7 @@ const SECTIONS: { key: Bucket; title: string; dot: string; hint: string }[] = [
 ];
 
 export default function AuctionResults({
+  auctionId,
   orders: initialOrders,
   unsold,
   locations,
@@ -87,6 +89,7 @@ export default function AuctionResults({
   const [orders, setOrders] = useState(initialOrders);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [busyItem, setBusyItem] = useState<string | null>(null);
+  const [busyGather, setBusyGather] = useState<string | null>(null);
   const [doneOpen, setDoneOpen] = useState(false);
   const [note, setNote] = useState<{ key: string; text: string; ok: boolean } | null>(null);
 
@@ -140,12 +143,43 @@ export default function AuctionResults({
     }
   };
 
+  // Mark a whole order gathered (or un-gather) — sets grabbedAt on each item so the
+  // closed screen doubles as a clear-the-storage checklist.
+  const toggleOrderGathered = async (order: ResultOrder, gathered: boolean) => {
+    setBusyGather(order.clerkUserId);
+    setNote(null);
+    try {
+      await Promise.all(
+        order.items.map((it) =>
+          fetch(`/api/admin/pickup/items/${it.id}/grab`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ grabbed: gathered }),
+          })
+        )
+      );
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.clerkUserId === order.clerkUserId
+            ? { ...o, items: o.items.map((i) => ({ ...i, gathered })) }
+            : o
+        )
+      );
+    } catch {
+      setNote({ key: order.clerkUserId, text: "Couldn't update gathered status.", ok: false });
+    } finally {
+      setBusyGather(null);
+    }
+  };
+
   const renderOrder = (order: ResultOrder, done = false) => {
     const isOpen = expanded.has(order.clerkUserId);
     const allPickedUp = order.items.every((i) => i.pickedUp);
+    const allGathered = order.items.length > 0 && order.items.every((i) => i.gathered);
     const orderUnpaid = order.items.filter((i) => i.paidState === "unpaid").length;
     const orderPicked = order.items.filter((i) => i.pickedUp).length;
     const chosenLocation = order.preferredLocationId ? locName.get(order.preferredLocationId) ?? null : null;
+    const labelHref = `/print/label?type=pickup&auction=${auctionId}&user=${encodeURIComponent(order.clerkUserId)}`;
 
     return (
       <div
@@ -172,6 +206,9 @@ export default function AuctionResults({
                 <>
                   {orderUnpaid > 0 && (
                     <span className="px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-bold">{orderUnpaid} unpaid</span>
+                  )}
+                  {allGathered && (
+                    <span className="px-1.5 py-0.5 rounded-full bg-[#efe0c9] text-[#8a5a2b] font-bold">Gathered ✓</span>
                   )}
                   <span className="px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold">
                     {orderPicked}/{order.items.length} picked up
@@ -203,6 +240,32 @@ export default function AuctionResults({
             ) : (
               <span className="text-amber-700">No pickup location chosen yet — the customer sets it on their pickup page.</span>
             )}
+          </div>
+        )}
+
+        {/* Gather & label — clear this order out of storage now, booked or not. */}
+        {!done && (
+          <div className="px-4 py-2.5 border-t border-slate-100 flex flex-wrap items-center gap-2">
+            <a
+              href={labelHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg bg-[#6c4d39] text-white hover:bg-[#563e2c]"
+            >
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="7" width="10" height="6" rx="1"/><path d="M4 7V3h8v4M5 10h6"/></svg>
+              Print 4×6 label
+            </a>
+            <button
+              onClick={() => toggleOrderGathered(order, !allGathered)}
+              disabled={busyGather === order.clerkUserId}
+              className={`text-xs font-bold px-3 py-2 rounded-lg border transition-colors disabled:opacity-50 ${
+                allGathered
+                  ? "bg-[#efe0c9] border-[#e3c9a3] text-[#8a5a2b]"
+                  : "bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              {busyGather === order.clerkUserId ? "…" : allGathered ? "Gathered ✓ — undo" : "Mark gathered"}
+            </button>
           </div>
         )}
 

@@ -248,7 +248,15 @@ export default async function ManageAuctionPage({ params }: Props) {
         orderMap.set(winnerId, order);
       }
       order.total += amount;
-      order.items.push({ id: item.id, title: item.title, photo, amount, paidState, pickedUp: item.status === "PICKED_UP" });
+      order.items.push({
+        id: item.id,
+        title: item.title,
+        photo,
+        amount,
+        paidState,
+        pickedUp: item.status === "PICKED_UP",
+        gathered: item.grabbedAt != null,
+      });
     }
     resultOrders = [...orderMap.values()].sort((a, b) => b.total - a.total);
 
