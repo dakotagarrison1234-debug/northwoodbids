@@ -43,24 +43,25 @@ function doc(kind: string, headerRows: string, count: number, countSuffix: strin
   return `<!doctype html><html><head><meta charset="utf-8"><style>
 @page { size: 4in 6in; margin: 0; }
 * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-html, body { margin: 0; padding: 0; }
-body { width: 4in; font-family: Arial, Helvetica, sans-serif; color: #000; }
-.wrap { padding: 0.14in 0.16in; }
-.top { display: flex; justify-content: space-between; align-items: baseline; font-size: 8.5pt; font-weight: 700; }
-.kind { letter-spacing: .12em; text-transform: uppercase; }
-.name { font-size: 17pt; font-weight: 800; line-height: 1.04; margin-top: 3pt; word-break: break-word; }
-.sub { font-size: 11pt; font-weight: 700; margin-top: 1pt; }
-.rule { border-top: 1.5pt solid #000; margin: 5pt 0; }
-.row { display: flex; justify-content: space-between; gap: 8pt; font-size: 9pt; margin: 1.5pt 0; }
+html, body { margin: 0; padding: 0; width: 4in; height: 6in; }
+body { font-family: Arial, Helvetica, sans-serif; color: #000; }
+.wrap { width: 4in; height: 6in; padding: 0.09in 0.11in; display: flex; flex-direction: column; }
+.top { display: flex; justify-content: space-between; align-items: baseline; font-size: 9pt; font-weight: 700; }
+.kind { letter-spacing: .1em; text-transform: uppercase; }
+.name { font-size: 21pt; font-weight: 800; line-height: 1.02; margin-top: 2pt; word-break: break-word; }
+.sub { font-size: 12pt; font-weight: 700; margin-top: 1pt; }
+.rule { border-top: 2pt solid #000; margin: 4pt 0; }
+.row { display: flex; justify-content: space-between; gap: 8pt; font-size: 10.5pt; margin: 2pt 0; }
 .row span:first-child { color: #333; }
 .row b { font-weight: 800; text-align: right; }
-.cnt { font-size: 10pt; font-weight: 800; margin-top: 3pt; }
-.grp-h { font-size: 8.5pt; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; background: #000; color: #fff; padding: 1.5pt 4pt; margin-top: 4pt; }
+.cnt { font-size: 11pt; font-weight: 800; margin-top: 3pt; }
+.list { flex: 1; overflow: hidden; }
+.grp-h { font-size: 9.5pt; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; background: #000; color: #fff; padding: 2pt 5pt; margin-top: 4pt; }
 ul { margin: 0; padding: 0; }
-li { list-style: none; display: flex; gap: 5pt; align-items: baseline; font-size: 9pt; line-height: 1.25; padding: 1.5pt 0; border-bottom: .5pt dotted #999; }
+li { list-style: none; display: flex; gap: 6pt; align-items: baseline; font-size: 10.5pt; line-height: 1.3; padding: 2pt 0; border-bottom: .5pt dotted #999; }
 .code { font-weight: 800; font-family: "Courier New", monospace; white-space: nowrap; }
 .ttl { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.shelf { font-weight: 800; white-space: nowrap; font-size: 8.5pt; }
+.shelf { font-weight: 800; white-space: nowrap; font-size: 9.5pt; }
 </style></head><body><div class="wrap">
 <div class="top"><span>NORTHWOOD BIDS</span><span class="kind">${esc(kind)}</span></div>
 <div class="name">${esc(nameBig)}</div>
@@ -69,7 +70,7 @@ ${sub ? `<div class="sub">${esc(sub)}</div>` : ""}
 ${headerRows}
 <div class="rule"></div>
 <div class="cnt">${count} item${count !== 1 ? "s" : ""}${countSuffix}</div>
-${groupsHtml(items)}
+<div class="list">${groupsHtml(items)}</div>
 </div></body></html>`;
 }
 

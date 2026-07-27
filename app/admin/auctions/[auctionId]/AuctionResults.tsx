@@ -147,25 +147,47 @@ export default function AuctionResults({
     }
   };
 
-  // Mark a whole order gathered (or un-gather) — sets grabbedAt on each item so the
-  // closed screen doubles as a clear-the-storage checklist.
+  const gatherItem = async (itemId: string, gathered: boolean) => {
+    await fetch(`/api/admin/pickup/items/${itemId}/grab`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ grabbed: gathered }),
+    });
+  };
+
+  // Gather (or un-gather) a single item — the one you actually pulled off the shelf.
+  const setItemGathered = async (clerkUserId: string, itemId: string, gathered: boolean) => {
+    setBusyItem(itemId);
+    setNote(null);
+    try {
+      await gatherItem(itemId, gathered);
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.clerkUserId === clerkUserId
+            ? { ...o, items: o.items.map((i) => (i.id === itemId ? { ...i, gathered } : i)) }
+            : o
+        )
+      );
+    } catch {
+      setNote({ key: itemId, text: "Couldn't update gathered status.", ok: false });
+    } finally {
+      setBusyItem(null);
+    }
+  };
+
+  // Gather all of an order's items that are ACTUALLY HERE (skip transferring / picked
+  // up) — the rest wait until they're transferred in and scheduled.
   const toggleOrderGathered = async (order: ResultOrder, gathered: boolean) => {
+    const targets = order.items.filter((i) => !i.pickedUp && !i.transferring);
     setBusyGather(order.clerkUserId);
     setNote(null);
     try {
-      await Promise.all(
-        order.items.map((it) =>
-          fetch(`/api/admin/pickup/items/${it.id}/grab`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ grabbed: gathered }),
-          })
-        )
-      );
+      await Promise.all(targets.map((it) => gatherItem(it.id, gathered)));
+      const ids = new Set(targets.map((t) => t.id));
       setOrders((prev) =>
         prev.map((o) =>
           o.clerkUserId === order.clerkUserId
-            ? { ...o, items: o.items.map((i) => ({ ...i, gathered })) }
+            ? { ...o, items: o.items.map((i) => (ids.has(i.id) ? { ...i, gathered } : i)) }
             : o
         )
       );
@@ -179,7 +201,9 @@ export default function AuctionResults({
   const renderOrder = (order: ResultOrder, done = false) => {
     const isOpen = expanded.has(order.clerkUserId);
     const allPickedUp = order.items.every((i) => i.pickedUp);
-    const allGathered = order.items.length > 0 && order.items.every((i) => i.gathered);
+    // You can only gather what's physically here: not picked up, not out on transfer.
+    const gatherable = order.items.filter((i) => !i.pickedUp && !i.transferring);
+    const allGathered = gatherable.length > 0 && gatherable.every((i) => i.gathered);
     const orderUnpaid = order.items.filter((i) => i.paidState === "unpaid").length;
     const orderPicked = order.items.filter((i) => i.pickedUp).length;
     const chosenLocation = order.preferredLocationId ? locName.get(order.preferredLocationId) ?? null : null;
@@ -282,17 +306,23 @@ export default function AuctionResults({
               label="Print 4×6 label"
               className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg bg-[#6c4d39] text-white hover:bg-[#563e2c] disabled:opacity-50"
             />
-            <button
-              onClick={() => toggleOrderGathered(order, !allGathered)}
-              disabled={busyGather === order.clerkUserId}
-              className={`text-xs font-bold px-3 py-2 rounded-lg border transition-colors disabled:opacity-50 ${
-                allGathered
-                  ? "bg-[#efe0c9] border-[#e3c9a3] text-[#8a5a2b]"
-                  : "bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
-              }`}
-            >
-              {busyGather === order.clerkUserId ? "…" : allGathered ? "Gathered ✓ — undo" : "Mark gathered"}
-            </button>
+            {gatherable.length > 0 && (
+              <button
+                onClick={() => toggleOrderGathered(order, !allGathered)}
+                disabled={busyGather === order.clerkUserId}
+                className={`text-xs font-bold px-3 py-2 rounded-lg border transition-colors disabled:opacity-50 ${
+                  allGathered
+                    ? "bg-[#efe0c9] border-[#e3c9a3] text-[#8a5a2b]"
+                    : "bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                {busyGather === order.clerkUserId
+                  ? "…"
+                  : allGathered
+                  ? "Gathered ✓ — undo"
+                  : `Gather ${gatherable.length} here`}
+              </button>
+            )}
           </div>
         )}
 
@@ -327,17 +357,40 @@ export default function AuctionResults({
                       )}
                     </div>
                   </div>
-                  <button
-                    onClick={() => setItemPickup(order.clerkUserId, it.id, !it.pickedUp)}
-                    disabled={busyItem === it.id}
-                    className={`shrink-0 text-xs font-bold px-3 py-2 rounded-lg border transition-colors disabled:opacity-50 ${
-                      it.pickedUp
-                        ? "bg-green-600 border-green-600 text-white hover:bg-green-700"
-                        : "bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
-                    }`}
-                  >
-                    {busyItem === it.id ? "…" : it.pickedUp ? "Picked up ✓" : "Mark picked up"}
-                  </button>
+                  <div className="shrink-0 flex flex-col items-end gap-1">
+                    {it.pickedUp ? (
+                      <button
+                        onClick={() => setItemPickup(order.clerkUserId, it.id, false)}
+                        disabled={busyItem === it.id}
+                        className="text-xs font-bold px-3 py-2 rounded-lg border bg-green-600 border-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                      >
+                        {busyItem === it.id ? "…" : "Picked up ✓"}
+                      </button>
+                    ) : it.transferring ? (
+                      <span className="text-[11px] font-bold text-amber-700 px-2 py-1 text-right">Awaiting transfer</span>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => setItemGathered(order.clerkUserId, it.id, !it.gathered)}
+                          disabled={busyItem === it.id}
+                          className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50 ${
+                            it.gathered
+                              ? "bg-[#efe0c9] border-[#e3c9a3] text-[#8a5a2b]"
+                              : "bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
+                          }`}
+                        >
+                          {busyItem === it.id ? "…" : it.gathered ? "Gathered ✓" : "Gather"}
+                        </button>
+                        <button
+                          onClick={() => setItemPickup(order.clerkUserId, it.id, true)}
+                          disabled={busyItem === it.id}
+                          className="text-[11px] font-bold px-3 py-1 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-50"
+                        >
+                          Picked up
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
