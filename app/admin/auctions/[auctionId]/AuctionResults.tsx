@@ -33,13 +33,14 @@ export interface ResultUnsold {
   storageLocation: string | null;
 }
 
-type Bucket = "scheduled" | "no_pickup" | "no_location";
+type Bucket = "done" | "scheduled" | "no_pickup" | "no_location";
 
 const money = (n: number) => `$${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 
-// A customer's fulfillment state. Derived on the client so setting a location
-// instantly moves the order out of "no location".
+// A customer's fulfillment state. "done" (everything collected) wins over
+// everything else so a finished order never shows as "no pickup scheduled".
 function bucketOf(o: ResultOrder): Bucket {
+  if (o.items.length > 0 && o.items.every((i) => i.pickedUp)) return "done";
   if (o.scheduledFor) return "scheduled";
   if (o.preferredLocationId) return "no_pickup";
   return "no_location";
@@ -86,8 +87,11 @@ export default function AuctionResults({
   const [orders, setOrders] = useState(initialOrders);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [busyItem, setBusyItem] = useState<string | null>(null);
-  const [busyLoc, setBusyLoc] = useState<string | null>(null);
+  const [doneOpen, setDoneOpen] = useState(false);
   const [note, setNote] = useState<{ key: string; text: string; ok: boolean } | null>(null);
+
+  // id → name, for showing a customer's chosen pickup location read-only.
+  const locName = new Map(locations.map((l) => [l.id, l.name]));
 
   const soldCount = orders.reduce((n, o) => n + o.items.length, 0);
   const grossTotal = orders.reduce((n, o) => n + o.total, 0);
@@ -136,50 +140,25 @@ export default function AuctionResults({
     }
   };
 
-  const setLocation = async (clerkUserId: string, locationId: string) => {
-    setBusyLoc(clerkUserId);
-    setNote(null);
-    try {
-      const res = await fetch(`/api/admin/pickup/set-location`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clerkUserId, locationId }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setOrders((prev) =>
-          prev.map((o) => (o.clerkUserId === clerkUserId ? { ...o, preferredLocationId: locationId } : o))
-        );
-        setNote({
-          key: clerkUserId,
-          text: `Pickup set to ${data.locationName}${data.transferred ? ` · ${data.transferred} item(s) transferring` : ""}.`,
-          ok: true,
-        });
-      } else {
-        setNote({ key: clerkUserId, text: data.error || "Could not set location.", ok: false });
-      }
-    } catch {
-      setNote({ key: clerkUserId, text: "Something went wrong.", ok: false });
-    } finally {
-      setBusyLoc(null);
-    }
-  };
-
-  const renderOrder = (order: ResultOrder) => {
+  const renderOrder = (order: ResultOrder, done = false) => {
     const isOpen = expanded.has(order.clerkUserId);
     const allPickedUp = order.items.every((i) => i.pickedUp);
     const orderUnpaid = order.items.filter((i) => i.paidState === "unpaid").length;
     const orderPicked = order.items.filter((i) => i.pickedUp).length;
+    const chosenLocation = order.preferredLocationId ? locName.get(order.preferredLocationId) ?? null : null;
 
     return (
-      <div key={order.clerkUserId} className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+      <div
+        key={order.clerkUserId}
+        className={`rounded-2xl border overflow-hidden ${done ? "border-green-200 bg-green-50/50" : "border-slate-200 bg-white"}`}
+      >
         {/* Header — always visible, tap to expand items */}
         <button
           onClick={() => toggle(order.clerkUserId)}
-          className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-slate-50 transition-colors"
+          className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-colors ${done ? "hover:bg-green-50" : "hover:bg-slate-50"}`}
         >
           <div className="min-w-0 flex-1">
-            <div className="font-bold text-slate-900 truncate">{order.name}</div>
+            <div className={`font-bold truncate ${done ? "text-green-900" : "text-slate-900"}`}>{order.name}</div>
             <div className="text-xs text-slate-500 truncate">
               {[order.phone, order.email].filter(Boolean).join(" · ") || "No contact on file"}
             </div>
@@ -187,53 +166,45 @@ export default function AuctionResults({
               <span className="text-slate-500">
                 {order.items.length} item{order.items.length !== 1 ? "s" : ""}
               </span>
-              {orderUnpaid > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-bold">{orderUnpaid} unpaid</span>
+              {done ? (
+                <span className="px-1.5 py-0.5 rounded-full bg-green-600 text-white font-bold">All set ✓</span>
+              ) : (
+                <>
+                  {orderUnpaid > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-bold">{orderUnpaid} unpaid</span>
+                  )}
+                  <span className="px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold">
+                    {orderPicked}/{order.items.length} picked up
+                  </span>
+                </>
               )}
-              <span className="px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold">
-                {orderPicked}/{order.items.length} picked up
-              </span>
             </div>
           </div>
           <div className="text-right shrink-0">
-            <div className="text-lg font-extrabold text-green-700 tabular-nums">{money(order.total)}</div>
+            <div className={`text-lg font-extrabold tabular-nums ${done ? "text-green-700" : "text-green-700"}`}>{money(order.total)}</div>
             <div className="text-[11px] text-[#6c4d39] font-semibold mt-0.5">{isOpen ? "Hide items ▲" : "View items ▼"}</div>
           </div>
         </button>
 
-        {/* Scheduled banner */}
-        {order.scheduledFor && (
+        {/* Scheduled banner (only while not fully done) */}
+        {!done && order.scheduledFor && (
           <div className="px-4 py-2 bg-green-50 border-t border-green-100 text-xs text-green-800 font-semibold">
             Pickup {fmtWhen(order.scheduledFor)}
             {order.scheduledLocation ? ` · ${order.scheduledLocation}` : ""}
           </div>
         )}
 
-        {/* Pickup location selector */}
-        <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/60">
-          <label className="block text-[11px] font-bold uppercase tracking-wide text-slate-400 mb-1">
-            Pickup location (this customer)
-          </label>
-          <div className="flex items-center gap-2">
-            <select
-              value={order.preferredLocationId ?? ""}
-              disabled={busyLoc === order.clerkUserId || locations.length === 0}
-              onChange={(e) => setLocation(order.clerkUserId, e.target.value)}
-              className="flex-1 min-w-0 bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-[#6c4d39] disabled:opacity-50"
-            >
-              <option value="" disabled>
-                {locations.length === 0 ? "No locations set up" : "Choose a location…"}
-              </option>
-              {locations.map((l) => (
-                <option key={l.id} value={l.id}>{l.name}</option>
-              ))}
-            </select>
-            {busyLoc === order.clerkUserId && <span className="text-xs text-slate-400 shrink-0">Saving…</span>}
+        {/* Pickup location — READ ONLY. The customer sets this on their pickup page;
+            it sticks until they (or an admin, elsewhere) change it. */}
+        {!done && (
+          <div className="px-4 py-2 border-t border-slate-100 text-xs">
+            {chosenLocation ? (
+              <span className="text-slate-600">📍 Picks up at <strong className="text-slate-900">{chosenLocation}</strong></span>
+            ) : (
+              <span className="text-amber-700">No pickup location chosen yet — the customer sets it on their pickup page.</span>
+            )}
           </div>
-          {note && note.key === order.clerkUserId && (
-            <p className={`text-xs mt-1.5 ${note.ok ? "text-green-700" : "text-red-600"}`}>{note.text}</p>
-          )}
-        </div>
+        )}
 
         {/* Items — hidden until expanded */}
         {isOpen && (
@@ -312,28 +283,56 @@ export default function AuctionResults({
         </div>
       </div>
 
+      {note && (
+        <p className={`text-sm font-medium px-1 ${note.ok ? "text-green-700" : "text-red-600"}`}>{note.text}</p>
+      )}
+
       {/* Orders grouped by fulfillment state */}
       {orders.length === 0 ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-slate-500">
           Nothing sold in this auction.
         </div>
       ) : (
-        SECTIONS.map(({ key, title, dot, hint }) => {
-          const group = orders.filter((o) => bucketOf(o) === key);
-          if (group.length === 0) return null;
-          return (
-            <div key={key} className="space-y-2.5">
-              <div className="flex items-center gap-2 px-1 pt-1">
-                <span className={`w-2.5 h-2.5 rounded-full ${dot}`} />
-                <h3 className="text-sm font-extrabold text-slate-900">
-                  {title} <span className="text-slate-400">({group.length})</span>
-                </h3>
-                <span className="text-[11px] text-slate-400 hidden sm:inline">— {hint}</span>
+        <>
+          {SECTIONS.map(({ key, title, dot, hint }) => {
+            const group = orders.filter((o) => bucketOf(o) === key);
+            if (group.length === 0) return null;
+            return (
+              <div key={key} className="space-y-2.5">
+                <div className="flex items-center gap-2 px-1 pt-1">
+                  <span className={`w-2.5 h-2.5 rounded-full ${dot}`} />
+                  <h3 className="text-sm font-extrabold text-slate-900">
+                    {title} <span className="text-slate-400">({group.length})</span>
+                  </h3>
+                  <span className="text-[11px] text-slate-400 hidden sm:inline">— {hint}</span>
+                </div>
+                {group.map((o) => renderOrder(o))}
               </div>
-              {group.map(renderOrder)}
-            </div>
-          );
-        })
+            );
+          })}
+
+          {/* All set — everything for this auction is collected. Minimized, green,
+              parked at the bottom. Tap the header to expand. */}
+          {(() => {
+            const doneOrders = orders.filter((o) => bucketOf(o) === "done");
+            if (doneOrders.length === 0) return null;
+            return (
+              <div className="space-y-2.5">
+                <button
+                  onClick={() => setDoneOpen((v) => !v)}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border border-green-200 bg-green-50 text-left"
+                >
+                  <span className="w-2.5 h-2.5 rounded-full bg-green-600" />
+                  <h3 className="text-sm font-extrabold text-green-900 flex-1">
+                    All set — picked up <span className="text-green-700/70">({doneOrders.length})</span>
+                  </h3>
+                  <span className="text-xs font-bold text-green-700">{doneOpen ? "Hide ▲" : "Show ▼"}</span>
+                </button>
+                {doneOpen && doneOrders.map((o) => renderOrder(o, true))}
+              </div>
+            );
+          })()}
+        </>
       )}
 
       {/* Unsold — where each sits + relist it straight into another auction */}
