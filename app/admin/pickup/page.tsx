@@ -1183,7 +1183,7 @@ export default function AdminPickupPage() {
                   onClick={() => setShowCollected((v) => !v)}
                   className="w-full flex items-center justify-between gap-3 max-w-3xl mb-4 group"
                 >
-                  <h2 className="text-xl font-semibold">Collected ({collected.length})</h2>
+                  <h2 className="text-xl font-semibold">Picked up ({collected.length})</h2>
                   <span className={`text-[#8a7559] transition-transform ${showCollected ? "rotate-180" : ""}`}>
                     <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4" /></svg>
                   </span>
@@ -1213,7 +1213,7 @@ export default function AdminPickupPage() {
                             </div>
                           </div>
                           <span className="shrink-0 text-sm bg-green-50 text-green-700 border border-green-200 px-3 py-1 rounded-full font-bold">
-                            Collected
+                            Picked up
                           </span>
                           <span className={`text-[#8a7559] shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`}>
                             <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4" /></svg>
