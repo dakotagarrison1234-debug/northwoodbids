@@ -11,7 +11,10 @@ export async function GET() {
   const orgId = membership.organizationId;
 
   const items = await prisma.item.findMany({
-    where: { organizationId: orgId, status: "PENDING_PICKUP", pickupAppointmentId: null },
+    // Exclude items out on an active transfer — they live on the Transfers board and
+    // the customer waits for them to arrive before booking. Showing them here too is
+    // just noise. (transferRequestId is non-null only while REQUESTED/LOADED.)
+    where: { organizationId: orgId, status: "PENDING_PICKUP", pickupAppointmentId: null, transferRequestId: null },
     select: {
       id: true,
       title: true,

@@ -1332,6 +1332,11 @@ export default function AdminPickupPage() {
                             {expandedWaitingId === w.clerkUserId ? "Hide" : "Gather"}
                             {w.gatherableCount > 0 && <span className="text-slate-400">{w.gatheredCount}/{w.gatherableCount}</span>}
                           </button>
+                          <PrintLabelButton
+                            href={`/api/admin/label?type=waiting&user=${encodeURIComponent(w.clerkUserId)}`}
+                            label="Print label"
+                            className="inline-flex items-center gap-1.5 min-h-[40px] px-4 rounded-xl border-2 border-[#cdbda3] bg-white text-[#6c4d39] font-bold text-sm disabled:opacity-50"
+                          />
                           {w.phone ? (
                             <button
                               onClick={() => setMsgTarget({ clerkUserId: w.clerkUserId, name: w.name, phone: w.phone })}

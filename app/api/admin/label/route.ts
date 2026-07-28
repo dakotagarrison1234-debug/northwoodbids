@@ -57,9 +57,11 @@ function doc(opts: {
   return `<!doctype html><html><head><meta charset="utf-8"><style>
 @page { size: 4in 6in; margin: 0; }
 * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-html, body { margin: 0; padding: 0; width: 4in; height: 6in; }
+/* Fill 100% of the page box (not a fixed 4in) so the browser never shrinks the
+   label and leaves empty margins inside the sheet. */
+html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
 body { font-family: Arial, Helvetica, sans-serif; color: #000; }
-.wrap { width: 4in; height: 6in; padding: 0.09in 0.11in; display: flex; flex-direction: column; }
+.wrap { width: 100%; height: 100%; padding: 0.08in 0.1in; display: flex; flex-direction: column; }
 .banner { text-align: center; font-size: 14pt; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; color: #fff; padding: 5pt; border-radius: 3pt; }
 .b-staged { background: #3f6f34; }
 .b-gathered { background: #8a5a2b; }
@@ -161,6 +163,47 @@ export async function GET(req: NextRequest) {
     const items: LItem[] = appt.items.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name }));
     return new Response(
       doc({ type: "PICKUP", state, name: profile?.name ?? "Bidder", phone: profile?.phone, email: profile?.email, headerRows: rows, count: appt.items.length, items }),
+      { headers: htmlHeaders }
+    );
+  }
+
+  // A customer's WHOLE outstanding pickup — every paid item across every auction that
+  // isn't on an appointment yet. One label to gather it all in one bundle.
+  if (type === "waiting") {
+    const user = sp.get("user") ?? "";
+    const its = await prisma.item.findMany({
+      // Only items physically here (not on an active transfer) — those are what you
+      // can actually gather into one bundle now.
+      where: {
+        organizationId: orgId,
+        status: "PENDING_PICKUP",
+        pickupAppointmentId: null,
+        transferRequestId: null,
+        bids: { some: { clerkUserId: user, status: "WON" } },
+      },
+      select: {
+        title: true, itemCode: true, grabbedAt: true, storageLocation: true,
+        location: { select: { name: true } },
+        auction: { select: { title: true } },
+      },
+    });
+    if (its.length === 0) return new Response("Nothing outstanding for this bidder", { status: 404 });
+    const profile = await prisma.bidderProfile.findUnique({ where: { clerkUserId: user }, select: { name: true, phone: true, email: true, preferredPickupLocationId: true } });
+    let preferredName: string | null = null;
+    if (profile?.preferredPickupLocationId) {
+      const loc = await prisma.pickupLocation.findUnique({ where: { id: profile.preferredPickupLocationId }, select: { name: true } });
+      preferredName = loc?.name ?? null;
+    }
+    const auctions = [...new Set(its.map((i) => i.auction?.title).filter(Boolean))] as string[];
+    const allGathered = its.every((i) => i.grabbedAt != null);
+    const state: LabelState = allGathered ? "GATHERED" : "TO GATHER";
+    const rows =
+      `<div class="row"><span>Pick up at</span><b>${esc(preferredName ?? "Not chosen")}</b></div>` +
+      `<div class="row"><span>Auctions</span><b>${esc(auctions.join(", ") || "—")}</b></div>` +
+      `<div class="row"><span>Status</span><b>Not scheduled yet</b></div>`;
+    const items: LItem[] = its.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name }));
+    return new Response(
+      doc({ type: "PICKUP", state, name: profile?.name ?? "Bidder", phone: profile?.phone, email: profile?.email, headerRows: rows, count: its.length, countSuffix: " · all auctions", items }),
       { headers: htmlHeaders }
     );
   }
