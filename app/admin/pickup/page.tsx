@@ -434,6 +434,24 @@ export default function AdminPickupPage() {
     }
   };
 
+  // Undo an accidental "Mark Loaded" — back to still-gathering (REQUESTED).
+  const unloadTransfer = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/pickup/transfers/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "REQUESTED" }),
+      });
+      const d = await res.json();
+      if (d.success) {
+        flash("Un-loaded — back to gathering.", true);
+        loadTransfers();
+      } else flash(d.error || "Could not un-load that transfer.", false);
+    } catch {
+      flash("Could not un-load that transfer.", false);
+    }
+  };
+
   // Undo a drop-off. The server restores each item's original warehouse from the
   // snapshot taken at completion, so a transfer that gathered from two places
   // unwinds correctly rather than dumping everything at one location.
@@ -1691,6 +1709,14 @@ export default function AdminPickupPage() {
                           Mark Dropped Off
                         </button>
                       </div>
+                      {t.status === "LOADED" && (
+                        <button
+                          onClick={() => unloadTransfer(t.id)}
+                          className="mt-2 w-full min-h-[44px] bg-white border-2 border-[#cdbda3] text-[#6f5b46] font-bold text-base rounded-xl active:bg-[#efe3d0] transition-colors"
+                        >
+                          Undo &ldquo;loaded&rdquo; — back to gathering
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

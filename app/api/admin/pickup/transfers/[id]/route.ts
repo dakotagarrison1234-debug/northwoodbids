@@ -41,8 +41,20 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       return NextResponse.json({ success: true });
     }
 
-    if (!["LOADED", "COMPLETED", "CANCELLED"].includes(status)) {
+    if (!["REQUESTED", "LOADED", "COMPLETED", "CANCELLED"].includes(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
+
+    // ── UNDO an accidental "loaded" — put it back to still-gathering. ──────────
+    if (transfer.status === "LOADED" && status === "REQUESTED") {
+      const claim = await prisma.transferRequest.updateMany({
+        where: { id, status: "LOADED" },
+        data: { status: "REQUESTED" },
+      });
+      if (claim.count === 0) {
+        return NextResponse.json({ error: "This transfer is no longer marked loaded." }, { status: 409 });
+      }
+      return NextResponse.json({ success: true });
     }
 
     // ── UNDO a completed drop-off ────────────────────────────────────────────
