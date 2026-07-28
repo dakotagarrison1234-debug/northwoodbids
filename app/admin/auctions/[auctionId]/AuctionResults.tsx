@@ -97,6 +97,15 @@ export default function AuctionResults({
   const [busyItem, setBusyItem] = useState<string | null>(null);
   const [busyGather, setBusyGather] = useState<string | null>(null);
   const [doneOpen, setDoneOpen] = useState(false);
+  // Each status group is a collapsible dropdown — open just the one you're working.
+  const [openSections, setOpenSections] = useState<Set<Bucket>>(new Set());
+  const toggleSection = (key: Bucket) =>
+    setOpenSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   const [note, setNote] = useState<{ key: string; text: string; ok: boolean } | null>(null);
 
   // id → name, for showing a customer's chosen pickup location read-only.
@@ -456,16 +465,21 @@ export default function AuctionResults({
           {SECTIONS.map(({ key, title, dot, hint }) => {
             const group = orders.filter((o) => bucketOf(o) === key);
             if (group.length === 0) return null;
+            const open = openSections.has(key);
             return (
               <div key={key} className="space-y-2.5">
-                <div className="flex items-center gap-2 px-1 pt-1">
-                  <span className={`w-2.5 h-2.5 rounded-full ${dot}`} />
-                  <h3 className="text-sm font-extrabold text-slate-900">
+                <button
+                  onClick={() => toggleSection(key)}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-left"
+                >
+                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${dot}`} />
+                  <h3 className="text-sm font-extrabold text-slate-900 flex-1 min-w-0">
                     {title} <span className="text-slate-400">({group.length})</span>
+                    <span className="text-[11px] font-normal text-slate-400 hidden sm:inline"> — {hint}</span>
                   </h3>
-                  <span className="text-[11px] text-slate-400 hidden sm:inline">— {hint}</span>
-                </div>
-                {group.map((o) => renderOrder(o))}
+                  <span className="text-xs font-bold text-[#6c4d39] shrink-0">{open ? "Hide ▲" : "Show ▼"}</span>
+                </button>
+                {open && group.map((o) => renderOrder(o))}
               </div>
             );
           })}
