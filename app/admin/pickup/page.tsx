@@ -203,7 +203,6 @@ export default function AdminPickupPage() {
   // Transfers are collapsed to one line each until tapped, and filterable by
   // direction ("Gladwin → Owosso") so a run can be picked out at a glance.
   const [expandedTransferId, setExpandedTransferId] = useState<string | null>(null);
-  const [transferDir, setTransferDir] = useState<string>("all");
   // Order staging: box the whole order up and label it once ("Box 4").
   const [stagingApptId, setStagingApptId] = useState<string | null>(null);
   const [stageSpot, setStageSpot] = useState("");
@@ -634,26 +633,14 @@ export default function AdminPickupPage() {
     if (names.length === 1) return names[0];
     return "Multiple";
   };
-  const transferDirLabel = (t: Transfer) => `${transferFrom(t)} → ${t.toLocation.name}`;
-
-  // Direction chips are built from the transfers that actually exist, so you only
-  // ever see runs you really have (Gladwin → Owosso, Owosso → Gladwin, …).
-  const directionCounts = new Map<string, number>();
-  for (const t of allActiveTransfers) {
-    const label = transferDirLabel(t);
-    directionCounts.set(label, (directionCounts.get(label) ?? 0) + 1);
-  }
-  const directions = [...directionCounts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-
   // The one warehouse you're working right now. Applied across appointments,
-  // transfers and waiting so an owner at Owosso never sees Gladwin's items.
+  // transfers and waiting so an owner at Owosso never sees Gladwin's items — this
+  // replaces the old confusing "Owosso → Gladwin" direction chips.
   const scopedLocName = apptLocationId === "all" ? null : locations.find((l) => l.id === apptLocationId)?.name ?? null;
   // A transfer is gathered at the SOURCE, so scope it by where its items sit now.
   const atScope = (fromName: string | null | undefined) => !scopedLocName || fromName === scopedLocName;
 
-  const activeTransfers = allActiveTransfers
-    .filter((t) => (transferDir === "all" ? true : transferDirLabel(t) === transferDir))
-    .filter((t) => !scopedLocName || t.items.some((i) => i.fromLocationName === scopedLocName));
+  const activeTransfers = allActiveTransfers.filter((t) => !scopedLocName || t.items.some((i) => i.fromLocationName === scopedLocName));
 
   // Waiting rows scoped to the working warehouse (someone with items at both shows
   // in both, but each owner only sees/gathers their building's items).
@@ -1442,44 +1429,17 @@ export default function AdminPickupPage() {
             {warehouseScopeBar}
             <h2 className="text-xl font-semibold">
               Active transfers ({activeTransfers.length}
-              {(transferDir !== "all" || scopedLocName) ? ` of ${allActiveTransfers.length}` : ""})
+              {scopedLocName ? ` of ${allActiveTransfers.length}` : ""})
               {scopedLocName && <span className="text-base font-medium text-[#8a7559]"> · gathering at {scopedLocName}</span>}
             </h2>
-
-            {/* Direction filter — pick a run (Gladwin → Owosso) and see only that. */}
-            {directions.length > 1 && (
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => { setTransferDir("all"); setExpandedTransferId(null); }}
-                  className={`px-3.5 py-2 rounded-xl text-sm font-bold border transition-colors ${
-                    transferDir === "all"
-                      ? "bg-[#6c4d39] text-white border-[#6c4d39]"
-                      : "bg-white text-[#4a3a2b] border-[#cdbda3] hover:bg-[#efe3d0]"
-                  }`}
-                >
-                  All ({allActiveTransfers.length})
-                </button>
-                {directions.map(([label, count]) => (
-                  <button
-                    key={label}
-                    onClick={() => { setTransferDir(label); setExpandedTransferId(null); }}
-                    className={`px-3.5 py-2 rounded-xl text-sm font-bold border transition-colors ${
-                      transferDir === label
-                        ? "bg-[#6c4d39] text-white border-[#6c4d39]"
-                        : "bg-white text-[#4a3a2b] border-[#cdbda3] hover:bg-[#efe3d0]"
-                    }`}
-                  >
-                    {label} ({count})
-                  </button>
-                ))}
-              </div>
-            )}
 
             {activeTransfers.length === 0 ? (
               <div className="text-base text-[#8a7559] bg-white border border-[#e3d6bf] rounded-xl px-5 py-8 text-center">
                 {allActiveTransfers.length === 0
                   ? "No transfers waiting. When a bidder asks for their items to be moved to another location, it shows up here."
-                  : "No transfers on this run right now."}
+                  : scopedLocName
+                  ? `Nothing to gather at ${scopedLocName} right now.`
+                  : "No transfers right now."}
               </div>
             ) : (
               // Collapsed to one line each — name, direction, item count, status.

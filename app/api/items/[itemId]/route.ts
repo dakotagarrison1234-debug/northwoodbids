@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { canAccessOrg } from "@/lib/auth";
 import { ensureItemCode } from "@/lib/itemCode";
+import { autoAttachPaidItems } from "@/lib/pickup";
 
 // Accept only http(s) URLs for photos — blocks javascript:/data:/file: etc.
 function isHttpUrl(value: unknown): boolean {
@@ -216,6 +217,35 @@ export async function PATCH(
       where: { id: itemId },
       data,
     });
+
+    // If a SOLD item's warehouse was changed, re-flow its pickup/transfer so the
+    // boards stay honest: an item now AT its transfer's destination is "ready" (drop
+    // the transfer); one moved elsewhere re-transfers to the winner's pickup location.
+    const newLoc = body.locationId !== undefined ? body.locationId || null : undefined;
+    const soldFamily = ["SOLD", "PENDING_PICKUP", "PICKED_UP"];
+    if (newLoc !== undefined && newLoc !== item.locationId && soldFamily.includes(item.status)) {
+      const wonBid = await prisma.bid.findFirst({ where: { itemId, status: "WON" }, select: { clerkUserId: true } });
+      if (wonBid) {
+        const before = await prisma.item.findUnique({ where: { id: itemId }, select: { transferRequestId: true } });
+        // Detach so it re-attaches correctly based on the new location.
+        await prisma.item.update({ where: { id: itemId }, data: { transferRequestId: null, pickupAppointmentId: null } });
+        try {
+          await autoAttachPaidItems(wonBid.clerkUserId, item.organizationId);
+        } catch (e) {
+          console.error("reconcile after location change failed:", e);
+        }
+        // Cancel a transfer left empty by the move (no items still riding it).
+        if (before?.transferRequestId) {
+          const remaining = await prisma.item.count({ where: { transferRequestId: before.transferRequestId } });
+          if (remaining === 0) {
+            await prisma.transferRequest.update({
+              where: { id: before.transferRequestId },
+              data: { status: "CANCELLED", stagedSpot: null, stagedAt: null },
+            });
+          }
+        }
+      }
+    }
 
     if (body.photos) {
       await prisma.itemPhoto.deleteMany({ where: { itemId } });

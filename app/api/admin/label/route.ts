@@ -66,26 +66,25 @@ body { font-family: Arial, Helvetica, sans-serif; color: #000; }
 .b-staged { background: #3f6f34; }
 .b-gathered { background: #8a5a2b; }
 .b-togather { background: #333; }
-.name { font-size: 20pt; font-weight: 900; line-height: 1.02; margin-top: 5pt; word-break: break-word; }
-.dest { font-size: 14pt; font-weight: 800; margin-top: 1pt; }
-.contact { font-size: 11pt; font-weight: 700; }
-.rule { border-top: 2pt solid #000; margin: 4pt 0; }
-.row { display: flex; justify-content: space-between; gap: 8pt; font-size: 10.5pt; margin: 2pt 0; }
+.name { font-size: 19pt; font-weight: 900; line-height: 1.02; margin-top: 5pt; word-break: break-word; }
+.dest { font-size: 13pt; font-weight: 800; margin-top: 1pt; }
+.contact { font-size: 10.5pt; font-weight: 700; word-break: break-all; }
+.rule { border-top: 2pt solid #000; margin: 3pt 0; }
+.row { display: flex; justify-content: space-between; gap: 8pt; font-size: 10pt; margin: 1.5pt 0; }
 .row span:first-child { color: #333; }
 .row b { font-weight: 800; text-align: right; }
-.cnt { font-size: 11pt; font-weight: 800; margin-top: 3pt; }
+.cnt { font-size: 10pt; font-weight: 800; margin-top: 2pt; }
 .list { flex: 1; overflow: hidden; }
-.grp-h { font-size: 9.5pt; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; background: #000; color: #fff; padding: 2pt 5pt; margin-top: 4pt; }
+.grp-h { font-size: 8pt; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; background: #000; color: #fff; padding: 1.5pt 5pt; margin-top: 3pt; }
 ul { margin: 0; padding: 0; }
-li { list-style: none; display: flex; gap: 6pt; align-items: baseline; font-size: 10.5pt; line-height: 1.3; padding: 2pt 0; border-bottom: .5pt dotted #999; }
+li { list-style: none; display: flex; gap: 5pt; align-items: baseline; font-size: 8.5pt; line-height: 1.18; padding: 0.8pt 0; border-bottom: .4pt dotted #aaa; }
 .code { font-weight: 800; font-family: "Courier New", monospace; white-space: nowrap; }
 .ttl { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.shelf { font-weight: 800; white-space: nowrap; font-size: 9.5pt; }
+.shelf { font-weight: 800; white-space: nowrap; font-size: 8pt; }
 </style></head><body><div class="wrap">
 <div class="banner ${stateClass}">${opts.type} · ${opts.state}</div>
 <div class="name">${esc(opts.name)}</div>
 ${opts.destination ? `<div class="dest">${esc(opts.destination)}</div>` : ""}
-${opts.phone ? `<div class="contact">${esc(opts.phone)}</div>` : ""}
 ${opts.email ? `<div class="contact">${esc(opts.email)}</div>` : ""}
 <div class="rule"></div>
 ${opts.headerRows}
@@ -114,14 +113,9 @@ export async function GET(req: NextRequest) {
     });
     if (!t || t.organizationId !== orgId) return new Response("Transfer not found", { status: 404 });
     const profile = await prisma.bidderProfile.findUnique({ where: { clerkUserId: t.clerkUserId }, select: { name: true, phone: true, email: true } });
-    const auctions = [...new Set(t.items.map((i) => i.auction?.title).filter(Boolean))] as string[];
     const allGathered = t.items.length > 0 && t.items.every((i) => i.grabbedAt != null);
     const state: LabelState = t.stagedSpot ? "STAGED" : allGathered ? "GATHERED" : "TO GATHER";
-    const rows =
-      (t.stagedSpot ? `<div class="row"><span>Staged in</span><b>${esc(t.stagedSpot)}</b></div>` : "") +
-      `<div class="row"><span>Load status</span><b>${t.status === "LOADED" ? "Loaded — in transit" : "Not loaded yet"}</b></div>` +
-      `<div class="row"><span>Requested</span><b>${esc(fmtDate(t.createdAt))}</b></div>` +
-      `<div class="row"><span>Auction${auctions.length !== 1 ? "s" : ""}</span><b>${esc(auctions.join(", ") || "—")}</b></div>`;
+    const rows = `<div class="row"><span>Requested</span><b>${esc(fmtDate(t.createdAt))}</b></div>`;
     const items: LItem[] = t.items.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name }));
     return new Response(
       doc({
@@ -152,14 +146,11 @@ export async function GET(req: NextRequest) {
     });
     if (!appt || appt.organizationId !== orgId) return new Response("Appointment not found", { status: 404 });
     const profile = await prisma.bidderProfile.findUnique({ where: { clerkUserId: appt.clerkUserId }, select: { name: true, phone: true, email: true } });
-    const auctions = [...new Set(appt.items.map((i) => i.auction?.title).filter(Boolean))] as string[];
     const allGathered = appt.items.length > 0 && appt.items.every((i) => i.grabbedAt != null);
     const state: LabelState = appt.stagedSpot ? "STAGED" : allGathered ? "GATHERED" : "TO GATHER";
     const rows =
       `<div class="row"><span>Pick up at</span><b>${esc(appt.location?.name ?? "—")}</b></div>` +
-      `<div class="row"><span>Appointment</span><b>${esc(fmtDateTime(appt.startsAt))}</b></div>` +
-      (appt.stagedSpot ? `<div class="row"><span>Staged in</span><b>${esc(appt.stagedSpot)}</b></div>` : "") +
-      `<div class="row"><span>Auction${auctions.length !== 1 ? "s" : ""}</span><b>${esc(auctions.join(", ") || "—")}</b></div>`;
+      `<div class="row"><span>Appointment</span><b>${esc(fmtDateTime(appt.startsAt))}</b></div>`;
     const items: LItem[] = appt.items.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name }));
     return new Response(
       doc({ type: "PICKUP", state, name: profile?.name ?? "Bidder", phone: profile?.phone, email: profile?.email, headerRows: rows, count: appt.items.length, items }),
@@ -194,13 +185,9 @@ export async function GET(req: NextRequest) {
       const loc = await prisma.pickupLocation.findUnique({ where: { id: profile.preferredPickupLocationId }, select: { name: true } });
       preferredName = loc?.name ?? null;
     }
-    const auctions = [...new Set(its.map((i) => i.auction?.title).filter(Boolean))] as string[];
     const allGathered = its.every((i) => i.grabbedAt != null);
     const state: LabelState = allGathered ? "GATHERED" : "TO GATHER";
-    const rows =
-      `<div class="row"><span>Pick up at</span><b>${esc(preferredName ?? "Not chosen")}</b></div>` +
-      `<div class="row"><span>Auctions</span><b>${esc(auctions.join(", ") || "—")}</b></div>` +
-      `<div class="row"><span>Status</span><b>Not scheduled yet</b></div>`;
+    const rows = `<div class="row"><span>Pick up at</span><b>${esc(preferredName ?? "Not chosen")}</b></div>`;
     const items: LItem[] = its.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name }));
     return new Response(
       doc({ type: "PICKUP", state, name: profile?.name ?? "Bidder", phone: profile?.phone, email: profile?.email, headerRows: rows, count: its.length, countSuffix: " · all auctions", items }),
@@ -232,7 +219,6 @@ export async function GET(req: NextRequest) {
     const state: LabelState = allGathered ? "GATHERED" : "TO GATHER";
     const rows =
       `<div class="row"><span>Pick up at</span><b>${esc(pickupAt)}</b></div>` +
-      `<div class="row"><span>Auction</span><b>${esc(auction.title)}</b></div>` +
       `<div class="row"><span>Closed</span><b>${esc(fmtDate(auction.endAt))}</b></div>`;
     const items: LItem[] = its.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name }));
     return new Response(
