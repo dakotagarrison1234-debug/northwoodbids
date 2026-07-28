@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-import { autoTransferToPreferred } from "@/lib/pickup";
+import { autoTransferToPreferred, switchPreferredCascade } from "@/lib/pickup";
 
 /**
  * POST /api/pickup/preferred
@@ -45,29 +45,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (switching) {
-      // Re-point still-gathering transfers to the new location (LOADED ones are
-      // already in transit — leave them).
-      await prisma.transferRequest.updateMany({
-        where: { clerkUserId: userId, organizationId: org.id, status: "REQUESTED" },
-        data: { toLocationId: locationId },
-      });
-      // Clear any upcoming appointment (it was for the old location) and free its
-      // items so they re-flow into ready/transfer for the new location.
-      const appts = await prisma.pickupAppointment.findMany({
-        where: { clerkUserId: userId, organizationId: org.id, status: "SCHEDULED" },
-        select: { id: true },
-      });
-      if (appts.length > 0) {
-        const apptIds = appts.map((a) => a.id);
-        await prisma.item.updateMany({
-          where: { pickupAppointmentId: { in: apptIds } },
-          data: { pickupAppointmentId: null },
-        });
-        await prisma.pickupAppointment.updateMany({
-          where: { id: { in: apptIds } },
-          data: { status: "CANCELLED" },
-        });
-      }
+      await switchPreferredCascade(userId, org.id, previous!, locationId);
     }
 
     // Move everything that isn't at the preferred location there.

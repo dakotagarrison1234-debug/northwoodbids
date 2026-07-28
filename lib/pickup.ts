@@ -9,6 +9,55 @@ import { notifyTransferRequested } from "@/lib/transferNotify";
 export const PICKUP_TZ = "America/Detroit";
 export type Slot = { startsAt: string; remaining: number };
 
+/**
+ * Reconcile a bidder's pickup pipeline when they (or an admin) switch preferred
+ * pickup location from `previous` to `next`. Safe/surgical:
+ *  - only re-points transfers that were headed to the OLD location (leaves manual
+ *    transfers to other places alone),
+ *  - cancels only the stale appointment(s) AT the old location (an appointment at
+ *    another warehouse — e.g. for a non-transferable item — is left intact),
+ *  - clears the staged spot on anything it cancels, and
+ *  - merges any duplicate REQUESTED transfers now pointing at the new location so a
+ *    bidder never ends up with two carts to the same place.
+ * The caller runs autoTransferToPreferred afterwards to move remaining items.
+ */
+export async function switchPreferredCascade(
+  clerkUserId: string,
+  organizationId: string,
+  previous: string,
+  next: string
+): Promise<void> {
+  // Re-point only OLD-location transfers.
+  await prisma.transferRequest.updateMany({
+    where: { clerkUserId, organizationId, status: "REQUESTED", toLocationId: previous },
+    data: { toLocationId: next },
+  });
+
+  // Cancel the stale appointment(s) at the old location only.
+  const staleAppts = await prisma.pickupAppointment.findMany({
+    where: { clerkUserId, organizationId, status: "SCHEDULED", locationId: previous },
+    select: { id: true },
+  });
+  if (staleAppts.length > 0) {
+    const ids = staleAppts.map((a) => a.id);
+    await prisma.item.updateMany({ where: { pickupAppointmentId: { in: ids } }, data: { pickupAppointmentId: null } });
+    await prisma.pickupAppointment.updateMany({ where: { id: { in: ids } }, data: { status: "CANCELLED", stagedSpot: null, stagedAt: null } });
+  }
+
+  // Merge duplicate REQUESTED transfers to the new location into one cart.
+  const toNew = await prisma.transferRequest.findMany({
+    where: { clerkUserId, organizationId, status: "REQUESTED", toLocationId: next },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+  if (toNew.length > 1) {
+    const keep = toNew[0].id;
+    const dropIds = toNew.slice(1).map((t) => t.id);
+    await prisma.item.updateMany({ where: { transferRequestId: { in: dropIds } }, data: { transferRequestId: keep } });
+    await prisma.transferRequest.updateMany({ where: { id: { in: dropIds } }, data: { status: "CANCELLED", stagedSpot: null, stagedAt: null } });
+  }
+}
+
 const DAYS_AHEAD = 28;
 
 /**

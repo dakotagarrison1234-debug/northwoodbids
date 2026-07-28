@@ -42,7 +42,9 @@ export async function POST(_request: NextRequest, { params }: Props) {
 
     await prisma.item.updateMany({
       where: { pickupAppointmentId: id },
-      data: { status: "PICKED_UP", pickedUpAt: new Date() },
+      // Clear grabbedAt too, matching the admin collect path — a picked-up item
+      // shouldn't linger as "gathered".
+      data: { status: "PICKED_UP", pickedUpAt: new Date(), grabbedAt: null },
     });
 
     return NextResponse.json({ success: true });

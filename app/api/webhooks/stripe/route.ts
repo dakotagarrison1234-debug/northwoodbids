@@ -225,11 +225,26 @@ async function markPaymentsRefunded(paymentIntentId: string): Promise<void> {
         data: { clerkUserId: p.clerkUserId, amount: Number(p.creditApplied), reason: "referral_refund_return" },
       });
     }
-    // Free the item for re-listing unless it's already been collected/staged.
+    // Free the item for re-listing — detach from any appointment/transfer and clear
+    // the gather/pickup residue so it doesn't leave a phantom staged spot behind.
+    const before = await prisma.item.findFirst({
+      where: { id: p.itemId, status: { in: ["SOLD", "PENDING_PICKUP"] } },
+      select: { transferRequestId: true },
+    });
     await prisma.item.updateMany({
       where: { id: p.itemId, status: { in: ["SOLD", "PENDING_PICKUP"] } },
-      data: { status: "UNSOLD", pickupAppointmentId: null, transferRequestId: null },
+      data: { status: "UNSOLD", pickupAppointmentId: null, transferRequestId: null, grabbedAt: null, pickedUpAt: null },
     });
+    // Cancel a now-empty REQUESTED transfer left behind by the refund.
+    if (before?.transferRequestId) {
+      const remaining = await prisma.item.count({ where: { transferRequestId: before.transferRequestId } });
+      if (remaining === 0) {
+        await prisma.transferRequest.updateMany({
+          where: { id: before.transferRequestId, status: "REQUESTED" },
+          data: { status: "CANCELLED", stagedSpot: null, stagedAt: null },
+        });
+      }
+    }
   }
 }
 

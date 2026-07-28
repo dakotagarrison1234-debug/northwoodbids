@@ -222,8 +222,10 @@ export async function PATCH(
     // boards stay honest: an item now AT its transfer's destination is "ready" (drop
     // the transfer); one moved elsewhere re-transfers to the winner's pickup location.
     const newLoc = body.locationId !== undefined ? body.locationId || null : undefined;
-    const soldFamily = ["SOLD", "PENDING_PICKUP", "PICKED_UP"];
-    if (newLoc !== undefined && newLoc !== item.locationId && soldFamily.includes(item.status)) {
+    // Only re-flow items still awaiting pickup — a PICKED_UP item is done, and
+    // detaching it would just erase the appointment that recorded the collection.
+    const reflowable = ["SOLD", "PENDING_PICKUP"];
+    if (newLoc !== undefined && newLoc !== item.locationId && reflowable.includes(item.status)) {
       const wonBid = await prisma.bid.findFirst({ where: { itemId, status: "WON" }, select: { clerkUserId: true } });
       if (wonBid) {
         const before = await prisma.item.findUnique({ where: { id: itemId }, select: { transferRequestId: true } });
@@ -234,12 +236,13 @@ export async function PATCH(
         } catch (e) {
           console.error("reconcile after location change failed:", e);
         }
-        // Cancel a transfer left empty by the move (no items still riding it).
+        // Cancel a transfer left empty by the move — but only a still-REQUESTED one.
+        // An in-transit (LOADED) transfer stays even if this item left it.
         if (before?.transferRequestId) {
           const remaining = await prisma.item.count({ where: { transferRequestId: before.transferRequestId } });
           if (remaining === 0) {
-            await prisma.transferRequest.update({
-              where: { id: before.transferRequestId },
+            await prisma.transferRequest.updateMany({
+              where: { id: before.transferRequestId, status: "REQUESTED" },
               data: { status: "CANCELLED", stagedSpot: null, stagedAt: null },
             });
           }

@@ -46,9 +46,6 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     }
 
     // ── UNDO a completed drop-off ────────────────────────────────────────────
-    // Completing a transfer overwrites each item's home location and unlinks it,
-    // so undoing needs the snapshot we took at drop-off. Per-item, because one
-    // transfer can gather items from more than one warehouse.
     if (transfer.status === "COMPLETED" && status === "LOADED") {
       const snap = transfer.revertSnapshot as { itemId: string; locationId: string | null }[] | null;
       if (!snap || !Array.isArray(snap) || snap.length === 0) {
@@ -57,87 +54,73 @@ export async function PATCH(request: NextRequest, { params }: Props) {
           { status: 422 }
         );
       }
-
-      await prisma.$transaction([
-        ...snap.map((s) =>
-          prisma.item.update({
-            where: { id: s.itemId },
-            data: {
-              locationId: s.locationId,
-              transferRequestId: id,
-              // The item is going back to the origin warehouse, so it can't be
-              // collected at the destination — drop it off any appointment the
-              // drop-off auto-attached it to.
-              pickupAppointmentId: null,
-            },
-          })
-        ),
-        prisma.transferRequest.update({
-          where: { id },
-          data: { status: "LOADED", completedAt: null, revertSnapshot: Prisma.DbNull },
-        }),
-      ]);
-
+      // Atomically claim the revert so two undos can't both run.
+      const claim = await prisma.transferRequest.updateMany({
+        where: { id, status: "COMPLETED" },
+        data: { status: "LOADED", completedAt: null, revertSnapshot: Prisma.DbNull },
+      });
+      if (claim.count === 0) {
+        return NextResponse.json({ error: "This drop-off was already undone." }, { status: 409 });
+      }
+      // Restore each item to its origin — but never drag back one the customer has
+      // since collected, and tolerate an item that was deleted/relisted meanwhile.
+      for (const s of snap) {
+        await prisma.item.updateMany({
+          where: { id: s.itemId, status: { not: "PICKED_UP" } },
+          data: { locationId: s.locationId, transferRequestId: id, pickupAppointmentId: null },
+        });
+      }
       return NextResponse.json({ success: true, reverted: snap.length });
     }
 
-    // Already terminal — refuse so a double-click / stale tab can't re-run the
-    // relocation or re-send the "items arrived" SMS.
+    // Already terminal — quick refusal for the common (non-race) case.
     if (transfer.status === "COMPLETED" || transfer.status === "CANCELLED") {
       return NextResponse.json({ error: `This transfer is already ${transfer.status.toLowerCase()}.` }, { status: 409 });
     }
-    // No-op guard for repeated LOADED.
-    if (status === "LOADED" && transfer.status === "LOADED") {
-      return NextResponse.json({ success: true });
-    }
 
     if (status === "LOADED") {
-      // Items have been loaded and are in transit.
-      await prisma.transferRequest.update({
-        where: { id },
-        data: { status: "LOADED" },
-      });
+      // Atomic: only a still-REQUESTED transfer can be loaded. A concurrent/repeat
+      // request that lost the race is a harmless no-op.
+      await prisma.transferRequest.updateMany({ where: { id, status: "REQUESTED" }, data: { status: "LOADED" } });
     } else if (status === "COMPLETED") {
-      // Notify the bidder BEFORE detaching items — the webhook reads the transfer's
-      // items, which get cleared by the relocation mutation below. A notify failure
-      // must NOT block the drop-off, so it's best-effort.
+      // CLAIM the completion atomically FIRST — this is what actually prevents a
+      // double-click from sending the "arrived" SMS twice or snapshotting the wrong
+      // (already-moved) locations. Only one request can flip REQUESTED/LOADED→COMPLETED.
+      const claim = await prisma.transferRequest.updateMany({
+        where: { id, status: { in: ["REQUESTED", "LOADED"] } },
+        data: { status: "COMPLETED", completedAt: new Date() },
+      });
+      if (claim.count === 0) {
+        return NextResponse.json({ error: "This transfer is already completed." }, { status: 409 });
+      }
+      // We own the completion. Items still carry transferRequestId, so notify + snapshot
+      // read correct data before we move them.
       try {
         await notifyTransferArrived(id);
       } catch (e) {
         console.error("notifyTransferArrived failed (continuing):", e);
       }
-
-      // Record where each item lived BEFORE we move it — this is the only chance
-      // to capture it, and it's what makes an accidental drop-off reversible.
-      const moving = await prisma.item.findMany({
-        where: { transferRequestId: id },
-        select: { id: true, locationId: true },
-      });
+      const moving = await prisma.item.findMany({ where: { transferRequestId: id }, select: { id: true, locationId: true } });
       const snapshot = moving.map((m) => ({ itemId: m.id, locationId: m.locationId }));
-
-      // Items have arrived: set their home location to the destination, detach transfer.
       await prisma.item.updateMany({
         where: { transferRequestId: id },
         data: { locationId: transfer.toLocationId, transferRequestId: null },
       });
       await prisma.transferRequest.update({
         where: { id },
-        data: { status: "COMPLETED", completedAt: new Date(), revertSnapshot: snapshot, stagedSpot: null, stagedAt: null },
+        data: { revertSnapshot: snapshot, stagedSpot: null, stagedAt: null },
       });
-
-      // Fold the arrived items into the bidder's upcoming appointment at this
-      // location, if they already have one.
       await attachToUpcomingAppointment(transfer.clerkUserId, transfer.organizationId);
     } else {
       // Cancelled: detach items, leaving their home location unchanged.
-      await prisma.item.updateMany({
-        where: { transferRequestId: id },
-        data: { transferRequestId: null },
-      });
-      await prisma.transferRequest.update({
-        where: { id },
+      const claim = await prisma.transferRequest.updateMany({
+        where: { id, status: { in: ["REQUESTED", "LOADED"] } },
         data: { status: "CANCELLED", stagedSpot: null, stagedAt: null },
       });
+      if (claim.count === 0) {
+        return NextResponse.json({ error: "This transfer is already closed." }, { status: 409 });
+      }
+      await prisma.item.updateMany({ where: { transferRequestId: id }, data: { transferRequestId: null } });
     }
 
     return NextResponse.json({ success: true });

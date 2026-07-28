@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg } from "@/lib/auth";
-import { autoTransferToPreferred } from "@/lib/pickup";
+import { autoTransferToPreferred, switchPreferredCascade } from "@/lib/pickup";
 
 /**
  * POST /api/admin/pickup/set-location
@@ -45,25 +45,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (switching) {
-      await prisma.transferRequest.updateMany({
-        where: { clerkUserId, organizationId: orgId, status: "REQUESTED" },
-        data: { toLocationId: locationId },
-      });
-      const appts = await prisma.pickupAppointment.findMany({
-        where: { clerkUserId, organizationId: orgId, status: "SCHEDULED" },
-        select: { id: true },
-      });
-      if (appts.length > 0) {
-        const apptIds = appts.map((a) => a.id);
-        await prisma.item.updateMany({
-          where: { pickupAppointmentId: { in: apptIds } },
-          data: { pickupAppointmentId: null },
-        });
-        await prisma.pickupAppointment.updateMany({
-          where: { id: { in: apptIds } },
-          data: { status: "CANCELLED" },
-        });
-      }
+      await switchPreferredCascade(clerkUserId, orgId, previous!, locationId);
     }
 
     const result = await autoTransferToPreferred(clerkUserId, orgId);
