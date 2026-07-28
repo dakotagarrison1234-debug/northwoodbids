@@ -196,7 +196,7 @@ function localInputToIso(local: string) {
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function AdminPickupPage() {
-  const [tab, setTab] = useState<"appointments" | "locations" | "transfers" | "waiting">("appointments");
+  const [tab, setTab] = useState<"pickups" | "locations" | "transfers">("pickups");
   const [selectedApptId, setSelectedApptId] = useState<string | null>(null);
   const [showCollected, setShowCollected] = useState(false);
   const [showCompletedTransfers, setShowCompletedTransfers] = useState(false);
@@ -900,13 +900,12 @@ export default function AdminPickupPage() {
         <h1 className="text-2xl sm:text-3xl font-semibold">Pickup</h1>
         {/* Horizontal-scroll tab strip so four tabs never wrap or squash on a phone. */}
         <div className="flex gap-2 mt-3 overflow-x-auto -mx-4 px-4 pb-1 sm:mx-0 sm:px-0">
-          {(["appointments", "waiting", "transfers", "locations"] as const).map((t) => {
+          {(["pickups", "transfers", "locations"] as const).map((t) => {
             const badge =
               t === "transfers" ? activeTransfers.length :
-              t === "waiting" ? waiting?.totals.people ?? 0 : 0;
+              t === "pickups" ? waitingRows.length : 0;
             const label =
-              t === "appointments" ? "Appointments" :
-              t === "waiting" ? "Waiting" :
+              t === "pickups" ? "Pickups" :
               t === "transfers" ? "Transfers" : "Locations";
             return (
               <button
@@ -919,7 +918,7 @@ export default function AdminPickupPage() {
                 {label}
                 {badge > 0 && (
                   <span className={`ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full text-sm font-bold ${
-                    t === "waiting"
+                    t === "pickups"
                       ? (tab === t ? "bg-white text-amber-700" : "bg-amber-500 text-white")
                       : (tab === t ? "bg-white text-slate-900" : "bg-slate-900 text-white")
                   }`}>
@@ -947,7 +946,8 @@ export default function AdminPickupPage() {
       <div className="px-6 sm:px-8 py-6">
         {loading ? (
           <div className="text-center py-20 text-base text-[#8a7559]">Loading…</div>
-        ) : tab === "appointments" ? (
+        ) : tab === "pickups" ? (
+          <div className="space-y-8">
           <div className="space-y-8">
             {/* ── Warehouse switch ── scopes everything below it. ── */}
             {locations.length > 1 && (
@@ -1274,12 +1274,14 @@ export default function AdminPickupPage() {
               </div>
             )}
           </div>
-        ) : tab === "waiting" ? (
-          // ── Waiting to pick up ──
-          // Winners with items still unclaimed — no appointment booked. Split by
-          // whether they've even chosen a location, because that's a different chase.
+
+          {/* ── Not booked yet — merged from the old Waiting tab into one pipeline.
+              Same warehouse scope (the chips above) governs this section too. ── */}
           <div className="space-y-4 max-w-2xl">
-            {warehouseScopeBar}
+            <h2 className="text-xl font-semibold text-slate-900">
+              Not booked yet
+              {waitingRows.length > 0 && <span className="text-slate-400 text-base font-medium"> ({waitingRows.length})</span>}
+            </h2>
             {!waiting || waitingRows.length === 0 ? (
               <div className="bg-white border-2 border-green-200 rounded-2xl px-5 py-10 text-center">
                 <div className="text-2xl mb-1">🎉</div>
@@ -1422,6 +1424,7 @@ export default function AdminPickupPage() {
                 </ul>
               </>
             )}
+          </div>
           </div>
         ) : tab === "transfers" ? (
           // ── Transfers ──
