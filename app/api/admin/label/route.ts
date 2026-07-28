@@ -108,14 +108,20 @@ export async function GET(req: NextRequest) {
       where: { id },
       include: {
         toLocation: { select: { name: true } },
-        items: { select: { title: true, itemCode: true, grabbedAt: true, storageLocation: true, location: { select: { name: true } }, auction: { select: { title: true } } } },
+        items: { select: { title: true, itemCode: true, grabbedAt: true, gatherSpot: true, storageLocation: true, location: { select: { name: true } }, auction: { select: { title: true } } } },
       },
     });
     if (!t || t.organizationId !== orgId) return new Response("Transfer not found", { status: 404 });
     const profile = await prisma.bidderProfile.findUnique({ where: { clerkUserId: t.clerkUserId }, select: { name: true, phone: true, email: true } });
+    // A transfer is never "staged" — that's customer-facing. It's GATHERED (set aside
+    // to move) or still TO GATHER.
+    const spots = [...new Set(t.items.map((i) => i.gatherSpot).filter(Boolean))] as string[];
+    const gatherSpot = spots.length === 1 ? spots[0] : spots.length > 1 ? "Multiple" : null;
     const allGathered = t.items.length > 0 && t.items.every((i) => i.grabbedAt != null);
-    const state: LabelState = t.stagedSpot ? "STAGED" : allGathered ? "GATHERED" : "TO GATHER";
-    const rows = `<div class="row"><span>Requested</span><b>${esc(fmtDate(t.createdAt))}</b></div>`;
+    const state: LabelState = gatherSpot || allGathered ? "GATHERED" : "TO GATHER";
+    const rows =
+      (gatherSpot ? `<div class="row"><span>Gathered in</span><b>${esc(gatherSpot)}</b></div>` : "") +
+      `<div class="row"><span>Requested</span><b>${esc(fmtDate(t.createdAt))}</b></div>`;
     const items: LItem[] = t.items.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name }));
     return new Response(
       doc({
@@ -173,7 +179,7 @@ export async function GET(req: NextRequest) {
         bids: { some: { clerkUserId: user, status: "WON" } },
       },
       select: {
-        title: true, itemCode: true, grabbedAt: true, storageLocation: true,
+        title: true, itemCode: true, grabbedAt: true, gatherSpot: true, storageLocation: true,
         location: { select: { name: true } },
         auction: { select: { title: true } },
       },
@@ -185,9 +191,13 @@ export async function GET(req: NextRequest) {
       const loc = await prisma.pickupLocation.findUnique({ where: { id: profile.preferredPickupLocationId }, select: { name: true } });
       preferredName = loc?.name ?? null;
     }
-    const allGathered = its.every((i) => i.grabbedAt != null);
+    const wSpots = [...new Set(its.map((i) => i.gatherSpot).filter(Boolean))] as string[];
+    const wGatherSpot = wSpots.length === 1 ? wSpots[0] : wSpots.length > 1 ? "Multiple" : null;
+    const allGathered = wGatherSpot != null || its.every((i) => i.grabbedAt != null);
     const state: LabelState = allGathered ? "GATHERED" : "TO GATHER";
-    const rows = `<div class="row"><span>Pick up at</span><b>${esc(preferredName ?? "Not chosen")}</b></div>`;
+    const rows =
+      `<div class="row"><span>Pick up at</span><b>${esc(preferredName ?? "Not chosen")}</b></div>` +
+      (wGatherSpot ? `<div class="row"><span>Gathered in</span><b>${esc(wGatherSpot)}</b></div>` : "");
     const items: LItem[] = its.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name }));
     return new Response(
       doc({ type: "PICKUP", state, name: profile?.name ?? "Bidder", phone: profile?.phone, email: profile?.email, headerRows: rows, count: its.length, countSuffix: " · all auctions", items }),

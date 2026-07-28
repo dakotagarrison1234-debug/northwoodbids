@@ -81,7 +81,12 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     if (status === "LOADED") {
       // Atomic: only a still-REQUESTED transfer can be loaded. A concurrent/repeat
       // request that lost the race is a harmless no-op.
-      await prisma.transferRequest.updateMany({ where: { id, status: "REQUESTED" }, data: { status: "LOADED" } });
+      const claim = await prisma.transferRequest.updateMany({ where: { id, status: "REQUESTED" }, data: { status: "LOADED" } });
+      // Loaded = it left the source, so the gather spot there is freed for the next
+      // bundle. At the destination it'll be gathered/staged fresh.
+      if (claim.count > 0) {
+        await prisma.item.updateMany({ where: { transferRequestId: id }, data: { gatherSpot: null } });
+      }
     } else if (status === "COMPLETED") {
       // CLAIM the completion atomically FIRST — this is what actually prevents a
       // double-click from sending the "arrived" SMS twice or snapshotting the wrong

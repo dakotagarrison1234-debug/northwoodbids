@@ -20,6 +20,7 @@ export async function GET() {
       title: true,
       itemCode: true,
       grabbedAt: true,
+      gatherSpot: true,
       storageLocation: true,
       updatedAt: true,
       location: { select: { name: true } },
@@ -41,6 +42,7 @@ export async function GET() {
     title: string;
     itemCode: string | null;
     grabbed: boolean;
+    gatherSpot: string | null;
     storageLocation: string | null;
     warehouse: string | null;
     transferring: boolean;
@@ -57,6 +59,7 @@ export async function GET() {
       title: it.title,
       itemCode: it.itemCode,
       grabbed: it.grabbedAt != null,
+      gatherSpot: it.gatherSpot,
       storageLocation: it.storageLocation,
       warehouse: it.location?.name ?? null,
       transferring: !!tr && (tr.status === "REQUESTED" || tr.status === "LOADED"),
@@ -85,6 +88,7 @@ export async function GET() {
       const locId = p?.preferredPickupLocationId ?? null;
       // Only items physically here (not out on transfer) are gatherable.
       const gatherable = r.items.filter((i) => !i.transferring);
+      const spots = [...new Set(gatherable.map((i) => i.gatherSpot).filter(Boolean))] as string[];
       return {
         clerkUserId: r.clerkUserId,
         name: p?.name ?? null,
@@ -92,6 +96,7 @@ export async function GET() {
         phone: p?.phone ?? null,
         items: r.items.length,
         itemList: r.items,
+        gatherSpot: spots.length === 1 ? spots[0] : spots.length > 1 ? "Multiple" : null,
         gatheredCount: gatherable.filter((i) => i.grabbed).length,
         gatherableCount: gatherable.length,
         locationId: locId,

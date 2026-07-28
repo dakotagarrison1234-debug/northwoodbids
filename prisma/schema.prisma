@@ -135,6 +135,11 @@ enum AuctionStatus {
   /// Stored (not local state) so progress survives a refresh and two people can
   /// gather the same order together. Cleared when the order is staged or collected.
   grabbedAt           DateTime?
+  /// Internal "gather spot" — where the team set the gathered bundle aside at a
+  /// warehouse (e.g. "Closet"). NOT customer-facing. Used for transfer bundles
+  /// before loading and for pickups before they're booked/staged. Cleared when the
+  /// item is loaded onto a transfer or staged onto an appointment.
+  gatherSpot          String?
   pickupAppointmentId String?
   pickupAppointment   PickupAppointment? @relation(fields: [pickupAppointmentId], references: [id], onDelete: SetNull)
   locationId          String?

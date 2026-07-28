@@ -102,9 +102,11 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     // in the box now, so the tick marks have served their purpose. Clearing them
     // means an order that gets un-staged starts its checklist clean.
     if (stagedSpot !== undefined || status === "CANCELLED") {
+      // Staging an appointment graduates the bundle gather → staged (customer-facing),
+      // so clear both the checklist ticks AND the internal gather spot.
       await prisma.item.updateMany({
         where: { pickupAppointmentId: id },
-        data: { grabbedAt: null },
+        data: { grabbedAt: null, gatherSpot: null },
       });
     }
 

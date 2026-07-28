@@ -59,6 +59,7 @@ interface WaitingItem {
   title: string;
   itemCode: string | null;
   grabbed: boolean;
+  gatherSpot: string | null;
   storageLocation: string | null;
   warehouse: string | null;
   transferring: boolean;
@@ -70,6 +71,7 @@ interface WaitingRow {
   phone: string | null;
   items: number;
   itemList: WaitingItem[];
+  gatherSpot: string | null;
   gatheredCount: number;
   gatherableCount: number;
   locationName: string | null;
@@ -97,13 +99,14 @@ interface TransferItem {
   title: string;
   itemCode: string | null;
   grabbed: boolean;
+  gatherSpot: string | null;
   fromLocationName: string | null;
   storageLocation: string | null;
 }
 interface Transfer {
   id: string;
   status: "REQUESTED" | "LOADED" | "COMPLETED" | "CANCELLED";
-  stagedSpot: string | null;
+  gatherSpot: string | null;
   createdAt: string;
   completedAt: string | null;
   clerkUserId: string;
@@ -199,6 +202,7 @@ export default function AdminPickupPage() {
   const [tab, setTab] = useState<"pickups" | "locations" | "transfers">("pickups");
   const [selectedApptId, setSelectedApptId] = useState<string | null>(null);
   const [showCollected, setShowCollected] = useState(false);
+  const [collectedSearch, setCollectedSearch] = useState("");
   const [showCompletedTransfers, setShowCompletedTransfers] = useState(false);
   // Transfers are collapsed to one line each until tapped, and filterable by
   // direction ("Gladwin → Owosso") so a run can be picked out at a glance.
@@ -211,6 +215,8 @@ export default function AdminPickupPage() {
   const [transferStageSpot, setTransferStageSpot] = useState("");
   // Waiting list: expand a person to gather their items even before they book.
   const [expandedWaitingId, setExpandedWaitingId] = useState<string | null>(null);
+  const [gatherWaitingId, setGatherWaitingId] = useState<string | null>(null);
+  const [waitingGatherSpot, setWaitingGatherSpot] = useState("");
   // Which warehouse's pickups to show ("all" = both). You work one building at a time.
   const [apptLocationId, setApptLocationId] = useState<string>("all");
   const [showAddLoc, setShowAddLoc] = useState(false);
@@ -388,22 +394,43 @@ export default function AdminPickupPage() {
     }
   };
 
-  // Stage a transfer into a spot (or clear it). Mirrors appointment staging.
-  const saveTransferStage = async (id: string, spot: string) => {
+  // Set the internal gather spot for a waiting customer's bundle (before they book).
+  const saveWaitingGatherSpot = async (clerkUserId: string, itemIds: string[], spot: string) => {
     try {
-      const res = await fetch(`/api/admin/pickup/transfers/${id}`, {
-        method: "PATCH",
+      const res = await fetch(`/api/admin/pickup/gather-spot`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stagedSpot: spot }),
+        body: JSON.stringify({ spot, itemIds }),
+      });
+      const d = await res.json();
+      if (d.success) {
+        setGatherWaitingId(null);
+        flash(spot.trim() ? `Gathered into ${spot.trim()}.` : "Gather spot cleared.", true);
+        loadWaiting();
+      } else flash(d.error || "Could not set the gather spot.", false);
+    } catch {
+      flash("Could not set the gather spot.", false);
+    }
+  };
+
+  // Set the internal GATHER spot for a transfer bundle (where your team set it aside
+  // to move). Not customer-facing — that's staging, which only happens on booked
+  // pickups at the destination. Applies to the items you gather at THIS warehouse.
+  const saveTransferGatherSpot = async (id: string, itemIds: string[], spot: string) => {
+    try {
+      const res = await fetch(`/api/admin/pickup/gather-spot`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ spot, itemIds }),
       });
       const d = await res.json();
       if (d.success) {
         setStagingTransferId(null);
-        flash(spot.trim() ? `Transfer staged in ${spot.trim()}.` : "Transfer un-staged.", true);
+        flash(spot.trim() ? `Gathered into ${spot.trim()}.` : "Gather spot cleared.", true);
         loadTransfers();
-      } else flash(d.error || "Could not stage the transfer.", false);
+      } else flash(d.error || "Could not set the gather spot.", false);
     } catch {
-      flash("Could not stage the transfer.", false);
+      flash("Could not set the gather spot.", false);
     }
   };
 
@@ -581,6 +608,19 @@ export default function AdminPickupPage() {
   const inWarehouse = (a: Appointment) => apptLocationId === "all" || a.locationId === apptLocationId;
   const scheduled = appointments.filter((a) => a.status === "SCHEDULED" && inWarehouse(a));
   const collected = appointments.filter((a) => a.status === "COLLECTED" && inWarehouse(a));
+  // Picked-up list: most-recent-first; show only the 5 latest unless searching, so the
+  // list doesn't grow to every pickup ever.
+  const collectedSorted = [...collected].sort((a, b) => b.startsAt.localeCompare(a.startsAt));
+  const collectedShown = collectedSearch.trim()
+    ? collectedSorted.filter((a) => {
+        const q = collectedSearch.trim().toLowerCase();
+        return (
+          (a.bidder.name ?? "").toLowerCase().includes(q) ||
+          (a.bidder.email ?? "").toLowerCase().includes(q) ||
+          (a.bidder.phone ?? "").includes(collectedSearch.trim())
+        );
+      })
+    : collectedSorted.slice(0, 5);
 
   // Counts per warehouse for the chips — from SCHEDULED only, unfiltered, so each
   // chip always shows that warehouse's real workload.
@@ -1190,10 +1230,21 @@ export default function AdminPickupPage() {
                 </button>
                 {showCollected && (
                 <div className="space-y-2 max-w-3xl">
-                  {/* Collected orders open up like any other, so a mis-tap can be
-                      undone. Before this, marking something collected by accident
-                      could only be fixed in the database. */}
-                  {collected.map((a) => {
+                  <input
+                    type="text"
+                    value={collectedSearch}
+                    onChange={(e) => setCollectedSearch(e.target.value)}
+                    placeholder="Search picked-up orders by name, email or phone…"
+                    className="w-full bg-white border-2 border-slate-200 rounded-xl px-4 min-h-[44px] text-base text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400"
+                  />
+                  {!collectedSearch.trim() && collected.length > 5 && (
+                    <p className="text-sm text-[#8a7559] px-1">Showing the 5 most recent · search to find older ones.</p>
+                  )}
+                  {collectedSearch.trim() && collectedShown.length === 0 && (
+                    <p className="text-sm text-[#8a7559] px-1 py-2">No picked-up orders match &ldquo;{collectedSearch.trim()}&rdquo;.</p>
+                  )}
+                  {/* Collected orders open up like any other, so a mis-tap can be undone. */}
+                  {collectedShown.map((a) => {
                     const expanded = selectedApptId === a.id;
                     return (
                       <div key={a.id} className="bg-white border border-[#e3d6bf] rounded-xl overflow-hidden">
@@ -1348,9 +1399,11 @@ export default function AdminPickupPage() {
                             No location picked
                           </span>
                         )}
-                        {allScopedGathered && (
+                        {w.gatherSpot ? (
+                          <span className="text-sm font-bold bg-[#8a5a2b] text-white rounded-full px-2.5 py-1">Gathered: {w.gatherSpot}</span>
+                        ) : allScopedGathered ? (
                           <span className="text-sm font-bold bg-green-100 text-green-700 border border-green-200 rounded-full px-2.5 py-1">Gathered ✓</span>
-                        )}
+                        ) : null}
                         <span className="text-sm text-slate-500">
                           waiting {w.waitingDays === 0 ? "today" : `${w.waitingDays} day${w.waitingDays !== 1 ? "s" : ""}`}
                         </span>
@@ -1416,6 +1469,37 @@ export default function AdminPickupPage() {
                               )}
                             </li>
                           ))}
+                          {/* Gather spot for this bundle (internal). */}
+                          {scopedItems.length > 0 && (
+                            <li className="pt-1">
+                              {gatherWaitingId === w.clerkUserId ? (
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <input
+                                    autoFocus
+                                    value={waitingGatherSpot}
+                                    onChange={(e) => setWaitingGatherSpot(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === "Enter") saveWaitingGatherSpot(w.clerkUserId, scopedItems.map((i) => i.id), waitingGatherSpot); }}
+                                    placeholder="Gather spot — e.g. Shelf B"
+                                    className="flex-1 min-w-[130px] bg-white border border-[#cdbda3] rounded-xl px-3 py-2.5 text-base focus:outline-none focus:border-[#6c4d39]"
+                                  />
+                                  <button onClick={() => saveWaitingGatherSpot(w.clerkUserId, scopedItems.map((i) => i.id), waitingGatherSpot)} className="bg-[#8a5a2b] text-white font-semibold text-base px-4 py-2.5 rounded-xl">
+                                    {w.gatherSpot ? "Update" : "Set spot"}
+                                  </button>
+                                  <button onClick={() => setGatherWaitingId(null)} className="bg-white border border-[#cdbda3] text-[#6f5b46] font-semibold text-base px-4 py-2.5 rounded-xl">Cancel</button>
+                                  {w.gatherSpot && (
+                                    <button onClick={() => saveWaitingGatherSpot(w.clerkUserId, scopedItems.map((i) => i.id), "")} className="text-red-600 font-semibold text-base px-3 py-2.5">Clear</button>
+                                  )}
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => { setGatherWaitingId(w.clerkUserId); setWaitingGatherSpot(w.gatherSpot ?? ""); }}
+                                  className={`font-semibold text-sm px-4 py-2.5 rounded-xl border ${w.gatherSpot ? "bg-[#efe3d0] border-[#cdbda3] text-[#6c4d39]" : "bg-[#8a5a2b] border-[#8a5a2b] text-white"}`}
+                                >
+                                  {w.gatherSpot ? `Gathered in ${w.gatherSpot}` : "Set gather spot"}
+                                </button>
+                              )}
+                            </li>
+                          )}
                         </ul>
                       )}
                     </li>
@@ -1470,11 +1554,12 @@ export default function AdminPickupPage() {
                           <LocationBadge name={t.toLocation.name} size="sm" />
                           <span>· {t.items.length} item{t.items.length !== 1 ? "s" : ""}</span>
                         </div>
-                        {/* Gathered/staged marker on its own line so it doesn't squeeze the route. */}
-                        {t.stagedSpot ? (
-                          <span className="inline-flex items-center gap-1 mt-1.5 text-sm px-2.5 py-1 rounded-full font-bold bg-[#5f7a45] text-white">
+                        {/* Gather marker on its own line so it doesn't squeeze the route.
+                            Transfers are GATHERED (internal), never staged. */}
+                        {t.gatherSpot ? (
+                          <span className="inline-flex items-center gap-1 mt-1.5 text-sm px-2.5 py-1 rounded-full font-bold bg-[#8a5a2b] text-white">
                             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8.5l3.5 3.5L13 5" /></svg>
-                            Staged: {t.stagedSpot}
+                            Gathered: {t.gatherSpot}
                           </span>
                         ) : t.items.length > 0 && t.items.every((i) => i.grabbed) ? (
                           <span className="inline-flex items-center mt-1.5 text-sm px-2.5 py-1 rounded-full font-bold bg-green-100 text-green-700 border border-green-200">
@@ -1507,12 +1592,13 @@ export default function AdminPickupPage() {
                       </div>
                       <div className="text-sm text-[#8a7559] mt-1">Requested {fmtDateTime(t.createdAt)}</div>
 
-                      {/* Staged banner — gathered & set aside, not loaded yet. */}
-                      {t.stagedSpot && (
-                        <div className="mt-3 rounded-xl bg-[#5f7a45] text-white px-4 py-3">
-                          <div className="text-sm font-bold uppercase tracking-wider text-[#d8e6c8]">Staged — not loaded</div>
-                          <div className="text-xl font-extrabold leading-tight mt-0.5">{t.stagedSpot}</div>
-                          <p className="text-sm text-[#d8e6c8] mt-1">Gathered &amp; set aside. Load &amp; drop off on transfer day.</p>
+                      {/* Gathered banner — internal spot the bundle is set aside in
+                          before loading. NOT staging (that's customer-facing at pickup). */}
+                      {t.gatherSpot && (
+                        <div className="mt-3 rounded-xl bg-[#8a5a2b] text-white px-4 py-3">
+                          <div className="text-sm font-bold uppercase tracking-wider text-[#f0e0cc]">Gathered — ready to load</div>
+                          <div className="text-xl font-extrabold leading-tight mt-0.5">{t.gatherSpot}</div>
+                          <p className="text-sm text-[#f0e0cc] mt-1">Set aside for the team. Load &amp; drop off on transfer day.</p>
                         </div>
                       )}
 
@@ -1544,39 +1630,42 @@ export default function AdminPickupPage() {
                         </ul>
                       </div>
 
-                      {/* Print + Stage */}
+                      {/* Print + Gather spot (internal; the customer never sees this). */}
                       <div className="mt-3 flex flex-wrap gap-2">
                         <PrintLabelButton
                           href={`/api/admin/label?type=transfer&transfer=${t.id}`}
                           label="Print 4×6 label"
                           className="inline-flex items-center gap-1.5 text-sm font-bold px-4 py-2.5 rounded-xl border-2 border-[#cdbda3] bg-white text-[#6c4d39] hover:bg-[#efe3d0] transition-colors disabled:opacity-50"
                         />
-                        {stagingTransferId === t.id ? (
-                          <div className="flex flex-wrap items-center gap-2 w-full">
-                            <input
-                              autoFocus
-                              value={transferStageSpot}
-                              onChange={(e) => setTransferStageSpot(e.target.value)}
-                              onKeyDown={(e) => { if (e.key === "Enter") saveTransferStage(t.id, transferStageSpot); }}
-                              placeholder="Spot — e.g. Bay 3"
-                              className="flex-1 min-w-[130px] bg-white border border-[#cdbda3] rounded-xl px-3 py-2.5 text-base focus:outline-none focus:border-[#6c4d39]"
-                            />
-                            <button onClick={() => saveTransferStage(t.id, transferStageSpot)} className="bg-[#8a5a2b] text-white font-semibold text-base px-4 py-2.5 rounded-xl">
-                              {t.stagedSpot ? "Update spot" : "Stage"}
+                        {(() => {
+                          const scopedIds = t.items.filter((it) => atScope(it.fromLocationName)).map((it) => it.id);
+                          return stagingTransferId === t.id ? (
+                            <div className="flex flex-wrap items-center gap-2 w-full">
+                              <input
+                                autoFocus
+                                value={transferStageSpot}
+                                onChange={(e) => setTransferStageSpot(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === "Enter") saveTransferGatherSpot(t.id, scopedIds, transferStageSpot); }}
+                                placeholder="Gather spot — e.g. Bay 3"
+                                className="flex-1 min-w-[130px] bg-white border border-[#cdbda3] rounded-xl px-3 py-2.5 text-base focus:outline-none focus:border-[#6c4d39]"
+                              />
+                              <button onClick={() => saveTransferGatherSpot(t.id, scopedIds, transferStageSpot)} className="bg-[#8a5a2b] text-white font-semibold text-base px-4 py-2.5 rounded-xl">
+                                {t.gatherSpot ? "Update spot" : "Set spot"}
+                              </button>
+                              <button onClick={() => setStagingTransferId(null)} className="bg-white border border-[#cdbda3] text-[#6f5b46] font-semibold text-base px-4 py-2.5 rounded-xl">Cancel</button>
+                              {t.gatherSpot && (
+                                <button onClick={() => saveTransferGatherSpot(t.id, scopedIds, "")} className="text-red-600 font-semibold text-base px-3 py-2.5">Clear</button>
+                              )}
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => { setStagingTransferId(t.id); setTransferStageSpot(t.gatherSpot ?? ""); }}
+                              className={`font-semibold text-sm px-4 py-2.5 rounded-xl border ${t.gatherSpot ? "bg-[#efe3d0] border-[#cdbda3] text-[#6c4d39]" : "bg-[#8a5a2b] border-[#8a5a2b] text-white"}`}
+                            >
+                              {t.gatherSpot ? `Gathered in ${t.gatherSpot}` : "Set gather spot"}
                             </button>
-                            <button onClick={() => setStagingTransferId(null)} className="bg-white border border-[#cdbda3] text-[#6f5b46] font-semibold text-base px-4 py-2.5 rounded-xl">Cancel</button>
-                            {t.stagedSpot && (
-                              <button onClick={() => saveTransferStage(t.id, "")} className="text-red-600 font-semibold text-base px-3 py-2.5">Un-stage</button>
-                            )}
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => { setStagingTransferId(t.id); setTransferStageSpot(t.stagedSpot ?? ""); }}
-                            className={`font-semibold text-sm px-4 py-2.5 rounded-xl border ${t.stagedSpot ? "bg-[#efe3d0] border-[#cdbda3] text-[#6c4d39]" : "bg-[#8a5a2b] border-[#8a5a2b] text-white"}`}
-                          >
-                            {t.stagedSpot ? `Staged in ${t.stagedSpot}` : "Stage transfer"}
-                          </button>
-                        )}
+                          );
+                        })()}
                       </div>
                       <div className="mt-3 flex flex-col sm:flex-row gap-3">
                         {t.status === "REQUESTED" && (

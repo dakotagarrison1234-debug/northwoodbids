@@ -17,6 +17,7 @@ export async function GET() {
           title: true,
           itemCode: true,
           grabbedAt: true,
+          gatherSpot: true,
           storageLocation: true,
           location: { select: { name: true } },
         },
@@ -53,24 +54,30 @@ export async function GET() {
       : [];
     const profileMap = new Map(profiles.map((p) => [p.clerkUserId, p]));
 
-    const result = transfers.map((t) => ({
-      id: t.id,
-      status: t.status,
-      stagedSpot: t.stagedSpot,
-      createdAt: t.createdAt.toISOString(),
-      completedAt: t.completedAt ? t.completedAt.toISOString() : null,
-      clerkUserId: t.clerkUserId,
-      toLocation: t.toLocation,
-      bidder: profileMap.get(t.clerkUserId) ?? { name: null, email: null, phone: null },
-      items: t.items.map((it) => ({
-        id: it.id,
-        title: it.title,
-        itemCode: it.itemCode,
-        grabbed: it.grabbedAt != null,
-        fromLocationName: it.location?.name ?? "Unassigned",
-        storageLocation: it.storageLocation,
-      })),
-    }));
+    const result = transfers.map((t) => {
+      // Transfer-level gather spot = the common spot its items were gathered into.
+      const spots = [...new Set(t.items.map((i) => i.gatherSpot).filter(Boolean))] as string[];
+      const gatherSpot = spots.length === 1 ? spots[0] : spots.length > 1 ? "Multiple" : null;
+      return {
+        id: t.id,
+        status: t.status,
+        gatherSpot,
+        createdAt: t.createdAt.toISOString(),
+        completedAt: t.completedAt ? t.completedAt.toISOString() : null,
+        clerkUserId: t.clerkUserId,
+        toLocation: t.toLocation,
+        bidder: profileMap.get(t.clerkUserId) ?? { name: null, email: null, phone: null },
+        items: t.items.map((it) => ({
+          id: it.id,
+          title: it.title,
+          itemCode: it.itemCode,
+          grabbed: it.grabbedAt != null,
+          gatherSpot: it.gatherSpot,
+          fromLocationName: it.location?.name ?? "Unassigned",
+          storageLocation: it.storageLocation,
+        })),
+      };
+    });
 
     return NextResponse.json({ transfers: result });
   } catch (err) {
