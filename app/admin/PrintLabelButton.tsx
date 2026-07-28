@@ -25,9 +25,11 @@ export default function PrintLabelButton({
       if (!res.ok) throw new Error("bad");
       const html = await res.text();
 
+      // Off-screen but with a REAL size — a 0x0 iframe lays the label out at zero
+      // width and prints it tiny. Give it a 4x6-ish box so it renders full size.
       const iframe = document.createElement("iframe");
       iframe.setAttribute("aria-hidden", "true");
-      iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;";
+      iframe.style.cssText = "position:fixed;left:-10000px;top:0;width:420px;height:640px;border:0;";
       document.body.appendChild(iframe);
 
       const cleanup = () => {
