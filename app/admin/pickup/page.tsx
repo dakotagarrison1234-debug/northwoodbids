@@ -1574,7 +1574,11 @@ export default function AdminPickupPage() {
                       <div className="mt-3 flex flex-col sm:flex-row gap-3">
                         {t.status === "REQUESTED" && (
                           <button
-                            onClick={() => setTransferStatus(t.id, "LOADED", t.toLocation.name)}
+                            onClick={() => askConfirm(
+                              `Mark this transfer to ${t.toLocation.name} as loaded onto the truck?`,
+                              () => setTransferStatus(t.id, "LOADED", t.toLocation.name),
+                              { confirmLabel: "Mark Loaded" }
+                            )}
                             className="flex-1 bg-white border-2 border-[#6c4d39] text-[#6c4d39] hover:bg-[#efe3d0] font-semibold text-base py-3.5 rounded-xl transition-colors"
                           >
                             Mark Loaded
