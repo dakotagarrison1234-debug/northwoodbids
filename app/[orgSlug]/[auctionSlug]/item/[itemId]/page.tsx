@@ -571,12 +571,21 @@ export default function ItemPage() {
         </div>
       )}
 
-      {/* Breadcrumb / back link */}
+      {/* Breadcrumb / back link. Uses history-back when we came FROM the auction so
+          the bidder lands exactly where they were scrolled to (not the top). Falls
+          back to a normal navigation on a deep-link / fresh load. */}
       <div className="max-w-6xl mx-auto px-6 sm:px-8 pt-4 flex items-center gap-2 text-sm min-w-0">
-        <Link href={`/${orgSlug}/${auctionSlug}`} className="text-[#8a7559] hover:text-[#241a12] shrink-0 flex items-center gap-1 transition-colors text-sm font-medium">
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window !== "undefined" && window.history.length > 1) router.back();
+            else router.push(`/${orgSlug}/${auctionSlug}`);
+          }}
+          className="text-[#8a7559] hover:text-[#241a12] shrink-0 flex items-center gap-1 transition-colors text-sm font-medium"
+        >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><path d="M8 2L4 6l4 4" /></svg>
           Back to auction
-        </Link>
+        </button>
         {me && (me.isSuperAdmin || (!!item.org && me.orgId === item.org.id)) && (
           <Link
             href={`/admin/items/${item.id}`}

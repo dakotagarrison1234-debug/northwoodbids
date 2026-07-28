@@ -46,10 +46,20 @@ export default function PusherRefresh({ channel, event, filter, throttleMs = 120
       if (!filter || filter(data)) schedule();
     });
 
+    // Refresh when the page comes back into view — coming back from an item page
+    // (tap Back, swipe back, or bfcache restore) re-runs the server fetch in place,
+    // so a bid you just placed shows as "You're winning" without a manual refresh.
+    const onVisible = () => { if (document.visibilityState === "visible") schedule(); };
+    const onPageShow = () => schedule();
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("pageshow", onPageShow);
+
     return () => {
       if (pending) clearTimeout(pending);
       ch.unbind_all();
       pusher.disconnect();
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("pageshow", onPageShow);
     };
   }, [channel, event, filter, router, throttleMs]);
 
