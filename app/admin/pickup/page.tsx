@@ -1458,13 +1458,19 @@ export default function AdminPickupPage() {
                           <LocationBadge name={t.toLocation.name} size="sm" />
                           <span>· {t.items.length} item{t.items.length !== 1 ? "s" : ""}</span>
                         </div>
+                        {/* Gathered/staged marker on its own line so it doesn't squeeze the route. */}
+                        {t.stagedSpot ? (
+                          <span className="inline-flex items-center gap-1 mt-1.5 text-sm px-2.5 py-1 rounded-full font-bold bg-[#5f7a45] text-white">
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8.5l3.5 3.5L13 5" /></svg>
+                            Staged: {t.stagedSpot}
+                          </span>
+                        ) : t.items.length > 0 && t.items.every((i) => i.grabbed) ? (
+                          <span className="inline-flex items-center mt-1.5 text-sm px-2.5 py-1 rounded-full font-bold bg-green-100 text-green-700 border border-green-200">
+                            Gathered ✓
+                          </span>
+                        ) : null}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        {t.stagedSpot ? (
-                          <span className="text-sm px-3 py-1 rounded-full font-bold bg-[#5f7a45] text-white">Staged: {t.stagedSpot}</span>
-                        ) : t.items.length > 0 && t.items.every((i) => i.grabbed) ? (
-                          <span className="text-sm px-3 py-1 rounded-full font-bold bg-green-100 text-green-700 border border-green-200">Gathered ✓</span>
-                        ) : null}
                         <span
                           className={`text-sm px-3 py-1 rounded-full font-bold border ${
                             t.status === "LOADED"
