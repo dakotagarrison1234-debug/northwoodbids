@@ -262,6 +262,14 @@ export default function AdminPickupPage() {
     Promise.all([loadAppointments(), loadLocations(), loadTransfers(), loadWaiting()]).finally(() => setLoading(false));
   }, [loadAppointments, loadLocations, loadTransfers, loadWaiting]);
 
+  // Remember which warehouse you're working — an owner sets it once per shift.
+  useEffect(() => {
+    try { const s = localStorage.getItem("nb-pickup-warehouse"); if (s) setApptLocationId(s); } catch {}
+  }, []);
+  useEffect(() => {
+    try { localStorage.setItem("nb-pickup-warehouse", apptLocationId); } catch {}
+  }, [apptLocationId]);
+
   const flash = (text: string, ok: boolean) => {
     setMsg({ text, ok });
     setTimeout(() => setMsg(null), 4000);
@@ -637,10 +645,36 @@ export default function AdminPickupPage() {
   }
   const directions = [...directionCounts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
 
-  const activeTransfers =
-    transferDir === "all"
-      ? allActiveTransfers
-      : allActiveTransfers.filter((t) => transferDirLabel(t) === transferDir);
+  // The one warehouse you're working right now. Applied across appointments,
+  // transfers and waiting so an owner at Owosso never sees Gladwin's items.
+  const scopedLocName = apptLocationId === "all" ? null : locations.find((l) => l.id === apptLocationId)?.name ?? null;
+  // A transfer is gathered at the SOURCE, so scope it by where its items sit now.
+  const atScope = (fromName: string | null | undefined) => !scopedLocName || fromName === scopedLocName;
+
+  const activeTransfers = allActiveTransfers
+    .filter((t) => (transferDir === "all" ? true : transferDirLabel(t) === transferDir))
+    .filter((t) => !scopedLocName || t.items.some((i) => i.fromLocationName === scopedLocName));
+
+  // Waiting rows scoped to the working warehouse (someone with items at both shows
+  // in both, but each owner only sees/gathers their building's items).
+  const waitingRows = (waiting?.rows ?? []).filter((w) => !scopedLocName || w.itemList.some((i) => i.warehouse === scopedLocName));
+
+  // Small warehouse scope selector, reused on the transfers + waiting tabs.
+  const warehouseScopeBar = locations.length > 1 && (
+    <div className="flex flex-wrap gap-2 mb-3">
+      {[{ id: "all", name: "All warehouses" }, ...locations].map((l) => (
+        <button
+          key={l.id}
+          onClick={() => setApptLocationId(l.id)}
+          className={`px-4 py-2 rounded-xl text-sm font-bold border-2 transition-colors ${
+            apptLocationId === l.id ? "bg-[#6c4d39] text-white border-[#6c4d39]" : "bg-white text-[#6f5b46] border-[#cdbda3]"
+          }`}
+        >
+          {l.name}
+        </button>
+      ))}
+    </div>
+  );
 
   // The expanded appointment panel — items to gather, the staging box, and the
   // actions. Shared by Today and Coming up so the two lists can never drift apart.
@@ -1258,10 +1292,13 @@ export default function AdminPickupPage() {
           // Winners with items still unclaimed — no appointment booked. Split by
           // whether they've even chosen a location, because that's a different chase.
           <div className="space-y-4 max-w-2xl">
-            {!waiting || waiting.rows.length === 0 ? (
+            {warehouseScopeBar}
+            {!waiting || waitingRows.length === 0 ? (
               <div className="bg-white border-2 border-green-200 rounded-2xl px-5 py-10 text-center">
                 <div className="text-2xl mb-1">🎉</div>
-                <p className="text-base font-bold text-green-700">Nobody&apos;s waiting.</p>
+                <p className="text-base font-bold text-green-700">
+                  {scopedLocName ? `Nothing waiting at ${scopedLocName}.` : "Nobody's waiting."}
+                </p>
                 <p className="text-sm text-slate-500 mt-1">Everyone with won items has booked a pickup.</p>
               </div>
             ) : (
@@ -1284,7 +1321,11 @@ export default function AdminPickupPage() {
                 </div>
 
                 <ul className="space-y-2">
-                  {waiting.rows.map((w) => (
+                  {waitingRows.map((w) => {
+                    const scopedItems = w.itemList.filter((i) => atScope(i.warehouse));
+                    const scopedGathered = scopedItems.filter((i) => i.grabbed).length;
+                    const allScopedGathered = scopedItems.length > 0 && scopedGathered === scopedItems.length;
+                    return (
                     <li key={w.clerkUserId} className={`bg-white border-2 rounded-2xl p-4 ${
                       w.hasLocation ? "border-slate-200" : "border-amber-200 bg-amber-50/40"
                     }`}>
@@ -1301,9 +1342,9 @@ export default function AdminPickupPage() {
                           {w.phone && <div className="text-sm text-slate-500">{w.phone}</div>}
                         </div>
                         <div className="shrink-0 text-right">
-                          <div className="text-xl font-extrabold text-slate-900 tabular-nums">{w.items}</div>
+                          <div className="text-xl font-extrabold text-slate-900 tabular-nums">{scopedItems.length}</div>
                           <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                            item{w.items !== 1 ? "s" : ""}
+                            item{scopedItems.length !== 1 ? "s" : ""}
                           </div>
                         </div>
                       </div>
@@ -1318,7 +1359,7 @@ export default function AdminPickupPage() {
                             No location picked
                           </span>
                         )}
-                        {w.gatherableCount > 0 && w.gatheredCount === w.gatherableCount && (
+                        {allScopedGathered && (
                           <span className="text-sm font-bold bg-green-100 text-green-700 border border-green-200 rounded-full px-2.5 py-1">Gathered ✓</span>
                         )}
                         <span className="text-sm text-slate-500">
@@ -1330,7 +1371,7 @@ export default function AdminPickupPage() {
                             className="inline-flex items-center gap-1.5 min-h-[40px] px-4 rounded-xl border-2 border-slate-200 bg-white text-slate-700 font-bold text-sm"
                           >
                             {expandedWaitingId === w.clerkUserId ? "Hide" : "Gather"}
-                            {w.gatherableCount > 0 && <span className="text-slate-400">{w.gatheredCount}/{w.gatherableCount}</span>}
+                            {scopedItems.length > 0 && <span className="text-slate-400">{scopedGathered}/{scopedItems.length}</span>}
                           </button>
                           <PrintLabelButton
                             href={`/api/admin/label?type=waiting&user=${encodeURIComponent(w.clerkUserId)}`}
@@ -1355,7 +1396,7 @@ export default function AdminPickupPage() {
                           Transferring items can't be gathered until they arrive. */}
                       {expandedWaitingId === w.clerkUserId && (
                         <ul className="mt-3 space-y-2 border-t border-slate-100 pt-3">
-                          {w.itemList.map((it) => (
+                          {scopedItems.map((it) => (
                             <li key={it.id}>
                               {it.transferring ? (
                                 <div className="flex items-start gap-2.5 rounded-xl px-4 py-2.5 bg-amber-50 border border-amber-200">
@@ -1389,7 +1430,8 @@ export default function AdminPickupPage() {
                         </ul>
                       )}
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               </>
             )}
@@ -1397,9 +1439,11 @@ export default function AdminPickupPage() {
         ) : tab === "transfers" ? (
           // ── Transfers ──
           <div className="space-y-4 max-w-3xl">
+            {warehouseScopeBar}
             <h2 className="text-xl font-semibold">
               Active transfers ({activeTransfers.length}
-              {transferDir !== "all" ? ` of ${allActiveTransfers.length}` : ""})
+              {(transferDir !== "all" || scopedLocName) ? ` of ${allActiveTransfers.length}` : ""})
+              {scopedLocName && <span className="text-base font-medium text-[#8a7559]"> · gathering at {scopedLocName}</span>}
             </h2>
 
             {/* Direction filter — pick a run (Gladwin → Owosso) and see only that. */}
@@ -1511,10 +1555,10 @@ export default function AdminPickupPage() {
 
                       <div className="mt-3">
                         <div className="text-sm font-semibold text-[#8a7559] uppercase tracking-wide mb-2">
-                          {t.items.length} item{t.items.length !== 1 ? "s" : ""} to gather
+                          {t.items.filter((it) => atScope(it.fromLocationName)).length} item{t.items.filter((it) => atScope(it.fromLocationName)).length !== 1 ? "s" : ""} to gather{scopedLocName ? ` at ${scopedLocName}` : ""}
                         </div>
                         <ul className="space-y-2">
-                          {t.items.map((it) => (
+                          {t.items.filter((it) => atScope(it.fromLocationName)).map((it) => (
                             <li key={it.id}>
                               <button
                                 type="button"

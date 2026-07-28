@@ -102,6 +102,14 @@ export async function attachToUpcomingAppointment(
     where: { id: { in: matching.map((i) => i.id) } },
     data: { pickupAppointmentId: appt.id },
   });
+  // New items folded into a staged appointment mean the staged box is incomplete —
+  // un-stage so staff re-gather + re-stage the full order.
+  if (appt.stagedSpot) {
+    await prisma.pickupAppointment.update({
+      where: { id: appt.id },
+      data: { stagedSpot: null, stagedAt: null },
+    });
+  }
   return { attached: matching.length, startsAt: appt.startsAt };
 }
 
@@ -183,6 +191,12 @@ export async function attachToPendingTransfers(
     where: { id: { in: loose.map((i) => i.id) } },
     data: { transferRequestId: target.id },
   });
+  // New items joined the bundle, so a spot it was already staged into is now
+  // incomplete — un-stage it so staff re-gather and re-stage the full set.
+  await prisma.transferRequest.updateMany({
+    where: { id: target.id, stagedSpot: { not: null } },
+    data: { stagedSpot: null, stagedAt: null },
+  });
   return { attached: loose.length, toLocationName: target.toLocation?.name ?? null };
 }
 
@@ -252,6 +266,14 @@ export async function autoTransferToPreferred(
     where: { id: { in: elsewhere.map((i) => i.id) } },
     data: { transferRequestId: transfer.id },
   });
+  // If more items just joined a transfer that was already staged, the staged spot no
+  // longer holds the whole bundle — un-stage so it's re-gathered and re-staged.
+  if (!created) {
+    await prisma.transferRequest.updateMany({
+      where: { id: transfer.id, stagedSpot: { not: null } },
+      data: { stagedSpot: null, stagedAt: null },
+    });
+  }
 
   // Team alert (fire-and-forget) — only worth pinging when it's a fresh transfer
   // or items were added.

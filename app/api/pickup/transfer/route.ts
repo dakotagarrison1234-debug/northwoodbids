@@ -67,6 +67,11 @@ export async function POST(request: NextRequest) {
         where: { id: { in: itemsToMove.map((it) => it.id) } },
         data: { transferRequestId: existing.id },
       });
+      // Bundle grew after it was staged — un-stage so staff re-gather the full set.
+      await prisma.transferRequest.updateMany({
+        where: { id: existing.id, stagedSpot: { not: null } },
+        data: { stagedSpot: null, stagedAt: null },
+      });
       transferId = existing.id;
     } else {
       const transfer = await prisma.transferRequest.create({
