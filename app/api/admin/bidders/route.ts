@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
       blocked: true,
       blockedAt: true,
       blockedReason: true,
+      preferredPickupLocationId: true,
       createdAt: true,
     },
   });
@@ -46,5 +47,12 @@ export async function GET(req: NextRequest) {
   const roleById = new Map(members.map((m) => [m.clerkUserId, m.role]));
   const bidders = rows.map((b) => ({ ...b, role: roleById.get(b.clerkUserId) ?? null }));
 
-  return NextResponse.json({ bidders });
+  // Org pickup locations, so the page can offer an admin location picker per bidder.
+  const locations = await prisma.pickupLocation.findMany({
+    where: { organizationId: membership.organizationId, isActive: true },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, name: true },
+  });
+
+  return NextResponse.json({ bidders, locations });
 }

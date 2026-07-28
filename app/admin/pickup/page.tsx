@@ -54,12 +54,24 @@ function bidderSecondary(b: Bidder) {
   if (b.email) return b.phone || null;           // email is the primary, add phone
   return null;
 }
+interface WaitingItem {
+  id: string;
+  title: string;
+  itemCode: string | null;
+  grabbed: boolean;
+  storageLocation: string | null;
+  warehouse: string | null;
+  transferring: boolean;
+}
 interface WaitingRow {
   clerkUserId: string;
   name: string | null;
   email: string | null;
   phone: string | null;
   items: number;
+  itemList: WaitingItem[];
+  gatheredCount: number;
+  gatherableCount: number;
   locationName: string | null;
   hasLocation: boolean;
   waitingDays: number;
@@ -198,6 +210,8 @@ export default function AdminPickupPage() {
   // Transfer staging: gather + bundle a transfer's items in a spot before load day.
   const [stagingTransferId, setStagingTransferId] = useState<string | null>(null);
   const [transferStageSpot, setTransferStageSpot] = useState("");
+  // Waiting list: expand a person to gather their items even before they book.
+  const [expandedWaitingId, setExpandedWaitingId] = useState<string | null>(null);
   // Which warehouse's pickups to show ("all" = both). You work one building at a time.
   const [apptLocationId, setApptLocationId] = useState<string>("all");
   const [showAddLoc, setShowAddLoc] = useState(false);
@@ -333,6 +347,37 @@ export default function AdminPickupPage() {
         prev.map((t) => (t.id === transferId ? { ...t, items: t.items.map((i) => (i.id === itemId ? { ...i, grabbed: !next } : i)) } : t))
       );
       flash("Couldn't update the gather list.", false);
+    }
+  };
+
+  // Gather-checklist toggle for a WAITING person's items (optimistic).
+  const toggleWaitingGrab = async (clerkUserId: string, itemId: string, next: boolean) => {
+    setWaiting((prev) =>
+      prev
+        ? {
+            ...prev,
+            rows: prev.rows.map((r) =>
+              r.clerkUserId === clerkUserId
+                ? {
+                    ...r,
+                    itemList: r.itemList.map((i) => (i.id === itemId ? { ...i, grabbed: next } : i)),
+                    gatheredCount: r.itemList.filter((i) => (i.id === itemId ? next : i.grabbed) && !i.transferring).length,
+                  }
+                : r
+            ),
+          }
+        : prev
+    );
+    try {
+      const res = await fetch(`/api/admin/pickup/items/${itemId}/grab`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ grabbed: next }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      flash("Couldn't update the gather list.", false);
+      loadWaiting();
     }
   };
 
@@ -1004,6 +1049,9 @@ export default function AdminPickupPage() {
                             <div className="text-sm text-[#6f5b46] flex flex-wrap items-center gap-x-2 gap-y-1 mt-0.5">
                               <span>{a.items.length} item{a.items.length !== 1 ? "s" : ""}</span>
                               <LocationBadge name={a.location.name} size="sm" />
+                              {!a.stagedSpot && a.items.length > 0 && a.items.every((it) => it.grabbed) && (
+                                <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-bold text-xs">Gathered ✓</span>
+                              )}
                             </div>
                           </div>
                           {a.stagedSpot ? (
@@ -1080,6 +1128,9 @@ export default function AdminPickupPage() {
                                       <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 5.5h12v8H2zM2 5.5 4 2.5h8l2 3M8 2.5v11" /></svg>
                                       {a.stagedSpot}
                                     </span>
+                                  )}
+                                  {!a.stagedSpot && a.items.length > 0 && a.items.every((it) => it.grabbed) && (
+                                    <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-bold">Gathered ✓</span>
                                   )}
                                 </div>
                               </div>
@@ -1267,10 +1318,20 @@ export default function AdminPickupPage() {
                             No location picked
                           </span>
                         )}
+                        {w.gatherableCount > 0 && w.gatheredCount === w.gatherableCount && (
+                          <span className="text-sm font-bold bg-green-100 text-green-700 border border-green-200 rounded-full px-2.5 py-1">Gathered ✓</span>
+                        )}
                         <span className="text-sm text-slate-500">
                           waiting {w.waitingDays === 0 ? "today" : `${w.waitingDays} day${w.waitingDays !== 1 ? "s" : ""}`}
                         </span>
-                        <span className="ml-auto">
+                        <span className="ml-auto flex items-center gap-2">
+                          <button
+                            onClick={() => setExpandedWaitingId(expandedWaitingId === w.clerkUserId ? null : w.clerkUserId)}
+                            className="inline-flex items-center gap-1.5 min-h-[40px] px-4 rounded-xl border-2 border-slate-200 bg-white text-slate-700 font-bold text-sm"
+                          >
+                            {expandedWaitingId === w.clerkUserId ? "Hide" : "Gather"}
+                            {w.gatherableCount > 0 && <span className="text-slate-400">{w.gatheredCount}/{w.gatherableCount}</span>}
+                          </button>
                           {w.phone ? (
                             <button
                               onClick={() => setMsgTarget({ clerkUserId: w.clerkUserId, name: w.name, phone: w.phone })}
@@ -1284,6 +1345,44 @@ export default function AdminPickupPage() {
                           )}
                         </span>
                       </div>
+
+                      {/* Gather checklist — pull their items early, even with no appointment.
+                          Transferring items can't be gathered until they arrive. */}
+                      {expandedWaitingId === w.clerkUserId && (
+                        <ul className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+                          {w.itemList.map((it) => (
+                            <li key={it.id}>
+                              {it.transferring ? (
+                                <div className="flex items-start gap-2.5 rounded-xl px-4 py-2.5 bg-amber-50 border border-amber-200">
+                                  <span className="mt-0.5 text-amber-600">🚚</span>
+                                  <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-base text-[#241a12] min-w-0">
+                                    {it.itemCode && <span className="font-mono font-extrabold text-[#6c4d39]">{it.itemCode}</span>}
+                                    <span className="font-semibold">{it.title}</span>
+                                    <span className="text-amber-700 font-semibold">— awaiting transfer</span>
+                                  </span>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleWaitingGrab(w.clerkUserId, it.id, !it.grabbed)}
+                                  className={`w-full flex items-start gap-2.5 rounded-xl px-4 py-2.5 text-left transition-colors ${it.grabbed ? "bg-[#5f7a45]/12" : "bg-[#f1e7d5] hover:bg-[#e9dcc4]"}`}
+                                >
+                                  <span className={`mt-0.5 w-5 h-5 rounded-md border-2 grid place-items-center shrink-0 ${it.grabbed ? "bg-[#5f7a45] border-[#5f7a45] text-white" : "border-[#cdbda3] text-transparent"}`}>
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6l3 3 5-6" /></svg>
+                                  </span>
+                                  <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-base text-[#241a12] min-w-0">
+                                    {it.itemCode && <span className="font-mono font-extrabold text-[#6c4d39]">{it.itemCode}</span>}
+                                    <span className={`font-semibold ${it.grabbed ? "line-through text-[#6f5b46]" : ""}`}>{it.title}</span>
+                                    <span className="text-[#6f5b46]">— at</span>
+                                    <LocationBadge name={it.warehouse || "Unassigned"} size="sm" />
+                                    <span className="text-[#6f5b46]">· {it.storageLocation || "no spot"}</span>
+                                  </span>
+                                </button>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -1361,6 +1460,11 @@ export default function AdminPickupPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
+                        {t.stagedSpot ? (
+                          <span className="text-sm px-3 py-1 rounded-full font-bold bg-[#5f7a45] text-white">Staged: {t.stagedSpot}</span>
+                        ) : t.items.length > 0 && t.items.every((i) => i.grabbed) ? (
+                          <span className="text-sm px-3 py-1 rounded-full font-bold bg-green-100 text-green-700 border border-green-200">Gathered ✓</span>
+                        ) : null}
                         <span
                           className={`text-sm px-3 py-1 rounded-full font-bold border ${
                             t.status === "LOADED"

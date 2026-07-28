@@ -3,34 +3,27 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg } from "@/lib/auth";
 
-/**
- * GET /api/admin/pickup/waiting
- *
- * Everyone who has WON items sitting unclaimed — grouped per bidder, with their
- * chosen pickup location (or a flag that they never picked one). Two distinct
- * "stuck" states, because they need different nudges:
- *
- *   • no location  → they can't even be told where to go; chase them to pick one
- *   • not booked   → they've a location but haven't chosen a time
- *
- * "Unclaimed" = PENDING_PICKUP with no appointment attached. Once they book, the
- * items get an appointmentId and drop off this list.
- */
+// Winners with paid items that aren't on an appointment yet. Now returns each
+// person's item list too, so staff can gather them early (before a booking).
 export async function GET() {
   const membership = await getUserOrg();
   if (!membership) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const orgId = membership.organizationId;
 
   const items = await prisma.item.findMany({
-    where: {
-      organizationId: orgId,
-      status: "PENDING_PICKUP",
-      pickupAppointmentId: null,
+    where: { organizationId: orgId, status: "PENDING_PICKUP", pickupAppointmentId: null },
+    select: {
+      id: true,
+      title: true,
+      itemCode: true,
+      grabbedAt: true,
+      storageLocation: true,
+      updatedAt: true,
+      location: { select: { name: true } },
+      transferRequest: { select: { status: true } },
     },
-    select: { id: true, title: true, currentBid: true, updatedAt: true },
   });
 
-  // Who won each unclaimed item? The winning bid holds the buyer.
   const itemIds = items.map((i) => i.id);
   const winners = itemIds.length
     ? await prisma.bid.findMany({
@@ -40,13 +33,31 @@ export async function GET() {
     : [];
   const buyerOf = new Map(winners.map((w) => [w.itemId, w.clerkUserId]));
 
-  type Row = { clerkUserId: string; items: number; oldest: Date };
+  type LiteItem = {
+    id: string;
+    title: string;
+    itemCode: string | null;
+    grabbed: boolean;
+    storageLocation: string | null;
+    warehouse: string | null;
+    transferring: boolean;
+  };
+  type Row = { clerkUserId: string; items: LiteItem[]; oldest: Date };
   const byUser = new Map<string, Row>();
   for (const it of items) {
     const uid = buyerOf.get(it.id);
     if (!uid) continue;
-    const row = byUser.get(uid) ?? { clerkUserId: uid, items: 0, oldest: it.updatedAt };
-    row.items += 1;
+    const row = byUser.get(uid) ?? { clerkUserId: uid, items: [], oldest: it.updatedAt };
+    const tr = it.transferRequest;
+    row.items.push({
+      id: it.id,
+      title: it.title,
+      itemCode: it.itemCode,
+      grabbed: it.grabbedAt != null,
+      storageLocation: it.storageLocation,
+      warehouse: it.location?.name ?? null,
+      transferring: !!tr && (tr.status === "REQUESTED" || tr.status === "LOADED"),
+    });
     if (it.updatedAt < row.oldest) row.oldest = it.updatedAt;
     byUser.set(uid, row);
   }
@@ -69,21 +80,23 @@ export async function GET() {
     .map((r) => {
       const p = pmap.get(r.clerkUserId);
       const locId = p?.preferredPickupLocationId ?? null;
+      // Only items physically here (not out on transfer) are gatherable.
+      const gatherable = r.items.filter((i) => !i.transferring);
       return {
         clerkUserId: r.clerkUserId,
         name: p?.name ?? null,
         email: p?.email ?? null,
         phone: p?.phone ?? null,
-        items: r.items,
-        // Where they'd pick up, if they've chosen. null → they haven't.
+        items: r.items.length,
+        itemList: r.items,
+        gatheredCount: gatherable.filter((i) => i.grabbed).length,
+        gatherableCount: gatherable.length,
         locationId: locId,
         locationName: locId ? locName.get(locId) ?? null : null,
         hasLocation: !!locId,
-        // How long they've been sitting unclaimed — the stalest first.
         waitingDays: Math.floor((now - r.oldest.getTime()) / 86_400_000),
       };
     })
-    // No location is the more urgent stuck state; within each, longest wait first.
     .sort((a, b) => Number(a.hasLocation) - Number(b.hasLocation) || b.waitingDays - a.waitingDays);
 
   return NextResponse.json({

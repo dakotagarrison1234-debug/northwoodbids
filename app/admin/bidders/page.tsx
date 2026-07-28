@@ -11,15 +11,18 @@ interface Bidder {
   blocked: boolean;
   blockedAt: string | null;
   blockedReason: string | null;
+  preferredPickupLocationId: string | null;
   createdAt: string;
   role: "OWNER" | "ADMIN" | "STAFF" | null;
 }
 
 export default function BiddersPage() {
   const [bidders, setBidders] = useState<Bidder[]>([]);
+  const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [busyLoc, setBusyLoc] = useState<string | null>(null);
   const [myRole, setMyRole] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<
     { text: string; confirmLabel: string; danger?: boolean; onConfirm: () => void } | null
@@ -34,10 +37,31 @@ export default function BiddersPage() {
     setLoading(true);
     fetch(`/api/admin/bidders${query ? `?q=${encodeURIComponent(query)}` : ""}`)
       .then((r) => r.json())
-      .then((d) => setBidders(d.bidders ?? []))
+      .then((d) => { setBidders(d.bidders ?? []); setLocations(d.locations ?? []); })
       .catch(() => setBidders([]))
       .finally(() => setLoading(false));
   }, []);
+
+  // Admin override of a bidder's pickup location (they normally set it themselves).
+  const setBidderLocation = async (clerkUserId: string, locationId: string) => {
+    if (!locationId) return;
+    setBusyLoc(clerkUserId);
+    try {
+      const res = await fetch("/api/admin/pickup/set-location", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clerkUserId, locationId }),
+      });
+      const d = await res.json();
+      if (d.success) {
+        setBidders((prev) => prev.map((b) => (b.clerkUserId === clerkUserId ? { ...b, preferredPickupLocationId: locationId } : b)));
+      }
+    } catch {
+      /* non-critical */
+    } finally {
+      setBusyLoc(null);
+    }
+  };
 
   useEffect(() => { load(""); }, [load]);
   useEffect(() => {
@@ -214,6 +238,25 @@ export default function BiddersPage() {
                       <p className="text-sm text-red-700 mt-1.5">{b.blockedReason}</p>
                     )}
                   </div>
+
+                  {/* Pickup location — the bidder normally sets this, but the owner can
+                      override it here (it sticks until they or a customer change it). */}
+                  {canManage && locations.length > 0 && (
+                    <div className="flex items-center gap-2 mt-3">
+                      <span className="text-xs font-bold uppercase tracking-wide text-slate-400 shrink-0">Pickup</span>
+                      <select
+                        value={b.preferredPickupLocationId ?? ""}
+                        disabled={busyLoc === b.clerkUserId}
+                        onChange={(e) => setBidderLocation(b.clerkUserId, e.target.value)}
+                        className="min-w-0 flex-1 max-w-[220px] bg-white border-2 border-slate-200 rounded-xl px-3 min-h-[40px] text-base text-slate-900 focus:outline-none focus:border-slate-400 disabled:opacity-50"
+                      >
+                        <option value="" disabled>Not set — choose…</option>
+                        {locations.map((l) => (
+                          <option key={l.id} value={l.id}>{l.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   <div className="flex flex-wrap gap-2 mt-3">
                     {/* Text this customer directly. Owner/admin only, and only if

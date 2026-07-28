@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { fmtMoney, fmtMoney0 } from "../format";
 import { Pill, Panel, Empty } from "../ui";
+import MessageSheet, { type MessageTarget } from "../MessageSheet";
 
 interface LeaderRow { name: string; value: number; items?: number }
 interface OwedRow { clerkUserId: string; name: string; phone: string; email: string; itemCount: number; amount: number }
@@ -69,6 +70,9 @@ export default function WinnersPage() {
   const [filter, setFilter] = useState<"all" | "unpaid" | "paid">("all");
   const [tab, setTab] = useState<"money" | "leaders">("money");
   const [loading, setLoading] = useState(true);
+  const [msgTarget, setMsgTarget] = useState<MessageTarget | null>(null);
+  const [retrying, setRetrying] = useState<string | null>(null);
+  const [retryMsg, setRetryMsg] = useState<{ key: string; text: string; ok: boolean } | null>(null);
 
   const load = useCallback((query: string, sk: number, f: string) => {
     setLoading(true);
@@ -78,6 +82,30 @@ export default function WinnersPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  // Admin retry of a customer's outstanding balance (charges their card on file).
+  const retryCharge = async (clerkUserId: string) => {
+    setRetrying(clerkUserId);
+    setRetryMsg(null);
+    try {
+      const res = await fetch("/api/admin/charge-owed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clerkUserId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setRetryMsg({ key: clerkUserId, text: data.coveredByCredit ? "Covered by Bid Bucks ✓" : "Charged ✓", ok: true });
+        load(q.trim(), skip, filter);
+      } else {
+        setRetryMsg({ key: clerkUserId, text: data.error || "Could not charge.", ok: false });
+      }
+    } catch {
+      setRetryMsg({ key: clerkUserId, text: "Something went wrong.", ok: false });
+    } finally {
+      setRetrying(null);
+    }
+  };
 
   useEffect(() => {
     const t = setTimeout(() => load(q.trim(), skip, filter), q ? 300 : 0);
@@ -194,17 +222,26 @@ export default function WinnersPage() {
                           </div>
                         </div>
                         <div className="flex gap-2 mt-2.5">
+                          <button
+                            onClick={() => retryCharge(o.clerkUserId)}
+                            disabled={retrying === o.clerkUserId}
+                            className="flex-1 min-h-[44px] inline-flex items-center justify-center rounded-xl bg-[#5f7a45] hover:bg-[#4f6639] disabled:opacity-50 text-white font-bold text-base"
+                          >
+                            {retrying === o.clerkUserId ? "Charging…" : "Retry charge"}
+                          </button>
                           {o.phone && (
-                            <a href={`tel:${o.phone}`} className="flex-1 min-h-[44px] inline-flex items-center justify-center rounded-xl border-2 border-slate-200 bg-white font-bold text-base text-slate-700">
-                              Call
-                            </a>
-                          )}
-                          {o.email && (
-                            <a href={`mailto:${o.email}`} className="flex-1 min-h-[44px] inline-flex items-center justify-center rounded-xl border-2 border-slate-200 bg-white font-bold text-base text-slate-700">
-                              Email
-                            </a>
+                            <button
+                              onClick={() => setMsgTarget({ clerkUserId: o.clerkUserId, name: o.name, phone: o.phone })}
+                              className="flex-1 min-h-[44px] inline-flex items-center justify-center gap-1.5 rounded-xl border-2 border-slate-200 bg-white font-bold text-base text-slate-700"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3.5h12v8H5l-3 2.5z"/></svg>
+                              Text
+                            </button>
                           )}
                         </div>
+                        {retryMsg && retryMsg.key === o.clerkUserId && (
+                          <p className={`text-sm mt-1.5 font-medium ${retryMsg.ok ? "text-[#3f5226]" : "text-red-600"}`}>{retryMsg.text}</p>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -310,6 +347,7 @@ export default function WinnersPage() {
           </>
         )}
       </div>
+      <MessageSheet target={msgTarget} onClose={() => setMsgTarget(null)} />
     </>
   );
 }
