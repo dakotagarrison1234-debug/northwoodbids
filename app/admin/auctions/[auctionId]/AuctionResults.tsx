@@ -97,8 +97,17 @@ export default function AuctionResults({
   const [busyItem, setBusyItem] = useState<string | null>(null);
   const [busyGather, setBusyGather] = useState<string | null>(null);
   const [doneOpen, setDoneOpen] = useState(false);
+  const [orderSearch, setOrderSearch] = useState("");
   // Each status group is a collapsible dropdown — open just the one you're working.
   const [openSections, setOpenSections] = useState<Set<Bucket>>(new Set());
+
+  // One search across all orders (name/email/phone) so a big auction stays usable.
+  const oq = orderSearch.trim().toLowerCase();
+  const matchOrder = (o: ResultOrder) =>
+    !oq ||
+    o.name.toLowerCase().includes(oq) ||
+    (o.email ?? "").toLowerCase().includes(oq) ||
+    (o.phone ?? "").includes(orderSearch.trim());
   const toggleSection = (key: Bucket) =>
     setOpenSections((prev) => {
       const next = new Set(prev);
@@ -449,6 +458,15 @@ export default function AuctionResults({
             </div>
           ))}
         </div>
+        {orders.length > 5 && (
+          <input
+            type="text"
+            value={orderSearch}
+            onChange={(e) => setOrderSearch(e.target.value)}
+            placeholder="Search orders by name, email or phone…"
+            className="mt-3 w-full bg-white border-2 border-slate-200 rounded-xl px-4 min-h-[42px] text-base text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400"
+          />
+        )}
       </div>
 
       {note && (
@@ -463,7 +481,7 @@ export default function AuctionResults({
       ) : (
         <>
           {SECTIONS.map(({ key, title, dot, hint }) => {
-            const group = orders.filter((o) => bucketOf(o) === key);
+            const group = orders.filter((o) => bucketOf(o) === key && matchOrder(o));
             if (group.length === 0) return null;
             const open = openSections.has(key);
             return (
@@ -487,8 +505,12 @@ export default function AuctionResults({
           {/* All set — everything for this auction is collected. Minimized, green,
               parked at the bottom. Tap the header to expand. */}
           {(() => {
-            const doneOrders = orders.filter((o) => bucketOf(o) === "done");
-            if (doneOrders.length === 0) return null;
+            const allDone = orders.filter((o) => bucketOf(o) === "done" && matchOrder(o));
+            if (allDone.length === 0) return null;
+            // When not searching, only show the 5 most recent — a big auction can
+            // have hundreds of picked-up orders and we don't want to render them all.
+            const doneOrders = oq ? allDone : allDone.slice(0, 5);
+            const hiddenDone = allDone.length - doneOrders.length;
             return (
               <div className="space-y-2.5">
                 <button
@@ -497,11 +519,16 @@ export default function AuctionResults({
                 >
                   <span className="w-2.5 h-2.5 rounded-full bg-green-600" />
                   <h3 className="text-sm font-extrabold text-green-900 flex-1">
-                    All set — picked up <span className="text-green-700/70">({doneOrders.length})</span>
+                    All set — picked up <span className="text-green-700/70">({allDone.length})</span>
                   </h3>
                   <span className="text-xs font-bold text-green-700">{doneOpen ? "Hide ▲" : "Show ▼"}</span>
                 </button>
                 {doneOpen && doneOrders.map((o) => renderOrder(o, true))}
+                {doneOpen && hiddenDone > 0 && (
+                  <p className="text-[11px] text-slate-400 px-3 pb-1">
+                    Showing 5 most recent. Search above to find any of the other {hiddenDone}.
+                  </p>
+                )}
               </div>
             );
           })()}

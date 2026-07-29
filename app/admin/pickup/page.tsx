@@ -204,6 +204,8 @@ export default function AdminPickupPage() {
   const [showCollected, setShowCollected] = useState(false);
   const [collectedSearch, setCollectedSearch] = useState("");
   const [showCompletedTransfers, setShowCompletedTransfers] = useState(false);
+  const [completedTransferSearch, setCompletedTransferSearch] = useState("");
+  const [waitingSearch, setWaitingSearch] = useState("");
   // Transfers are collapsed to one line each until tapped, and filterable by
   // direction ("Gladwin → Owosso") so a run can be picked out at a glance.
   const [expandedTransferId, setExpandedTransferId] = useState<string | null>(null);
@@ -681,7 +683,21 @@ export default function AdminPickupPage() {
   const allActiveTransfers = transfers.filter(
     (t) => t.status === "REQUESTED" || t.status === "LOADED"
   );
-  const completedTransfers = transfers.filter((t) => t.status === "COMPLETED");
+  const completedTransfersAll = transfers
+    .filter((t) => t.status === "COMPLETED")
+    .sort((a, b) => (b.completedAt ?? "").localeCompare(a.completedAt ?? ""));
+  // Newest 5 only, unless searching — a busy warehouse racks up hundreds of these.
+  const completedTransfers = completedTransferSearch.trim()
+    ? completedTransfersAll.filter((t) => {
+        const q = completedTransferSearch.trim().toLowerCase();
+        return (
+          (t.bidder.name ?? "").toLowerCase().includes(q) ||
+          (t.bidder.email ?? "").toLowerCase().includes(q) ||
+          (t.bidder.phone ?? "").includes(completedTransferSearch.trim())
+        );
+      })
+    : completedTransfersAll.slice(0, 5);
+  const completedTransfersHidden = completedTransfersAll.length - completedTransfers.length;
 
   // A transfer's "from" comes off its items (they're the things being moved). Almost
   // always one warehouse; if a run somehow spans two, say so rather than pick one.
@@ -702,7 +718,19 @@ export default function AdminPickupPage() {
 
   // Waiting rows scoped to the working warehouse (someone with items at both shows
   // in both, but each owner only sees/gathers their building's items).
-  const waitingRows = (waiting?.rows ?? []).filter((w) => !scopedLocName || w.itemList.some((i) => i.warehouse === scopedLocName));
+  const waitingRowsScoped = (waiting?.rows ?? []).filter((w) => !scopedLocName || w.itemList.some((i) => i.warehouse === scopedLocName));
+  // These are all active (people who still need to book), so we don't cap them —
+  // but a search box keeps it usable once there are dozens of names.
+  const waitingRows = waitingSearch.trim()
+    ? waitingRowsScoped.filter((w) => {
+        const q = waitingSearch.trim().toLowerCase();
+        return (
+          (w.name ?? "").toLowerCase().includes(q) ||
+          (w.email ?? "").toLowerCase().includes(q) ||
+          (w.phone ?? "").includes(waitingSearch.trim())
+        );
+      })
+    : waitingRowsScoped;
 
   // Small warehouse scope selector, reused on the transfers + waiting tabs.
   const warehouseScopeBar = locations.length > 1 && (
@@ -961,7 +989,7 @@ export default function AdminPickupPage() {
           {(["pickups", "transfers", "locations"] as const).map((t) => {
             const badge =
               t === "transfers" ? activeTransfers.length :
-              t === "pickups" ? waitingRows.length : 0;
+              t === "pickups" ? waitingRowsScoped.length : 0;
             const label =
               t === "pickups" ? "Pickups" :
               t === "transfers" ? "Transfers" : "Locations";
@@ -1349,9 +1377,9 @@ export default function AdminPickupPage() {
           <div className="space-y-4 max-w-2xl">
             <h2 className="text-xl font-semibold text-slate-900">
               Not booked yet
-              {waitingRows.length > 0 && <span className="text-slate-400 text-base font-medium"> ({waitingRows.length})</span>}
+              {waitingRowsScoped.length > 0 && <span className="text-slate-400 text-base font-medium"> ({waitingRowsScoped.length})</span>}
             </h2>
-            {!waiting || waitingRows.length === 0 ? (
+            {!waiting || waitingRowsScoped.length === 0 ? (
               <div className="bg-white border-2 border-green-200 rounded-2xl px-5 py-10 text-center">
                 <div className="text-2xl mb-1">🎉</div>
                 <p className="text-base font-bold text-green-700">
@@ -1378,6 +1406,18 @@ export default function AdminPickupPage() {
                   ))}
                 </div>
 
+                {waitingRowsScoped.length > 5 && (
+                  <input
+                    type="text"
+                    value={waitingSearch}
+                    onChange={(e) => setWaitingSearch(e.target.value)}
+                    placeholder="Search by name, email or phone…"
+                    className="w-full bg-white border-2 border-slate-200 rounded-2xl px-4 min-h-[44px] text-base text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400"
+                  />
+                )}
+                {waitingSearch.trim() && waitingRows.length === 0 && (
+                  <p className="text-sm text-slate-500 px-1">No one waiting matches &ldquo;{waitingSearch.trim()}&rdquo;.</p>
+                )}
                 <ul className="space-y-2">
                   {waitingRows.map((w) => {
                     const scopedItems = w.itemList.filter((i) => atScope(i.warehouse));
@@ -1725,19 +1765,31 @@ export default function AdminPickupPage() {
             )}
 
             {/* Recently completed — collapsed by default, reveal with the arrow */}
-            {completedTransfers.length > 0 && (
+            {completedTransfersAll.length > 0 && (
               <div className="pt-4">
                 <button
                   onClick={() => setShowCompletedTransfers((v) => !v)}
                   className="w-full flex items-center justify-between gap-3 mb-3"
                 >
-                  <h3 className="text-lg font-semibold">Recently completed ({completedTransfers.length})</h3>
+                  <h3 className="text-lg font-semibold">Recently completed ({completedTransfersAll.length})</h3>
                   <span className={`text-[#8a7559] transition-transform ${showCompletedTransfers ? "rotate-180" : ""}`}>
                     <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4" /></svg>
                   </span>
                 </button>
                 {showCompletedTransfers && (
                 <div className="space-y-2">
+                  {completedTransfersAll.length > 5 && (
+                    <input
+                      type="text"
+                      value={completedTransferSearch}
+                      onChange={(e) => setCompletedTransferSearch(e.target.value)}
+                      placeholder="Search completed by name, email or phone…"
+                      className="w-full bg-white border-2 border-[#e3d6bf] rounded-xl px-4 min-h-[44px] text-base text-[#241a12] placeholder-[#a8967c] focus:outline-none focus:border-[#cdbda3]"
+                    />
+                  )}
+                  {completedTransferSearch.trim() && completedTransfers.length === 0 && (
+                    <p className="text-sm text-[#8a7559] px-1 py-2">No completed transfers match &ldquo;{completedTransferSearch.trim()}&rdquo;.</p>
+                  )}
                   {/* Completed drop-offs open up so a mis-tap can be undone. */}
                   {completedTransfers.map((t) => {
                     const open = expandedTransferId === t.id;
@@ -1797,6 +1849,11 @@ export default function AdminPickupPage() {
                       </div>
                     );
                   })}
+                  {!completedTransferSearch.trim() && completedTransfersHidden > 0 && (
+                    <p className="text-[11px] text-[#a8967c] px-1 pt-1">
+                      Showing 5 most recent. Search above to find any of the other {completedTransfersHidden}.
+                    </p>
+                  )}
                 </div>
                 )}
               </div>

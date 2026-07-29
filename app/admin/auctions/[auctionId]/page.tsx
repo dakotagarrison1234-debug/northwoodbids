@@ -1,6 +1,5 @@
 export const dynamic = "force-dynamic";
 import Link from "next/link";
-import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg } from "@/lib/auth";
 import { type ActiveProxy } from "./ProxyBidsPanel";
@@ -11,6 +10,7 @@ import { money } from "@/lib/format";
 import DeleteAuctionButton from "./DeleteAuctionButton";
 import EditAuction from "./EditAuction";
 import AuctionResults, { type ResultOrder, type ResultUnsold } from "./AuctionResults";
+import AuctionItemsList from "./AuctionItemsList";
 import ArchiveButton from "./ArchiveButton";
 import AuctionStatusButtons from "@/app/components/AuctionStatusButtons";
 import PusherRefresh from "@/app/components/PusherRefresh";
@@ -491,44 +491,21 @@ export default async function ManageAuctionPage({ params }: Props) {
             </div>
           ) : (
             // Dense, tappable list — one truncated line per item so 7–10 fit at a
-            // glance. Tap a row to edit it.
-            <ul className="divide-y divide-[#e3d6bf]">
-              {auction.items.map((item) => {
-                const photo = item.photos.find(p => p.isPrimary) ?? item.photos[0];
-                return (
-                  <li key={item.id}>
-                    <Link
-                      href={`/admin/items/${item.id}`}
-                      className="flex items-center gap-3 px-4 sm:px-5 py-2.5 hover:bg-[#efe3d0]/50 transition-colors"
-                    >
-                      {photo ? (
-                        <div className="relative w-9 h-9 rounded-lg overflow-hidden shrink-0">
-                          <Image src={photo.url} alt="" fill sizes="36px" className="object-cover" />
-                        </div>
-                      ) : (
-                        <div className="w-9 h-9 bg-[#efe3d0] rounded-lg flex items-center justify-center text-[#8a7559] text-xs shrink-0">?</div>
-                      )}
-
-                      <div className="min-w-0 flex-1">
-                        <div className="font-medium text-sm text-[#241a12] truncate">{item.title}</div>
-                        <div className="text-xs text-[#8a7559] truncate flex items-center gap-2">
-                          {item.storageLocation && (
-                            <span className="font-mono text-[#6c4d39] inline-flex items-center gap-0.5 shrink-0"><IcoPin />{item.storageLocation}</span>
-                          )}
-                          <span className="shrink-0">{item._count.bids} bid{item._count.bids !== 1 ? "s" : ""}</span>
-                        </div>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <div className="text-green-700 font-bold text-sm tabular-nums">{money(Number(item.currentBid))}</div>
-                      </div>
-                      <div className="shrink-0"><StatusPill status={item.status} /></div>
-                      <svg className="w-4 h-4 text-[#b3a085] shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4l4 4-4 4" /></svg>
-                    </Link>
-                  </li>
-                );
+            // glance. Tap a row to edit it. Search box appears once it gets long.
+            <AuctionItemsList
+              items={auction.items.map((item) => {
+                const photo = item.photos.find((p) => p.isPrimary) ?? item.photos[0];
+                return {
+                  id: item.id,
+                  title: item.title,
+                  photoUrl: photo?.url ?? null,
+                  storageLocation: item.storageLocation ?? null,
+                  bids: item._count.bids,
+                  currentBid: Number(item.currentBid),
+                  status: item.status,
+                };
               })}
-            </ul>
+            />
           )}
         </div>
 
