@@ -72,9 +72,9 @@ function notFound(): ConciergeStatus {
     needsToBook: false,
     links: LINKS,
     briefing:
-      "I couldn't find an account tied to this phone number. If you bid under a " +
-      "different number or email, let me know and I'll take another look — otherwise " +
-      "a team member will reach out to help.",
+      "Hmm, I can't find an account hitched to this phone number. If you bid under a " +
+      "different number or email, holler and I'll take another look — otherwise a team " +
+      "member will reach out to help.",
   };
 }
 
@@ -216,12 +216,12 @@ function buildBriefing(
   pickup: ConciergeStatus["pickup"],
   needsToBook: boolean
 ): string {
-  const hi = firstName ? `Hi ${firstName}! ` : "Hi! ";
+  const hi = firstName ? `Howdy ${firstName}! ` : "Howdy! ";
 
   if (items.length === 0) {
     return (
       `${hi}I don't see any won items on your account right now. If you just won ` +
-      `something it may still be updating — check back shortly, or a team member can help.`
+      `something it may still be updating — check back in a bit, or a team member can help.`
     );
   }
 
@@ -244,6 +244,7 @@ function buildBriefing(
     `${hi}Here's where things stand:\n` +
     lines.join("\n") +
     `\n\n${pickupLine}` +
-    `\n\nFor a return or refund, I'll have a team member reach out to you directly.`
+    `\n\nFor a return or refund, I'll have a team member reach out to you directly. ` +
+    `Holler if you need anything else!`
   );
 }
