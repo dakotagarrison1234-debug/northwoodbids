@@ -144,6 +144,14 @@ enum AuctionStatus {
   pickupAppointment   PickupAppointment? @relation(fields: [pickupAppointmentId], references: [id], onDelete: SetNull)
   locationId          String?
   location            PickupLocation?    @relation("ItemLocation", fields: [locationId], references: [id], onDelete: SetNull)
+  // Location the item was at WHEN IT SOLD (auction close). This is the source
+  // location that earns the commission. It is snapshotted at sale and never
+  // changed by a pickup transfer — so if Owosso listed the item, Owosso is paid
+  // even after it's moved to Gladwin for the buyer's pickup. Reports group by
+  // this, NOT the live locationId. Null on items sold before this field existed
+  // (reports fall back to the current location for those).
+  soldLocationId      String?
+  soldLocation        PickupLocation?    @relation("ItemSoldLocation", fields: [soldLocationId], references: [id], onDelete: SetNull)
   transferRequestId   String?
   transferRequest     TransferRequest?   @relation(fields: [transferRequestId], references: [id], onDelete: SetNull)
 
@@ -151,6 +159,7 @@ enum AuctionStatus {
   @@index([auctionId, status])
   @@index([pickupAppointmentId])
   @@index([locationId])
+  @@index([soldLocationId])
   @@index([organizationId, status])
   @@index([itemCode])
 }
@@ -168,6 +177,7 @@ model PickupLocation {
   blackouts      PickupBlackout[]
   appointments   PickupAppointment[]
   items          Item[]             @relation("ItemLocation")
+  soldItems      Item[]             @relation("ItemSoldLocation")
   transfersTo    TransferRequest[]  @relation("TransferTo")
 
   @@index([organizationId])

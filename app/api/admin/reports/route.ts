@@ -81,6 +81,10 @@ export async function GET(req: NextRequest) {
         select: {
           auctionId: true,
           auction: { select: { title: true, endAt: true } },
+          // Commission follows the SOURCE (sold-at) location, not where the item
+          // was later moved for pickup. Fall back to live location for items sold
+          // before soldLocationId existed.
+          soldLocation: { select: { id: true, name: true } },
           location: { select: { id: true, name: true } },
         },
       },
@@ -147,8 +151,11 @@ export async function GET(req: NextRequest) {
     if (!byAuction.has(aKey)) {
       byAuction.set(aKey, newBucket(aKey, aLabel, p.item?.auction?.endAt?.toISOString() ?? null));
     }
-    const wKey = p.item?.location?.id ?? "none";
-    const wLabel = p.item?.location?.name ?? "Unassigned";
+    // Source (commission) location: soldLocation if snapshotted, else the live
+    // location for older rows.
+    const srcLoc = p.item?.soldLocation ?? p.item?.location;
+    const wKey = srcLoc?.id ?? "none";
+    const wLabel = srcLoc?.name ?? "Unassigned";
     if (!byWarehouse.has(wKey)) byWarehouse.set(wKey, newBucket(wKey, wLabel));
 
     const ab = byAuction.get(aKey)!;

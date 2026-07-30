@@ -60,7 +60,7 @@ export default async function AuctionReportPage({ params }: Props) {
     select: {
       amount: true, applicationFeeAmount: true, taxAmount: true, creditApplied: true,
       stripePaymentIntentId: true,
-      item: { select: { auctionId: true, location: { select: { id: true, name: true } } } },
+      item: { select: { auctionId: true, soldLocation: { select: { id: true, name: true } }, location: { select: { id: true, name: true } } } },
     },
     take: ROW_CAP,
   });
@@ -94,7 +94,8 @@ export default async function AuctionReportPage({ params }: Props) {
     const t = num(p.taxAmount), cr = num(p.creditApplied ?? 0);
     itemsSold += 1;
     hammer += sale; premium += prem; tax += t; credit += cr; fees += fee;
-    const wLabel = p.item?.location?.name ?? "Unassigned";
+    // Commission stays with the source (sold-at) location, not the pickup one.
+    const wLabel = (p.item?.soldLocation ?? p.item?.location)?.name ?? "Unassigned";
     byWarehouse.set(wLabel, (byWarehouse.get(wLabel) ?? 0) + (sale + prem - cr - fee));
     if (p.stripePaymentIntentId) pis.add(p.stripePaymentIntentId);
     else if (grossOf(p) > 0) soloCharges++;

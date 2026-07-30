@@ -32,6 +32,7 @@ type ItemWithBidsAndOrg = {
   title: string;
   auctionId: string | null;
   reservePrice: Prisma.Decimal | null;
+  locationId: string | null;
   bids: { id: string; clerkUserId: string; amount: Prisma.Decimal }[];
   auction: { id: string; title: string; organization: { name: string; slug: string } } | null;
 };
@@ -114,7 +115,10 @@ async function closeItem(
         where: { itemId: item.id, status: "ACTIVE", id: { not: winningBid.id } },
         data: { status: "OUTBID" },
       }),
-      prisma.item.update({ where: { id: item.id }, data: { status: "SOLD" } }),
+      // Snapshot the source location for commission. At close the item is still
+      // at the location that listed it (pickup transfers only happen afterward),
+      // so this locks in who gets paid — even if it's later moved for pickup.
+      prisma.item.update({ where: { id: item.id }, data: { status: "SOLD", soldLocationId: item.locationId } }),
       prisma.proxyBid.updateMany({ where: { itemId: item.id, isActive: true }, data: { isActive: false } }),
     ]);
     triggerItemClosed(item.id).catch(() => {});
