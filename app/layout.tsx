@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono, Bitter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import HomeHeader from "@/app/components/HomeHeader";
@@ -95,6 +96,13 @@ export default function RootLayout({
           <HomeHeader />
           <ReferralClaimer />
           {children}
+          {/* Woody — GoHighLevel chat widget (Northwood Bids support concierge). */}
+          <Script
+            src="https://widgets.leadconnectorhq.com/loader.js"
+            data-resources-url="https://widgets.leadconnectorhq.com/chat-widget/loader.js"
+            data-widget-id="6a6982e9702ca026d596be98"
+            strategy="afterInteractive"
+          />
         </body>
       </html>
     </ClerkProvider>
