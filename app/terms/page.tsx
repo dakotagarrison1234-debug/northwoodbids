@@ -107,7 +107,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-lg font-bold text-[#241a12] mb-3">14. Governing Law</h2>
-            <p>These Terms are governed by the laws of the State of Texas, without regard to its conflict of law principles. Any disputes shall be resolved exclusively in the state or federal courts located in Texas.</p>
+            <p>These Terms are governed by the laws of the State of Michigan, without regard to its conflict of law principles. Any disputes shall be resolved exclusively in the state or federal courts located in Michigan.</p>
           </section>
 
           <section>
@@ -117,7 +117,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-lg font-bold text-[#241a12] mb-3">16. Contact</h2>
-            <p>If you have any questions about these Terms, please contact us at <a href="mailto:goldenpawskennel@mail.com" className="text-[#6c4d39] hover:underline">goldenpawskennel@mail.com</a>.</p>
+            <p>If you have any questions about these Terms, please contact us by phone at <a href="tel:+18108181772" className="text-[#6c4d39] hover:underline">(810) 818-1772</a>.</p>
           </section>
 
         </div>
