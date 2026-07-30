@@ -55,7 +55,14 @@ export default function MobileNav({ navItems, orgName, role }: Props) {
     <>
       {/* Mobile top bar */}
       <div className="md:hidden bar-safe-top safe-x flex items-center justify-between px-4 pb-3 bg-white border-b border-[#e3d6bf] sticky top-0 z-40">
-        <Link href="/admin/dashboard" className="text-[#6c4d39] font-bold text-xl">Northwood Bids</Link>
+        <Link href="/admin/dashboard" className="flex items-center shrink-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://assets.cdn.filesafe.space/U1S2bq3S7QBjnH50rEhn/media/6a380945f2131051b829edf3.png"
+            alt="Northwood Bids"
+            className="h-9 w-auto max-w-[180px] object-contain"
+          />
+        </Link>
         <button onClick={() => setOpen(true)} className="text-[#6f5b46] hover:text-[#241a12] p-2" aria-label="Open menu">
           <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="3" y1="6" x2="21" y2="6" />
@@ -73,9 +80,14 @@ export default function MobileNav({ navItems, orgName, role }: Props) {
           {/* Drawer */}
           <div className="relative w-72 bg-white flex flex-col h-full shadow-2xl">
             <div className="bar-safe-top px-6 pb-5 border-b border-[#e3d6bf] flex items-center justify-between">
-              <div>
-                <span className="text-[#6c4d39] font-bold text-2xl">Northwood Bids</span>
-                <p className="text-[#4a3a2b] text-base mt-0.5 font-medium truncate">{orgName}</p>
+              <div className="min-w-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://assets.cdn.filesafe.space/U1S2bq3S7QBjnH50rEhn/media/6a380945f2131051b829edf3.png"
+                  alt="Northwood Bids"
+                  className="h-9 w-auto max-w-[180px] object-contain"
+                />
+                <p className="text-[#4a3a2b] text-base mt-1.5 font-medium truncate">{orgName}</p>
                 <span className="text-sm text-[#8a7559] capitalize">{role}</span>
               </div>
               <button onClick={() => setOpen(false)} className="text-[#8a7559] hover:text-[#241a12] p-1">

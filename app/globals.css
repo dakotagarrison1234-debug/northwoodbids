@@ -202,3 +202,18 @@ h1, h2, h3, h4, .font-display {
 @media (prefers-reduced-motion: reduce) {
   .nb-skeleton { animation: none; }
 }
+
+/* ───────────────────────────────────────────────────────────
+   Woody chat widget — hidden on admin / My Bids / pickup / account
+   pages so its floating bubble never covers those pages' bottom
+   controls. Toggled by ChatWidget.tsx adding `woody-hidden` to <body>.
+   Targets the GoHighLevel widget host element and its wrappers.
+   ─────────────────────────────────────────────────────────── */
+body.woody-hidden chat-widget,
+body.woody-hidden #chat-widget,
+body.woody-hidden [id^="lc_text-widget"],
+body.woody-hidden [class*="lc_text-widget"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
