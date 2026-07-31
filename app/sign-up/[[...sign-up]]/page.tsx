@@ -1,4 +1,5 @@
 import { SignUp } from "@clerk/nextjs";
+import AuthSwitch from "@/app/components/AuthSwitch";
 
 const LOGO_URL =
   "https://assets.cdn.filesafe.space/TwuL7EwKfW8oGIV0Zo5q/media/6a373b261c5d711b35bf4e56.png";
@@ -56,7 +57,8 @@ export default function SignUpPage() {
         </div>
 
         {/* Clerk sign-up */}
-        <div className="flex justify-center lg:justify-end">
+        <div className="flex flex-col items-center lg:items-end w-full">
+          <AuthSwitch active="up" />
           <SignUp forceRedirectUrl="/register" signInUrl="/sign-in" />
         </div>
       </div>

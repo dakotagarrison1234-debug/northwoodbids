@@ -64,7 +64,10 @@ function RegisterForm() {
             body: JSON.stringify({
               phone: digits,
               email: user?.primaryEmailAddress?.emailAddress,
-              name: user?.fullName,
+              // Prefer their real name; if they only set a Clerk username at
+              // sign-up, use that (so they aren't shown as "Bidder"); email as
+              // a last resort.
+              name: user?.fullName || user?.username || user?.primaryEmailAddress?.emailAddress?.split("@")[0] || undefined,
               ...(orgSlug ? { orgSlug } : {}),
             }),
           }).then(r => r.json()).catch(() => null);

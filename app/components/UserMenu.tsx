@@ -145,7 +145,7 @@ export default function UserMenu() {
     "?"
   ).toUpperCase();
 
-  const displayName = user?.fullName || user?.firstName || "Bidder";
+  const displayName = user?.fullName || user?.firstName || user?.username || "Bidder";
   const email = user?.emailAddresses?.[0]?.emailAddress || "";
 
   if (!isSignedIn) {
@@ -153,7 +153,7 @@ export default function UserMenu() {
       <div className="flex items-center gap-2">
         <Link
           href="/sign-in"
-          className="text-[#6f5b46] hover:text-[#241a12] text-sm px-3 py-1.5 rounded-lg hover:bg-[#efe3d0] transition-colors whitespace-nowrap hidden sm:block"
+          className="text-[#6f5b46] hover:text-[#241a12] text-sm px-3 py-1.5 rounded-lg hover:bg-[#efe3d0] transition-colors whitespace-nowrap"
         >
           Sign In
         </Link>
