@@ -73,20 +73,16 @@ export async function GET() {
   );
   const paidItemsBy = new Map(spendAgg.map((s) => [s.clerkUserId, s._count.id]));
 
-  // The bidder universe for this org: anyone who has bid or paid here, plus
-  // anyone who signed up preferring this org (so "never bid" signups show up).
+  // Single-business site: every signed-up customer is one of our bidders, so the
+  // universe is all profiles (matches the Bidders page). Spend/bids are still
+  // attributed through this org's items via the aggregates above.
   const activityIds = new Set<string>([...bidCountBy.keys(), ...spendBy.keys()]);
   const profiles = await prisma.bidderProfile.findMany({
-    where: {
-      OR: [
-        { clerkUserId: { in: [...activityIds] } },
-        { preferredOrgId: orgId },
-      ],
-    },
     select: {
       clerkUserId: true, name: true, email: true, phone: true,
       createdAt: true, blocked: true,
     },
+    take: 10000,
   });
 
   const profById = new Map(profiles.map((p) => [p.clerkUserId, p]));

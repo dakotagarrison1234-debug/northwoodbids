@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import BidderReportView from "./BidderReportView";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Split { label: string; net: number }
@@ -17,6 +18,7 @@ interface Report {
   taxPercent: number;
   totals: Bucket & { buyersPaid: number; chargeCount: number };
   headroom: { total: number; items: number; biggest: number; avg: number };
+  trendTitle: string;
   trend: { label: string; net: number }[];
   auctions: Bucket[];
   warehouses: Bucket[];
@@ -78,35 +80,30 @@ const RANGES = [
 const WH_COLORS = ["#6c4d39", "#4a7c59", "#c47b3e", "#3f6f8f", "#8a4f1c"];
 
 // ── Trend chart ───────────────────────────────────────────────────────────────
+// Light bars, readable on the dark-green hero card. Each bar shows its dollar
+// value above it and its period label below.
 function TrendChart({ data }: { data: { label: string; net: number }[] }) {
   const max = Math.max(1, ...data.map((d) => d.net));
-  const W = 320, H = 90, pad = 4;
-  const step = data.length > 1 ? (W - pad * 2) / (data.length - 1) : 0;
-  const y = (v: number) => H - pad - (v / max) * (H - pad * 2);
-  const pts = data.map((d, i) => [pad + i * step, y(d.net)] as const);
-  const line = pts.map(([x, yy], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)} ${yy.toFixed(1)}`).join(" ");
-  const area = `${line} L${(pad + (data.length - 1) * step).toFixed(1)} ${H - pad} L${pad} ${H - pad} Z`;
-
+  const BAR = 58;
   return (
-    <div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-[90px]" preserveAspectRatio="none">
-        <defs>
-          <linearGradient id="tg" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#5f7a45" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="#5f7a45" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <path d={area} fill="url(#tg)" />
-        <path d={line} fill="none" stroke="#5f7a45" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-        {pts.map(([x, yy], i) => (
-          <circle key={i} cx={x} cy={yy} r="3" fill="#fff" stroke="#5f7a45" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-        ))}
-      </svg>
-      <div className="flex justify-between mt-1">
-        {data.map((d) => (
-          <span key={d.label} className="text-[11px] font-semibold text-[#8a7559]">{d.label}</span>
-        ))}
-      </div>
+    <div className="flex items-end gap-1.5">
+      {data.map((d, i) => (
+        <div key={i} className="flex-1 flex flex-col items-center gap-1 min-w-0">
+          <div className="text-[9px] font-bold text-[#eef4e4] tabular-nums leading-none h-3">
+            {d.net > 0 ? money0(d.net) : ""}
+          </div>
+          <div className="w-full flex items-end justify-center" style={{ height: BAR }}>
+            <div
+              className="w-full max-w-[28px] rounded-t bg-[#cfe0bb]"
+              style={{ height: `${Math.max(d.net > 0 ? 4 : 1, (d.net / max) * BAR)}px` }}
+              title={money0(d.net)}
+            />
+          </div>
+          <span className="text-[10px] font-semibold text-[#dbe8ca] tabular-nums truncate w-full text-center">
+            {d.label}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -252,6 +249,7 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [showAllAuctions, setShowAllAuctions] = useState(false);
+  const [view, setView] = useState<"sales" | "bidders">("sales");
 
   const load = useCallback((rg: string) => {
     setLoading(true);
@@ -283,13 +281,46 @@ export default function ReportsPage() {
     </div>
   );
 
+  const viewToggle = (
+    <div className="flex gap-1 p-1 rounded-xl bg-[#efe3d0] border border-[#e3d6bf]">
+      {(["sales", "bidders"] as const).map((v) => (
+        <button
+          key={v}
+          onClick={() => setView(v)}
+          className={`px-3.5 py-1.5 rounded-lg text-sm font-bold transition-colors ${
+            view === v ? "bg-[#6c4d39] text-white shadow-sm" : "text-[#6f5b46] hover:text-[#241a12]"
+          }`}
+        >
+          {v === "sales" ? "Sales" : "Bidders"}
+        </button>
+      ))}
+    </div>
+  );
+
+  const header = (
+    <header className="border-b border-[#e3d6bf] px-5 sm:px-8 py-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-center gap-3">
+        <h1 className="text-2xl sm:text-3xl font-semibold">Reports</h1>
+        {viewToggle}
+      </div>
+      {view === "sales" && rangeChips}
+    </header>
+  );
+
+  // Bidder analytics is its own self-contained view (own data + loading state).
+  if (view === "bidders") {
+    return (
+      <>
+        {header}
+        <BidderReportView />
+      </>
+    );
+  }
+
   if (loading || error || !d) {
     return (
       <>
-        <header className="border-b border-[#e3d6bf] px-5 sm:px-8 py-4 flex items-center justify-between gap-3">
-          <h1 className="text-2xl sm:text-3xl font-semibold">Reports</h1>
-          {rangeChips}
-        </header>
+        {header}
         <div className="flex-1 flex items-center justify-center p-8">
           {error ? (
             <div className="text-center">
@@ -304,7 +335,7 @@ export default function ReportsPage() {
     );
   }
 
-  const { totals, trend, auctions, warehouses, owed } = d;
+  const { totals, trend, trendTitle, auctions, warehouses, owed } = d;
   const topNet = Math.max(1, ...auctions.map((a) => a.net));
   const topWhNet = Math.max(1, ...warehouses.map((w) => w.net));
   const shownAuctions = showAllAuctions ? auctions : auctions.slice(0, 5);
@@ -312,10 +343,7 @@ export default function ReportsPage() {
 
   return (
     <>
-      <header className="border-b border-[#e3d6bf] px-5 sm:px-8 py-4 flex items-center justify-between gap-3">
-        <h1 className="text-2xl sm:text-3xl font-semibold">Reports</h1>
-        {rangeChips}
-      </header>
+      {header}
 
       <div className="px-4 sm:px-8 py-5 space-y-5 max-w-2xl mx-auto w-full pb-16">
 
@@ -332,8 +360,8 @@ export default function ReportsPage() {
           </div>
           <Scope items={SCOPE_NET} />
           <div className="mt-4 rounded-2xl bg-white/12 p-3">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-[#d8e6c8] mb-1 px-1">
-              Last 6 months
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#d8e6c8] mb-2 px-1">
+              {trendTitle}
             </div>
             <TrendChart data={trend} />
           </div>

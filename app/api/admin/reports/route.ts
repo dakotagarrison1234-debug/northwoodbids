@@ -118,14 +118,46 @@ export async function GET(req: NextRequest) {
   const uniqueCharges = new Set<string>();
   let soloCharges = 0;
 
+  // Trend buckets ADAPT to the selected range so the chart reflects what's chosen:
+  // days for short ranges, months for long ones.
+  const DAY = 24 * 60 * 60 * 1000;
+  const startOfDay = (dt: Date) => new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+  const endToday = new Date(startOfDay(now).getTime() + DAY); // exclusive upper bound
   const monthWindows: { label: string; start: Date; end: Date; net: number }[] = [];
-  for (let i = 5; i >= 0; i--) {
-    const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
-    monthWindows.push({
-      label: start.toLocaleString("en-US", { month: "short" }),
-      start, end, net: 0,
-    });
+  let trendTitle = "Last 6 months";
+
+  const pushDayBuckets = (count: number, size: number, label: (d: Date) => string) => {
+    for (let i = count - 1; i >= 0; i--) {
+      const end = new Date(endToday.getTime() - i * size * DAY);
+      const start = new Date(end.getTime() - size * DAY);
+      monthWindows.push({ label: label(start), start, end, net: 0 });
+    }
+  };
+  const md = (d: Date) => d.toLocaleDateString("en-US", { month: "numeric", day: "numeric" });
+
+  if (range === "7d") {
+    trendTitle = "Last 7 days";
+    pushDayBuckets(7, 1, (d) => d.toLocaleDateString("en-US", { weekday: "short" }));
+  } else if (range === "30d") {
+    trendTitle = "Last 30 days";
+    pushDayBuckets(6, 5, md);
+  } else if (range === "90d") {
+    trendTitle = "Last 90 days";
+    pushDayBuckets(9, 10, md);
+  } else if (range === "ytd") {
+    trendTitle = "This year";
+    for (let m = 0; m <= now.getMonth(); m++) {
+      const start = new Date(now.getFullYear(), m, 1);
+      const end = new Date(now.getFullYear(), m + 1, 1);
+      monthWindows.push({ label: start.toLocaleString("en-US", { month: "short" }), start, end, net: 0 });
+    }
+  } else {
+    trendTitle = "Last 6 months";
+    for (let i = 5; i >= 0; i--) {
+      const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+      monthWindows.push({ label: start.toLocaleString("en-US", { month: "short" }), start, end, net: 0 });
+    }
   }
 
   const add = (b: Bucket, p: (typeof paidRows)[number], fee: number) => {
@@ -281,6 +313,7 @@ export async function GET(req: NextRequest) {
       biggest: r2(biggestGap),
       avg: headroomItems > 0 ? r2(headroomTotal / headroomItems) : 0,
     },
+    trendTitle,
     trend: monthWindows.map((m) => ({ label: m.label, net: r2(m.net) })),
     auctions: [...byAuction.values()].map(out).sort((a, b) => b.net - a.net),
     warehouses: [...byWarehouse.values()].map(out).sort((a, b) => b.net - a.net),
