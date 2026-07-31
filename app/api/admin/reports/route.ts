@@ -62,7 +62,8 @@ export async function GET(req: NextRequest) {
   const range = req.nextUrl.searchParams.get("range") || "90d";
   const now = new Date();
   let from: Date | null = null;
-  if (range === "30d") from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  if (range === "7d") from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  else if (range === "30d") from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   else if (range === "90d") from = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
   else if (range === "ytd") from = new Date(now.getFullYear(), 0, 1);
 

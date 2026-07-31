@@ -67,6 +67,7 @@ const SCOPE_PAID = [
 ];
 
 const RANGES = [
+  { key: "7d", label: "Week" },
   { key: "30d", label: "30d" },
   { key: "90d", label: "90d" },
   { key: "ytd", label: "Year" },
