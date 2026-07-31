@@ -10,12 +10,30 @@
 // Safe to run more than once.
 
 import { PrismaClient } from "@prisma/client";
+import { readFileSync } from "node:fs";
+
+// Node doesn't auto-read .env files the way the Next app does, so pull any
+// missing vars (CLERK_SECRET_KEY, DATABASE_URL) from the local env files.
+for (const file of [".env.local", ".env"]) {
+  try {
+    for (const line of readFileSync(file, "utf8").split("\n")) {
+      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+      if (!m) continue;
+      const key = m[1];
+      let val = m[2].trim().replace(/^["']|["']$/g, "");
+      if (!(key in process.env)) process.env[key] = val;
+    }
+  } catch { /* file may not exist — that's fine */ }
+}
 
 const prisma = new PrismaClient();
 const CLERK_SECRET = process.env.CLERK_SECRET_KEY;
 
 if (!CLERK_SECRET) {
-  console.error("Missing CLERK_SECRET_KEY in the environment. Aborting.");
+  console.error(
+    "Missing CLERK_SECRET_KEY — not found in the environment or in .env.local / .env.\n" +
+    "Add it to .env.local (same value as in Vercel) and re-run."
+  );
   process.exit(1);
 }
 
