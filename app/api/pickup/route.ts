@@ -7,6 +7,7 @@ import {
   getSlotCapacity,
   getUnscheduledPickupItemIds,
 } from "@/lib/pickup";
+import { notifyAppointmentBooked } from "@/lib/appointmentNotify";
 
 type ItemCard = {
   id: string;
@@ -246,6 +247,9 @@ export async function POST(request: NextRequest) {
       }
       throw e;
     }
+
+    // Team heads-up (fire-and-forget): text the owner that a pickup was booked.
+    notifyAppointmentBooked(appointmentId).catch(() => {});
 
     return NextResponse.json({ success: true, appointmentId });
   } catch (err) {

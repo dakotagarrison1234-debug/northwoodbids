@@ -8,6 +8,14 @@
     {
       "path": "/api/cron/winback",
       "schedule": "0 17 * * *"
+    },
+    {
+      "path": "/api/cron/appointments-digest",
+      "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/appointments-digest",
+      "schedule": "0 13 * * *"
     }
   ],
   "functions": {
