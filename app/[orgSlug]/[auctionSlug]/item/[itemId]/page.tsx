@@ -65,7 +65,6 @@ export default function ItemPage() {
   const [userProxy, setUserProxy] = useState<{ maxAmount: number } | null>(null);
   const [hasActiveProxy, setHasActiveProxy] = useState(false);
   const [cancellingProxy, setCancellingProxy] = useState(false);
-  const [proxyWasBeaten, setProxyWasBeaten] = useState(false);
 
   // Winning state
   const [isWinning, setIsWinning] = useState(false);
@@ -153,12 +152,8 @@ export default function ItemPage() {
     fetch(`/api/proxy-bids/${itemId}`)
       .then(r => r.json())
       .then(d => {
-        // Fix #5: detect beaten proxy and auto-reset to set form
-        if (hadProxy && !d.userProxy) {
-          setProxyWasBeaten(true);
-        }
-        // Transient "you've been outbid" flash — fires when the user's max bid was
-        // just beaten, OR they were the leader and just lost the lead.
+        // One-time pulse on the persistent standing banner when the user's max bid
+        // was just beaten, OR they were the leader and just lost the lead.
         const wasWinning = wasWinningRef.current;
         const lostLead = wasWinning && d.isWinning === false;
         if ((hadProxy && !d.userProxy) || lostLead) {
@@ -429,7 +424,6 @@ export default function ItemPage() {
       if (data.success) {
         setUserProxy({ maxAmount: amount });
         setHasActiveProxy(true);
-        setProxyWasBeaten(false);
         setProxyAmount("");
         setProxyMessage({
           text: data.proxyFired
@@ -468,7 +462,6 @@ export default function ItemPage() {
         // as "your max bid was beaten").
         setUserProxy(null);
         setHasActiveProxy(data.hasActiveProxy ?? false);
-        setProxyWasBeaten(false);
         setProxyAmount("");
         setProxyMessage({ text: "Max bid cancelled. Any bids already placed for you still stand.", type: "success" });
       } else {
@@ -573,16 +566,6 @@ export default function ItemPage() {
 
   return (
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
-      {/* Transient "you've been outbid" flash */}
-      {outbidFlash && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] nb-toast">
-          <div className="flex items-center gap-2 bg-red-600 text-white px-4 py-2.5 rounded-xl shadow-lg text-sm font-semibold">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
-            You&apos;ve been outbid by a higher max bid
-          </div>
-        </div>
-      )}
-
       {/* Breadcrumb / back link. Uses history-back when we came FROM the auction so
           the bidder lands exactly where they were scrolled to (not the top). Falls
           back to a normal navigation on a deep-link / fresh load. */}
@@ -611,15 +594,15 @@ export default function ItemPage() {
 
       {/* Small mobile gap so the title sits close under the photo; the big gap only
           applies on lg, where it's the horizontal gutter between the two columns. */}
-      <div className="max-w-6xl mx-auto px-6 sm:px-8 py-4 sm:py-8 grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-12">
+      <div className="max-w-6xl mx-auto px-6 sm:px-8 py-3 sm:py-8 grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-12">
         {/* Left: photos */}
         <div>
-          {/* Main photo with swipe support. Capped to ~44vh on MOBILE so it doesn't
-              eat the whole first screen — a full-width square pushed the entire bid
-              box below the fold. Full square returns on desktop (lg) where the layout
-              is two columns and vertical space isn't the constraint. */}
+          {/* Main photo with swipe support. Capped to ~34vh on MOBILE so the price
+              and bid controls surface with the product still in view — you shouldn't
+              have to scroll past a full screen of photo to bid. Full square returns on
+              desktop (lg) where the layout is two columns and height isn't the constraint. */}
           <div
-            className="w-full h-[44vh] lg:h-auto lg:aspect-square bg-white rounded-2xl overflow-hidden mb-3 flex items-center justify-center relative select-none"
+            className="w-full h-[34vh] lg:h-auto lg:aspect-square bg-white rounded-2xl overflow-hidden mb-2 flex items-center justify-center relative select-none"
             onTouchStart={(e) => { touchStartXRef.current = e.touches[0].clientX; }}
             onTouchEnd={(e) => {
               if (touchStartXRef.current === null || item.photos.length < 2) return;
@@ -713,22 +696,34 @@ export default function ItemPage() {
               eating vertical space. font-sans (not display) is narrower per glyph. */}
           <h1 className="text-lg sm:text-xl font-bold leading-snug">{item.title}</h1>
 
-          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-            {(item.packSize ?? 0) > 1 && (
-              <span className="text-xs text-white bg-[#241a12] px-2.5 py-1 rounded-full font-bold">{item.packSize}-Pack lot</span>
-            )}
-            {/* Bigger and darker than the other pills — a lone "M" gets lost at the
-                same weight as "good" and "Apparel". */}
-            {item.size && (
-              <span className="text-sm text-white bg-[#241a12] px-3 py-1.5 rounded-lg font-extrabold uppercase tracking-wide">
-                Size {item.size}
+          <div className="flex items-start justify-between gap-2 mt-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+              {(item.packSize ?? 0) > 1 && (
+                <span className="text-xs text-white bg-[#241a12] px-2.5 py-1 rounded-full font-bold">{item.packSize}-Pack lot</span>
+              )}
+              {/* Bigger and darker than the other pills — a lone "M" gets lost at the
+                  same weight as "good" and "Apparel". */}
+              {item.size && (
+                <span className="text-sm text-white bg-[#241a12] px-3 py-1.5 rounded-lg font-extrabold uppercase tracking-wide">
+                  Size {item.size}
+                </span>
+              )}
+              <span className="text-xs text-[#6f5b46] bg-[#efe3d0] border border-[#e3d6bf] px-2.5 py-1 rounded-full capitalize font-medium">
+                {item.condition.replace("_", " ").toLowerCase()}
               </span>
-            )}
-            <span className="text-xs text-[#6f5b46] bg-[#efe3d0] border border-[#e3d6bf] px-2.5 py-1 rounded-full capitalize font-medium">
-              {item.condition.replace("_", " ").toLowerCase()}
-            </span>
-            {item.category && (
-              <span className="text-xs text-[#6c4d39] bg-[#6c4d39]/10 border border-[#6c4d39]/20 px-2.5 py-1 rounded-full font-medium">{item.category}</span>
+              {item.category && (
+                <span className="text-xs text-[#6c4d39] bg-[#6c4d39]/10 border border-[#6c4d39]/20 px-2.5 py-1 rounded-full font-medium">{item.category}</span>
+              )}
+            </div>
+            {/* Countdown lives here — filling the dead space beside the condition
+                instead of eating a whole row of its own. Just the clock, no label. */}
+            {effectiveEndAt && !biddingLocked && (
+              <span className="shrink-0 inline-flex items-center gap-1 text-sm whitespace-nowrap pt-0.5">
+                <svg className="w-3.5 h-3.5 text-[#8a7559]" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
+                  <circle cx="8" cy="8" r="6" /><path d="M8 5v3l2 1.5" />
+                </svg>
+                <Countdown endAt={effectiveEndAt} onExpire={handleExpire} />
+              </span>
             )}
           </div>
 
@@ -764,26 +759,10 @@ export default function ItemPage() {
               ) : null}
             </div>
 
-            {/* ── 3. Urgency — inside the same card, hairline-divided ── */}
-            {effectiveEndAt && !auctionClosed && !itemSold && !itemNotActive && (
-              <div className={`px-4 py-2.5 flex items-center justify-between gap-3 border-t ${
-                biddingEnded ? "bg-white border-[#e3d6bf]" : "bg-[#f6ecda] border-[#6c4d39]/20"
-              }`}>
-                <span className="text-[#8a7559] text-xs font-semibold uppercase tracking-wide">
-                  {biddingEnded ? "Bidding ended" : "Time left"}
-                </span>
-                {!biddingEnded ? (
-                  <Countdown endAt={effectiveEndAt} onExpire={handleExpire} />
-                ) : (
-                  <span className="text-[#8a7559] font-semibold text-sm">Refreshing results…</span>
-                )}
-              </div>
-            )}
-
           {/* ── 4. Bidding — SAME card, divided by a hairline. One unified surface
               (price → time → bid) instead of separate floating boxes, so it reads as
               one tool and both bid methods sit right under the price. ── */}
-          <div className="border-t border-[#e3d6bf] p-3">
+          <div className="border-t border-[#e3d6bf] p-2.5">
 
             {/* ── Persistent standing banner ──
                 Always tells a signed-in bidder where they actually stand, so nobody
@@ -909,11 +888,6 @@ export default function ItemPage() {
                   ) : (
                     /* Set max bid form */
                     <div>
-                      {proxyWasBeaten && (
-                        <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-2.5 text-xs text-red-600">
-                          Your max bid was outbid. Set a new maximum to get back in the lead.
-                        </div>
-                      )}
                       {/* Quick-pick chips — no "Quick picks:" label; the chips are
                           self-explanatory and the label was a whole wasted line. */}
                       <div className="flex gap-1.5 mb-2 flex-wrap">
