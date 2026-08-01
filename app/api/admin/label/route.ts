@@ -47,7 +47,9 @@ export async function GET(req: NextRequest) {
     const items: LItem[] = t.items.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name }));
     return pdfResponse(await buildLabel({
       type: "TRANSFER", state, name: profile?.name ?? "Bidder", email: profile?.email,
-      destination: `To ${t.toLocation?.name ?? "Destination"}`, rows, count: t.items.length, countSuffix: " · grab from", items,
+      destination: `To ${t.toLocation?.name ?? "Destination"}`, rows, count: t.items.length,
+      // "grab from" only matters while it still needs pulling off shelves.
+      countSuffix: state === "TO GATHER" ? " · grab from" : "", items,
     }));
   }
 
@@ -67,6 +69,8 @@ export async function GET(req: NextRequest) {
     const state: LabelState = appt.stagedSpot ? "STAGED" : allGathered ? "GATHERED" : "TO GATHER";
     const rows: Row[] = [
       { label: "Pick up at", value: appt.location?.name ?? "-" },
+      // Once staged, the staged spot IS the location that matters — it's off the shelf.
+      ...(appt.stagedSpot ? [{ label: "Staged in", value: appt.stagedSpot }] : []),
       { label: "Appointment", value: fmtDateTime(appt.startsAt) },
     ];
     const items: LItem[] = appt.items.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name }));

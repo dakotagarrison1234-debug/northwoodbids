@@ -137,39 +137,53 @@ export async function buildLabel(opts: {
   textTop(PAD, `${opts.count} item${opts.count !== 1 ? "s" : ""}${opts.countSuffix ?? ""}`, bold, 11);
   cur -= 16;
 
-  // ── Item groups by warehouse ──
-  const groups = new Map<string, LItem[]>();
-  for (const it of opts.items) {
-    const key = it.warehouse || "Unassigned";
-    (groups.get(key) ?? groups.set(key, []).get(key)!).push(it);
-  }
-  const sortedGroups = [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  const drawItemRow = (it: LItem, showShelf: boolean) => {
+    const size = 8.5;
+    let x = PAD;
+    if (it.code) {
+      const c = san(it.code);
+      page.drawText(c, { x, y: cur - size, size, font: mono, color: black });
+      x += mono.widthOfTextAtSize(c, size) + 5;
+    }
+    const shelf = showShelf && it.shelf ? san(it.shelf) : "";
+    const shelfW = shelf ? bold.widthOfTextAtSize(shelf, 8) : 0;
+    const titleMaxW = W - PAD - x - (shelfW ? shelfW + 6 : 0);
+    page.drawText(clip(shortTitle(it.title), reg, size, titleMaxW), { x, y: cur - size, size, font: reg, color: black });
+    if (shelf) page.drawText(shelf, { x: W - PAD - shelfW, y: cur - 8, size: 8, font: bold, color: black });
+    cur -= 12;
+    page.drawRectangle({ x: PAD, y: cur + 3, width: innerW, height: 0.4, color: hair });
+  };
 
-  outer:
-  for (const [wh, its] of sortedGroups) {
-    if (cur < PAD + 26) break;
-    const gh = 14;
-    page.drawRectangle({ x: PAD, y: cur - gh, width: innerW, height: gh, color: black });
-    page.drawText(san(`${wh} · ${its.length}`), { x: PAD + 4, y: cur - gh + 4, size: 8, font: bold, color: white });
-    cur -= gh + 3;
+  // Once an order is GATHERED or STAGED it's off the shelf and consolidated into
+  // its pickup/staged spot, so the original shelf + warehouse no longer matter —
+  // show a flat list of what's in the bundle. Only a TO-GATHER label needs the
+  // warehouse groups + shelves (so staff know where to pull each item from).
+  if (opts.state !== "TO GATHER") {
+    for (const it of opts.items) {
+      if (cur < PAD + 12) { textTop(PAD, "...more", bold, 8, gray); break; }
+      drawItemRow(it, false);
+    }
+  } else {
+    const groups = new Map<string, LItem[]>();
+    for (const it of opts.items) {
+      const key = it.warehouse || "Unassigned";
+      (groups.get(key) ?? groups.set(key, []).get(key)!).push(it);
+    }
+    const sortedGroups = [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
 
-    const rows = its.slice().sort((a, b) => (a.shelf || "").localeCompare(b.shelf || ""));
-    for (const it of rows) {
-      if (cur < PAD + 12) { textTop(PAD, "...more", bold, 8, gray); break outer; }
-      const size = 8.5;
-      let x = PAD;
-      if (it.code) {
-        const c = san(it.code);
-        page.drawText(c, { x, y: cur - size, size, font: mono, color: black });
-        x += mono.widthOfTextAtSize(c, size) + 5;
+    outer:
+    for (const [wh, its] of sortedGroups) {
+      if (cur < PAD + 26) break;
+      const gh = 14;
+      page.drawRectangle({ x: PAD, y: cur - gh, width: innerW, height: gh, color: black });
+      page.drawText(san(`${wh} · ${its.length}`), { x: PAD + 4, y: cur - gh + 4, size: 8, font: bold, color: white });
+      cur -= gh + 3;
+
+      const rows = its.slice().sort((a, b) => (a.shelf || "").localeCompare(b.shelf || ""));
+      for (const it of rows) {
+        if (cur < PAD + 12) { textTop(PAD, "...more", bold, 8, gray); break outer; }
+        drawItemRow(it, true);
       }
-      const shelf = it.shelf ? san(it.shelf) : "";
-      const shelfW = shelf ? bold.widthOfTextAtSize(shelf, 8) : 0;
-      const titleMaxW = W - PAD - x - (shelfW ? shelfW + 6 : 0);
-      page.drawText(clip(shortTitle(it.title), reg, size, titleMaxW), { x, y: cur - size, size, font: reg, color: black });
-      if (shelf) page.drawText(shelf, { x: W - PAD - shelfW, y: cur - 8, size: 8, font: bold, color: black });
-      cur -= 12;
-      page.drawRectangle({ x: PAD, y: cur + 3, width: innerW, height: 0.4, color: hair });
     }
   }
 
