@@ -21,28 +21,32 @@ export default function PrintLabelButton({
   const print = async () => {
     setBusy(true);
     try {
+      // The label is a real 4x6 PDF now. Load it into a hidden iframe as a blob URL
+      // and print THAT — the browser renders the PDF at its exact page size. (Older
+      // versions wrote the response as HTML via srcdoc, which dumped raw PDF bytes.)
       const res = await fetch(href);
       if (!res.ok) throw new Error("bad");
-      const html = await res.text();
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
 
-      // Off-screen but with a REAL size — a 0x0 iframe lays the label out at zero
-      // width and prints it tiny. Give it a 4x6-ish box so it renders full size.
       const iframe = document.createElement("iframe");
       iframe.setAttribute("aria-hidden", "true");
       iframe.style.cssText = "position:fixed;left:-10000px;top:0;width:420px;height:640px;border:0;";
       document.body.appendChild(iframe);
 
       const cleanup = () => {
-        setTimeout(() => iframe.remove(), 1500);
+        setTimeout(() => { iframe.remove(); URL.revokeObjectURL(url); }, 2000);
       };
       iframe.onload = () => {
         const w = iframe.contentWindow;
         if (!w) return cleanup();
-        w.focus();
-        w.print();
-        cleanup();
+        // Small delay so the PDF viewer finishes laying out before the print call.
+        setTimeout(() => {
+          try { w.focus(); w.print(); } catch { window.open(url, "_blank"); }
+          cleanup();
+        }, 350);
       };
-      iframe.srcdoc = html;
+      iframe.src = url;
     } catch {
       alert("Couldn't build the label. Please try again.");
     } finally {
