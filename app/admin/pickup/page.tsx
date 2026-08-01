@@ -825,7 +825,9 @@ export default function AdminPickupPage() {
                           {it.itemCode}
                         </span>
                       )}
-                      {it.storageLocation && (
+                      {/* Once the item is grabbed (off the shelf) or the whole order
+                          is staged, the shelf spot no longer applies — hide it. */}
+                      {it.storageLocation && !it.grabbed && !a.stagedSpot && (
                         <span className="text-sm font-bold text-[#8a5a2b] bg-[#f6ecda] border border-[#e3c9a3] rounded px-1.5 py-0.5">
                           {it.storageLocation}
                         </span>
@@ -1519,9 +1521,14 @@ export default function AdminPickupPage() {
                                   <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-base text-[#241a12] min-w-0">
                                     {it.itemCode && <span className="font-mono font-extrabold text-[#6c4d39]">{it.itemCode}</span>}
                                     <span className={`font-semibold ${it.grabbed ? "line-through text-[#6f5b46]" : ""}`}>{it.title}</span>
-                                    <span className="text-[#6f5b46]">— at</span>
-                                    <LocationBadge name={it.warehouse || "Unassigned"} size="sm" />
-                                    <span className="text-[#6f5b46]">· {it.storageLocation || "no spot"}</span>
+                                    {/* Off the shelf once grabbed or the order's gathered — drop the shelf/warehouse. */}
+                                    {!it.grabbed && !w.gatherSpot && (
+                                      <>
+                                        <span className="text-[#6f5b46]">— at</span>
+                                        <LocationBadge name={it.warehouse || "Unassigned"} size="sm" />
+                                        <span className="text-[#6f5b46]">· {it.storageLocation || "no spot"}</span>
+                                      </>
+                                    )}
                                   </span>
                                 </button>
                               )}
@@ -1678,9 +1685,14 @@ export default function AdminPickupPage() {
                                 <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-base text-[#241a12] min-w-0">
                                   {it.itemCode && <span className="font-mono font-extrabold text-[#6c4d39]">{it.itemCode}</span>}
                                   <span className={`font-semibold ${it.grabbed ? "line-through text-[#6f5b46]" : ""}`}>{it.title}</span>
-                                  <span className="text-[#6f5b46]">— now at</span>
-                                  <LocationBadge name={it.fromLocationName || "Unassigned"} size="sm" />
-                                  <span className="text-[#6f5b46]">· {it.storageLocation || "no spot"}</span>
+                                  {/* Off the shelf once grabbed or the transfer's gathered — drop the shelf/warehouse. */}
+                                  {!it.grabbed && !t.gatherSpot && (
+                                    <>
+                                      <span className="text-[#6f5b46]">— now at</span>
+                                      <LocationBadge name={it.fromLocationName || "Unassigned"} size="sm" />
+                                      <span className="text-[#6f5b46]">· {it.storageLocation || "no spot"}</span>
+                                    </>
+                                  )}
                                 </span>
                               </button>
                             </li>

@@ -177,7 +177,7 @@ export default async function AuctionPage({ params }: Props) {
         : isClosed || isItemClosed
         ? "bg-[#f4efe4] text-[#a3927b]"
         : winning
-        ? "bg-[#efe0c9] text-[#563e2c] border border-[#6c4d39]/30"
+        ? "bg-[#e4f2e4] text-[#2f5d3a] border border-[#5f7a45]/45"
         : outbid
         ? "bg-red-600 group-hover:bg-red-700 text-white"
         : "bg-[#6c4d39] group-hover:bg-[#563e2c] text-white"
@@ -186,7 +186,7 @@ export default async function AuctionPage({ params }: Props) {
       item.isPremium
         ? "nb-premium border-2"
         : winning
-        ? "border-[#6c4d39]/50 shadow-[0_0_0_1px_rgba(108,77,57,0.15),0_0_20px_rgba(108,77,57,0.08)]"
+        ? "border-[#5f7a45]/55 shadow-[0_0_0_1px_rgba(95,122,69,0.18),0_0_20px_rgba(95,122,69,0.10)]"
         : outbid
         ? "border-red-400 shadow-[0_0_0_1px_rgba(220,38,38,0.18),0_0_18px_rgba(220,38,38,0.10)]"
         : isClosed || isItemClosed
@@ -223,7 +223,7 @@ export default async function AuctionPage({ params }: Props) {
       : isItemUnsold
       ? { text: "Ended", cls: "bg-[#f1e7d5]/85 text-[#8a7559]" }
       : winning
-      ? { text: "Winning", cls: "bg-[#6c4d39] text-white" }
+      ? { text: "Winning", cls: "bg-[#5f7a45] text-white" }
       : outbid
       ? { text: "Outbid", cls: "bg-red-600 text-white" }
       : item.isPremium

@@ -373,6 +373,9 @@ export default function AuctionResults({
                         <span className="text-green-700">✓ Picked up</span>
                       ) : it.transferring ? (
                         <span className="text-amber-700">🚚 Transferring{it.transferTo ? ` → ${it.transferTo}` : ""}</span>
+                      ) : it.gathered ? (
+                        // Off the shelf now — the warehouse it came from no longer matters.
+                        <span className="text-[#8a5a2b]">✓ Gathered · off shelf</span>
                       ) : it.warehouse ? (
                         <span className="text-slate-500">📍 {it.warehouse} · ready to gather</span>
                       ) : (
