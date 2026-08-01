@@ -117,6 +117,18 @@ export default async function AuctionPage({ params }: Props) {
   // Staff/admin viewing the public page get inline "edit listing" pencils.
   const isStaff = await canAccessOrg(auction.organizationId);
 
+  // Which lots has THIS user bid on? Lets each card flag "Outbid" at a glance so a
+  // bidder scanning the grid can see what they're losing — not just what they're winning.
+  const userBidItemIds = new Set<string>();
+  if (userId) {
+    const myBids = await prisma.bid.findMany({
+      where: { clerkUserId: userId, item: { auctionId: auction.id } },
+      select: { itemId: true },
+      distinct: ["itemId"],
+    });
+    for (const b of myBids) userBidItemIds.add(b.itemId);
+  }
+
   const isClosed = auction.status === "CLOSED" || auction.status === "SETTLED";
   const isClosing = auction.status === "CLOSING";
   // Upcoming = scheduled but not yet opened. Bidders can preview the lots, but
@@ -156,7 +168,9 @@ export default async function AuctionPage({ params }: Props) {
     const isItemUnsold = item.status === "UNSOLD";
     const isItemClosed = isItemSold || isItemUnsold;
     const winning = isLive && !isItemClosed && isUserWinning(item.bids);
-    const bidLabel = isUpcoming ? "Preview" : isItemUnsold ? "Ended" : isItemSold ? "Sold" : isClosed ? "Closed" : winning ? "You're winning" : "Bid now";
+    // Bid on this lot, live, but not the top bid → they're being outbid.
+    const outbid = isLive && !isItemClosed && !winning && userBidItemIds.has(item.id);
+    const bidLabel = isUpcoming ? "Preview" : isItemUnsold ? "Ended" : isItemSold ? "Sold" : isClosed ? "Closed" : winning ? "You're winning" : outbid ? "You're outbid" : "Bid now";
     const bidClass = `block w-full text-center rounded-xl py-2 text-xs font-bold transition-colors ${
       isUpcoming
         ? "bg-[#efe3d0] text-[#6c4d39] border border-[#6c4d39]/20"
@@ -164,6 +178,8 @@ export default async function AuctionPage({ params }: Props) {
         ? "bg-[#f4efe4] text-[#a3927b]"
         : winning
         ? "bg-[#efe0c9] text-[#563e2c] border border-[#6c4d39]/30"
+        : outbid
+        ? "bg-red-600 group-hover:bg-red-700 text-white"
         : "bg-[#6c4d39] group-hover:bg-[#563e2c] text-white"
     }`;
     const cardClass = `cv-card flex flex-col h-full bg-white border rounded-2xl overflow-hidden transition-all group ${
@@ -171,6 +187,8 @@ export default async function AuctionPage({ params }: Props) {
         ? "nb-premium border-2"
         : winning
         ? "border-[#6c4d39]/50 shadow-[0_0_0_1px_rgba(108,77,57,0.15),0_0_20px_rgba(108,77,57,0.08)]"
+        : outbid
+        ? "border-red-400 shadow-[0_0_0_1px_rgba(220,38,38,0.18),0_0_18px_rgba(220,38,38,0.10)]"
         : isClosed || isItemClosed
         ? "border-[#e3d6bf]/60 opacity-80 hover:border-[#cdbda3]"
         : "border-[#e3d6bf] hover:border-[#6c4d39]/40 hover:shadow-[0_0_25px_rgba(108,77,57,0.06)]"
@@ -206,6 +224,8 @@ export default async function AuctionPage({ params }: Props) {
       ? { text: "Ended", cls: "bg-[#f1e7d5]/85 text-[#8a7559]" }
       : winning
       ? { text: "Winning", cls: "bg-[#6c4d39] text-white" }
+      : outbid
+      ? { text: "Outbid", cls: "bg-red-600 text-white" }
       : item.isPremium
       ? { text: "Featured", cls: "bg-[#c47b3e] text-white" }
       : null;

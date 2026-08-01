@@ -101,6 +101,11 @@ export default function ItemPage() {
   userProxyRef.current = userProxy;
   const wasWinningRef = useRef(false);
   const [outbidFlash, setOutbidFlash] = useState(false);
+  // Has this user bid on THIS lot? Drives a persistent standing banner so a bidder
+  // who missed the outbid alert doesn't wrongly assume they're still winning.
+  const [participated, setParticipated] = useState(false);
+  // One-time celebratory pop when you newly take the lead.
+  const [winFlash, setWinFlash] = useState(false);
 
   // Staff/admin viewing get an inline "Edit listing" link.
   const [me, setMe] = useState<{ orgId: string | null; isSuperAdmin: boolean } | null>(null);
@@ -154,12 +159,19 @@ export default function ItemPage() {
         }
         // Transient "you've been outbid" flash — fires when the user's max bid was
         // just beaten, OR they were the leader and just lost the lead.
-        const lostLead = wasWinningRef.current && d.isWinning === false;
+        const wasWinning = wasWinningRef.current;
+        const lostLead = wasWinning && d.isWinning === false;
         if ((hadProxy && !d.userProxy) || lostLead) {
           setOutbidFlash(true);
           setTimeout(() => setOutbidFlash(false), 3000);
         }
+        // Newly took the lead → one-time celebratory pop on the standing banner.
+        if (!wasWinning && d.isWinning) {
+          setWinFlash(true);
+          setTimeout(() => setWinFlash(false), 1600);
+        }
         wasWinningRef.current = !!d.isWinning;
+        setParticipated(!!d.participated);
         setUserProxy(d.userProxy ?? null);
         setHasActiveProxy(d.hasActiveProxy ?? false);
         // Fix #4: update winning state
@@ -773,21 +785,41 @@ export default function ItemPage() {
               one tool and both bid methods sit right under the price. ── */}
           <div className="border-t border-[#e3d6bf] p-3">
 
-            {(showWinning || hasActiveProxy) && (
+            {/* ── Persistent standing banner ──
+                Always tells a signed-in bidder where they actually stand, so nobody
+                assumes they're still winning after missing the outbid alert. Winning
+                pops once when you take the lead; outbid pulses once when you lose it,
+                then stays put (no fleeting toast to miss) until you're back in front. */}
+            {isSignedIn && isLoaded && !biddingLocked && showWinning && (
+              <div className={`mb-2 rounded-xl bg-[#eef5ec] border-2 border-[#4a7c59]/45 px-3.5 py-2.5 flex items-center gap-2.5 ${winFlash ? "nb-pop" : ""}`}>
+                <span className="text-xl leading-none shrink-0">🎉</span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-extrabold text-[#2f5d3a] leading-tight">You&apos;re winning this lot</div>
+                  <div className="text-xs text-[#4a6b52] leading-tight mt-0.5">
+                    Top bid ${currentBid.toLocaleString()} · we&apos;ll alert you the second someone passes you.
+                  </div>
+                </div>
+              </div>
+            )}
+            {isSignedIn && isLoaded && !biddingLocked && !isWinning && participated && (
+              <div className={`mb-2 rounded-xl bg-[#fdecec] border-2 border-red-500/70 px-3.5 py-2.5 flex items-center gap-2.5 ${outbidFlash ? "nb-attention" : ""}`}>
+                <span className="w-7 h-7 rounded-full bg-red-600 text-white grid place-items-center shrink-0">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-extrabold text-red-700 leading-tight">You&apos;ve been outbid</div>
+                  <div className="text-xs text-red-600 leading-tight mt-0.5">
+                    Someone went higher — raise your bid below to get back in front.
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {hasActiveProxy && (
               <div className="flex flex-wrap items-center gap-2 mb-2">
-                {showWinning && (
-                  <span className="inline-flex items-center gap-1.5 text-xs bg-[#4a7c59] text-white px-2.5 py-1 rounded-full font-bold">
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M2 6.5l2.5 2.5L10 3.5" />
-                    </svg>
-                    You&apos;re winning
-                  </span>
-                )}
-                {hasActiveProxy && (
-                  <span className="text-xs bg-[#6c4d39]/15 text-[#563e2c] px-2.5 py-1 rounded-full font-semibold">
-                    Max bid active
-                  </span>
-                )}
+                <span className="text-xs bg-[#6c4d39]/15 text-[#563e2c] px-2.5 py-1 rounded-full font-semibold">
+                  Max bid active
+                </span>
               </div>
             )}
 

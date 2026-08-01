@@ -18,7 +18,7 @@ export async function GET(
     const { userId } = await auth();
     const { itemId } = await params;
 
-    const [userProxy, activeProxyCount, topBid] = await Promise.all([
+    const [userProxy, activeProxyCount, topBid, userBidCount] = await Promise.all([
       userId
         ? prisma.proxyBid.findUnique({
             where: { itemId_clerkUserId: { itemId, clerkUserId: userId } },
@@ -31,12 +31,18 @@ export async function GET(
         orderBy: { amount: "desc" },
         select: { clerkUserId: true },
       }),
+      // Has this user bid on this lot at all? Lets the UI show a PERSISTENT
+      // "you've been outbid" state across reloads — not just a fleeting toast.
+      userId
+        ? prisma.bid.count({ where: { itemId, clerkUserId: userId } })
+        : Promise.resolve(0),
     ]);
 
     return NextResponse.json({
       userProxy: userProxy?.isActive ? { maxAmount: Number(userProxy.maxAmount) } : null,
       hasActiveProxy: activeProxyCount > 0,
       isWinning: !!userId && topBid?.clerkUserId === userId,
+      participated: !!userId && (userBidCount > 0 || !!userProxy),
     });
   } catch (error) {
     console.error("GET proxy-bids error:", error);
