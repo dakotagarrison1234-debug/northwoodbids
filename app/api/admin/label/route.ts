@@ -2,97 +2,21 @@ export const dynamic = "force-dynamic";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg } from "@/lib/auth";
+import { buildLabel, type LItem, type LabelState, type Row } from "@/lib/labelPdf";
 
 const SOLD_STATUSES = ["SOLD", "PENDING_PICKUP", "PICKED_UP"] as const;
 
-const esc = (s: unknown) =>
-  String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
-const shortTitle = (t: string, n = 26) => (t.length > n ? t.slice(0, n - 1).trimEnd() + "…" : t);
 const fmtDate = (d: Date | null | undefined) =>
   d ? d.toLocaleString("en-US", { timeZone: "America/Detroit", month: "short", day: "numeric", year: "numeric" }) : "";
 const fmtDateTime = (d: Date | null | undefined) =>
   d ? d.toLocaleString("en-US", { timeZone: "America/Detroit", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
 
-type LItem = { code?: string | null; title: string; shelf?: string | null; warehouse?: string | null };
-
-// Item list grouped by warehouse: work one location at a time; each line is
-// code → clipped title → shelf.
-function groupsHtml(items: LItem[]): string {
-  const groups = new Map<string, LItem[]>();
-  for (const it of items) {
-    const key = it.warehouse || "Unassigned";
-    (groups.get(key) ?? groups.set(key, []).get(key)!).push(it);
-  }
-  return [...groups.entries()]
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([wh, its]) => {
-      const lis = its
-        .slice()
-        .sort((a, b) => (a.shelf || "").localeCompare(b.shelf || ""))
-        .map(
-          (i) =>
-            `<li>${i.code ? `<span class="code">${esc(i.code)}</span>` : ""}<span class="ttl">${esc(shortTitle(i.title))}</span>${i.shelf ? `<span class="shelf">${esc(i.shelf)}</span>` : ""}</li>`
-        )
-        .join("");
-      return `<div class="grp-h">${esc(wh)} · ${its.length}</div><ul>${lis}</ul>`;
-    })
-    .join("");
-}
-
-type LabelState = "STAGED" | "GATHERED" | "TO GATHER";
-
-function doc(opts: {
-  type: "PICKUP" | "TRANSFER";
-  state: LabelState;
-  name: string;
-  phone?: string | null;
-  email?: string | null;
-  destination?: string | null; // transfer: "→ Gladwin"
-  headerRows: string;
-  count: number;
-  countSuffix?: string;
-  items: LItem[];
-}): string {
-  const stateClass = opts.state === "STAGED" ? "b-staged" : opts.state === "GATHERED" ? "b-gathered" : "b-togather";
-  return `<!doctype html><html><head><meta charset="utf-8"><style>
-@page { size: 4in 6in; margin: 0; }
-* { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-/* Fill 100% of the page box (not a fixed 4in) so the browser never shrinks the
-   label and leaves empty margins inside the sheet. */
-html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
-body { font-family: Arial, Helvetica, sans-serif; color: #000; }
-.wrap { width: 100%; height: 100%; padding: 0.08in 0.1in; display: flex; flex-direction: column; }
-.banner { text-align: center; font-size: 14pt; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; color: #fff; padding: 5pt; border-radius: 3pt; }
-.b-staged { background: #3f6f34; }
-.b-gathered { background: #8a5a2b; }
-.b-togather { background: #333; }
-.name { font-size: 19pt; font-weight: 900; line-height: 1.02; margin-top: 5pt; word-break: break-word; }
-.dest { font-size: 13pt; font-weight: 800; margin-top: 1pt; }
-.contact { font-size: 10.5pt; font-weight: 700; word-break: break-all; }
-.rule { border-top: 2pt solid #000; margin: 3pt 0; }
-.row { display: flex; justify-content: space-between; gap: 8pt; font-size: 10pt; margin: 1.5pt 0; }
-.row span:first-child { color: #333; }
-.row b { font-weight: 800; text-align: right; }
-.cnt { font-size: 10pt; font-weight: 800; margin-top: 2pt; }
-.list { flex: 1; overflow: hidden; }
-.grp-h { font-size: 8pt; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; background: #000; color: #fff; padding: 1.5pt 5pt; margin-top: 3pt; }
-ul { margin: 0; padding: 0; }
-li { list-style: none; display: flex; gap: 5pt; align-items: baseline; font-size: 8.5pt; line-height: 1.18; padding: 0.8pt 0; border-bottom: .4pt dotted #aaa; }
-.code { font-weight: 800; font-family: "Courier New", monospace; white-space: nowrap; }
-.ttl { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.shelf { font-weight: 800; white-space: nowrap; font-size: 8pt; }
-</style></head><body><div class="wrap">
-<div class="banner ${stateClass}">${opts.type} · ${opts.state}</div>
-<div class="name">${esc(opts.name)}</div>
-${opts.destination ? `<div class="dest">${esc(opts.destination)}</div>` : ""}
-${opts.email ? `<div class="contact">${esc(opts.email)}</div>` : ""}
-<div class="rule"></div>
-${opts.headerRows}
-<div class="rule"></div>
-<div class="cnt">${opts.count} item${opts.count !== 1 ? "s" : ""}${opts.countSuffix ?? ""}</div>
-<div class="list">${groupsHtml(opts.items)}</div>
-</div></body></html>`;
-}
+const pdfHeaders = {
+  "content-type": "application/pdf",
+  "content-disposition": "inline; filename=label.pdf",
+  "cache-control": "no-store",
+};
+const pdfResponse = (bytes: Uint8Array) => new Response(Buffer.from(bytes), { headers: pdfHeaders });
 
 export async function GET(req: NextRequest) {
   const membership = await getUserOrg();
@@ -100,7 +24,6 @@ export async function GET(req: NextRequest) {
   const orgId = membership.organizationId;
   const sp = req.nextUrl.searchParams;
   const type = sp.get("type");
-  const htmlHeaders = { "content-type": "text/html; charset=utf-8" };
 
   if (type === "transfer") {
     const id = sp.get("transfer") ?? "";
@@ -113,31 +36,19 @@ export async function GET(req: NextRequest) {
     });
     if (!t || t.organizationId !== orgId) return new Response("Transfer not found", { status: 404 });
     const profile = await prisma.bidderProfile.findUnique({ where: { clerkUserId: t.clerkUserId }, select: { name: true, phone: true, email: true } });
-    // A transfer is never "staged" — that's customer-facing. It's GATHERED (set aside
-    // to move) or still TO GATHER.
     const spots = [...new Set(t.items.map((i) => i.gatherSpot).filter(Boolean))] as string[];
     const gatherSpot = spots.length === 1 ? spots[0] : spots.length > 1 ? "Multiple" : null;
     const allGathered = t.items.length > 0 && t.items.every((i) => i.grabbedAt != null);
     const state: LabelState = gatherSpot || allGathered ? "GATHERED" : "TO GATHER";
-    const rows =
-      (gatherSpot ? `<div class="row"><span>Gathered in</span><b>${esc(gatherSpot)}</b></div>` : "") +
-      `<div class="row"><span>Requested</span><b>${esc(fmtDate(t.createdAt))}</b></div>`;
+    const rows: Row[] = [
+      ...(gatherSpot ? [{ label: "Gathered in", value: gatherSpot }] : []),
+      { label: "Requested", value: fmtDate(t.createdAt) },
+    ];
     const items: LItem[] = t.items.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name }));
-    return new Response(
-      doc({
-        type: "TRANSFER",
-        state,
-        name: profile?.name ?? "Bidder",
-        phone: profile?.phone,
-        email: profile?.email,
-        destination: `→ ${t.toLocation?.name ?? "Destination"}`,
-        headerRows: rows,
-        count: t.items.length,
-        countSuffix: " · grab from",
-        items,
-      }),
-      { headers: htmlHeaders }
-    );
+    return pdfResponse(await buildLabel({
+      type: "TRANSFER", state, name: profile?.name ?? "Bidder", email: profile?.email,
+      destination: `To ${t.toLocation?.name ?? "Destination"}`, rows, count: t.items.length, countSuffix: " · grab from", items,
+    }));
   }
 
   if (type === "appointment") {
@@ -154,23 +65,19 @@ export async function GET(req: NextRequest) {
     const profile = await prisma.bidderProfile.findUnique({ where: { clerkUserId: appt.clerkUserId }, select: { name: true, phone: true, email: true } });
     const allGathered = appt.items.length > 0 && appt.items.every((i) => i.grabbedAt != null);
     const state: LabelState = appt.stagedSpot ? "STAGED" : allGathered ? "GATHERED" : "TO GATHER";
-    const rows =
-      `<div class="row"><span>Pick up at</span><b>${esc(appt.location?.name ?? "—")}</b></div>` +
-      `<div class="row"><span>Appointment</span><b>${esc(fmtDateTime(appt.startsAt))}</b></div>`;
+    const rows: Row[] = [
+      { label: "Pick up at", value: appt.location?.name ?? "-" },
+      { label: "Appointment", value: fmtDateTime(appt.startsAt) },
+    ];
     const items: LItem[] = appt.items.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name }));
-    return new Response(
-      doc({ type: "PICKUP", state, name: profile?.name ?? "Bidder", phone: profile?.phone, email: profile?.email, headerRows: rows, count: appt.items.length, items }),
-      { headers: htmlHeaders }
-    );
+    return pdfResponse(await buildLabel({
+      type: "PICKUP", state, name: profile?.name ?? "Bidder", email: profile?.email, rows, count: appt.items.length, items,
+    }));
   }
 
-  // A customer's WHOLE outstanding pickup — every paid item across every auction that
-  // isn't on an appointment yet. One label to gather it all in one bundle.
   if (type === "waiting") {
     const user = sp.get("user") ?? "";
     const its = await prisma.item.findMany({
-      // Only items physically here (not on an active transfer) — those are what you
-      // can actually gather into one bundle now.
       where: {
         organizationId: orgId,
         status: "PENDING_PICKUP",
@@ -195,14 +102,14 @@ export async function GET(req: NextRequest) {
     const wGatherSpot = wSpots.length === 1 ? wSpots[0] : wSpots.length > 1 ? "Multiple" : null;
     const allGathered = wGatherSpot != null || its.every((i) => i.grabbedAt != null);
     const state: LabelState = allGathered ? "GATHERED" : "TO GATHER";
-    const rows =
-      `<div class="row"><span>Pick up at</span><b>${esc(preferredName ?? "Not chosen")}</b></div>` +
-      (wGatherSpot ? `<div class="row"><span>Gathered in</span><b>${esc(wGatherSpot)}</b></div>` : "");
+    const rows: Row[] = [
+      { label: "Pick up at", value: preferredName ?? "Not chosen" },
+      ...(wGatherSpot ? [{ label: "Gathered in", value: wGatherSpot }] : []),
+    ];
     const items: LItem[] = its.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name }));
-    return new Response(
-      doc({ type: "PICKUP", state, name: profile?.name ?? "Bidder", phone: profile?.phone, email: profile?.email, headerRows: rows, count: its.length, countSuffix: " · all auctions", items }),
-      { headers: htmlHeaders }
-    );
+    return pdfResponse(await buildLabel({
+      type: "PICKUP", state, name: profile?.name ?? "Bidder", email: profile?.email, rows, count: its.length, countSuffix: " · all auctions", items,
+    }));
   }
 
   if (type === "pickup") {
@@ -222,19 +129,17 @@ export async function GET(req: NextRequest) {
       preferredName = loc?.name ?? null;
     }
     const warehouses = [...new Set(its.map((i) => i.location?.name).filter(Boolean))] as string[];
-    const pickupAt = preferredName ?? warehouses.join(", ") ?? "—";
-    // A closed-auction order isn't on an appointment, so it's never "staged" here —
-    // only gathered or not.
+    const pickupAt = preferredName ?? (warehouses.length ? warehouses.join(", ") : "-");
     const allGathered = its.length > 0 && its.every((i) => i.grabbedAt != null);
     const state: LabelState = allGathered ? "GATHERED" : "TO GATHER";
-    const rows =
-      `<div class="row"><span>Pick up at</span><b>${esc(pickupAt)}</b></div>` +
-      `<div class="row"><span>Closed</span><b>${esc(fmtDate(auction.endAt))}</b></div>`;
+    const rows: Row[] = [
+      { label: "Pick up at", value: pickupAt },
+      { label: "Closed", value: fmtDate(auction.endAt) },
+    ];
     const items: LItem[] = its.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name }));
-    return new Response(
-      doc({ type: "PICKUP", state, name: profile?.name ?? "Bidder", phone: profile?.phone, email: profile?.email, headerRows: rows, count: its.length, items }),
-      { headers: htmlHeaders }
-    );
+    return pdfResponse(await buildLabel({
+      type: "PICKUP", state, name: profile?.name ?? "Bidder", email: profile?.email, rows, count: its.length, items,
+    }));
   }
 
   return new Response("Unknown label type", { status: 400 });
