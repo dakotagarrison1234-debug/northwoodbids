@@ -832,11 +832,12 @@ function NewItemForm() {
           setLastCode(savedCode || null);
           setLastTitle(savedTitle);
           genCode();
-          // Remount the scanner clean, open, and already scanning.
+          // Remount the scanner clean and ready — but DON'T auto-open the camera.
+          // The next item might be entered manually; let the user tap Scan to start.
           setScannerKey((k) => k + 1);
           setScannerCollapsed(false);
-          setScannerAutoStart(true);
-          setBanner("Saved. Scan the next item.");
+          setScannerAutoStart(false);
+          setBanner("Saved. Scan the next item or enter it manually.");
           scrollTop();
         } else {
           router.push(preselectedAuctionId ? `/admin/auctions/${preselectedAuctionId}` : "/admin/auctions");
