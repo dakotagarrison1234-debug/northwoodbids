@@ -38,13 +38,16 @@ export async function GET(req: NextRequest) {
     const profile = await prisma.bidderProfile.findUnique({ where: { clerkUserId: t.clerkUserId }, select: { name: true, phone: true, email: true } });
     const spots = [...new Set(t.items.map((i) => i.gatherSpot).filter(Boolean))] as string[];
     const gatherSpot = spots.length === 1 ? spots[0] : spots.length > 1 ? "Multiple" : null;
-    const allGathered = t.items.length > 0 && t.items.every((i) => i.grabbedAt != null);
-    const state: LabelState = gatherSpot || allGathered ? "GATHERED" : "TO GATHER";
+    // "Gathered" is PER ITEM (grabbed or given its own spot). The label is only
+    // fully consolidated when every item is off the shelf — a newly added, still-
+    // shelved item keeps the label in "to gather" so its shelf still prints.
+    const allGathered = t.items.length > 0 && t.items.every((i) => i.grabbedAt != null || i.gatherSpot);
+    const state: LabelState = allGathered ? "GATHERED" : "TO GATHER";
     const rows: Row[] = [
       ...(gatherSpot ? [{ label: "Gathered in", value: gatherSpot }] : []),
       { label: "Requested", value: fmtDate(t.createdAt) },
     ];
-    const items: LItem[] = t.items.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name }));
+    const items: LItem[] = t.items.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name, gathered: i.grabbedAt != null || !!i.gatherSpot }));
     return pdfResponse(await buildLabel({
       type: "TRANSFER", state, name: profile?.name ?? "Bidder", email: profile?.email,
       destination: `To ${t.toLocation?.name ?? "Destination"}`, rows, count: t.items.length,
@@ -73,7 +76,7 @@ export async function GET(req: NextRequest) {
       ...(appt.stagedSpot ? [{ label: "Staged in", value: appt.stagedSpot }] : []),
       { label: "Appointment", value: fmtDateTime(appt.startsAt) },
     ];
-    const items: LItem[] = appt.items.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name }));
+    const items: LItem[] = appt.items.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name, gathered: i.grabbedAt != null }));
     return pdfResponse(await buildLabel({
       type: "PICKUP", state, name: profile?.name ?? "Bidder", email: profile?.email, rows, count: appt.items.length, items,
     }));
@@ -104,13 +107,14 @@ export async function GET(req: NextRequest) {
     }
     const wSpots = [...new Set(its.map((i) => i.gatherSpot).filter(Boolean))] as string[];
     const wGatherSpot = wSpots.length === 1 ? wSpots[0] : wSpots.length > 1 ? "Multiple" : null;
-    const allGathered = wGatherSpot != null || its.every((i) => i.grabbedAt != null);
+    // Per item: a still-shelved (newly won) item keeps the label in "to gather".
+    const allGathered = its.length > 0 && its.every((i) => i.grabbedAt != null || i.gatherSpot);
     const state: LabelState = allGathered ? "GATHERED" : "TO GATHER";
     const rows: Row[] = [
       { label: "Pick up at", value: preferredName ?? "Not chosen" },
       ...(wGatherSpot ? [{ label: "Gathered in", value: wGatherSpot }] : []),
     ];
-    const items: LItem[] = its.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name }));
+    const items: LItem[] = its.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name, gathered: i.grabbedAt != null || !!i.gatherSpot }));
     return pdfResponse(await buildLabel({
       type: "PICKUP", state, name: profile?.name ?? "Bidder", email: profile?.email, rows, count: its.length, countSuffix: " · all auctions", items,
     }));
@@ -140,7 +144,7 @@ export async function GET(req: NextRequest) {
       { label: "Pick up at", value: pickupAt },
       { label: "Closed", value: fmtDate(auction.endAt) },
     ];
-    const items: LItem[] = its.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name }));
+    const items: LItem[] = its.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name, gathered: i.grabbedAt != null }));
     return pdfResponse(await buildLabel({
       type: "PICKUP", state, name: profile?.name ?? "Bidder", email: profile?.email, rows, count: its.length, items,
     }));

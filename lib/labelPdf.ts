@@ -7,7 +7,7 @@ const W = 288;
 const H = 432;
 const PAD = 12;
 
-export type LItem = { code?: string | null; title: string; shelf?: string | null; warehouse?: string | null };
+export type LItem = { code?: string | null; title: string; shelf?: string | null; warehouse?: string | null; gathered?: boolean };
 export type LabelState = "STAGED" | "GATHERED" | "TO GATHER";
 export type Row = { label: string; value: string };
 
@@ -182,7 +182,9 @@ export async function buildLabel(opts: {
       const rows = its.slice().sort((a, b) => (a.shelf || "").localeCompare(b.shelf || ""));
       for (const it of rows) {
         if (cur < PAD + 12) { textTop(PAD, "...more", bold, 8, gray); break outer; }
-        drawItemRow(it, true);
+        // Even on a to-gather label, an item that's already been grabbed is off the
+        // shelf — hide just that item's shelf, keep it for the ones still to pull.
+        drawItemRow(it, !it.gathered);
       }
     }
   }

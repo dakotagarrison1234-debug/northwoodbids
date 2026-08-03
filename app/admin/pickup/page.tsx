@@ -1521,8 +1521,10 @@ export default function AdminPickupPage() {
                                   <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-base text-[#241a12] min-w-0">
                                     {it.itemCode && <span className="font-mono font-extrabold text-[#6c4d39]">{it.itemCode}</span>}
                                     <span className={`font-semibold ${it.grabbed ? "line-through text-[#6f5b46]" : ""}`}>{it.title}</span>
-                                    {/* Off the shelf once grabbed or the order's gathered — drop the shelf/warehouse. */}
-                                    {!it.grabbed && !w.gatherSpot && (
+                                    {/* Off the shelf once THIS item is grabbed or has its own gather spot.
+                                        (Must be per-item — a newly won item on an already-gathered order
+                                        is still on the shelf.) */}
+                                    {!it.grabbed && !it.gatherSpot && (
                                       <>
                                         <span className="text-[#6f5b46]">— at</span>
                                         <LocationBadge name={it.warehouse || "Unassigned"} size="sm" />
@@ -1685,8 +1687,8 @@ export default function AdminPickupPage() {
                                 <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-base text-[#241a12] min-w-0">
                                   {it.itemCode && <span className="font-mono font-extrabold text-[#6c4d39]">{it.itemCode}</span>}
                                   <span className={`font-semibold ${it.grabbed ? "line-through text-[#6f5b46]" : ""}`}>{it.title}</span>
-                                  {/* Off the shelf once grabbed or the transfer's gathered — drop the shelf/warehouse. */}
-                                  {!it.grabbed && !t.gatherSpot && (
+                                  {/* Off the shelf once THIS item is grabbed or has its own gather spot. */}
+                                  {!it.grabbed && !it.gatherSpot && (
                                     <>
                                       <span className="text-[#6f5b46]">— now at</span>
                                       <LocationBadge name={it.fromLocationName || "Unassigned"} size="sm" />
