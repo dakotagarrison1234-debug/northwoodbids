@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg } from "@/lib/auth";
-import { buildLabel, type LItem, type LabelState, type Row } from "@/lib/labelPdf";
+import { buildLabel, buildBatch, type LItem, type LabelOpts, type LabelState, type Row } from "@/lib/labelPdf";
 
 const SOLD_STATUSES = ["SOLD", "PENDING_PICKUP", "PICKED_UP"] as const;
 
@@ -24,6 +24,41 @@ export async function GET(req: NextRequest) {
   const orgId = membership.organizationId;
   const sp = req.nextUrl.searchParams;
   const type = sp.get("type");
+
+  // Batch pull sheet: one label per transfer, for every active transfer that still
+  // has items to pull from a given warehouse (location=all for every warehouse).
+  // Walk the warehouse, pull each customer's items, gather them for delivery.
+  if (type === "transfer-batch") {
+    const locationId = sp.get("location") ?? "all";
+    const transfers = await prisma.transferRequest.findMany({
+      where: { organizationId: orgId, status: "REQUESTED" },
+      orderBy: { createdAt: "asc" },
+      include: {
+        toLocation: { select: { name: true } },
+        items: { select: { title: true, itemCode: true, grabbedAt: true, gatherSpot: true, storageLocation: true, location: { select: { id: true, name: true } } } },
+      },
+    });
+    const labels: LabelOpts[] = [];
+    for (const t of transfers) {
+      // Items still on the shelf at THIS warehouse (not yet grabbed / given a spot).
+      const its = t.items.filter(
+        (i) => (locationId === "all" || i.location?.id === locationId) && i.grabbedAt == null && !i.gatherSpot
+      );
+      if (its.length === 0) continue;
+      const profile = await prisma.bidderProfile.findUnique({ where: { clerkUserId: t.clerkUserId }, select: { name: true } });
+      labels.push({
+        type: "TRANSFER",
+        state: "TO GATHER",
+        name: profile?.name ?? "Bidder",
+        destination: `To ${t.toLocation?.name ?? "Destination"}`,
+        rows: [{ label: "Requested", value: fmtDate(t.createdAt) }],
+        count: its.length,
+        countSuffix: " · grab from",
+        items: its.map((i) => ({ code: i.itemCode, title: i.title, shelf: i.storageLocation, warehouse: i.location?.name, gathered: false })),
+      });
+    }
+    return pdfResponse(await buildBatch(labels));
+  }
 
   if (type === "transfer") {
     const id = sp.get("transfer") ?? "";

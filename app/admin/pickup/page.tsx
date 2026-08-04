@@ -1587,6 +1587,16 @@ export default function AdminPickupPage() {
               {scopedLocName && <span className="text-base font-medium text-[#8a7559]"> · gathering at {scopedLocName}</span>}
             </h2>
 
+            {/* One print job with every transfer to pull from the selected warehouse
+                (one label per transfer) — walk the aisles, grab, gather for delivery. */}
+            {activeTransfers.length > 0 && (
+              <PrintLabelButton
+                href={`/api/admin/label?type=transfer-batch&location=${apptLocationId}`}
+                label={scopedLocName ? `Print all to pull · ${scopedLocName}` : "Print all transfers to pull"}
+                className="inline-flex items-center gap-2 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold text-sm px-4 py-2 rounded-xl transition-colors"
+              />
+            )}
+
             {activeTransfers.length === 0 ? (
               <div className="text-base text-[#8a7559] bg-white border border-[#e3d6bf] rounded-xl px-5 py-8 text-center">
                 {allActiveTransfers.length === 0

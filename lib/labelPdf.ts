@@ -54,7 +54,7 @@ function clip(text: string, font: PDFFont, size: number, maxW: number): string {
   return `${s.trimEnd()}...`;
 }
 
-export async function buildLabel(opts: {
+export type LabelOpts = {
   type: "PICKUP" | "TRANSFER";
   state: LabelState;
   name: string;
@@ -64,12 +64,22 @@ export async function buildLabel(opts: {
   count: number;
   countSuffix?: string;
   items: LItem[];
-}): Promise<Uint8Array> {
-  const pdf = await PDFDocument.create();
+};
+type Fonts = { reg: PDFFont; bold: PDFFont; mono: PDFFont };
+
+async function embedFonts(pdf: PDFDocument): Promise<Fonts> {
+  return {
+    reg: await pdf.embedFont(StandardFonts.Helvetica),
+    bold: await pdf.embedFont(StandardFonts.HelveticaBold),
+    mono: await pdf.embedFont(StandardFonts.CourierBold),
+  };
+}
+
+// Draws one 4x6 label onto a fresh page of the given document. Shared by the
+// single-label and multi-page batch builders.
+function drawLabelPage(pdf: PDFDocument, fonts: Fonts, opts: LabelOpts) {
   const page: PDFPage = pdf.addPage([W, H]);
-  const reg = await pdf.embedFont(StandardFonts.Helvetica);
-  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-  const mono = await pdf.embedFont(StandardFonts.CourierBold);
+  const { reg, bold, mono } = fonts;
 
   // Thermal printers are black-only — any color/gray just dithers into muddy
   // halftone. Everything is solid black on white; the state (STAGED/GATHERED/TO
@@ -188,6 +198,23 @@ export async function buildLabel(opts: {
       }
     }
   }
+}
 
+export async function buildLabel(opts: LabelOpts): Promise<Uint8Array> {
+  const pdf = await PDFDocument.create();
+  const fonts = await embedFonts(pdf);
+  drawLabelPage(pdf, fonts, opts);
+  return pdf.save();
+}
+
+// Multi-page: one label per page, e.g. every transfer to pull from a warehouse.
+export async function buildBatch(list: LabelOpts[]): Promise<Uint8Array> {
+  const pdf = await PDFDocument.create();
+  const fonts = await embedFonts(pdf);
+  if (list.length === 0) {
+    drawLabelPage(pdf, fonts, { type: "TRANSFER", state: "TO GATHER", name: "Nothing to pull", rows: [], count: 0, items: [] });
+  } else {
+    for (const o of list) drawLabelPage(pdf, fonts, o);
+  }
   return pdf.save();
 }
