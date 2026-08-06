@@ -147,14 +147,21 @@ export default async function AuctionPage({ params }: Props) {
   const SOLD_STATUSES = ["SOLD", "PENDING_PICKUP", "PICKED_UP"];
 
   // Only show items that are visible to bidders (not DRAFT).
-  // While the auction is LIVE, ended items (sold/unsold) drop off the grid so
-  // bidders only see what's still biddable (popcorn stragglers included).
+  // While the auction is LIVE, only items STILL BIDDABLE stay on the grid: status
+  // ACTIVE *and* their (popcorn-extended) end time hasn't passed yet. This is what
+  // matters after the main end time — once the auction is closing, the dozens of
+  // items whose time is up drop off immediately (even before the cron marks them
+  // sold/unsold), so the handful that got extended by late bids are easy to find
+  // and keep bidding, instead of being buried among items that still say "ending".
   // Once the whole auction has closed, show everything as the historical view.
+  const nowMs = Date.now();
+  const stillBiddable = (i: (typeof auction.items)[number]) =>
+    i.status === "ACTIVE" && (i.itemEndAt ?? auction.endAt).getTime() > nowMs;
   const allVisible = auction.items.filter(i => i.status !== "DRAFT");
   const visibleItems = isUpcoming
     ? auction.items // preview every lot before it opens
     : isLive
-    ? allVisible.filter(i => i.status === "ACTIVE")
+    ? allVisible.filter(stillBiddable)
     : allVisible;
   const endedCount = allVisible.length - (isLive ? visibleItems.length : 0);
 
