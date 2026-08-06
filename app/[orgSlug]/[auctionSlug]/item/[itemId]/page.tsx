@@ -769,17 +769,6 @@ export default function ItemPage() {
                 assumes they're still winning after missing the outbid alert. Winning
                 pops once when you take the lead; outbid pulses once when you lose it,
                 then stays put (no fleeting toast to miss) until you're back in front. */}
-            {isSignedIn && isLoaded && !biddingLocked && showWinning && (
-              <div className={`mb-2 rounded-xl bg-[#eef5ec] border-2 border-[#4a7c59]/45 px-3.5 py-2.5 flex items-center gap-2.5 ${winFlash ? "nb-pop" : ""}`}>
-                <span className="text-xl leading-none shrink-0">🎉</span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-extrabold text-[#2f5d3a] leading-tight">You&apos;re winning this lot</div>
-                  <div className="text-xs text-[#4a6b52] leading-tight mt-0.5">
-                    Top bid ${currentBid.toLocaleString()} · we&apos;ll alert you the second someone passes you.
-                  </div>
-                </div>
-              </div>
-            )}
             {isSignedIn && isLoaded && !biddingLocked && !isWinning && participated && (
               <div className={`mb-2 rounded-xl bg-[#fdecec] border-2 border-red-500/70 px-3.5 py-2.5 flex items-center gap-2.5 ${outbidFlash ? "nb-attention" : ""}`}>
                 <span className="w-7 h-7 rounded-full bg-red-600 text-white grid place-items-center shrink-0">
@@ -823,6 +812,10 @@ export default function ItemPage() {
               </div>
             ) : (
               <>
+                {/* Once you're winning, the bid tools aren't needed — hide the max-bid
+                    box and quick-bid and just show a winning summary with your REAL total. */}
+                {!showWinning && (
+                <>
                 {/* ═══════════════════════════════════════════════════════════
                     MAX BID — PRIMARY option
                 ═══════════════════════════════════════════════════════════ */}
@@ -953,6 +946,8 @@ export default function ItemPage() {
                   <span className="text-[11px] text-[#b3a085] uppercase tracking-wide">or take the lead now</span>
                   <div className="flex-1 h-px bg-[#e3d6bf]" />
                 </div>
+                </>
+                )}
 
                 {/* QUICK BID — double tap for the next increment. No wrapper card; it
                     sits flush as a sibling of the max-bid box, so the two methods are
@@ -967,14 +962,18 @@ export default function ItemPage() {
                   )}
 
                   {showWinning ? (
-                    /* You can't outbid yourself. One tidy line, not a 5-line hero —
-                       the pill above already flags the winning state. */
-                    <div className="rounded-xl bg-green-50 border-2 border-green-200 px-4 py-3 flex items-center gap-2.5">
-                      <span className="text-lg shrink-0">🎉</span>
-                      <p className="text-sm text-green-800">
-                        <span className="font-extrabold">You&apos;re the top bid.</span>{" "}
-                        We&apos;ll alert you if someone passes you.
-                      </p>
+                    /* The single winning indicator. You can't outbid yourself, so no bid
+                       controls — just confirm the lead and the amount, total shown below. */
+                    <div className={`rounded-xl bg-green-50 border-2 border-green-300 px-4 py-3.5 flex items-center gap-3 ${winFlash ? "nb-pop" : ""}`}>
+                      <span className="text-2xl shrink-0">🎉</span>
+                      <div className="min-w-0">
+                        <p className="text-base font-extrabold text-green-800 leading-tight">
+                          You&apos;re winning at ${currentBid.toLocaleString()}
+                        </p>
+                        <p className="text-xs text-green-700 leading-tight mt-0.5">
+                          We&apos;ll alert you the moment someone passes you.
+                        </p>
+                      </div>
                     </div>
                   ) : (
                     <>
@@ -1033,7 +1032,9 @@ export default function ItemPage() {
                   {(() => {
                     const feePct = item.org?.platformFeePercent ?? 0;
                     const taxPct = item.org?.taxPercent ?? 0;
-                    const baseBid = minBid;
+                    // When you're winning, the total is on YOUR current bid — not the
+                    // next increment you'd pay if you were still trying to take the lead.
+                    const baseBid = showWinning ? currentBid : minBid;
                     const bidCents = Math.round(baseBid * 100);
                     const feeCents = Math.round(baseBid * feePct / 100 * 100);
                     const taxCents = Math.round((bidCents + feeCents) * taxPct / 100);
