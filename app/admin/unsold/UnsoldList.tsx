@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import RelistControl, { type RelistTarget } from "../RelistControl";
+import RelistControl, { type RelistTarget, type RelistLocation } from "../RelistControl";
 
 const money = (n: number) => `$${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 
@@ -25,10 +25,12 @@ export interface UnsoldGroup {
 export default function UnsoldList({
   groups,
   relistTargets,
+  locations = [],
   total,
 }: {
   groups: UnsoldGroup[];
   relistTargets: RelistTarget[];
+  locations?: RelistLocation[];
   total: number;
 }) {
   const [search, setSearch] = useState("");
@@ -93,7 +95,7 @@ export default function UnsoldList({
                       {u.high > 0 ? ` · high bid ${money(u.high)}` : ""}
                     </div>
                   </div>
-                  <RelistControl itemId={u.id} targets={relistTargets} />
+                  <RelistControl itemId={u.id} targets={relistTargets} locations={locations} />
                   <Link href={`/admin/items/${u.id}`} className="shrink-0 text-xs font-bold text-[#6c4d39] px-1">
                     Edit
                   </Link>

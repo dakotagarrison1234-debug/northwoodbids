@@ -7,7 +7,7 @@ export default async function UnsoldPage() {
   const membership = await requireUserOrg();
   const orgId = membership.organization.id;
 
-  const [items, relistTargets] = await Promise.all([
+  const [items, relistTargets, locations] = await Promise.all([
     prisma.item.findMany({
       where: { organizationId: orgId, status: "UNSOLD" },
       orderBy: [{ updatedAt: "desc" }],
@@ -25,6 +25,11 @@ export default async function UnsoldPage() {
       where: { organizationId: orgId, status: { in: ["DRAFT", "OPEN", "CLOSING"] } },
       orderBy: [{ startAt: "asc" }],
       select: { id: true, title: true, status: true },
+    }),
+    prisma.pickupLocation.findMany({
+      where: { organizationId: orgId, isActive: true },
+      orderBy: [{ name: "asc" }],
+      select: { id: true, name: true },
     }),
   ]);
 
@@ -61,7 +66,7 @@ export default async function UnsoldPage() {
             Nothing unsold right now — every item found a buyer. 🎉
           </div>
         ) : (
-          <UnsoldList groups={grouped} relistTargets={relistTargets} total={items.length} />
+          <UnsoldList groups={grouped} relistTargets={relistTargets} locations={locations} total={items.length} />
         )}
       </div>
     </>

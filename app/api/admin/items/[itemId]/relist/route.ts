@@ -26,6 +26,18 @@ export async function POST(request: NextRequest, { params }: Props) {
     const { itemId } = await params;
     const body = await request.json().catch(() => ({}));
     const auctionId: string | null = body?.auctionId ?? null;
+    const locationId: string | null = body?.locationId ?? null;
+
+    // Optional: move the item to a different warehouse as part of the relist.
+    if (locationId) {
+      const loc = await prisma.pickupLocation.findUnique({
+        where: { id: locationId },
+        select: { id: true, organizationId: true },
+      });
+      if (!loc || loc.organizationId !== orgId) {
+        return NextResponse.json({ error: "Invalid location" }, { status: 400 });
+      }
+    }
 
     const item = await prisma.item.findUnique({
       where: { id: itemId },
@@ -78,6 +90,8 @@ export async function POST(request: NextRequest, { params }: Props) {
           grabbedAt: null,
           pickupAppointmentId: null,
           transferRequestId: null,
+          // Move warehouses if a new location was chosen; otherwise leave it put.
+          ...(locationId ? { locationId } : {}),
         },
       }),
     ]);

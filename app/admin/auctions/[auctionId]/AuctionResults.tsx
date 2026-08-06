@@ -569,7 +569,7 @@ export default function AuctionResults({
                     {u.highBid > 0 ? ` · high bid ${money(u.highBid)}` : ""}
                   </div>
                 </div>
-                <RelistControl itemId={u.id} targets={relistTargets} />
+                <RelistControl itemId={u.id} targets={relistTargets} locations={locations} />
                 <Link href={`/admin/items/${u.id}`} className="shrink-0 text-xs font-bold text-[#6c4d39] px-1">
                   Edit
                 </Link>
