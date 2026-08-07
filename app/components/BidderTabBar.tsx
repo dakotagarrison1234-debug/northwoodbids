@@ -43,8 +43,10 @@ function TabBarInner() {
 
   const onDash = pathname === "/dashboard";
   const tabs = [
-    { href: "/", label: "Home", Icon: IcoHome, active: pathname === "/" },
-    { href: "/dashboard", label: "Bids", Icon: IcoGavel, active: onDash && tab !== "history" },
+    // Home = the live-auction previews (the auctions browse), not the marketing landing.
+    { href: "/auctions", label: "Home", Icon: IcoHome, active: pathname === "/" || pathname.startsWith("/auctions") },
+    // Bids = current/active bids (winning + outbid); Wins = past wins + invoices.
+    { href: "/dashboard?tab=active", label: "Bids", Icon: IcoGavel, active: onDash && tab !== "history" },
     { href: "/dashboard?tab=history", label: "Wins", Icon: IcoTrophy, active: onDash && tab === "history" },
     { href: "/pickup", label: "Pickup", Icon: IcoBox, active: pathname.startsWith("/pickup") },
     { href: "/account", label: "Profile", Icon: IcoUser, active: pathname.startsWith("/account") },
