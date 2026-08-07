@@ -426,7 +426,11 @@ model BidderProfile {
 
 model GameScore {
   id          String   @id @default(cuid())
-  clerkUserId String   @unique
+  clerkUserId String
+  // Start of the 30-day season this best belongs to. The leaderboard only shows
+  // the CURRENT season, so scores "reset" every 30 days (old rows kept as history).
+  // One best per player per season.
+  seasonStart DateTime @default(now())
   name        String?
   avatarKey   String?
   bestScore   Int      @default(0)
@@ -434,7 +438,8 @@ model GameScore {
   updatedAt   DateTime @default(now()) @updatedAt
   createdAt   DateTime @default(now())
 
-  @@index([bestScore])
+  @@unique([clerkUserId, seasonStart])
+  @@index([seasonStart, bestScore])
 }
 
 model OrgApplication {

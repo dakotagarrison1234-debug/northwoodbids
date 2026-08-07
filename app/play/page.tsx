@@ -42,6 +42,7 @@ export default function PlayPage() {
   const [lots, setLots] = useState<Lot[]>(FALLBACK_LOTS);
   const [leaders, setLeaders] = useState<Leader[]>([]);
   const [yourBest, setYourBest] = useState<number | null>(null);
+  const [seasonEnd, setSeasonEnd] = useState<string | null>(null);
 
   const [state, setState] = useState<"idle" | "playing" | "over">("idle");
   const markerElRef = useRef<HTMLDivElement | null>(null);
@@ -97,7 +98,7 @@ export default function PlayPage() {
   const loadBoard = useCallback(() => {
     fetch("/api/game/leaderboard")
       .then((r) => r.json())
-      .then((d) => { setLeaders(d.leaders ?? []); setYourBest(d.you?.best ?? null); })
+      .then((d) => { setLeaders(d.leaders ?? []); setYourBest(d.you?.best ?? null); setSeasonEnd(d.seasonEnd ?? null); })
       .catch(() => {});
   }, []);
 
@@ -406,6 +407,7 @@ export default function PlayPage() {
   };
 
   const lot = lots[lotIdx] ?? lots[0];
+  const daysLeft = seasonEnd ? Math.max(0, Math.ceil((new Date(seasonEnd).getTime() - Date.now()) / 86_400_000)) : null;
   const bullW = zone.width * BULL_FRAC * 2;
   const comboPct = Math.min(100, (combo / 10) * 100);
 
@@ -645,12 +647,15 @@ export default function PlayPage() {
         {/* ── Leaderboard ── */}
         <div>
           <div className="board rounded-3xl p-5 sm:p-6">
-            <h2 className="font-display text-lg font-black mb-4 flex items-center gap-2">
+            <h2 className="font-display text-lg font-black flex items-center gap-2">
               <svg className="w-5 h-5 text-[#b45309]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 9H4a2 2 0 0 1-2-2V5h4M18 9h2a2 2 0 0 0 2-2V5h-4M8 21h8M12 17v4M6 3h12v8a6 6 0 0 1-12 0V3z" />
               </svg>
               High Scores
             </h2>
+            <p className="text-xs font-semibold text-[#8a7559] mb-4 mt-0.5">
+              This month&apos;s season{daysLeft != null && daysLeft > 0 ? ` · resets in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}` : daysLeft === 0 ? " · resets today" : ""}
+            </p>
             {leaders.length === 0 ? (
               <p className="text-[#8a7559] text-sm">No scores yet — be the first!</p>
             ) : (
