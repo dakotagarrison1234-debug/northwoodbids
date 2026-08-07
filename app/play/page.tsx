@@ -30,6 +30,11 @@ const ZONE_MAX = 28;        // starting zone width (%)
 const ZONE_MIN = 8;
 const ZONE_STEP = 1.3;
 const BULL_FRAC = 0.18;     // bullseye = center ± (zone width * this)
+const MAX_MULT = 8;         // score multiplier cap
+const FRENZY_EVERY = 5;     // every Nth combo kicks off a Gavel Frenzy
+const FRENZY_LEN = 4;       // slams a frenzy lasts
+const GOLDEN_CHANCE = 0.16; // chance a lot is a golden (×3) chase lot
+const NEAR_MISS = 4;        // % from the zone edge that still counts as "so close"
 
 type Particle = {
   x: number; y: number; vx: number; vy: number;
@@ -53,6 +58,9 @@ export default function PlayPage() {
   const [combo, setCombo] = useState(0);
   const [round, setRound] = useState(0);
   const [bestCombo, setBestCombo] = useState(0);
+  const [multiplier, setMultiplier] = useState(1);
+  const [frenzy, setFrenzy] = useState(false);
+  const [golden, setGolden] = useState(false);
   const [flash, setFlash] = useState<{ text: string; tone: "good" | "great" | "bad"; id: number } | null>(null);
   const [lotIdx, setLotIdx] = useState(0);
   const [lotKey, setLotKey] = useState(0); // bumps to retrigger entrance anim
@@ -78,6 +86,10 @@ export default function PlayPage() {
   const comboRef = useRef(0);
   const roundRef = useRef(0);
   const bestComboRef = useRef(0);
+  const multRef = useRef(1);
+  const frenzyHitsRef = useRef(0);
+  const goldenRef = useRef(false);
+  const bestMultRef = useRef(1);
   const shakeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Particle layer
@@ -280,6 +292,10 @@ export default function PlayPage() {
     setLotIdx((i) => (i + 1) % lots.length);
     setLotKey((k) => k + 1);
     setChatter(CHATTER[Math.floor(Math.random() * CHATTER.length)]);
+    // Roll the next lot's rarity — a golden lot is worth ×3 (the chase).
+    const g = Math.random() < GOLDEN_CHANCE;
+    goldenRef.current = g;
+    setGolden(g);
   }, [lots.length]);
 
   const startGame = useCallback(() => {
@@ -287,8 +303,10 @@ export default function PlayPage() {
     stopLoop();
     scoreRef.current = 0; strikesRef.current = 0; comboRef.current = 0;
     roundRef.current = 0; bestComboRef.current = 0;
+    multRef.current = 1; frenzyHitsRef.current = 0; goldenRef.current = false; bestMultRef.current = 1;
     setScore(0); setDisplayScore(0); setStrikes(0); setCombo(0); setRound(0);
-    setBestCombo(0); setFlash(null); setFinalRank(null); setNewBest(false);
+    setBestCombo(0); setMultiplier(1); setFrenzy(false); setGolden(false);
+    setFlash(null); setFinalRank(null); setNewBest(false);
     setLotIdx(Math.floor(Math.random() * lots.length));
     setLotKey((k) => k + 1);
     setChatter(CHATTER[Math.floor(Math.random() * CHATTER.length)]);
@@ -341,33 +359,67 @@ export default function PlayPage() {
     const id = Date.now();
 
     if (inZone) {
-      const c = comboRef.current;
-      const pts = (bull ? 250 : 100) + c * 25;
-      scoreRef.current += pts;
-      comboRef.current = c + 1;
+      const wasGolden = goldenRef.current;
+      // Multiplier climbs each clean hit (faster on a bullseye), resets on a miss.
+      multRef.current = Math.min(MAX_MULT, multRef.current + (bull ? 2 : 1));
+      const mult = multRef.current;
+      comboRef.current += 1;
       roundRef.current += 1;
       bestComboRef.current = Math.max(bestComboRef.current, comboRef.current);
+      bestMultRef.current = Math.max(bestMultRef.current, mult);
+
+      // Gavel Frenzy: every Nth combo kicks off a short ×2 fever with a wider target.
+      let startedFrenzy = false;
+      if (comboRef.current % FRENZY_EVERY === 0 && frenzyHitsRef.current <= 0) {
+        frenzyHitsRef.current = FRENZY_LEN;
+        startedFrenzy = true;
+      }
+      const inFrenzy = frenzyHitsRef.current > 0;
+      const base = bull ? 200 : 100;
+      const pts = base * mult * (wasGolden ? 3 : 1) * (inFrenzy ? 2 : 1);
+      scoreRef.current += pts;
+      if (frenzyHitsRef.current > 0) frenzyHitsRef.current -= 1;
+
       setScore(scoreRef.current);
       setCombo(comboRef.current);
       setRound(roundRef.current);
       setBestCombo(bestComboRef.current);
-      setFlash({ text: bull ? `BULLSEYE!  +${pts}` : `SOLD!  +${pts}`, tone: bull ? "great" : "good", id });
+      setMultiplier(mult);
+      setFrenzy(frenzyHitsRef.current > 0 || startedFrenzy);
+
+      const milestone = roundRef.current % 10 === 0;
+      const label = milestone ? `${roundRef.current} LOTS! 🔥`
+        : startedFrenzy ? "GAVEL FRENZY! ×2"
+        : wasGolden ? `GOLDEN! +${pts.toLocaleString()}`
+        : bull ? `BULLSEYE! +${pts.toLocaleString()}`
+        : `SOLD! +${pts.toLocaleString()}`;
+      setFlash({ text: label, tone: (bull || wasGolden || startedFrenzy || milestone) ? "great" : "good", id });
+
       // juice
       sfxRef.current?.thud();
-      if (bull) sfxRef.current?.bullseye(c); else sfxRef.current?.ding(c);
-      burst(bull);
+      if (startedFrenzy) sfxRef.current?.fanfare();
+      else if (bull || wasGolden) sfxRef.current?.bullseye(comboRef.current);
+      else sfxRef.current?.ding(comboRef.current);
+      burst(bull || wasGolden || inFrenzy);
       triggerShake("hit");
-      // ramp difficulty
+
+      // ramp difficulty; frenzy rewards you with a temporarily wider target.
       speedRef.current = Math.min(MAX_SPEED, BASE_SPEED + roundRef.current * SPEED_STEP);
-      newZone(Math.max(ZONE_MIN, ZONE_MAX - roundRef.current * ZONE_STEP));
+      const baseWidth = Math.max(ZONE_MIN, ZONE_MAX - roundRef.current * ZONE_STEP);
+      newZone(frenzyHitsRef.current > 0 ? Math.min(ZONE_MAX, baseWidth + 8) : baseWidth);
       advanceLot();
     } else {
+      const nearMiss = Math.min(Math.abs(pos - z.start), Math.abs(pos - (z.start + z.width))) <= NEAR_MISS;
       strikesRef.current += 1;
       comboRef.current = 0;
+      multRef.current = 1;
+      frenzyHitsRef.current = 0;
       setStrikes(strikesRef.current);
       setCombo(0);
+      setMultiplier(1);
+      setFrenzy(false);
       const dead = strikesRef.current >= 3;
-      setFlash({ text: dead ? "GAVEL DROPPED!" : "MISSED!", tone: "bad", id });
+      setFlash({ text: dead ? "GAVEL DROPPED!" : nearMiss ? "SO CLOSE!" : "MISSED!", tone: "bad", id });
       sfxRef.current?.thud();
       sfxRef.current?.buzz();
       triggerShake("miss");
@@ -409,7 +461,6 @@ export default function PlayPage() {
   const lot = lots[lotIdx] ?? lots[0];
   const daysLeft = seasonEnd ? Math.max(0, Math.ceil((new Date(seasonEnd).getTime() - Date.now()) / 86_400_000)) : null;
   const bullW = zone.width * BULL_FRAC * 2;
-  const comboPct = Math.min(100, (combo / 10) * 100);
 
   return (
     <div className="min-h-screen text-[#241a12] arcade-root">
@@ -439,7 +490,7 @@ export default function PlayPage() {
       <div className="max-w-6xl mx-auto px-6 sm:px-8 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
         {/* ── Game column ── */}
         <div className="lg:col-span-2">
-          <div className={`stage relative overflow-hidden rounded-3xl ${shake === "hit" ? "shake-hit" : shake === "miss" ? "shake-miss" : ""}`}>
+          <div className={`stage relative overflow-hidden rounded-3xl ${frenzy ? "frenzy" : ""} ${shake === "hit" ? "shake-hit" : shake === "miss" ? "shake-miss" : ""}`}>
             {/* bunting / pennants */}
             <div className="bunting" aria-hidden="true">
               {Array.from({ length: 14 }).map((_, i) => (
@@ -505,15 +556,23 @@ export default function PlayPage() {
                       <div className="text-[10px] uppercase tracking-widest text-[#d8c19a] font-bold">Score</div>
                       <div className="font-display text-2xl sm:text-3xl font-black text-[#bfe08a] leading-none tabular-nums">{displayScore.toLocaleString()}</div>
                     </div>
-                    {/* combo flame meter */}
+                    {/* multiplier + frenzy — the star of the HUD */}
                     <div className="flex flex-col items-center">
-                      <div className={`text-sm font-black ${combo > 1 ? "text-[#b45309]" : "text-[#cdbda3]"} transition-colors`}>
-                        {combo > 1 ? `${combo}× COMBO` : "COMBO"}
+                      <div
+                        key={multiplier}
+                        className={`font-display font-black leading-none transition-all ${multiplier > 1 ? "text-3xl sm:text-4xl mult-pop" : "text-lg"}`}
+                        style={multiplier > 1
+                          ? { color: "#ffcf5c", textShadow: "0 0 18px rgba(245,158,11,0.8)" }
+                          : { color: "#8a7559" }}
+                      >
+                        ×{multiplier}
                       </div>
-                      <div className="w-full max-w-[120px] h-2.5 rounded-full bg-[#e6d8bf] overflow-hidden mt-1 border border-[#d8c7a6]">
-                        <div className="h-full rounded-full combo-fill" style={{ width: `${comboPct}%` }} />
-                      </div>
-                      {combo >= 3 && <span className="flame text-base leading-none mt-0.5" aria-hidden="true">🔥</span>}
+                      <div className="text-[10px] uppercase tracking-widest font-bold text-[#d8c19a]">Multiplier</div>
+                      {frenzy ? (
+                        <span className="mt-1 text-[11px] font-black text-[#fff2cf] px-2.5 py-0.5 rounded-full bg-[#b45309]/60 border border-[#f59e0b]/70 animate-pulse whitespace-nowrap">🔥 FRENZY ×2</span>
+                      ) : combo > 1 ? (
+                        <span className="mt-1 text-[11px] font-bold text-[#e9d9bd]">{combo}× combo</span>
+                      ) : null}
                     </div>
                     {/* lives as gavels */}
                     <div className="flex justify-end gap-1.5" aria-label={`${3 - strikes} lives left`}>
@@ -524,9 +583,14 @@ export default function PlayPage() {
                   </div>
 
                   {/* Lot on the block — pedestal card with entrance anim */}
-                  <div key={lotKey} className="lot-card relative rounded-2xl p-4 mb-5 flex items-center gap-4 min-h-[92px]">
+                  <div key={lotKey} className={`lot-card relative rounded-2xl p-4 mb-5 flex items-center gap-4 min-h-[92px] ${golden ? "golden" : ""}`}>
                     <div className="lot-spot" aria-hidden="true" />
-                    <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-[#efe3d0] shrink-0 grid place-items-center ring-2 ring-[#fffdf7] shadow-md">
+                    {golden && (
+                      <span className="golden-badge absolute -top-2.5 right-3 z-10 text-[11px] font-display font-black text-[#5a3a00] px-2.5 py-0.5 rounded-full">
+                        ✦ GOLDEN ×3
+                      </span>
+                    )}
+                    <div className={`relative w-20 h-20 rounded-xl overflow-hidden bg-[#efe3d0] shrink-0 grid place-items-center shadow-md ${golden ? "ring-2 ring-[#f59e0b]" : "ring-2 ring-[#fffdf7]"}`}>
                       {lot?.photo
                         ? <Image src={lot.photo} alt="" fill sizes="80px" className="object-cover" />
                         : <LotGlyph />}
@@ -600,6 +664,10 @@ export default function PlayPage() {
                     <div className="stat-pill">
                       <div className="font-display text-2xl font-black text-[#b45309]">{bestCombo}×</div>
                       <div className="text-[10px] uppercase tracking-widest text-[#8a7559] font-bold">Best Combo</div>
+                    </div>
+                    <div className="stat-pill">
+                      <div className="font-display text-2xl font-black text-[#c98a00]">×{bestMultRef.current}</div>
+                      <div className="text-[10px] uppercase tracking-widest text-[#8a7559] font-bold">Top Mult</div>
                     </div>
                   </div>
 
@@ -947,8 +1015,44 @@ export default function PlayPage() {
           box-shadow: inset 0 0 0 1px rgba(245,158,11,0.35);
         }
 
+        /* ── Multiplier pop ── */
+        .mult-pop { animation: multPop 0.28s cubic-bezier(0.3, 1.5, 0.5, 1); }
+        @keyframes multPop { 0% { transform: scale(1.5); } 60% { transform: scale(0.9); } 100% { transform: scale(1); } }
+
+        /* ── Golden lot ── */
+        .lot-card.golden {
+          background: linear-gradient(180deg, #fff7df, #ffe9b0);
+          border-color: #f0b429;
+          animation: goldShimmer 1.6s ease-in-out infinite, lotIn 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes goldShimmer {
+          0%,100% { box-shadow: 0 0 0 2px rgba(245,158,11,0.55), 0 16px 34px -14px rgba(245,158,11,0.5); }
+          50%     { box-shadow: 0 0 0 2px rgba(245,158,11,0.95), 0 0 26px 2px rgba(245,158,11,0.55), 0 16px 34px -14px rgba(245,158,11,0.6); }
+        }
+        .golden-badge {
+          background: linear-gradient(180deg, #ffe08a, #f0b429);
+          border: 1px solid #b7791f;
+          box-shadow: 0 3px 8px -2px rgba(160,110,20,0.6);
+        }
+
+        /* ── Gavel Frenzy fever ── */
+        .frenzy { animation: frenzyEdge 0.7s ease-in-out infinite; }
+        .frenzy::before {
+          content: "";
+          position: absolute; inset: 0;
+          background: radial-gradient(130% 100% at 50% 50%, rgba(245,158,11,0.24), rgba(245,158,11,0.06) 55%, transparent 75%);
+          pointer-events: none; z-index: 6;
+          animation: frenzyGlow 0.7s ease-in-out infinite;
+        }
+        @keyframes frenzyEdge {
+          0%,100% { box-shadow: 0 30px 60px -25px rgba(36,26,18,0.55), inset 0 0 0 2px rgba(245,158,11,0.35); }
+          50%     { box-shadow: 0 30px 60px -25px rgba(36,26,18,0.55), inset 0 0 46px rgba(245,158,11,0.5), inset 0 0 0 2px rgba(245,158,11,0.7); }
+        }
+        @keyframes frenzyGlow { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
+
         @media (prefers-reduced-motion: reduce) {
-          .start-btn, .bob, .pennant, .bullseye, .flame { animation: none !important; }
+          .start-btn, .bob, .pennant, .bullseye, .flame,
+          .lot-card.golden, .frenzy, .frenzy::before, .mult-pop { animation: none !important; }
         }
       `}</style>
     </div>
