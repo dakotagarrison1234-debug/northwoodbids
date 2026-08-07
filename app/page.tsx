@@ -129,7 +129,7 @@ export default async function HomePage() {
   const topCandidates = await prisma.item.findMany({
     where: { status: "ACTIVE", auction: { status: { in: ["OPEN", "CLOSING"] }, archived: false } },
     orderBy: [{ bids: { _count: "desc" } }, { currentBid: "desc" }],
-    take: 40,
+    take: 60,
     select: {
       id: true, title: true, currentBid: true, retailValue: true,
       photos: { take: 1, orderBy: [{ isPrimary: "desc" }, { order: "asc" }], select: { url: true } },
@@ -155,7 +155,7 @@ export default async function HomePage() {
       };
     })
     .sort((a, b) => b.score - a.score)
-    .slice(0, 12);
+    .slice(0, 20);
 
   return (
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
