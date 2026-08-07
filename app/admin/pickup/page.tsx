@@ -769,6 +769,29 @@ export default function AdminPickupPage() {
       const grabbed = a.items.filter((it) => it.grabbed).length;
       const all = a.items.length;
       const allGrabbed = all > 0 && grabbed === all;
+
+      // Already staged = gathered AND boxed. Drop the gather checklist entirely —
+      // there's nothing to gather. Just show where it's boxed and what's in it.
+      if (a.stagedSpot) {
+        return (
+          <div className="mt-4">
+            <div className="rounded-xl bg-[#eaf1e2] border border-[#c9dab3] px-4 py-3 mb-2.5">
+              <div className="text-xs font-bold uppercase tracking-wide text-[#4f6639]">Staged &amp; ready</div>
+              <div className="text-lg font-extrabold text-[#3f5226] leading-tight">{a.stagedSpot}</div>
+              <div className="text-sm text-[#5f7a45]">{all} item{all !== 1 ? "s" : ""} boxed for pickup.</div>
+            </div>
+            <ul className="space-y-1">
+              {a.items.map((it) => (
+                <li key={it.id} className="flex items-center gap-2 text-base text-[#4a3a2b] px-1 py-0.5">
+                  {it.itemCode && <span className="font-mono font-bold text-[#6c4d39] text-sm shrink-0">{it.itemCode}</span>}
+                  <span className="truncate">{it.title}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      }
+
       return (
         <div className="mt-4">
           <div className="flex items-center justify-between gap-3 mb-2">
