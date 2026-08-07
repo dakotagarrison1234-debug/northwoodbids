@@ -457,22 +457,40 @@ export default function PlayPage() {
 
               {/* ── IDLE / START SCREEN ── */}
               {state === "idle" && (
-                <div className="text-center py-8 sm:py-12">
-                  <div className="flex justify-center mb-5">
+                <div className="text-center py-7 sm:py-10">
+                  <div className="flex justify-center mb-4">
                     <div className="bob relative">
-                      <div className="absolute inset-0 rounded-full bg-[#f59e0b]/25 blur-xl scale-110" />
+                      <div className="absolute inset-0 rounded-full bg-[#f59e0b]/30 blur-xl scale-125" />
                       <Avatar avatarKey={AVATARS[5]?.key} className="relative w-24 h-24 drop-shadow-lg" />
                     </div>
                   </div>
-                  <p className="text-[#4a3a2b] text-base sm:text-lg mb-1 font-medium">Run the auction block!</p>
-                  <p className="text-[#6c4d39] text-sm mb-7 max-w-sm mx-auto">
-                    Slam the gavel inside the green <span className="text-[#5f7a45] font-bold">SOLD</span> zone to win each lot.
-                    Nail the bullseye for bonus, stack your combo, and don&apos;t miss thrice.
+
+                  <p className="font-display text-2xl sm:text-3xl font-black text-[#ffe4b0] leading-tight mb-2 px-2"
+                     style={{ textShadow: "0 2px 14px rgba(245,158,11,0.45), 0 1px 0 #1a120b" }}>
+                    Think you&apos;ve got the fastest gavel? 🔨
                   </p>
-                  <button onClick={startGame} className="start-btn font-display font-black text-xl px-12 py-4 rounded-2xl text-white">
-                    START
+                  <p className="text-[#f3e7cf] text-base sm:text-lg font-semibold leading-snug max-w-md mx-auto mb-3">
+                    Time your slam to land inside the glowing <span className="text-[#bff08a] font-black">SOLD</span> zone
+                    and win the lot.
+                  </p>
+
+                  {/* quick, readable "how to win" chips */}
+                  <div className="flex flex-wrap items-center justify-center gap-2 mb-6 max-w-sm mx-auto">
+                    <span className="text-sm font-bold text-[#f3e7cf] bg-white/10 border border-white/15 rounded-full px-3 py-1">🎯 Hit the bullseye = bonus</span>
+                    <span className="text-sm font-bold text-[#f3e7cf] bg-white/10 border border-white/15 rounded-full px-3 py-1">🔥 Stack combos</span>
+                    <span className="text-sm font-bold text-[#f3e7cf] bg-white/10 border border-white/15 rounded-full px-3 py-1">⚡ 3 misses = out</span>
+                  </div>
+
+                  {leaders[0] && (
+                    <p className="text-[#ffd9a0] text-sm font-bold mb-4">
+                      👑 Top score to beat: <span className="tabular-nums">{leaders[0].score.toLocaleString()}</span>
+                    </p>
+                  )}
+
+                  <button onClick={startGame} className="start-btn font-display font-black text-2xl px-14 py-4 rounded-2xl text-white">
+                    PLAY NOW
                   </button>
-                  <p className="text-[#8a7559] text-xs mt-4">Tap the button or press <kbd className="kbd">Space</kbd></p>
+                  <p className="text-[#d8c19a] text-xs mt-4 font-medium">Tap the button or press <kbd className="kbd">Space</kbd> — it&apos;s free & fun.</p>
                 </div>
               )}
 
@@ -482,8 +500,8 @@ export default function PlayPage() {
                   {/* HUD */}
                   <div className="grid grid-cols-3 items-center gap-2 mb-4 mt-3">
                     <div className="text-left">
-                      <div className="text-[10px] uppercase tracking-widest text-[#8a7559] font-bold">Score</div>
-                      <div className="font-display text-2xl sm:text-3xl font-black text-[#3f5230] leading-none tabular-nums">{displayScore.toLocaleString()}</div>
+                      <div className="text-[10px] uppercase tracking-widest text-[#d8c19a] font-bold">Score</div>
+                      <div className="font-display text-2xl sm:text-3xl font-black text-[#bfe08a] leading-none tabular-nums">{displayScore.toLocaleString()}</div>
                     </div>
                     {/* combo flame meter */}
                     <div className="flex flex-col items-center">
@@ -562,8 +580,8 @@ export default function PlayPage() {
               {/* ── GAME OVER SCREEN ── */}
               {state === "over" && (
                 <div className="text-center py-6 sm:py-8 over-in">
-                  <div className="text-xs text-[#8a7559] uppercase tracking-widest font-bold">Final Score</div>
-                  <div className="font-display text-6xl font-black text-[#3f5230] my-1 tabular-nums">{score.toLocaleString()}</div>
+                  <div className="text-xs text-[#d8c19a] uppercase tracking-widest font-bold">Final Score</div>
+                  <div className="font-display text-6xl font-black text-[#bfe08a] my-1 tabular-nums">{score.toLocaleString()}</div>
 
                   {newBest && (
                     <div className="best-badge inline-flex items-center gap-1.5 font-display font-black text-[#b45309] text-sm mb-2">
@@ -584,13 +602,13 @@ export default function PlayPage() {
                   </div>
 
                   {isSignedIn ? (
-                    <p className="text-[#4a3a2b] text-base mb-5">
+                    <p className="text-[#f3e7cf] text-base mb-5 font-semibold">
                       {submitting ? "Saving…" : finalRank ? `You're #${finalRank} on the board!` : "Score saved."}
-                      {yourBest != null && <span className="block text-[#8a7559] text-sm mt-1">Your best: {yourBest.toLocaleString()}</span>}
+                      {yourBest != null && <span className="block text-[#d8c19a] text-sm mt-1 font-normal">Your best: {yourBest.toLocaleString()}</span>}
                     </p>
                   ) : (
                     <div className="mb-5">
-                      <p className="text-[#4a3a2b] text-base mb-2">Sign in to save your score to the board.</p>
+                      <p className="text-[#f3e7cf] text-base mb-2 font-semibold">Sign in to save your score to the board.</p>
                       <SignInButton mode="modal">
                         <button className="bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] text-[#241a12] font-semibold px-5 py-2.5 rounded-xl">Sign in to save your score</button>
                       </SignInButton>
