@@ -566,7 +566,7 @@ export default function PlayPage() {
 
                   {/* SLAM button with SVG gavel */}
                   <button
-                    onClick={slam}
+                    onPointerDown={slam}
                     aria-label="Slam the gavel"
                     className="slam-btn group w-full font-display font-black text-2xl py-5 rounded-2xl text-white mt-2 select-none flex items-center justify-center gap-3"
                   >
@@ -633,7 +633,7 @@ export default function PlayPage() {
             {/* full-stage click target while playing (sits below HUD content) */}
             {state === "playing" && (
               <button
-                onClick={slam}
+                onPointerDown={slam}
                 aria-label="Slam the gavel"
                 tabIndex={-1}
                 className="absolute inset-0 z-10 cursor-pointer"
