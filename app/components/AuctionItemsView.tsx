@@ -23,6 +23,8 @@ export interface ViewItem {
   size: string | null;
   priceLabel: string;
   priceValue: number;
+  /** The current high bid in dollars (0 = no bids yet). Used for the bid filter/sort. */
+  bidAmount: number;
   retailValue: number;
   bidLabel: string;
   bidClass: string; // full Tailwind class string for the grid CTA bar
@@ -77,13 +79,35 @@ export default function AuctionItemsView({
     } catch {}
   };
 
+  // Bid-activity filter/sort. "featured" keeps the server order (premium first).
+  const [sort, setSort] = useState<"featured" | "nobids" | "high" | "low">("featured");
+  const shownItems = (() => {
+    if (sort === "nobids") return items.filter((i) => i.bidAmount === 0);
+    if (sort === "high") return [...items].sort((a, b) => b.bidAmount - a.bidAmount);
+    if (sort === "low") return [...items].sort((a, b) => a.bidAmount - b.bidAmount); // $0 (no bids) first
+    return items;
+  })();
+
   return (
     <>
-      {/* View toggle */}
-      <div className="flex items-center justify-between gap-3 mb-5">
-        <span className="text-xs text-[#8a7559] font-medium">
-          {items.length} item{items.length !== 1 ? "s" : ""}
-        </span>
+      {/* Filter/sort + view toggle */}
+      <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-xs text-[#8a7559] font-medium shrink-0">
+            {shownItems.length} item{shownItems.length !== 1 ? "s" : ""}
+          </span>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as typeof sort)}
+            aria-label="Filter items by bids"
+            className="bg-white border border-[#cdbda3] rounded-xl px-2.5 py-2 text-xs font-bold text-[#6f5b46] focus:outline-none focus:border-[#6c4d39]"
+          >
+            <option value="featured">Featured</option>
+            <option value="nobids">No bids</option>
+            <option value="high">Highest bids</option>
+            <option value="low">Lowest bids</option>
+          </select>
+        </div>
         <div className="inline-flex rounded-xl border border-[#cdbda3] bg-white overflow-hidden shrink-0" role="group" aria-label="View">
           {(
             [
@@ -108,7 +132,7 @@ export default function AuctionItemsView({
 
       {view === "grid" ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 items-stretch">
-          {items.map((item) => (
+          {shownItems.map((item) => (
             <div key={item.id} className="flex flex-col h-full">
               <Link href={item.href} className={item.cardClass}>
                 {/* Photo */}
@@ -203,7 +227,7 @@ export default function AuctionItemsView({
         /* ── List view: compact full-width rows for fast scanning. Small square
            photo, title + meta in the middle, price + CTA on the right. ── */
         <div className="flex flex-col gap-2">
-          {items.map((item) => (
+          {shownItems.map((item) => (
             <div key={item.id} className="flex flex-col">
               <Link
                 href={item.href}

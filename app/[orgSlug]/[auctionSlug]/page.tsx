@@ -250,6 +250,7 @@ export default async function AuctionPage({ params }: Props) {
       size: item.size ?? null,
       priceLabel,
       priceValue,
+      bidAmount: Number(item.currentBid), // 0 = no bids yet — drives the bid filter/sort
       retailValue: Number(item.retailValue),
       bidLabel,
       bidClass,
