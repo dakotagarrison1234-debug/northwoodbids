@@ -74,7 +74,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Auctions", href: "/admin/auctions", icon: "gavel" },
     ...(isOwnerOrAdmin ? [{ label: "Winners & Payments", href: "/admin/winners", icon: "trophy" }] : []),
     { label: "Pickup", href: "/admin/pickup", icon: "package" },
-    ...(isOwnerOrAdmin ? [{ label: "Fulfillment", href: "/admin/fulfillment", icon: "grid" }] : []),
     ...(isOwnerOrAdmin ? [{ label: "Unsold / Relist", href: "/admin/unsold", icon: "refresh" }] : []),
     ...(isOwnerOrAdmin ? [{ label: "Reports", href: "/admin/reports", icon: "chart" }] : []),
     ...(isOwnerOrAdmin ? [{ label: "Bidders", href: "/admin/bidders", icon: "users" }] : []),

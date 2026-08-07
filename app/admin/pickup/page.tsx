@@ -283,6 +283,35 @@ export default function AdminPickupPage() {
     setTimeout(() => setMsg(null), 4000);
   };
 
+  // Add loose / just-arrived items to a customer's existing appointment ("click and
+  // add"). Reloads the waiting list + appointments so the item moves onto the order.
+  const [addingApptId, setAddingApptId] = useState<string | null>(null);
+  const addToAppointment = async (apptId: string, itemIds: string[]) => {
+    if (itemIds.length === 0) return;
+    setAddingApptId(apptId);
+    try {
+      const res = await fetch(`/api/admin/pickup/appointments/${apptId}/add-items`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemIds }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        flash(
+          `Added ${data.added} item${data.added !== 1 ? "s" : ""} to the pickup${data.unstaged ? " — re-gather & re-stage the box" : ""}.`,
+          true
+        );
+        await Promise.all([loadWaiting(), loadAppointments()]);
+      } else {
+        flash(data.error || "Couldn't add to the pickup.", false);
+      }
+    } catch {
+      flash("Something went wrong.", false);
+    } finally {
+      setAddingApptId(null);
+    }
+  };
+
   // ── Appointment actions ──────────────────────────────────────────────────
   const [editingApptId, setEditingApptId] = useState<string | null>(null);
   const [editStartsAt, setEditStartsAt] = useState("");
@@ -1449,6 +1478,15 @@ export default function AdminPickupPage() {
                     const scopedItems = w.itemList.filter((i) => atScope(i.warehouse));
                     const scopedGathered = scopedItems.filter((i) => i.grabbed).length;
                     const allScopedGathered = scopedItems.length > 0 && scopedGathered === scopedItems.length;
+                    // Does this customer already have a booked pickup? If so, their loose
+                    // items at that pickup's warehouse can be added straight to it.
+                    const custAppt = appointments.find((ap) => ap.clerkUserId === w.clerkUserId && ap.status === "SCHEDULED");
+                    const addableToAppt = custAppt
+                      ? w.itemList.filter((i) => !i.transferring && i.warehouse === custAppt.location.name)
+                      : [];
+                    const apptWhen = custAppt
+                      ? new Date(custAppt.startsAt).toLocaleString("en-US", { timeZone: "America/Detroit", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+                      : "";
                     return (
                     <li key={w.clerkUserId} className={`bg-white border-2 rounded-2xl p-4 ${
                       w.hasLocation ? "border-slate-200" : "border-amber-200 bg-amber-50/40"
@@ -1517,6 +1555,21 @@ export default function AdminPickupPage() {
                           )}
                         </span>
                       </div>
+
+                      {/* Customer already has a booked pickup at this warehouse — add these
+                          loose / just-arrived items straight onto it. This is the missing
+                          "click and add" so an arrived transfer isn't stranded. */}
+                      {custAppt && addableToAppt.length > 0 && (
+                        <button
+                          onClick={() => addToAppointment(custAppt.id, addableToAppt.map((i) => i.id))}
+                          disabled={addingApptId === custAppt.id}
+                          className="w-full mt-3 inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base py-3 rounded-xl disabled:opacity-50"
+                        >
+                          {addingApptId === custAppt.id
+                            ? "Adding…"
+                            : `＋ Add ${addableToAppt.length} item${addableToAppt.length !== 1 ? "s" : ""} to their ${apptWhen} pickup`}
+                        </button>
+                      )}
 
                       {/* Gather checklist — pull their items early, even with no appointment.
                           Transferring items can't be gathered until they arrive. */}
