@@ -8,7 +8,7 @@ import LocalDate from "@/app/components/LocalDate";
 import PusherRefresh from "@/app/components/PusherRefresh";
 import NotFoundCard from "@/app/components/NotFoundCard";
 import AuctionItemsView, { type ViewItem } from "@/app/components/AuctionItemsView";
-import { PineMark, BranchDivider, WoodenCrate } from "@/app/components/Illustrations";
+import { PineMark, WoodenCrate } from "@/app/components/Illustrations";
 
 interface Props {
   params: Promise<{ orgSlug: string; auctionSlug: string }>;
@@ -322,10 +322,7 @@ export default async function AuctionPage({ params }: Props) {
       </div>
 
       {/* Item grid */}
-      <section className="px-6 sm:px-8 py-8 sm:py-10 max-w-6xl mx-auto">
-        <div className="flex justify-center mb-6 sm:mb-8">
-          <BranchDivider className="w-40 h-5 opacity-80" />
-        </div>
+      <section className="px-6 sm:px-8 py-6 sm:py-8 max-w-6xl mx-auto">
         {visibleItems.length === 0 ? (
           <div className="text-center py-20 text-[#8a7559] px-5">
             <div className="flex justify-center mb-4">

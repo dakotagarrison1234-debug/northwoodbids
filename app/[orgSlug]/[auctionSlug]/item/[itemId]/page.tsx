@@ -10,7 +10,6 @@ import { getNextValidBid, getProxySuggestions } from "@/lib/bidIncrements";
 import CardSetupModal from "@/app/components/CardSetupModal";
 import MaxBidExplainerModal from "@/app/components/MaxBidExplainerModal";
 import ExpandableDescription from "@/app/components/ExpandableDescription";
-import { BranchDivider } from "@/app/components/Illustrations";
 import Skeleton from "@/app/components/Skeleton";
 
 interface Item {
@@ -1181,10 +1180,7 @@ export default function ItemPage() {
         </div>
       </div>
 
-      {/* Footer flourish */}
-      <div className="flex justify-center pb-10">
-        <BranchDivider className="w-40 h-5 opacity-80" />
-      </div>
+      <div className="pb-8" />
 
       {/* Card setup modal — shown when user tries to bid without a card on file */}
       {showCardModal && (
