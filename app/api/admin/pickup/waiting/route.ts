@@ -22,6 +22,7 @@ export async function GET() {
       grabbedAt: true,
       gatherSpot: true,
       storageLocation: true,
+      needsPlacement: true,
       updatedAt: true,
       location: { select: { name: true } },
       transferRequest: { select: { status: true } },
@@ -46,6 +47,7 @@ export async function GET() {
     storageLocation: string | null;
     warehouse: string | null;
     transferring: boolean;
+    needsPlacement: boolean;
   };
   type Row = { clerkUserId: string; items: LiteItem[]; oldest: Date };
   const byUser = new Map<string, Row>();
@@ -63,6 +65,7 @@ export async function GET() {
       storageLocation: it.storageLocation,
       warehouse: it.location?.name ?? null,
       transferring: !!tr && (tr.status === "REQUESTED" || tr.status === "LOADED"),
+      needsPlacement: it.needsPlacement,
     });
     if (it.updatedAt < row.oldest) row.oldest = it.updatedAt;
     byUser.set(uid, row);

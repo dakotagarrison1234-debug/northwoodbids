@@ -24,7 +24,8 @@ export async function POST(request: NextRequest) {
 
     await prisma.item.updateMany({
       where: { id: { in: itemIds }, organizationId: membership.organizationId },
-      data: { gatherSpot: trimmed || null },
+      // Giving it a gather spot = it's been placed, so it's no longer "needs placing".
+      data: { gatherSpot: trimmed || null, ...(trimmed ? { needsPlacement: false } : {}) },
     });
 
     return NextResponse.json({ success: true, spot: trimmed || null });

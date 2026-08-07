@@ -63,6 +63,7 @@ interface WaitingItem {
   storageLocation: string | null;
   warehouse: string | null;
   transferring: boolean;
+  needsPlacement: boolean;
 }
 interface WaitingRow {
   clerkUserId: string;
@@ -1521,6 +1522,12 @@ export default function AdminPickupPage() {
                                   <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-base text-[#241a12] min-w-0">
                                     {it.itemCode && <span className="font-mono font-extrabold text-[#6c4d39]">{it.itemCode}</span>}
                                     <span className={`font-semibold ${it.grabbed ? "line-through text-[#6f5b46]" : ""}`}>{it.title}</span>
+                                    {/* Just landed via transfer — warehouse known, spot not. Needs a human to place it. */}
+                                    {it.needsPlacement && !it.grabbed && (
+                                      <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300 whitespace-nowrap">
+                                        Just arrived · place it
+                                      </span>
+                                    )}
                                     {/* Off the shelf once THIS item is grabbed or has its own gather spot.
                                         (Must be per-item — a newly won item on an already-gathered order
                                         is still on the shelf.) */}

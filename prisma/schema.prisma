@@ -140,6 +140,11 @@ enum AuctionStatus {
   /// before loading and for pickups before they're booked/staged. Cleared when the
   /// item is loaded onto a transfer or staged onto an appointment.
   gatherSpot          String?
+  /// True when an item has just landed at a warehouse (arrived via transfer) or is
+  /// newly paid and hasn't been physically placed yet — it needs a human to set its
+  /// spot and decide what to do with it (the "Decide inbox"). Cleared once staff give
+  /// it a gather spot / shelf or grab it. Additive flag; safe default false.
+  needsPlacement      Boolean            @default(false)
   pickupAppointmentId String?
   pickupAppointment   PickupAppointment? @relation(fields: [pickupAppointmentId], references: [id], onDelete: SetNull)
   locationId          String?

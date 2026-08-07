@@ -30,7 +30,8 @@ export async function POST(request: NextRequest, { params }: Props) {
     // Scope to this org — an item id from elsewhere must not be touchable.
     const updated = await prisma.item.updateMany({
       where: { id: itemId, organizationId: membership.organizationId },
-      data: { grabbedAt: grabbed ? new Date() : null },
+      // Grabbing it means a human has it in hand → it's been placed/handled.
+      data: { grabbedAt: grabbed ? new Date() : null, ...(grabbed ? { needsPlacement: false } : {}) },
     });
     if (updated.count === 0) {
       return NextResponse.json({ error: "Item not found" }, { status: 404 });

@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { getUserOrg } from "@/lib/auth";
-import { attachToUpcomingAppointment } from "@/lib/pickup";
 import { notifyTransferArrived } from "@/lib/transferNotify";
 
 interface Props {
@@ -121,13 +120,25 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       const snapshot = moving.map((m) => ({ itemId: m.id, locationId: m.locationId }));
       await prisma.item.updateMany({
         where: { transferRequestId: id },
-        data: { locationId: transfer.toLocationId, transferRequestId: null },
+        data: {
+          locationId: transfer.toLocationId,
+          transferRequestId: null,
+          // Freshly unloaded at the destination: we know the WAREHOUSE, not the spot.
+          // Reset physical state so an arrived item never inherits the old warehouse's
+          // gathered/shelf status, and flag it so a human places + assigns it. It does
+          // NOT auto-merge into a gathered order or an appointment anymore.
+          grabbedAt: null,
+          gatherSpot: null,
+          storageLocation: null,
+          needsPlacement: true,
+        },
       });
       await prisma.transferRequest.update({
         where: { id },
         data: { revertSnapshot: snapshot, stagedSpot: null, stagedAt: null },
       });
-      await attachToUpcomingAppointment(transfer.clerkUserId, transfer.organizationId);
+      // (Removed the auto-attach-to-appointment on arrival.) Arrived items wait in the
+      // Decide inbox (the "not booked yet" list) for staff to place + assign manually.
     } else {
       // Cancelled: detach items, leaving their home location unchanged.
       const claim = await prisma.transferRequest.updateMany({
