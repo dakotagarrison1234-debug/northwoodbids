@@ -4,7 +4,6 @@ import { ClerkProvider } from "@clerk/nextjs";
 import HomeHeader from "@/app/components/HomeHeader";
 import ReferralClaimer from "@/app/components/ReferralClaimer";
 import ChatWidget from "@/app/components/ChatWidget";
-import BidderTabBar from "@/app/components/BidderTabBar";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -99,8 +98,6 @@ export default function RootLayout({
           {children}
           {/* Woody — GHL support chat widget (only on customer-browsing pages). */}
           <ChatWidget />
-          {/* App-style bottom nav for signed-in bidders on mobile. */}
-          <BidderTabBar />
         </body>
       </html>
     </ClerkProvider>

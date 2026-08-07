@@ -166,13 +166,6 @@ html {
   .nb-pop, .nb-attention { animation: none; }
 }
 
-/* Bidder bottom tab bar (mobile only): give the page room so the fixed bar never
-   covers content, and lift the Woody chat launcher above the bar. */
-@media (max-width: 639px) {
-  body.nb-tabbar { padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
-  body.nb-tabbar chat-widget { bottom: calc(66px + env(safe-area-inset-bottom)) !important; }
-}
-
 /* sticky top bars: add the status-bar inset on top of their own padding */
 .bar-safe-top { padding-top: calc(env(safe-area-inset-top) + 0.5rem); }
 /* bottom nav bars: lift above the home indicator */
