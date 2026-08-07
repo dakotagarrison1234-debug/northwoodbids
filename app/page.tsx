@@ -5,6 +5,7 @@ import { auth } from "@clerk/nextjs/server";
 import AuctionCard from "./components/AuctionCard";
 import SiteFooter from "./components/SiteFooter";
 import PusherRefresh from "./components/PusherRefresh";
+import TopItemsCarousel from "./components/TopItemsCarousel";
 import { PineRidge, MountainRange, WoodenCrate, BranchDivider } from "./components/Illustrations";
 
 function IconSearch() {
@@ -122,6 +123,40 @@ export default async function HomePage() {
     activeItemsByAuction.map((r) => [r.auctionId, r._count._all])
   );
 
+  // "Hot right now" showcase: top live lots blended by bid count (engagement),
+  // current bid, and MSRP. Pull a bounded candidate set ordered by bids, then
+  // score in JS and keep the top 12 with a photo.
+  const topCandidates = await prisma.item.findMany({
+    where: { status: "ACTIVE", auction: { status: { in: ["OPEN", "CLOSING"] }, archived: false } },
+    orderBy: [{ bids: { _count: "desc" } }, { currentBid: "desc" }],
+    take: 40,
+    select: {
+      id: true, title: true, currentBid: true, retailValue: true,
+      photos: { take: 1, orderBy: [{ isPrimary: "desc" }, { order: "asc" }], select: { url: true } },
+      _count: { select: { bids: true } },
+      auction: { select: { slug: true, organization: { select: { slug: true } } } },
+    },
+  });
+  const topItems = topCandidates
+    .filter((it) => it.photos[0]?.url && it.auction?.slug && it.auction.organization?.slug)
+    .map((it) => {
+      const bidCount = it._count.bids;
+      const cur = Number(it.currentBid);
+      const msrp = Number(it.retailValue);
+      return {
+        id: it.id,
+        title: it.title,
+        href: `/${it.auction!.organization!.slug}/${it.auction!.slug}/item/${it.id}`,
+        photo: it.photos[0]!.url,
+        currentBid: cur,
+        retailValue: msrp,
+        bidCount,
+        score: bidCount * 3 + cur + msrp * 0.02,
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 12);
+
   return (
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
       <PusherRefresh channel="auctions" event="auction-updated" />
@@ -164,6 +199,9 @@ export default async function HomePage() {
         </div>
         <PineRidge className="pointer-events-none absolute bottom-0 left-0 w-full h-28" />
       </section>
+
+      {/* Hot right now — auto-scrolling showcase of the top live lots */}
+      {topItems.length >= 4 && <TopItemsCarousel items={topItems} />}
 
       {/* Live Auctions */}
       <section id="live-auctions" className="px-6 sm:px-8 pt-4 pb-14 sm:pb-16 max-w-6xl mx-auto">
