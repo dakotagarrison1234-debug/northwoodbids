@@ -901,6 +901,17 @@ function NewItemForm() {
             );
           })()}
 
+          {/* Previous item's code, pinned at the top after Save & next — so you can
+              still jot it down on the last item if you forgot. */}
+          {lastCode && (
+            <div className="rounded-xl bg-[#f6ecda] border-2 border-[#e3c9a3] px-4 py-2.5 flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] font-bold uppercase tracking-wide text-[#8a5a2b]">Just saved</span>
+              <span className="font-mono font-black text-[#6c4d39] text-lg leading-none">#{lastCode}</span>
+              {lastTitle && <span className="text-sm text-[#6f5b46] truncate max-w-[55%]">· {lastTitle}</span>}
+              <span className="ml-auto text-[11px] text-[#8a7559] font-medium">write this on the item</span>
+            </div>
+          )}
+
           {/* ── 1 · Scan ── */}
           <Step
             n={1}
