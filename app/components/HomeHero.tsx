@@ -53,35 +53,40 @@ export default function HomeHero({
 
   return (
     <div className="relative">
-      {/* ── Parallax backdrop ── */}
+      {/* ── Layered backdrop ──
+          A composed scene, not floating art: a faint sun-glow, distant mountains
+          seated right on the treeline, then a full-width pine ridge planted flush
+          on the bottom edge (on its own ground haze so the trees never look cut).
+          Only the far layers get a gentle parallax drift; the trees stay put so
+          they can't clip or slide as you scroll. */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        {/* warm sun/glow */}
+        {/* warm sun/glow (gentle drift) */}
         <div
-          className="nb-glow absolute left-1/2 top-6 w-[min(620px,96vw)] h-[420px] rounded-full blur-3xl"
+          className="nb-glow absolute left-1/2 top-4 w-[min(620px,96vw)] h-[380px] rounded-full blur-3xl"
           style={{
             background:
-              "radial-gradient(circle, rgba(212,160,90,0.4) 0%, rgba(212,160,90,0) 68%)",
-            transform: `translate(-50%, ${y * 0.12}px)`,
+              "radial-gradient(circle, rgba(212,160,90,0.38) 0%, rgba(212,160,90,0) 68%)",
+            transform: `translate(-50%, ${y * 0.1}px)`,
           }}
         />
-        {/* far mountains — slow drift */}
+
+        {/* distant mountains — small, faint, resting on the treeline */}
         <div
-          className="absolute bottom-0 left-0 w-full"
-          style={{ transform: `translateY(${y * 0.06}px)` }}
+          className="absolute left-0 w-full"
+          style={{ bottom: "5.5rem", transform: `translateY(${y * 0.05}px)` }}
         >
-          <MountainRange className="w-full h-[240px] opacity-25" />
+          <MountainRange className="w-full h-[150px] opacity-[0.18]" />
         </div>
-        {/* near pines — faster drift */}
-        <div
-          className="absolute -bottom-1 left-0 w-full"
-          style={{ transform: `translateY(${y * 0.22}px)` }}
-        >
-          <PineRidge className="w-full h-28" />
+
+        {/* ground haze + full-width pine ridge, planted on the bottom edge */}
+        <div className="absolute bottom-0 left-0 w-full">
+          <div className="h-14 -mb-2 bg-gradient-to-t from-[#e6d7ba] via-[#ecdfc6]/70 to-transparent" />
+          <PineRidge className="block w-full h-36" />
         </div>
       </div>
 
       {/* ── Foreground ── */}
-      <div className="relative max-w-3xl mx-auto px-1 pt-6 sm:pt-10 pb-4 text-center">
+      <div className="relative max-w-3xl mx-auto px-1 pt-6 sm:pt-10 pb-24 sm:pb-28 text-center">
         {/* live pill */}
         {hasLive && (
           <a

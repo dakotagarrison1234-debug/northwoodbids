@@ -190,7 +190,7 @@ export default async function HomePage() {
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
       <PusherRefresh channel="auctions" event="auction-updated" />
       {/* Hero */}
-      <section className="relative px-5 sm:px-8 pt-4 pb-10 sm:pt-6 sm:pb-14 overflow-hidden">
+      <section className="relative px-5 sm:px-8 pt-4 pb-0 sm:pt-6 overflow-hidden">
         <HomeHero
           liveAuctions={activeAuctions.length}
           liveLots={liveLots}
