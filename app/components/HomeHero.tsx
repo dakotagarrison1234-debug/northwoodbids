@@ -70,18 +70,20 @@ export default function HomeHero({
           }}
         />
 
-        {/* distant mountains — small, faint, resting on the treeline */}
+        {/* distant mountains — small, faint, resting on the treeline; side edges
+            feathered so they dissolve into the page instead of cropping */}
         <div
-          className="absolute left-0 w-full"
+          className="nb-feather-x absolute left-0 w-full"
           style={{ bottom: "5.5rem", transform: `translateY(${y * 0.05}px)` }}
         >
           <MountainRange className="w-full h-[150px] opacity-[0.18]" />
         </div>
 
-        {/* ground haze + full-width pine ridge, planted on the bottom edge */}
+        {/* ground haze + full-width pine ridge, planted on the bottom edge, with
+            its left/right edges feathered so no tree looks chopped at the sides */}
         <div className="absolute bottom-0 left-0 w-full">
-          <div className="h-14 -mb-2 bg-gradient-to-t from-[#e6d7ba] via-[#ecdfc6]/70 to-transparent" />
-          <PineRidge className="block w-full h-36" />
+          <div className="h-16 -mb-3 bg-gradient-to-t from-[#e6d7ba] via-[#ecdfc6]/60 to-transparent" />
+          <PineRidge className="nb-feather-x block w-full h-36" />
         </div>
       </div>
 

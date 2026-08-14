@@ -14,10 +14,10 @@ export default function BidTicker({ lots }: { lots: TickerLot[] }) {
   const doubled = [...lots, ...lots];
 
   return (
-    <div className="relative overflow-hidden border-y border-[#6c4d39]/15 bg-[#241a12]">
+    <div className="relative overflow-hidden rounded-2xl bg-[#241a12] shadow-[0_10px_30px_-14px_rgba(60,40,25,0.55)] ring-1 ring-black/5">
       {/* edge fades */}
-      <div className="pointer-events-none absolute left-0 top-0 h-full w-10 z-10 bg-gradient-to-r from-[#241a12] to-transparent" />
-      <div className="pointer-events-none absolute right-0 top-0 h-full w-10 z-10 bg-gradient-to-l from-[#241a12] to-transparent" />
+      <div className="pointer-events-none absolute left-0 top-0 h-full w-12 z-10 bg-gradient-to-r from-[#241a12] to-transparent" />
+      <div className="pointer-events-none absolute right-0 top-0 h-full w-12 z-10 bg-gradient-to-l from-[#241a12] to-transparent" />
       <div className="nb-ticker-track py-2.5">
         {doubled.map((l, idx) => (
           <Link

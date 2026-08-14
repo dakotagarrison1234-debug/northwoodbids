@@ -289,6 +289,30 @@ h1, h2, h3, h4, .font-display {
 .nb-lift { transition: transform 0.25s ease, box-shadow 0.25s ease; }
 .nb-lift:hover { transform: translateY(-5px); box-shadow: 0 18px 34px -16px rgba(60, 40, 25, 0.5); }
 
+/* Feather the edges of full-bleed decorative art so nothing looks hard-cropped
+   at the container edge — the scene melts into the page instead. */
+.nb-feather-x {
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 9%, #000 91%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, #000 9%, #000 91%, transparent 100%);
+}
+.nb-feather-b {
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+}
+.nb-feather-edges {
+  -webkit-mask-image:
+    linear-gradient(to right, transparent 0%, #000 9%, #000 91%, transparent 100%),
+    linear-gradient(to bottom, #000 60%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to right, transparent 0%, #000 9%, #000 91%, transparent 100%),
+    linear-gradient(to bottom, #000 60%, transparent 100%);
+  mask-composite: intersect;
+}
+
+/* Smooth, app-like anchor scrolling (respects reduced-motion below). */
+html { scroll-behavior: smooth; scroll-padding-top: 0.5rem; }
+
 /* Warm gradient sweep for the headline word. */
 .nb-gradient-text {
   background: linear-gradient(92deg, #6c4d39 0%, #c47b3e 52%, #6c4d39 100%);
@@ -304,6 +328,7 @@ h1, h2, h3, h4, .font-display {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
   .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
   .nb-rise { opacity: 1; animation: none; }
   .nb-float, .nb-glow, .nb-cue, .nb-ticker-track, .nb-gradient-text { animation: none !important; }

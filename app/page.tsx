@@ -201,7 +201,11 @@ export default async function HomePage() {
       </section>
 
       {/* Live board — streaming ticker of the hottest lots + current bids */}
-      {tickerLots.length >= 4 && <BidTicker lots={tickerLots} />}
+      {tickerLots.length >= 4 && (
+        <div className="max-w-6xl mx-auto px-5 sm:px-8 -mt-2">
+          <BidTicker lots={tickerLots} />
+        </div>
+      )}
 
       {/* Hot right now — auto-scrolling showcase of the top live lots */}
       {topItems.length >= 4 && (
@@ -289,7 +293,7 @@ export default async function HomePage() {
       )}
 
       {/* How it works */}
-      <section className="border-t border-[#e3d6bf]/60 bg-[#efe5d3] px-6 sm:px-8 py-14 sm:py-16">
+      <section className="bg-gradient-to-b from-transparent via-[#ece0cb]/55 to-transparent px-6 sm:px-8 py-14 sm:py-16">
         <div className="max-w-5xl mx-auto">
           <BranchDivider className="w-44 h-5 mx-auto mb-5 opacity-80" />
           <p className="text-center text-[#8a7559] text-xs font-bold uppercase tracking-[0.18em] mb-10">How it works</p>
