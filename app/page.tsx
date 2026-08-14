@@ -6,6 +6,7 @@ import AuctionCard from "./components/AuctionCard";
 import SiteFooter from "./components/SiteFooter";
 import PusherRefresh from "./components/PusherRefresh";
 import TopItemsCarousel from "./components/TopItemsCarousel";
+import HomeHero from "./components/HomeHero";
 import { PineRidge, MountainRange, WoodenCrate, BranchDivider } from "./components/Illustrations";
 
 function IconSearch() {
@@ -131,10 +132,10 @@ export default async function HomePage() {
     orderBy: [{ bids: { _count: "desc" } }, { currentBid: "desc" }],
     take: 60,
     select: {
-      id: true, title: true, currentBid: true, retailValue: true,
+      id: true, title: true, currentBid: true, retailValue: true, itemEndAt: true,
       photos: { take: 1, orderBy: [{ isPrimary: "desc" }, { order: "asc" }], select: { url: true } },
       _count: { select: { bids: true } },
-      auction: { select: { slug: true, organization: { select: { slug: true } } } },
+      auction: { select: { slug: true, endAt: true, organization: { select: { slug: true } } } },
     },
   });
   const topItems = topCandidates
@@ -151,6 +152,7 @@ export default async function HomePage() {
         currentBid: cur,
         retailValue: msrp,
         bidCount,
+        endsAt: new Date(it.itemEndAt ?? it.auction!.endAt).toISOString(),
         score: bidCount * 3 + cur + msrp * 0.02,
       };
     })
@@ -161,43 +163,54 @@ export default async function HomePage() {
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
       <PusherRefresh channel="auctions" event="auction-updated" />
       {/* Hero */}
-      <section className="relative px-6 sm:px-8 pt-3 pb-28 sm:pt-4 sm:pb-32 overflow-hidden">
+      <section className="relative px-5 sm:px-8 pt-6 pb-24 sm:pt-8 sm:pb-32 overflow-hidden">
         <MountainRange className="pointer-events-none absolute bottom-0 left-0 w-full h-[55%] opacity-25" />
-        <div className="relative max-w-3xl mx-auto text-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="https://assets.cdn.filesafe.space/TwuL7EwKfW8oGIV0Zo5q/media/6a373b261c5d711b35bf4e56.png"
-            alt="Northwood Bids"
-            loading="eager"
-            fetchPriority="high"
-            decoding="async"
-            className="h-40 sm:h-52 w-auto max-w-[420px] object-contain mx-auto mb-2 drop-shadow-sm"
+        {topItems.length > 0 ? (
+          <HomeHero
+            lots={topItems.slice(0, 6).map((it) => ({
+              id: it.id,
+              title: it.title,
+              href: it.href,
+              photo: it.photo,
+              currentBid: it.currentBid,
+              retailValue: it.retailValue,
+              bidCount: it.bidCount,
+              endsAt: it.endsAt,
+            }))}
+            liveCount={activeAuctions.length}
+            signedIn={!!userId}
           />
-          {activeAuctions.length > 0 && (
-            <a href="#live-auctions" className="inline-flex items-center gap-2 bg-[#6c4d39]/10 border border-[#6c4d39]/30 text-[#6c4d39] text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-full mb-6 hover:bg-[#6c4d39]/15 transition-colors">
-              <span className="w-2 h-2 rounded-full bg-[#6c4d39] animate-pulse inline-block" />
-              {activeAuctions.length} live auction{activeAuctions.length !== 1 ? "s" : ""} happening now
-            </a>
-          )}
-          <h1 className="font-display text-5xl sm:text-7xl font-black leading-[1.03] tracking-tight mb-5 text-[#241a12]">
-            Going once.<br />
-            <span className="text-[#6c4d39]">Going twice.</span>
-          </h1>
-          <p className="text-[#2c2317] font-medium text-lg sm:text-xl max-w-xl mx-auto mb-9 leading-relaxed">
-            Real-time auctions with a handshake feel. Bid live, get outbid alerts, and check out securely the moment you win.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a href="#live-auctions" className="bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold px-9 py-4 rounded-xl text-base transition-all hover:shadow-[0_6px_24px_rgba(108,77,57,0.35)] w-full sm:w-auto text-center">
-              {activeAuctions.length > 0 ? "See Live Auctions" : "Browse Auctions"}
-            </a>
-            {!userId && (
-              <Link href="/sign-up" className="bg-white hover:bg-[#efe3d0] border-2 border-[#241a12]/15 text-[#241a12] font-semibold px-9 py-4 rounded-xl text-base transition-colors w-full sm:w-auto text-center shadow-sm">
-                Create Free Account
-              </Link>
-            )}
+        ) : (
+          // Fallback: no live lots to spotlight — keep it simple and inviting.
+          <div className="relative max-w-3xl mx-auto text-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://assets.cdn.filesafe.space/TwuL7EwKfW8oGIV0Zo5q/media/6a373b261c5d711b35bf4e56.png"
+              alt="Northwood Bids"
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+              className="h-36 sm:h-52 w-auto max-w-[420px] object-contain mx-auto mb-3 drop-shadow-sm"
+            />
+            <h1 className="font-display text-4xl sm:text-7xl font-black leading-[1.03] tracking-tight mb-4 text-[#241a12]">
+              Going once. <span className="text-[#6c4d39]">Going twice.</span>
+            </h1>
+            <p className="text-[#2c2317] font-medium text-base sm:text-xl max-w-xl mx-auto mb-8 leading-relaxed">
+              Real-time auctions with a handshake feel. New lots drop all the time — check back soon.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <a href="#upcoming" className="bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold px-9 py-4 rounded-xl text-base transition-all hover:shadow-[0_6px_24px_rgba(108,77,57,0.35)] w-full sm:w-auto text-center">
+                See what's coming
+              </a>
+              {!userId && (
+                <Link href="/sign-up" className="bg-white hover:bg-[#efe3d0] border-2 border-[#241a12]/15 text-[#241a12] font-semibold px-9 py-4 rounded-xl text-base transition-colors w-full sm:w-auto text-center shadow-sm">
+                  Create Free Account
+                </Link>
+              )}
+            </div>
           </div>
-        </div>
-        <PineRidge className="pointer-events-none absolute bottom-0 left-0 w-full h-28" />
+        )}
+        <PineRidge className="pointer-events-none absolute bottom-0 left-0 w-full h-24" />
       </section>
 
       {/* Hot right now — auto-scrolling showcase of the top live lots */}
@@ -247,7 +260,7 @@ export default async function HomePage() {
 
       {/* Upcoming Auctions */}
       {upcomingAuctions.length > 0 && (
-        <section className="px-6 sm:px-8 pb-14 sm:pb-16 max-w-6xl mx-auto">
+        <section id="upcoming" className="px-6 sm:px-8 pb-14 sm:pb-16 max-w-6xl mx-auto">
           <div className="flex items-center gap-3 mb-8">
             <span className="text-[#8a7559]"><IconClock /></span>
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#241a12]">Coming Soon</h2>
