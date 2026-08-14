@@ -1,233 +1,186 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import AuctionCountdown from "./AuctionCountdown";
-
-export type HeroLot = {
-  id: string;
-  title: string;
-  href: string;
-  photo: string;
-  currentBid: number;
-  retailValue: number;
-  bidCount: number;
-  endsAt: string;
-};
+import CountUp from "./CountUp";
+import { MountainRange, PineRidge, PineMark } from "./Illustrations";
 
 /**
- * The home hero — but instead of a static logo + tagline, it leads with the LIVE
- * auction itself: a spotlight card that rotates through the hottest lots, each with
- * its photo, current bid, a ticking countdown and a one-tap "Bid now". The auction
- * IS the hero. Rustic flair (pennant bunting, warm glow) frames it without stealing
- * focus. Built mobile-first — the spotlight is the first thing a phone user sees.
+ * The home hero — brand energy with depth and motion, auctions front and centre.
+ * Layered parallax backdrop (mountains drift slow, pines drift faster) gives the
+ * scene real depth as you scroll; the foreground rises in on load; a stat trio
+ * tallies up live numbers so the page feels ALIVE the moment it opens. Built
+ * mobile-first — the parallax is transform-only (cheap on phones) and everything
+ * collapses gracefully under prefers-reduced-motion.
  */
 export default function HomeHero({
-  lots,
-  liveCount,
+  liveAuctions,
+  liveLots,
+  bidsToday,
+  bestDeal,
   signedIn,
 }: {
-  lots: HeroLot[];
-  liveCount: number;
+  liveAuctions: number;
+  liveLots: number;
+  bidsToday: number;
+  bestDeal: number;
   signedIn: boolean;
 }) {
-  const [i, setI] = useState(0);
-  const paused = useRef(false);
-  const n = lots.length;
+  const [y, setY] = useState(0);
 
-  // Auto-advance the spotlight every 5s; pause while the visitor is touching/hovering
-  // it so we never yank a lot out from under a tap.
+  // Parallax: track scroll and offset the two backdrop layers by different amounts.
   useEffect(() => {
-    if (n <= 1) return;
-    const id = setInterval(() => {
-      if (!paused.current) setI((v) => (v + 1) % n);
-    }, 5000);
-    return () => clearInterval(id);
-  }, [n]);
+    const reduce =
+      window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) return;
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        setY(window.scrollY);
+        raf = 0;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
 
-  if (n === 0) return null;
-  const lot = lots[Math.min(i, n - 1)];
-  const deal =
-    lot.retailValue > 0 && lot.currentBid < lot.retailValue
-      ? Math.round((1 - lot.currentBid / lot.retailValue) * 100)
-      : null;
+  const hasLive = liveAuctions > 0;
 
   return (
-    <div className="relative max-w-5xl mx-auto">
-      {/* Pennant bunting — the county-fair auction vibe, in our wood tones */}
-      <Bunting />
+    <div className="relative">
+      {/* ── Parallax backdrop ── */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        {/* warm sun/glow */}
+        <div
+          className="nb-glow absolute left-1/2 top-6 w-[min(620px,96vw)] h-[420px] rounded-full blur-3xl"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(212,160,90,0.4) 0%, rgba(212,160,90,0) 68%)",
+            transform: `translate(-50%, ${y * 0.12}px)`,
+          }}
+        />
+        {/* far mountains — slow drift */}
+        <div
+          className="absolute bottom-0 left-0 w-full"
+          style={{ transform: `translateY(${y * 0.06}px)` }}
+        >
+          <MountainRange className="w-full h-[240px] opacity-25" />
+        </div>
+        {/* near pines — faster drift */}
+        <div
+          className="absolute -bottom-1 left-0 w-full"
+          style={{ transform: `translateY(${y * 0.22}px)` }}
+        >
+          <PineRidge className="w-full h-28" />
+        </div>
+      </div>
 
-      {/* Warm radial glow behind the spotlight so the card feels lit on stage */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-24 -translate-x-1/2 w-[min(560px,92vw)] h-[560px] rounded-full blur-3xl opacity-60"
-        style={{ background: "radial-gradient(circle, rgba(212,160,90,0.35) 0%, rgba(212,160,90,0) 70%)" }}
-      />
-
-      <div className="relative text-center pt-3">
-        {/* Live pill */}
-        {liveCount > 0 && (
+      {/* ── Foreground ── */}
+      <div className="relative max-w-3xl mx-auto px-1 pt-6 sm:pt-10 pb-4 text-center">
+        {/* live pill */}
+        {hasLive && (
           <a
             href="#live-auctions"
-            className="inline-flex items-center gap-2 bg-[#6c4d39] text-[#f6ecda] text-[11px] font-black uppercase tracking-[0.14em] px-4 py-2 rounded-full mb-4 shadow-[0_4px_16px_rgba(108,77,57,0.3)] hover:bg-[#563e2c] transition-colors"
+            className="nb-rise inline-flex items-center gap-2 bg-[#6c4d39] text-[#f6ecda] text-[11px] font-black uppercase tracking-[0.16em] px-4 py-2 rounded-full mb-5 shadow-[0_6px_20px_-6px_rgba(108,77,57,0.7)] hover:bg-[#563e2c] transition-colors"
+            style={{ animationDelay: "40ms" }}
           >
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full rounded-full bg-[#e07a3a] opacity-75 animate-ping" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-[#f0a35a]" />
             </span>
-            {liveCount} live auction{liveCount !== 1 ? "s" : ""} · bidding now
+            {liveAuctions} live auction{liveAuctions !== 1 ? "s" : ""} · bidding now
           </a>
         )}
 
-        <h1 className="font-display text-[2.6rem] leading-[0.98] sm:text-6xl font-black tracking-tight text-[#241a12] mb-2">
-          Going once.{" "}
-          <span className="text-[#6c4d39] whitespace-nowrap">Going twice.</span>
+        {/* headline */}
+        <h1
+          className="nb-rise font-display text-[3rem] leading-[0.94] sm:text-7xl font-black tracking-tight text-[#241a12] mb-4"
+          style={{ animationDelay: "120ms" }}
+        >
+          Going once.
+          <br />
+          <span className="nb-gradient-text">Going twice.</span>
         </h1>
-        <p className="text-[#4a3a2b] font-semibold text-base sm:text-lg max-w-md mx-auto mb-6">
-          Real deals on real stuff — up for grabs right now.
+
+        <p
+          className="nb-rise text-[#3a2c1e] font-semibold text-base sm:text-xl max-w-lg mx-auto mb-7"
+          style={{ animationDelay: "200ms" }}
+        >
+          Local online auctions on brand-name overstock, returns &amp; surplus —
+          real deals, ending live.
         </p>
 
-        {/* ── The spotlight ── */}
+        {/* stat trio */}
         <div
-          className="mx-auto w-[min(400px,100%)]"
-          onMouseEnter={() => (paused.current = true)}
-          onMouseLeave={() => (paused.current = false)}
-          onTouchStart={() => (paused.current = true)}
+          className="nb-rise grid grid-cols-3 gap-2 sm:gap-4 max-w-lg mx-auto mb-8"
+          style={{ animationDelay: "280ms" }}
         >
-          <div
-            key={lot.id}
-            className="hero-pop relative rounded-[22px] bg-[#fbf4e6] border-[3px] border-[#6c4d39] shadow-[0_18px_44px_-14px_rgba(60,40,25,0.5)] overflow-hidden text-left"
-          >
-            {/* Photo */}
-            <div className="relative aspect-[4/3] bg-[#efe3d0]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={lot.photo}
-                alt={lot.title}
-                loading="eager"
-                decoding="async"
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-              {/* top tags */}
-              <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-[#6c4d39] text-[#f6ecda] text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow">
-                <GavelIcon /> Live lot
-              </div>
-              {deal !== null && deal >= 25 && (
-                <div className="absolute top-3 right-3 bg-[#4a7c59] text-white text-[11px] font-black px-2.5 py-1 rounded-full shadow">
-                  {deal}% off retail
-                </div>
-              )}
-              {/* soft bottom fade so the title band reads on any photo */}
-              <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/45 to-transparent" />
-              <p className="absolute bottom-2.5 left-3 right-3 text-white font-bold text-sm leading-snug line-clamp-2 drop-shadow">
-                {lot.title}
-              </p>
-            </div>
-
-            {/* Bid + countdown */}
-            <div className="p-4">
-              <div className="flex items-end justify-between gap-3 mb-3">
-                <div>
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-[#8a7559]">
-                    Current bid{lot.bidCount > 0 ? ` · ${lot.bidCount} bid${lot.bidCount !== 1 ? "s" : ""}` : ""}
-                  </div>
-                  <div className="text-[#241a12] font-black text-3xl leading-none tabular-nums">
-                    ${lot.currentBid.toLocaleString()}
-                  </div>
-                </div>
-                <div className="pb-0.5">
-                  <AuctionCountdown targetIso={lot.endsAt} mode="ends" />
-                </div>
-              </div>
-
-              <Link
-                href={lot.href}
-                className="flex items-center justify-center gap-2 w-full bg-[#6c4d39] hover:bg-[#563e2c] active:scale-[0.99] text-white font-black text-base py-3.5 rounded-xl transition-all shadow-[0_6px_18px_-4px_rgba(108,77,57,0.6)]"
-              >
-                <GavelIcon /> Bid now
-              </Link>
-            </div>
-          </div>
-
-          {/* Dots — which lot we're on, tappable */}
-          {n > 1 && (
-            <div className="flex items-center justify-center gap-1.5 mt-3">
-              {lots.map((l, idx) => (
-                <button
-                  key={l.id}
-                  type="button"
-                  aria-label={`Show lot ${idx + 1}`}
-                  onClick={() => setI(idx)}
-                  className={`h-2 rounded-full transition-all ${
-                    idx === i ? "w-6 bg-[#6c4d39]" : "w-2 bg-[#6c4d39]/30 hover:bg-[#6c4d39]/50"
-                  }`}
-                />
-              ))}
-            </div>
-          )}
+          <Stat value={liveLots} label={liveLots === 1 ? "lot live" : "lots live"} />
+          <Stat value={bestDeal} suffix="%" label="off retail" accent />
+          <Stat value={bidsToday} label="bids today" />
         </div>
 
         {/* CTAs */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 mt-6">
+        <div
+          className="nb-rise flex flex-col sm:flex-row items-center justify-center gap-2.5"
+          style={{ animationDelay: "360ms" }}
+        >
           <a
             href="#live-auctions"
-            className="w-full sm:w-auto bg-white hover:bg-[#efe3d0] border-2 border-[#6c4d39]/25 text-[#6c4d39] font-bold px-7 py-3 rounded-xl text-base transition-colors shadow-sm text-center"
+            className="w-full sm:w-auto bg-[#6c4d39] hover:bg-[#563e2c] active:scale-[0.99] text-white font-black px-8 py-3.5 rounded-xl text-base transition-all shadow-[0_8px_24px_-6px_rgba(108,77,57,0.65)] text-center"
           >
-            Browse all lots
+            {hasLive ? "Start bidding" : "See what's coming"}
           </a>
           {!signedIn && (
             <Link
               href="/sign-up"
-              className="w-full sm:w-auto text-[#6c4d39] font-bold px-7 py-3 rounded-xl text-base hover:bg-[#6c4d39]/8 transition-colors text-center"
+              className="w-full sm:w-auto bg-white/80 hover:bg-white border-2 border-[#6c4d39]/20 text-[#6c4d39] font-bold px-8 py-3.5 rounded-xl text-base transition-colors text-center shadow-sm"
             >
               Create free account
             </Link>
           )}
         </div>
-      </div>
 
-      <style>{`
-        @keyframes heroPop { 0% { opacity: 0; transform: translateY(10px) scale(0.985); } 100% { opacity: 1; transform: none; } }
-        .hero-pop { animation: heroPop 0.45s cubic-bezier(0.2,0.7,0.2,1); }
-      `}</style>
+        {/* scroll cue */}
+        <div className="nb-rise flex justify-center mt-9" style={{ animationDelay: "460ms" }}>
+          <a href="#live-auctions" aria-label="Scroll to live auctions" className="text-[#6c4d39]/70 hover:text-[#6c4d39]">
+            <span className="nb-cue inline-block">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </span>
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
 
-function GavelIcon() {
+function Stat({
+  value,
+  label,
+  suffix = "",
+  accent = false,
+}: {
+  value: number;
+  label: string;
+  suffix?: string;
+  accent?: boolean;
+}) {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="m14 4 6 6" />
-      <path d="m10.5 7.5 6 6" />
-      <path d="m3 21 6-6" />
-      <path d="m7 11 6 6" />
-      <path d="M4 17h6" />
-    </svg>
-  );
-}
-
-// A short string of triangle pennants across the top — subtle, in wood/moss tones.
-function Bunting() {
-  const colors = ["#6c4d39", "#4a7c59", "#c98a3c", "#8a6a4a", "#4a7c59", "#6c4d39", "#c98a3c", "#8a6a4a"];
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 800 44"
-      preserveAspectRatio="none"
-      className="pointer-events-none absolute -top-1 left-0 w-full h-9 opacity-90"
-    >
-      <path d="M0 6 Q400 26 800 6" stroke="#6c4d39" strokeWidth="2" fill="none" opacity="0.5" />
-      {colors.map((c, idx) => {
-        const step = 800 / colors.length;
-        const x = idx * step + step / 2;
-        // follow the sag of the string a touch
-        const t = (x / 800 - 0.5) * 2;
-        const y = 8 + (1 - t * t) * 14;
-        const w = 22;
-        return (
-          <path key={idx} d={`M${x - w / 2} ${y} L${x + w / 2} ${y} L${x} ${y + 20} Z`} fill={c} opacity="0.9" />
-        );
-      })}
-    </svg>
+    <div className="rounded-2xl bg-[#fbf4e6]/70 border border-[#6c4d39]/15 backdrop-blur-sm py-3 px-1.5 shadow-sm">
+      <div className={`font-display font-black text-2xl sm:text-4xl leading-none tabular-nums ${accent ? "text-[#4a7c59]" : "text-[#241a12]"}`}>
+        <CountUp value={value} suffix={suffix} />
+      </div>
+      <div className="mt-1 flex items-center justify-center gap-1 text-[10px] sm:text-xs font-bold uppercase tracking-wide text-[#8a7559]">
+        <PineMark className="w-3 h-3 opacity-70" />
+        {label}
+      </div>
+    </div>
   );
 }

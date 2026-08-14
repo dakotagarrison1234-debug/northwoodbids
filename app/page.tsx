@@ -7,7 +7,9 @@ import SiteFooter from "./components/SiteFooter";
 import PusherRefresh from "./components/PusherRefresh";
 import TopItemsCarousel from "./components/TopItemsCarousel";
 import HomeHero from "./components/HomeHero";
-import { PineRidge, MountainRange, WoodenCrate, BranchDivider } from "./components/Illustrations";
+import BidTicker from "./components/BidTicker";
+import ScrollReveal from "./components/ScrollReveal";
+import { WoodenCrate, BranchDivider } from "./components/Illustrations";
 
 function IconSearch() {
   return (
@@ -159,62 +161,54 @@ export default async function HomePage() {
     .sort((a, b) => b.score - a.score)
     .slice(0, 20);
 
+  // ── Hero live stats ──
+  // Total lots live right now (sum across live auctions), how many bids landed in
+  // the last 24h (the "it's happening" number), and the best MSRP discount on the
+  // board — a headline "up to X% off retail". All cheap: one count + in-JS maxes.
+  const liveLots = Array.from(activeItemsMap.values()).reduce((a, b) => a + b, 0);
+  const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const bidsToday = await prisma.bid.count({ where: { placedAt: { gte: dayAgo } } });
+  const bestDeal = Math.min(
+    95,
+    topItems.reduce((best, it) => {
+      if (it.retailValue > 0 && it.currentBid < it.retailValue) {
+        return Math.max(best, Math.round((1 - it.currentBid / it.retailValue) * 100));
+      }
+      return best;
+    }, 0)
+  );
+
+  // Ticker feed: the hottest lots as a streaming live board.
+  const tickerLots = topItems.slice(0, 14).map((it) => ({
+    id: it.id,
+    title: it.title,
+    href: it.href,
+    currentBid: it.currentBid,
+  }));
+
   return (
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
       <PusherRefresh channel="auctions" event="auction-updated" />
       {/* Hero */}
-      <section className="relative px-5 sm:px-8 pt-6 pb-24 sm:pt-8 sm:pb-32 overflow-hidden">
-        <MountainRange className="pointer-events-none absolute bottom-0 left-0 w-full h-[55%] opacity-25" />
-        {topItems.length > 0 ? (
-          <HomeHero
-            lots={topItems.slice(0, 6).map((it) => ({
-              id: it.id,
-              title: it.title,
-              href: it.href,
-              photo: it.photo,
-              currentBid: it.currentBid,
-              retailValue: it.retailValue,
-              bidCount: it.bidCount,
-              endsAt: it.endsAt,
-            }))}
-            liveCount={activeAuctions.length}
-            signedIn={!!userId}
-          />
-        ) : (
-          // Fallback: no live lots to spotlight — keep it simple and inviting.
-          <div className="relative max-w-3xl mx-auto text-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="https://assets.cdn.filesafe.space/TwuL7EwKfW8oGIV0Zo5q/media/6a373b261c5d711b35bf4e56.png"
-              alt="Northwood Bids"
-              loading="eager"
-              fetchPriority="high"
-              decoding="async"
-              className="h-36 sm:h-52 w-auto max-w-[420px] object-contain mx-auto mb-3 drop-shadow-sm"
-            />
-            <h1 className="font-display text-4xl sm:text-7xl font-black leading-[1.03] tracking-tight mb-4 text-[#241a12]">
-              Going once. <span className="text-[#6c4d39]">Going twice.</span>
-            </h1>
-            <p className="text-[#2c2317] font-medium text-base sm:text-xl max-w-xl mx-auto mb-8 leading-relaxed">
-              Real-time auctions with a handshake feel. New lots drop all the time — check back soon.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <a href="#upcoming" className="bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold px-9 py-4 rounded-xl text-base transition-all hover:shadow-[0_6px_24px_rgba(108,77,57,0.35)] w-full sm:w-auto text-center">
-                See what's coming
-              </a>
-              {!userId && (
-                <Link href="/sign-up" className="bg-white hover:bg-[#efe3d0] border-2 border-[#241a12]/15 text-[#241a12] font-semibold px-9 py-4 rounded-xl text-base transition-colors w-full sm:w-auto text-center shadow-sm">
-                  Create Free Account
-                </Link>
-              )}
-            </div>
-          </div>
-        )}
-        <PineRidge className="pointer-events-none absolute bottom-0 left-0 w-full h-24" />
+      <section className="relative px-5 sm:px-8 pt-4 pb-10 sm:pt-6 sm:pb-14 overflow-hidden">
+        <HomeHero
+          liveAuctions={activeAuctions.length}
+          liveLots={liveLots}
+          bidsToday={bidsToday}
+          bestDeal={bestDeal}
+          signedIn={!!userId}
+        />
       </section>
 
+      {/* Live board — streaming ticker of the hottest lots + current bids */}
+      {tickerLots.length >= 4 && <BidTicker lots={tickerLots} />}
+
       {/* Hot right now — auto-scrolling showcase of the top live lots */}
-      {topItems.length >= 4 && <TopItemsCarousel items={topItems} />}
+      {topItems.length >= 4 && (
+        <ScrollReveal variant="zoom">
+          <TopItemsCarousel items={topItems} />
+        </ScrollReveal>
+      )}
 
       {/* Live Auctions */}
       <section id="live-auctions" className="px-6 sm:px-8 pt-4 pb-14 sm:pb-16 max-w-6xl mx-auto">
@@ -227,26 +221,27 @@ export default async function HomePage() {
         </div>
         {activeAuctions.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
-            {activeAuctions.map((auction) => (
-              <AuctionCard
-                key={auction.id}
-                mode="live"
-                auction={{
-                  id: auction.id,
-                  title: auction.title,
-                  slug: auction.slug,
-                  status: auction.status,
-                  startAtIso: auction.startAt.toISOString(),
-                  endAtIso: auction.endAt.toISOString(),
-                  itemCount: activeItemsMap.get(auction.id) ?? 0,
-                  org: {
-                    name: auction.organization.name,
-                    slug: auction.organization.slug,
-                    logoUrl: auction.organization.logoUrl,
-                  },
-                  items: auction.items,
-                }}
-              />
+            {activeAuctions.map((auction, idx) => (
+              <ScrollReveal key={auction.id} delay={Math.min(idx, 5) * 80} className="h-full [&>*]:h-full nb-lift rounded-2xl">
+                <AuctionCard
+                  mode="live"
+                  auction={{
+                    id: auction.id,
+                    title: auction.title,
+                    slug: auction.slug,
+                    status: auction.status,
+                    startAtIso: auction.startAt.toISOString(),
+                    endAtIso: auction.endAt.toISOString(),
+                    itemCount: activeItemsMap.get(auction.id) ?? 0,
+                    org: {
+                      name: auction.organization.name,
+                      slug: auction.organization.slug,
+                      logoUrl: auction.organization.logoUrl,
+                    },
+                    items: auction.items,
+                  }}
+                />
+              </ScrollReveal>
             ))}
           </div>
         ) : (
@@ -267,26 +262,27 @@ export default async function HomePage() {
             <span className="text-[#8a7559] text-sm font-medium">({upcomingAuctions.length})</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
-            {upcomingAuctions.map((auction) => (
-              <AuctionCard
-                key={auction.id}
-                mode="upcoming"
-                auction={{
-                  id: auction.id,
-                  title: auction.title,
-                  slug: auction.slug,
-                  status: auction.status,
-                  startAtIso: auction.startAt.toISOString(),
-                  endAtIso: auction.endAt.toISOString(),
-                  itemCount: auction._count.items,
-                  org: {
-                    name: auction.organization.name,
-                    slug: auction.organization.slug,
-                    logoUrl: auction.organization.logoUrl,
-                  },
-                  items: auction.items,
-                }}
-              />
+            {upcomingAuctions.map((auction, idx) => (
+              <ScrollReveal key={auction.id} delay={Math.min(idx, 5) * 80} className="h-full [&>*]:h-full nb-lift rounded-2xl">
+                <AuctionCard
+                  mode="upcoming"
+                  auction={{
+                    id: auction.id,
+                    title: auction.title,
+                    slug: auction.slug,
+                    status: auction.status,
+                    startAtIso: auction.startAt.toISOString(),
+                    endAtIso: auction.endAt.toISOString(),
+                    itemCount: auction._count.items,
+                    org: {
+                      name: auction.organization.name,
+                      slug: auction.organization.slug,
+                      logoUrl: auction.organization.logoUrl,
+                    },
+                    items: auction.items,
+                  }}
+                />
+              </ScrollReveal>
             ))}
           </div>
         </section>
@@ -302,14 +298,16 @@ export default async function HomePage() {
               { icon: <IconSearch />, title: "Find an auction", desc: "Browse live auctions and watch the countdown. When the timer hits zero, the highest bid wins." },
               { icon: <IconBid />, title: "Place your bid", desc: "Bid in real time or set a max bid — we auto-bid for you. Instant alerts when you are outbid." },
               { icon: <IconTrophy />, title: "Win & pick up", desc: "Win and your card is charged automatically. Schedule your own pickup time online." },
-            ].map(({ icon, title, desc }) => (
-              <div key={title} className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-white border border-[#e3d6bf] rounded-2xl flex items-center justify-center text-[#6c4d39] shrink-0 shadow-sm">{icon}</div>
-                <div>
-                  <h3 className="font-bold text-[#241a12] mb-1.5">{title}</h3>
-                  <p className="text-[#6f5b46] text-sm leading-relaxed">{desc}</p>
+            ].map(({ icon, title, desc }, idx) => (
+              <ScrollReveal key={title} delay={idx * 110} variant="up">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-white border border-[#e3d6bf] rounded-2xl flex items-center justify-center text-[#6c4d39] shrink-0 shadow-sm">{icon}</div>
+                  <div>
+                    <h3 className="font-bold text-[#241a12] mb-1.5">{title}</h3>
+                    <p className="text-[#6f5b46] text-sm leading-relaxed">{desc}</p>
+                  </div>
                 </div>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-[#8a7559]">
@@ -323,6 +321,7 @@ export default async function HomePage() {
 
       {/* Game CTA */}
       <section className="px-6 sm:px-8 pb-14 sm:pb-16 max-w-6xl mx-auto">
+        <ScrollReveal variant="zoom">
         <Link href="/play"
           className="group relative block overflow-hidden rounded-2xl border border-[#6c4d39]/30 bg-gradient-to-br from-[#6c4d39] to-[#4a3a2b] text-[#f1e7d5] px-6 sm:px-10 py-8 shadow-sm hover:shadow-[0_8px_30px_rgba(74,58,43,0.35)] transition-shadow">
           <div className="relative flex flex-col sm:flex-row items-center justify-between gap-5">
@@ -339,6 +338,7 @@ export default async function HomePage() {
             </span>
           </div>
         </Link>
+        </ScrollReveal>
       </section>
 
       {/* Footer */}
