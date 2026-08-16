@@ -12,6 +12,15 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Pusher from "pusher-js";
 
+// Document-lifetime flag: true once ANY PusherRefresh has mounted. The very first
+// mount after a full page load is already showing server-fresh data, so we skip
+// its on-mount refresh. Every mount after that is a client-side (SPA) navigation
+// — including hitting Back / "Back to auction" — where Next restores a possibly
+// STALE cached view, so we refetch immediately. This is the key to prices and
+// "You're winning" being correct the instant you land back on the grid, with no
+// manual refresh.
+let firstMountConsumed = false;
+
 interface Props {
   channel: string;
   event: string;
@@ -53,6 +62,15 @@ export default function PusherRefresh({ channel, event, filter, throttleMs = 120
     const onPageShow = () => schedule();
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("pageshow", onPageShow);
+
+    // On-mount refetch for SPA back/return navigation (see firstMountConsumed note).
+    // The first mount of the document is skipped (server data is already fresh);
+    // any remount — which is what a Back/return navigation produces — refreshes now.
+    if (firstMountConsumed) {
+      doRefresh();
+    } else {
+      firstMountConsumed = true;
+    }
 
     return () => {
       if (pending) clearTimeout(pending);
