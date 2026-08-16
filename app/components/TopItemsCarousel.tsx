@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import Link from "next/link";
+import ItemCardTimer from "@/app/components/ItemCardTimer";
 
 export type TopItem = {
   id: string;
@@ -10,6 +11,7 @@ export type TopItem = {
   currentBid: number;
   retailValue: number;
   bidCount: number;
+  endsAt: string;
 };
 
 const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
@@ -70,9 +72,10 @@ export default function TopItemsCarousel({ items }: { items: TopItem[] }) {
             href={it.href}
             className="group shrink-0 w-40 sm:w-44 bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden hover:border-[#6c4d39]/40 hover:shadow-[0_4px_18px_rgba(108,77,57,0.10)] transition-all"
           >
-            <div className="aspect-square bg-[#faf5ea] overflow-hidden">
+            <div className="relative aspect-square bg-[#faf5ea] overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={it.photo} alt="" loading="lazy" className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform" />
+              <ItemCardTimer itemId={it.id} endAt={it.endsAt} />
             </div>
             <div className="p-2.5">
               <div className="text-sm font-semibold text-[#241a12] leading-tight line-clamp-2 min-h-[2.5em]">{it.title}</div>

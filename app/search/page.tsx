@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import SearchBar from "@/app/components/SearchBar";
 import LocalDate from "@/app/components/LocalDate";
 import OrgLogo from "@/app/components/OrgLogo";
+import ItemCardTimer from "@/app/components/ItemCardTimer";
 
 interface Props {
   searchParams: Promise<{ q?: string }>;
@@ -44,7 +45,7 @@ export default async function SearchPage({ searchParams }: Props) {
       },
       include: {
         organization: { select: { name: true, slug: true } },
-        auction: { select: { slug: true, title: true, endAt: true } },
+        auction: { select: { slug: true, title: true, endAt: true, status: true } },
         photos: { take: 1, orderBy: { isPrimary: "desc" } },
       },
       orderBy: { currentBid: "desc" },
@@ -122,11 +123,21 @@ export default async function SearchPage({ searchParams }: Props) {
                       {item.title}
                     </div>
                     <div className="text-xs text-[#8a7559] mt-0.5">{item.organization.name}</div>
-                    {item.auction?.endAt && (
+                    {item.auction &&
+                    item.status === "ACTIVE" &&
+                    (item.auction.status === "OPEN" || item.auction.status === "CLOSING") ? (
+                      <div className="mt-1">
+                        <ItemCardTimer
+                          itemId={item.id}
+                          endAt={new Date(item.itemEndAt ?? item.auction.endAt).toISOString()}
+                          inline
+                        />
+                      </div>
+                    ) : item.auction?.endAt ? (
                       <div className="text-xs text-[#8a7559] mt-0.5">
                         Closes <LocalDate iso={new Date(item.auction.endAt).toISOString()} />
                       </div>
-                    )}
+                    ) : null}
                   </div>
                   <div className="text-[#6c4d39] font-extrabold text-lg shrink-0">
                     ${(Number(item.currentBid) || 0).toLocaleString()}

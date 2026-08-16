@@ -10,6 +10,7 @@ import CardSetupModal from "@/app/components/CardSetupModal";
 import { PineMark, WoodenCrate } from "@/app/components/Illustrations";
 import Skeleton from "@/app/components/Skeleton";
 import PickupStatusCard from "@/app/components/PickupStatusCard";
+import ItemCardTimer from "@/app/components/ItemCardTimer";
 import { money } from "@/lib/format";
 
 type Tab = "overview" | "active" | "history" | "auctions" | "profile";
@@ -946,8 +947,15 @@ function BidderDashboardInner() {
                             <div className="flex-1 min-w-0">
                               <div className="font-bold truncate">{b.itemTitle}</div>
                               <div className="text-[#8a7559] text-xs sm:text-sm mt-0.5 truncate">{b.auctionTitle} · {b.orgName}</div>
-                              <div className="text-[#8a7559] text-xs mt-1">
-                                {ended ? "Bidding ended — finalizing your win" : `Ends ${formatEnd(b.itemEndAt ?? b.auctionEndAt)}`}
+                              <div className="text-[#8a7559] text-xs mt-1 flex items-center gap-2 flex-wrap">
+                                {ended ? (
+                                  "Bidding ended — finalizing your win"
+                                ) : (
+                                  <>
+                                    <ItemCardTimer itemId={b.itemId} endAt={new Date(b.itemEndAt ?? b.auctionEndAt).toISOString()} inline />
+                                    <span>Ends {formatEnd(b.itemEndAt ?? b.auctionEndAt)}</span>
+                                  </>
+                                )}
                               </div>
                             </div>
                             <div className="text-right shrink-0">
@@ -988,7 +996,10 @@ function BidderDashboardInner() {
                               <div className="flex-1 min-w-0">
                                 <div className="font-bold truncate">{b.itemTitle}</div>
                                 <div className="text-[#8a7559] text-xs sm:text-sm mt-0.5 truncate">{b.auctionTitle} · {b.orgName}</div>
-                                <div className="text-[#8a7559] text-xs mt-1">Ends {formatEnd(b.itemEndAt ?? b.auctionEndAt)}</div>
+                                <div className="text-[#8a7559] text-xs mt-1 flex items-center gap-2 flex-wrap">
+                                  <ItemCardTimer itemId={b.itemId} endAt={new Date(b.itemEndAt ?? b.auctionEndAt).toISOString()} inline />
+                                  <span>Ends {formatEnd(b.itemEndAt ?? b.auctionEndAt)}</span>
+                                </div>
                               </div>
                               <div className="text-right shrink-0">
                                 <div className="text-[#8a7559] text-xs">your bid</div>

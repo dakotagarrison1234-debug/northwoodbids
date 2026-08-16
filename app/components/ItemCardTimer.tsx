@@ -1,20 +1,24 @@
 "use client";
 /**
- * ItemCardTimer — countdown badge for item cards in browse/grid views.
+ * ItemCardTimer — always-on "time left" badge for item cards in browse/grid/home
+ * views. Shows the remaining time at ANY range (days → hours → the final m:ss),
+ * so a bidder can always see how long a lot has left without opening it. Colour
+ * escalates as it gets close: neutral far out, amber inside 12h, red inside the
+ * last hour, red-pulsing in the final 5 minutes.
  *
- * Renders NOTHING until the item is inside its final window (last 5 minutes),
- * then shows a live m:ss countdown badge. Subscribes to the item's Pusher
- * channel only while inside the window so popcorn extensions update the
- * timer in real time without a page refresh.
+ * It subscribes to the item's Pusher channel only once it's near the end, so
+ * popcorn (anti-snipe) extensions push a new end time in real time without a
+ * page refresh — and it doesn't open hundreds of sockets for far-off lots.
  *
- * A single shared Pusher connection is reused across all card timers on the
- * page (one WebSocket, many channels).
+ * A single shared Pusher connection is reused across every card timer on the page.
  */
 import { useEffect, useRef, useState } from "react";
 import Pusher from "pusher-js";
 
-const SHOW_WINDOW_MS = 5 * 60 * 1000; // show badge in the last 5 minutes
-const SUB_WINDOW_MS = 6 * 60 * 1000;  // subscribe slightly earlier than shown
+const SUB_WINDOW_MS = 6 * 60 * 1000; // subscribe to extensions in the last ~6 min
+const URGENT_MS = 5 * 60 * 1000;     // red + pulse
+const HOUR_MS = 60 * 60 * 1000;      // red
+const SOON_MS = 12 * 60 * 60 * 1000; // amber
 
 // Module-level shared Pusher client — one connection for the whole page
 let sharedPusher: Pusher | null = null;
@@ -30,7 +34,7 @@ function getPusher(): Pusher {
 interface Props {
   itemId: string;
   endAt: string; // ISO — item.itemEndAt ?? auction.endAt
-  inline?: boolean; // list-row variant: no absolute positioning, sits in a text row
+  inline?: boolean; // list-row / inline variant: no absolute positioning
 }
 
 export default function ItemCardTimer({ itemId, endAt: initialEndAt, inline }: Props) {
@@ -68,36 +72,59 @@ export default function ItemCardTimer({ itemId, endAt: initialEndAt, inline }: P
     };
   }, [remaining, itemId]);
 
-  // Hidden until the final window
-  if (remaining > SHOW_WINDOW_MS) return null;
+  const base = inline
+    ? "inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold tabular-nums"
+    : "absolute top-2.5 left-2.5 z-10 inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full font-bold tabular-nums shadow-sm backdrop-blur-sm";
 
-  // Past zero: closing is handled by the cron within ~a minute
+  // Past zero: the closing cron settles it within ~a minute.
   if (remaining <= 0) {
     return (
-      <span
-        className={
-          inline
-            ? "inline-flex items-center bg-[#f1e7d5] text-[#6f5b46] text-[10px] px-2 py-0.5 rounded-full font-semibold"
-            : "absolute top-2.5 left-2.5 bg-[#f1e7d5]/85 backdrop-blur-sm text-[#6f5b46] text-xs px-2.5 py-1 rounded-full font-semibold"
-        }
-      >
+      <span className={`${base} ${inline ? "bg-[#f1e7d5] text-[#6f5b46]" : "bg-[#f1e7d5]/90 text-[#6f5b46]"}`}>
+        <ClockIcon />
         Ending…
       </span>
     );
   }
 
-  const m = Math.floor(remaining / 60000);
-  const s = Math.floor((remaining % 60000) / 1000);
+  const totalSec = Math.floor(remaining / 1000);
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const mins = Math.floor((totalSec % 3600) / 60);
+  const secs = totalSec % 60;
+
+  // Two most-significant units, tightening as it runs out.
+  const label =
+    days > 0
+      ? `${days}d ${hours}h`
+      : hours > 0
+      ? `${hours}h ${mins}m`
+      : `${mins}:${secs.toString().padStart(2, "0")}`;
+
+  const tone =
+    remaining <= URGENT_MS
+      ? "bg-red-500/95 text-white animate-pulse"
+      : remaining <= HOUR_MS
+      ? "bg-red-500/90 text-white"
+      : remaining <= SOON_MS
+      ? "bg-[#c47b3e]/90 text-white"
+      : inline
+      ? "bg-[#efe3d0] text-[#6f5b46]"
+      : "bg-[#241a12]/75 text-white";
 
   return (
-    <span
-      className={
-        inline
-          ? "inline-flex items-center bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold animate-pulse tabular-nums"
-          : "absolute top-2.5 left-2.5 bg-red-500/90 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-full font-bold animate-pulse tabular-nums"
-      }
-    >
-      {m}:{s.toString().padStart(2, "0")} left
+    <span className={`${base} ${tone}`}>
+      <ClockIcon />
+      {label}
+      {hours > 0 || days > 0 ? " left" : ""}
     </span>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 3" />
+    </svg>
   );
 }
