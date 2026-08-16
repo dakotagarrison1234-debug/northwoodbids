@@ -35,9 +35,10 @@ interface Props {
   itemId: string;
   endAt: string; // ISO — item.itemEndAt ?? auction.endAt
   inline?: boolean; // list-row / inline variant: no absolute positioning
+  plain?: boolean;  // no pill/background — just small coloured text (sits by the condition)
 }
 
-export default function ItemCardTimer({ itemId, endAt: initialEndAt, inline }: Props) {
+export default function ItemCardTimer({ itemId, endAt: initialEndAt, inline, plain }: Props) {
   const [endAt, setEndAt] = useState(initialEndAt);
   const [remaining, setRemaining] = useState<number>(
     () => new Date(initialEndAt).getTime() - Date.now()
@@ -72,11 +73,47 @@ export default function ItemCardTimer({ itemId, endAt: initialEndAt, inline }: P
     };
   }, [remaining, itemId]);
 
+  const totalSec = Math.max(0, Math.floor(remaining / 1000));
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const mins = Math.floor((totalSec % 3600) / 60);
+  const secs = totalSec % 60;
+
+  // Two most-significant units, tightening as it runs out.
+  const label =
+    remaining <= 0
+      ? "Ending…"
+      : days > 0
+      ? `${days}d ${hours}h`
+      : hours > 0
+      ? `${hours}h ${mins}m`
+      : `${mins}:${secs.toString().padStart(2, "0")}`;
+
+  // ── Plain variant: no pill, just small coloured text next to the condition.
+  //    Stays quiet (muted) until it's close, then goes amber → red → red-pulse. ──
+  if (plain) {
+    const t =
+      remaining <= 0
+        ? "text-[#8a7559]"
+        : remaining <= URGENT_MS
+        ? "text-red-600 animate-pulse"
+        : remaining <= HOUR_MS
+        ? "text-red-600"
+        : remaining <= SOON_MS
+        ? "text-[#b06a28]"
+        : "text-[#8a7559]";
+    return (
+      <span className={`inline-flex items-center gap-0.5 tabular-nums font-semibold ${t}`}>
+        <ClockIcon />
+        {label}
+      </span>
+    );
+  }
+
   const base = inline
     ? "inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold tabular-nums"
     : "absolute top-2.5 left-2.5 z-10 inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full font-bold tabular-nums shadow-sm backdrop-blur-sm";
 
-  // Past zero: the closing cron settles it within ~a minute.
   if (remaining <= 0) {
     return (
       <span className={`${base} ${inline ? "bg-[#f1e7d5] text-[#6f5b46]" : "bg-[#f1e7d5]/90 text-[#6f5b46]"}`}>
@@ -85,20 +122,6 @@ export default function ItemCardTimer({ itemId, endAt: initialEndAt, inline }: P
       </span>
     );
   }
-
-  const totalSec = Math.floor(remaining / 1000);
-  const days = Math.floor(totalSec / 86400);
-  const hours = Math.floor((totalSec % 86400) / 3600);
-  const mins = Math.floor((totalSec % 3600) / 60);
-  const secs = totalSec % 60;
-
-  // Two most-significant units, tightening as it runs out.
-  const label =
-    days > 0
-      ? `${days}d ${hours}h`
-      : hours > 0
-      ? `${hours}h ${mins}m`
-      : `${mins}:${secs.toString().padStart(2, "0")}`;
 
   const tone =
     remaining <= URGENT_MS

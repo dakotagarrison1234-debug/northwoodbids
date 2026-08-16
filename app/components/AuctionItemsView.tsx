@@ -131,12 +131,12 @@ export default function AuctionItemsView({
       </div>
 
       {view === "grid" ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 items-stretch">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3 items-stretch">
           {shownItems.map((item) => (
             <div key={item.id} className="flex flex-col h-full">
               <Link href={item.href} className={item.cardClass}>
-                {/* Photo */}
-                <div className="w-full aspect-square bg-white flex items-center justify-center text-[#8a7559] overflow-hidden relative">
+                {/* Photo — the star; fills the frame with minimal padding */}
+                <div className="relative w-full aspect-square bg-white overflow-hidden flex items-center justify-center">
                   {item.isCombo && item.collage.length > 1 ? (
                     <div className={`absolute inset-0 grid gap-0.5 ${item.collage.length === 2 ? "grid-cols-2 grid-rows-1" : "grid-cols-2 grid-rows-2"}`}>
                       {item.collage.map((url, i) => (
@@ -151,10 +151,10 @@ export default function AuctionItemsView({
                       alt={item.title}
                       fill
                       sizes="(max-width:640px) 50vw, 25vw"
-                      className="object-contain p-2 group-hover:scale-105 transition-transform duration-300"
+                      className="object-contain p-1 group-hover:scale-105 transition-transform duration-300"
                     />
                   ) : (
-                    <div className="flex flex-col items-center gap-2 text-[#b3a085]">
+                    <div className="flex flex-col items-center gap-1.5 text-[#b3a085]">
                       <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                         <rect x="3" y="3" width="18" height="18" rx="3" />
                         <circle cx="8.5" cy="8.5" r="2" />
@@ -163,51 +163,54 @@ export default function AuctionItemsView({
                       <span className="text-xs">No photo</span>
                     </div>
                   )}
-                  {item.isItemLive && <ItemCardTimer itemId={item.id} endAt={item.itemEndAtIso} />}
                   {item.badge && (
-                    <div className={`absolute top-2.5 right-2.5 z-10 text-[11px] px-2.5 py-1 rounded-full font-bold shadow-sm backdrop-blur-sm ${item.badge.cls}`}>
+                    <div className={`absolute top-2 right-2 z-10 text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm backdrop-blur-sm ${item.badge.cls}`}>
                       {item.badge.text}
                     </div>
                   )}
                   {item.isCombo && (
-                    <div className="absolute bottom-2.5 left-2.5 bg-[#241a12]/85 text-white text-[11px] px-2.5 py-1 rounded-full font-bold shadow-sm z-10">
+                    <div className="absolute bottom-2 left-2 bg-[#241a12]/85 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm z-10">
                       {item.packSize}-Pack
                     </div>
                   )}
                 </div>
 
-                {/* Info */}
-                <div className="flex flex-col flex-1 p-3">
-                  <h3 className="font-bold text-sm leading-snug group-hover:text-[#6c4d39] transition-colors line-clamp-2 min-h-[2.5rem] break-words">
+                {/* Info — tight; timer rides next to the condition as quiet text */}
+                <div className="flex flex-col flex-1 p-2.5">
+                  <h3 className="font-bold text-sm leading-tight line-clamp-2 group-hover:text-[#6c4d39] transition-colors break-words">
                     {item.title}
                   </h3>
                   <div className="flex items-center justify-between gap-2 mt-1">
-                    <span className="text-[11px] text-[#8a7559] capitalize truncate">{item.condition}</span>
+                    <div className="flex items-center gap-1 min-w-0 text-[11px] text-[#8a7559]">
+                      <span className="capitalize truncate">{item.condition}</span>
+                      {item.isItemLive && (
+                        <>
+                          <span className="text-[#cdbda3] shrink-0">·</span>
+                          <ItemCardTimer itemId={item.id} endAt={item.itemEndAtIso} plain />
+                        </>
+                      )}
+                    </div>
                     {item.size && (
-                      <span className="shrink-0 max-w-[60%] truncate text-[11px] bg-[#efe3d0] border border-[#cdbda3] text-[#241a12] rounded-md px-1.5 py-0.5">
-                        Size <span className="font-extrabold">{item.size}</span>
+                      <span className="shrink-0 text-[10px] bg-[#efe3d0] border border-[#cdbda3] text-[#241a12] rounded-md px-1.5 py-0.5">
+                        Sz <span className="font-extrabold">{item.size}</span>
                       </span>
                     )}
                   </div>
-                  <div className="mt-auto pt-2.5">
-                    <div className="flex items-end justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="text-[10px] text-[#8a7559] uppercase tracking-wide leading-none">{item.priceLabel}</div>
-                        <div className={`font-extrabold text-lg leading-tight tabular-nums truncate ${item.isItemUnsold ? "text-[#8a7559]" : "text-[#6c4d39]"}`}>
-                          ${item.priceValue.toLocaleString()}
-                        </div>
+                  <div className="mt-auto pt-2 flex items-end justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-[10px] text-[#8a7559] uppercase tracking-wide leading-none">{item.priceLabel}</div>
+                      <div className={`font-extrabold text-lg leading-tight tabular-nums truncate ${item.isItemUnsold ? "text-[#8a7559]" : "text-[#6c4d39]"}`}>
+                        ${item.priceValue.toLocaleString()}
                       </div>
-                      {item.retailValue > 0 && (
-                        <div className="text-right shrink-0">
-                          <div className="text-[10px] text-[#8a7559] uppercase tracking-wide leading-none">Retail</div>
-                          <div className="text-[13px] font-bold text-[#a32d2d] leading-tight tabular-nums">
-                            ${item.retailValue.toLocaleString()}
-                          </div>
-                        </div>
-                      )}
                     </div>
-                    <div className={`${item.bidClass} mt-2.5`}>{item.bidLabel}</div>
+                    {item.retailValue > 0 && (
+                      <div className="text-right shrink-0 leading-none whitespace-nowrap">
+                        <span className="text-[10px] text-[#8a7559]">retail </span>
+                        <span className="text-[12px] font-bold text-[#a32d2d] tabular-nums line-through">${item.retailValue.toLocaleString()}</span>
+                      </div>
+                    )}
                   </div>
+                  <div className={`${item.bidClass} mt-2`}>{item.bidLabel}</div>
                 </div>
               </Link>
 

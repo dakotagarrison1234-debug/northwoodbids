@@ -322,7 +322,7 @@ export default async function AuctionPage({ params }: Props) {
       </div>
 
       {/* Item grid */}
-      <section className="px-6 sm:px-8 py-6 sm:py-8 max-w-6xl mx-auto">
+      <section className="px-3 sm:px-8 py-4 sm:py-8 max-w-6xl mx-auto">
         {visibleItems.length === 0 ? (
           <div className="text-center py-20 text-[#8a7559] px-5">
             <div className="flex justify-center mb-4">
