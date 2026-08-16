@@ -173,26 +173,25 @@ export default function AuctionItemsView({
                       {item.packSize}-Pack
                     </div>
                   )}
+                  {item.size && (
+                    <div className="absolute bottom-2 right-2 z-10 bg-[#efe3d0]/95 border border-[#cdbda3] text-[#241a12] text-[10px] px-1.5 py-0.5 rounded-md font-bold shadow-sm">
+                      Sz {item.size}
+                    </div>
+                  )}
                 </div>
 
-                {/* Info — tight; timer rides next to the condition as quiet text */}
+                {/* Info — tight; timer rides next to the condition as quiet text.
+                    Condition truncates first; the timer is shrink-0 so it never gets cut. */}
                 <div className="flex flex-col flex-1 p-2.5">
                   <h3 className="font-bold text-sm leading-tight line-clamp-2 group-hover:text-[#6c4d39] transition-colors break-words">
                     {item.title}
                   </h3>
-                  <div className="flex items-center justify-between gap-2 mt-1">
-                    <div className="flex items-center gap-1 min-w-0 text-[11px] text-[#8a7559]">
-                      <span className="capitalize truncate">{item.condition}</span>
-                      {item.isItemLive && (
-                        <>
-                          <span className="text-[#cdbda3] shrink-0">·</span>
-                          <ItemCardTimer itemId={item.id} endAt={item.itemEndAtIso} plain />
-                        </>
-                      )}
-                    </div>
-                    {item.size && (
-                      <span className="shrink-0 text-[10px] bg-[#efe3d0] border border-[#cdbda3] text-[#241a12] rounded-md px-1.5 py-0.5">
-                        Sz <span className="font-extrabold">{item.size}</span>
+                  <div className="flex items-center gap-1.5 mt-1 text-[11px] text-[#8a7559]">
+                    <span className="capitalize truncate min-w-0">{item.condition}</span>
+                    {item.isItemLive && (
+                      <span className="shrink-0 flex items-center gap-1 whitespace-nowrap">
+                        <span className="text-[#cdbda3]">·</span>
+                        <ItemCardTimer itemId={item.id} endAt={item.itemEndAtIso} plain />
                       </span>
                     )}
                   </div>
