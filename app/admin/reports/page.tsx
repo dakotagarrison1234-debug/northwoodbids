@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import BidderReportView from "./BidderReportView";
+import { AreaTrend, Donut } from "./Charts";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Split { label: string; net: number }
@@ -79,36 +80,7 @@ const RANGES = [
 // Warehouse accent colors, assigned by position — used consistently everywhere.
 const WH_COLORS = ["#6c4d39", "#4a7c59", "#c47b3e", "#3f6f8f", "#8a4f1c"];
 
-// ── Trend chart ───────────────────────────────────────────────────────────────
-// Light bars, readable on the dark-green hero card. Each bar shows its dollar
-// value above it and its period label below.
-function TrendChart({ data }: { data: { label: string; net: number }[] }) {
-  const max = Math.max(1, ...data.map((d) => d.net));
-  const BAR = 58;
-  return (
-    <div className="flex items-end gap-1.5">
-      {data.map((d, i) => (
-        <div key={i} className="flex-1 flex flex-col items-center gap-1 min-w-0">
-          <div className="text-[9px] font-bold text-[#eef4e4] tabular-nums leading-none h-3">
-            {d.net > 0 ? money0(d.net) : ""}
-          </div>
-          <div className="w-full flex items-end justify-center" style={{ height: BAR }}>
-            <div
-              className="w-full max-w-[28px] rounded-t bg-[#cfe0bb]"
-              style={{ height: `${Math.max(d.net > 0 ? 4 : 1, (d.net / max) * BAR)}px` }}
-              title={money0(d.net)}
-            />
-          </div>
-          <span className="text-[10px] font-semibold text-[#dbe8ca] tabular-nums truncate w-full text-center">
-            {d.label}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ── Where the money went: one stacked bar, no table ───────────────────────────
+// ── Where the money went: donut + legend with dollar amounts ──────────────────
 function MoneyBar({ t }: { t: Report["totals"] }) {
   const parts = [
     { label: "In your pocket", value: t.net, color: "#5f7a45" },
@@ -120,16 +92,12 @@ function MoneyBar({ t }: { t: Report["totals"] }) {
 
   return (
     <div>
-      <div className="flex h-11 rounded-xl overflow-hidden border border-[#e3d6bf]">
-        {parts.map((p) => (
-          <div
-            key={p.label}
-            style={{ width: `${(p.value / total) * 100}%`, background: p.color }}
-            title={`${p.label} ${money(p.value)}`}
-          />
-        ))}
-      </div>
-      <div className="mt-3 space-y-2">
+      <Donut
+        slices={parts}
+        centerTop={money0(t.buyersPaid)}
+        centerSub="buyers paid"
+      />
+      <div className="mt-4 space-y-2">
         {parts.map((p) => (
           <div key={p.label} className="flex items-center gap-2.5">
             <span className="w-3 h-3 rounded-full shrink-0" style={{ background: p.color }} />
@@ -335,7 +303,7 @@ export default function ReportsPage() {
     );
   }
 
-  const { totals, trend, trendTitle, auctions, warehouses, owed } = d;
+  const { totals, trend, trendTitle, auctions, warehouses, owed, headroom } = d;
   const topNet = Math.max(1, ...auctions.map((a) => a.net));
   const topWhNet = Math.max(1, ...warehouses.map((w) => w.net));
   const shownAuctions = showAllAuctions ? auctions : auctions.slice(0, 5);
@@ -360,10 +328,10 @@ export default function ReportsPage() {
           </div>
           <Scope items={SCOPE_NET} />
           <div className="mt-4 rounded-2xl bg-white/12 p-3">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-[#d8e6c8] mb-2 px-1">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#d8e6c8] mb-1 px-1">
               {trendTitle}
             </div>
-            <TrendChart data={trend} />
+            <AreaTrend data={trend.map((t) => ({ label: t.label, value: t.net }))} dark valueFmt={money0} />
           </div>
         </div>
 
@@ -462,6 +430,34 @@ export default function ReportsPage() {
           <div className="mb-4"><Scope items={SCOPE_PAID} /></div>
           <MoneyBar t={totals} />
         </div>
+
+        {/* ── Money left on the table (bid headroom) ── */}
+        {headroom.items > 0 && (
+          <div className="bg-white border border-[#e3d6bf] rounded-2xl p-5">
+            <h2 className="text-lg font-bold text-[#241a12]">Money left on the table</h2>
+            <p className="text-sm text-[#6f5b46] mb-3">
+              Winners with a max bid usually pay less than their max — the lot stops one increment over the
+              runner-up. That gap is demand you had but didn&apos;t capture.
+            </p>
+            <div className="text-3xl font-extrabold text-[#8a5a2b] tabular-nums">{money0(headroom.total)}</div>
+            <div className="grid grid-cols-3 gap-2 mt-3">
+              {[
+                { k: "Lots", v: headroom.items.toLocaleString() },
+                { k: "Avg gap", v: money0(headroom.avg) },
+                { k: "Biggest", v: money0(headroom.biggest) },
+              ].map((x) => (
+                <div key={x.k} className="bg-[#faf5ea] border border-[#e3d6bf] rounded-xl px-3 py-2.5 text-center">
+                  <div className="text-[11px] font-bold text-[#8a7559] uppercase tracking-wide">{x.k}</div>
+                  <div className="text-base font-extrabold text-[#241a12] tabular-nums mt-0.5">{x.v}</div>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-[#8a7559] mt-3 leading-snug">
+              A big number here means lots are closing cheap — too few bidders in the room, increments too
+              small, or reserves set too low.
+            </p>
+          </div>
+        )}
 
         {/* ── Still owed ── */}
         {owed.count > 0 && (

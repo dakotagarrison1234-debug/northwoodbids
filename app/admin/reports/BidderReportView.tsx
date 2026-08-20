@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { AreaTrend, Donut } from "./Charts";
 
 type Bidder = {
   clerkUserId: string;
@@ -145,8 +146,16 @@ export default function BidderReportView() {
   }
 
   const s = d.summary;
-  const trendMax = Math.max(1, ...d.signupTrend.map((t) => t.count));
   const spendMax = Math.max(1, ...d.topSpenders.map((t) => t.spend));
+
+  // Bidder base, as mutually-exclusive segments (they sum to total bidders):
+  //   Active ≤30d · Cooling 31–60d · Stale >60d · Never bid.
+  const baseSlices = [
+    { label: "Active (≤30d)", value: s.active30, color: "#4a7c59" },
+    { label: "Cooling (31–60d)", value: Math.max(0, s.active60 - s.active30), color: "#c47b3e" },
+    { label: "Stale (60d+)", value: s.stale, color: "#b4462f" },
+    { label: "Never bid", value: s.neverBid, color: "#b3a085" },
+  ];
 
   return (
     <div className="px-4 sm:px-8 py-5 space-y-6 max-w-3xl mx-auto w-full pb-20">
@@ -169,18 +178,20 @@ export default function BidderReportView() {
         </div>
       </div>
 
+      {/* ── Bidder base health ── */}
+      <div className="rounded-2xl bg-white border border-[#e3d6bf] p-4">
+        <div className="text-sm font-bold text-[#241a12] mb-3">Your bidder base</div>
+        <Donut slices={baseSlices} centerTop={s.totalBidders.toLocaleString()} centerSub="bidders" />
+        <p className="text-xs text-[#8a7559] mt-3 leading-snug">
+          {s.everBid} of {s.totalBidders} have ever bid. Chasing the <strong className="text-[#b4462f]">stale</strong>{" "}
+          and <strong className="text-[#8a7559]">never-bid</strong> groups is where re-engagement lives.
+        </p>
+      </div>
+
       {/* ── New signups per week ── */}
       <div className="rounded-2xl bg-white border border-[#e3d6bf] p-4">
-        <div className="text-sm font-bold text-[#241a12] mb-3">New signups · last 12 weeks</div>
-        <div className="flex items-end gap-1.5 h-28">
-          {d.signupTrend.map((t, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center gap-1 min-w-0">
-              <div className="text-[10px] font-bold text-[#6f5b46] tabular-nums">{t.count || ""}</div>
-              <div className="w-full rounded-t bg-[#6c4d39]" style={{ height: `${(t.count / trendMax) * 80}px`, minHeight: t.count ? 3 : 0 }} />
-              <div className="text-[9px] text-[#b3a085] tabular-nums truncate w-full text-center">{t.label}</div>
-            </div>
-          ))}
-        </div>
+        <div className="text-sm font-bold text-[#241a12] mb-2">New signups · last 12 weeks</div>
+        <AreaTrend data={d.signupTrend.map((t) => ({ label: t.label, value: t.count }))} height={130} valueFmt={(n) => String(n)} />
       </div>
 
       {/* ── Top spenders ── */}

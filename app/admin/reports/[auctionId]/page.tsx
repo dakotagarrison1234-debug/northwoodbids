@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireUserOrg } from "@/lib/auth";
+import { Donut } from "../Charts";
 
 // Match the aggregate reports endpoint exactly so a single-auction view can never
 // disagree with the ranked list it was opened from.
@@ -241,12 +242,8 @@ export default async function AuctionReportPage({ params }: Props) {
         {moneyParts.length > 0 && (
           <div className="bg-white border border-[#e3d6bf] rounded-2xl p-5">
             <h2 className="text-lg font-bold text-[#241a12] mb-3">Where the money went</h2>
-            <div className="flex h-11 rounded-xl overflow-hidden border border-[#e3d6bf]">
-              {moneyParts.map((p) => (
-                <div key={p.label} style={{ width: `${(p.value / moneyTotal) * 100}%`, background: p.color }} title={`${p.label} ${money(p.value)}`} />
-              ))}
-            </div>
-            <div className="mt-3 space-y-2">
+            <Donut slices={moneyParts} centerTop={money0(buyersPaid)} centerSub="buyers paid" />
+            <div className="mt-4 space-y-2">
               {moneyParts.map((p) => (
                 <div key={p.label} className="flex items-center gap-2.5">
                   <span className="w-3 h-3 rounded-full shrink-0" style={{ background: p.color }} />
