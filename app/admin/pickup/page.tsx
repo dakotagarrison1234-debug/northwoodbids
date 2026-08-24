@@ -343,6 +343,32 @@ export default function AdminPickupPage() {
     }
   };
 
+  // Compact per-item "mark picked up" control — reused in the gather, staged and
+  // waiting lists so a single stuck/handed-off item can be cleared on its own,
+  // without collecting the whole order.
+  const PickedUpItemBtn = (itemId: string) => (
+    <button
+      type="button"
+      onClick={() => askConfirm(
+        "Mark this one item as picked up?",
+        () => markPickedUp(itemId, [itemId]),
+        { confirmLabel: "Picked up" }
+      )}
+      disabled={markingPickedId === itemId}
+      title="Mark this item picked up"
+      className="shrink-0 self-center inline-flex items-center gap-1 px-2.5 py-2 rounded-xl border border-[#5f7a45]/45 bg-[#eaf1e2] text-[#3f5226] text-xs font-bold hover:bg-[#dce8cc] disabled:opacity-50 whitespace-nowrap"
+    >
+      {markingPickedId === itemId ? (
+        "…"
+      ) : (
+        <>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6l3 3 5-6" /></svg>
+          Picked up
+        </>
+      )}
+    </button>
+  );
+
   // ── Appointment actions ──────────────────────────────────────────────────
   const [editingApptId, setEditingApptId] = useState<string | null>(null);
   const [editStartsAt, setEditStartsAt] = useState("");
@@ -840,11 +866,12 @@ export default function AdminPickupPage() {
               <div className="text-lg font-extrabold text-[#3f5226] leading-tight">{a.stagedSpot}</div>
               <div className="text-sm text-[#5f7a45]">{all} item{all !== 1 ? "s" : ""} boxed for pickup.</div>
             </div>
-            <ul className="space-y-1">
+            <ul className="space-y-1.5">
               {a.items.map((it) => (
                 <li key={it.id} className="flex items-center gap-2 text-base text-[#4a3a2b] px-1 py-0.5">
                   {it.itemCode && <span className="font-mono font-bold text-[#6c4d39] text-sm shrink-0">{it.itemCode}</span>}
-                  <span className="truncate">{it.title}</span>
+                  <span className="truncate flex-1 min-w-0">{it.title}</span>
+                  {PickedUpItemBtn(it.id)}
                 </li>
               ))}
             </ul>
@@ -874,11 +901,11 @@ export default function AdminPickupPage() {
 
           <ul className="space-y-2">
             {a.items.map((it) => (
-              <li key={it.id}>
+              <li key={it.id} className="flex items-stretch gap-2">
                 <button
                   type="button"
                   onClick={() => toggleGrab(a.id, it.id, !it.grabbed)}
-                  className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 border-2 text-left transition-colors ${
+                  className={`flex-1 min-w-0 flex items-center gap-3 rounded-xl px-3 py-2.5 border-2 text-left transition-colors ${
                     it.grabbed
                       ? "bg-[#5f7a45]/10 border-[#5f7a45]/40"
                       : "bg-white border-[#e3d6bf] active:bg-[#faf5ea]"
@@ -924,6 +951,7 @@ export default function AdminPickupPage() {
                     </span>
                   </span>
                 </button>
+                {PickedUpItemBtn(it.id)}
               </li>
             ))}
           </ul>
@@ -1607,9 +1635,9 @@ export default function AdminPickupPage() {
                       {expandedWaitingId === w.clerkUserId && (
                         <ul className="mt-3 space-y-2 border-t border-slate-100 pt-3">
                           {scopedItems.map((it) => (
-                            <li key={it.id}>
+                            <li key={it.id} className="flex items-stretch gap-2">
                               {it.transferring ? (
-                                <div className="flex items-start gap-2.5 rounded-xl px-4 py-2.5 bg-amber-50 border border-amber-200">
+                                <div className="flex-1 flex items-start gap-2.5 rounded-xl px-4 py-2.5 bg-amber-50 border border-amber-200">
                                   <span className="mt-0.5 text-amber-600">🚚</span>
                                   <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-base text-[#241a12] min-w-0">
                                     {it.itemCode && <span className="font-mono font-extrabold text-[#6c4d39]">{it.itemCode}</span>}
@@ -1618,35 +1646,38 @@ export default function AdminPickupPage() {
                                   </span>
                                 </div>
                               ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => toggleWaitingGrab(w.clerkUserId, it.id, !it.grabbed)}
-                                  className={`w-full flex items-start gap-2.5 rounded-xl px-4 py-2.5 text-left transition-colors ${it.grabbed ? "bg-[#5f7a45]/12" : "bg-[#f1e7d5] hover:bg-[#e9dcc4]"}`}
-                                >
-                                  <span className={`mt-0.5 w-5 h-5 rounded-md border-2 grid place-items-center shrink-0 ${it.grabbed ? "bg-[#5f7a45] border-[#5f7a45] text-white" : "border-[#cdbda3] text-transparent"}`}>
-                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6l3 3 5-6" /></svg>
-                                  </span>
-                                  <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-base text-[#241a12] min-w-0">
-                                    {it.itemCode && <span className="font-mono font-extrabold text-[#6c4d39]">{it.itemCode}</span>}
-                                    <span className={`font-semibold ${it.grabbed ? "line-through text-[#6f5b46]" : ""}`}>{it.title}</span>
-                                    {/* Just landed via transfer — warehouse known, spot not. Needs a human to place it. */}
-                                    {it.needsPlacement && !it.grabbed && (
-                                      <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300 whitespace-nowrap">
-                                        Just arrived · place it
-                                      </span>
-                                    )}
-                                    {/* Off the shelf once THIS item is grabbed or has its own gather spot.
-                                        (Must be per-item — a newly won item on an already-gathered order
-                                        is still on the shelf.) */}
-                                    {!it.grabbed && !it.gatherSpot && (
-                                      <>
-                                        <span className="text-[#6f5b46]">— at</span>
-                                        <LocationBadge name={it.warehouse || "Unassigned"} size="sm" />
-                                        <span className="text-[#6f5b46]">· {it.storageLocation || "no spot"}</span>
-                                      </>
-                                    )}
-                                  </span>
-                                </button>
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleWaitingGrab(w.clerkUserId, it.id, !it.grabbed)}
+                                    className={`flex-1 min-w-0 flex items-start gap-2.5 rounded-xl px-4 py-2.5 text-left transition-colors ${it.grabbed ? "bg-[#5f7a45]/12" : "bg-[#f1e7d5] hover:bg-[#e9dcc4]"}`}
+                                  >
+                                    <span className={`mt-0.5 w-5 h-5 rounded-md border-2 grid place-items-center shrink-0 ${it.grabbed ? "bg-[#5f7a45] border-[#5f7a45] text-white" : "border-[#cdbda3] text-transparent"}`}>
+                                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6l3 3 5-6" /></svg>
+                                    </span>
+                                    <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-base text-[#241a12] min-w-0">
+                                      {it.itemCode && <span className="font-mono font-extrabold text-[#6c4d39]">{it.itemCode}</span>}
+                                      <span className={`font-semibold ${it.grabbed ? "line-through text-[#6f5b46]" : ""}`}>{it.title}</span>
+                                      {/* Just landed via transfer — warehouse known, spot not. Needs a human to place it. */}
+                                      {it.needsPlacement && !it.grabbed && (
+                                        <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300 whitespace-nowrap">
+                                          Just arrived · place it
+                                        </span>
+                                      )}
+                                      {/* Off the shelf once THIS item is grabbed or has its own gather spot.
+                                          (Must be per-item — a newly won item on an already-gathered order
+                                          is still on the shelf.) */}
+                                      {!it.grabbed && !it.gatherSpot && (
+                                        <>
+                                          <span className="text-[#6f5b46]">— at</span>
+                                          <LocationBadge name={it.warehouse || "Unassigned"} size="sm" />
+                                          <span className="text-[#6f5b46]">· {it.storageLocation || "no spot"}</span>
+                                        </>
+                                      )}
+                                    </span>
+                                  </button>
+                                  {PickedUpItemBtn(it.id)}
+                                </>
                               )}
                             </li>
                           ))}
@@ -1683,29 +1714,6 @@ export default function AdminPickupPage() {
                           )}
                         </ul>
                       )}
-
-                      {/* Cleanup: mark this customer's loose items picked up without a
-                          scheduled appointment — for walk-ins or fixing a stuck order. */}
-                      {expandedWaitingId === w.clerkUserId && (() => {
-                        const pickable = scopedItems.filter((it) => !it.transferring);
-                        if (pickable.length === 0) return null;
-                        const who = w.name || w.email || "this customer";
-                        return (
-                          <div className="mt-3 pt-3 border-t border-slate-100">
-                            <button
-                              onClick={() => askConfirm(
-                                `Mark all ${pickable.length} of ${who}'s item${pickable.length !== 1 ? "s" : ""} as picked up? Use this to clear a stuck order — it won't charge or notify them.`,
-                                () => markPickedUp(w.clerkUserId, pickable.map((i) => i.id)),
-                                { confirmLabel: "Mark picked up" }
-                              )}
-                              disabled={markingPickedId === w.clerkUserId}
-                              className="w-full inline-flex items-center justify-center gap-2 bg-[#5f7a45] hover:bg-[#4f6639] text-white font-bold text-base py-3 rounded-xl disabled:opacity-50"
-                            >
-                              {markingPickedId === w.clerkUserId ? "Marking…" : `✓ Mark ${pickable.length} picked up`}
-                            </button>
-                          </div>
-                        );
-                      })()}
                     </li>
                     );
                   })}
