@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
     },
     select: {
       amount: true, applicationFeeAmount: true, taxAmount: true, creditApplied: true,
-      stripePaymentIntentId: true, createdAt: true,
+      stripePaymentIntentId: true, createdAt: true, paidInCash: true,
       item: {
         select: {
           auctionId: true,
@@ -103,6 +103,7 @@ export async function GET(req: NextRequest) {
     piGross.set(p.stripePaymentIntentId, (piGross.get(p.stripePaymentIntentId) ?? 0) + grossOf(p));
   }
   const feeForRow = (p: (typeof paidRows)[number]): number => {
+    if (p.paidInCash) return 0; // cash paid in person — no Stripe processor cut
     const gross = grossOf(p);
     if (!p.stripePaymentIntentId) return gross > 0 ? gross * STRIPE_PCT + STRIPE_FIXED : 0;
     const total = piGross.get(p.stripePaymentIntentId) ?? 0;
@@ -174,10 +175,14 @@ export async function GET(req: NextRequest) {
     b.net += sale + prem - credit - fee;
   };
 
+  let cashCollected = 0; // what buyers physically handed over in cash (hammer+premium+tax)
+  let cashItems = 0;
   for (const p of paidRows) {
     const fee = feeForRow(p);
+    if (p.paidInCash) { cashCollected += grossOf(p); cashItems += 1; }
+    // Card charges only: cash never counts toward the Stripe charge tally.
     if (p.stripePaymentIntentId) uniqueCharges.add(p.stripePaymentIntentId);
-    else if (grossOf(p) > 0) soloCharges++;
+    else if (!p.paidInCash && grossOf(p) > 0) soloCharges++;
 
     const aKey = p.item?.auctionId ?? "none";
     const aLabel = p.item?.auction?.title ?? "No auction";
@@ -306,6 +311,8 @@ export async function GET(req: NextRequest) {
       ...out(totals),
       buyersPaid: r2(totals.hammer + totals.premium + totals.tax),
       chargeCount: uniqueCharges.size + soloCharges,
+      cashCollected: r2(cashCollected),
+      cashItems,
     },
     headroom: {
       total: r2(headroomTotal),

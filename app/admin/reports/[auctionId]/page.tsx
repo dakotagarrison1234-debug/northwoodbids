@@ -60,7 +60,7 @@ export default async function AuctionReportPage({ params }: Props) {
     where: { status: "PAID", comped: false, item: { organizationId: orgId } },
     select: {
       amount: true, applicationFeeAmount: true, taxAmount: true, creditApplied: true,
-      stripePaymentIntentId: true,
+      stripePaymentIntentId: true, paidInCash: true,
       item: { select: { auctionId: true, soldLocation: { select: { id: true, name: true } }, location: { select: { id: true, name: true } } } },
     },
     take: ROW_CAP,
@@ -74,6 +74,7 @@ export default async function AuctionReportPage({ params }: Props) {
     piGross.set(p.stripePaymentIntentId, (piGross.get(p.stripePaymentIntentId) ?? 0) + grossOf(p));
   }
   const feeForRow = (p: (typeof paidAll)[number]): number => {
+    if (p.paidInCash) return 0; // cash paid in person — no Stripe cut
     const gross = grossOf(p);
     if (!p.stripePaymentIntentId) return gross > 0 ? gross * STRIPE_PCT + STRIPE_FIXED : 0;
     const total = piGross.get(p.stripePaymentIntentId) ?? 0;
@@ -99,7 +100,7 @@ export default async function AuctionReportPage({ params }: Props) {
     const wLabel = (p.item?.soldLocation ?? p.item?.location)?.name ?? "Unassigned";
     byWarehouse.set(wLabel, (byWarehouse.get(wLabel) ?? 0) + (sale + prem - cr - fee));
     if (p.stripePaymentIntentId) pis.add(p.stripePaymentIntentId);
-    else if (grossOf(p) > 0) soloCharges++;
+    else if (!p.paidInCash && grossOf(p) > 0) soloCharges++;
   }
   const net = hammer + premium - credit - fees;
   const buyersPaid = hammer + premium + tax;

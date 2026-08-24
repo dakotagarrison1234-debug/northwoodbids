@@ -73,6 +73,10 @@ export default function WinnersPage() {
   const [msgTarget, setMsgTarget] = useState<MessageTarget | null>(null);
   const [retrying, setRetrying] = useState<string | null>(null);
   const [retryMsg, setRetryMsg] = useState<{ key: string; text: string; ok: boolean } | null>(null);
+  // Cash / in-person payment: two-tap confirm so it can't be fired by accident.
+  const [cashKey, setCashKey] = useState<string | null>(null);
+  const [cashBusy, setCashBusy] = useState<string | null>(null);
+  const [cashMsg, setCashMsg] = useState<{ key: string; text: string; ok: boolean } | null>(null);
 
   const load = useCallback((query: string, sk: number, f: string) => {
     setLoading(true);
@@ -104,6 +108,33 @@ export default function WinnersPage() {
       setRetryMsg({ key: clerkUserId, text: "Something went wrong.", ok: false });
     } finally {
       setRetrying(null);
+    }
+  };
+
+  // Record an in-person CASH payment for everything this customer owes. No card is
+  // charged; it just marks their balance paid (cash) so items flow to pickup and the
+  // money shows in the Sales + Cash reports.
+  const markCash = async (clerkUserId: string) => {
+    setCashBusy(clerkUserId);
+    setCashMsg(null);
+    try {
+      const res = await fetch("/api/admin/mark-cash-paid", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clerkUserId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCashKey(null);
+        setCashMsg({ key: clerkUserId, text: "Marked paid in cash ✓", ok: true });
+        load(q.trim(), skip, filter);
+      } else {
+        setCashMsg({ key: clerkUserId, text: data.error || "Could not mark cash.", ok: false });
+      }
+    } catch {
+      setCashMsg({ key: clerkUserId, text: "Something went wrong.", ok: false });
+    } finally {
+      setCashBusy(null);
     }
   };
 
@@ -239,8 +270,37 @@ export default function WinnersPage() {
                             </button>
                           )}
                         </div>
+                        {/* Cash / in-person — two-tap confirm (it's money). */}
+                        {cashKey === o.clerkUserId ? (
+                          <div className="flex gap-2 mt-2">
+                            <button
+                              onClick={() => markCash(o.clerkUserId)}
+                              disabled={cashBusy === o.clerkUserId}
+                              className="flex-1 min-h-[44px] inline-flex items-center justify-center rounded-xl bg-[#3f5226] hover:bg-[#33421f] disabled:opacity-50 text-white font-bold text-base"
+                            >
+                              {cashBusy === o.clerkUserId ? "Marking…" : `Confirm cash ${fmtMoney(o.amount)}`}
+                            </button>
+                            <button
+                              onClick={() => setCashKey(null)}
+                              className="min-h-[44px] px-4 inline-flex items-center justify-center rounded-xl border-2 border-slate-200 bg-white font-bold text-base text-slate-600"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => { setCashKey(o.clerkUserId); setCashMsg(null); }}
+                            className="w-full mt-2 min-h-[44px] inline-flex items-center justify-center gap-1.5 rounded-xl border-2 border-[#3f5226]/25 bg-[#eaf1e2] text-[#3f5226] font-bold text-base hover:bg-[#dfeacb]"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="16" height="10" rx="2" /><circle cx="10" cy="10" r="2.2" /></svg>
+                            Mark paid — cash
+                          </button>
+                        )}
                         {retryMsg && retryMsg.key === o.clerkUserId && (
                           <p className={`text-sm mt-1.5 font-medium ${retryMsg.ok ? "text-[#3f5226]" : "text-red-600"}`}>{retryMsg.text}</p>
+                        )}
+                        {cashMsg && cashMsg.key === o.clerkUserId && (
+                          <p className={`text-sm mt-1.5 font-medium ${cashMsg.ok ? "text-[#3f5226]" : "text-red-600"}`}>{cashMsg.text}</p>
                         )}
                       </li>
                     ))}

@@ -372,6 +372,14 @@ model Payment {
   // pickup) but no card is ever charged. Kept out of sales totals so comped admin
   // wins don't inflate revenue. Normal bidders are NEVER comped.
   comped                Boolean       @default(false)
+  // Cash / in-person payment: an admin recorded that the customer paid cash, so no
+  // card is ever charged and Stripe takes no cut. Counted as real revenue in reports
+  // (unlike comps) but broken out separately, and never assigned an estimated Stripe
+  // fee. paidAt = when it was recorded; markedPaidBy = the admin who did it (audit).
+  paidInCash            Boolean       @default(false)
+  paidAt                DateTime?
+  markedPaidBy          String?
+  cashNote              String?
   autoChargeAttemptedAt DateTime?
   failureReason         String?
   createdAt             DateTime      @default(now())
@@ -381,6 +389,7 @@ model Payment {
   @@index([stripePaymentIntentId])
   @@index([clerkUserId])
   @@index([status])
+  @@index([paidInCash, paidAt])
 }
 
 model BidderStripeCustomer {

@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import BidderReportView from "./BidderReportView";
+import CashReportView from "./CashReportView";
 import { AreaTrend, Donut } from "./Charts";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -17,7 +18,7 @@ interface Report {
   range: string;
   feePercent: number;
   taxPercent: number;
-  totals: Bucket & { buyersPaid: number; chargeCount: number };
+  totals: Bucket & { buyersPaid: number; chargeCount: number; cashCollected: number; cashItems: number };
   headroom: { total: number; items: number; biggest: number; avg: number };
   trendTitle: string;
   trend: { label: string; net: number }[];
@@ -114,6 +115,12 @@ function MoneyBar({ t }: { t: Report["totals"] }) {
         {t.chargeCount} card charge{t.chargeCount !== 1 ? "s" : ""}. The green slice is what&apos;s
         actually yours — tax was never your money, and Stripe takes its cut before you see it.
       </p>
+      {t.cashCollected > 0 && (
+        <p className="text-sm text-[#3f5226] mt-2 leading-snug font-semibold">
+          Includes {money(t.cashCollected)} collected in cash across {t.cashItems} item{t.cashItems !== 1 ? "s" : ""} —
+          no Stripe fee on those. Full breakdown in the <strong>Cash</strong> tab.
+        </p>
+      )}
     </div>
   );
 }
@@ -217,7 +224,7 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [showAllAuctions, setShowAllAuctions] = useState(false);
-  const [view, setView] = useState<"sales" | "bidders">("sales");
+  const [view, setView] = useState<"sales" | "bidders" | "cash">("sales");
 
   const load = useCallback((rg: string) => {
     setLoading(true);
@@ -251,7 +258,7 @@ export default function ReportsPage() {
 
   const viewToggle = (
     <div className="flex gap-1 p-1 rounded-xl bg-[#efe3d0] border border-[#e3d6bf]">
-      {(["sales", "bidders"] as const).map((v) => (
+      {(["sales", "bidders", "cash"] as const).map((v) => (
         <button
           key={v}
           onClick={() => setView(v)}
@@ -259,7 +266,7 @@ export default function ReportsPage() {
             view === v ? "bg-[#6c4d39] text-white shadow-sm" : "text-[#6f5b46] hover:text-[#241a12]"
           }`}
         >
-          {v === "sales" ? "Sales" : "Bidders"}
+          {v === "sales" ? "Sales" : v === "bidders" ? "Bidders" : "Cash"}
         </button>
       ))}
     </div>
@@ -281,6 +288,16 @@ export default function ReportsPage() {
       <>
         {header}
         <BidderReportView />
+      </>
+    );
+  }
+
+  // Cash payments — its own self-contained view (own range + data).
+  if (view === "cash") {
+    return (
+      <>
+        {header}
+        <CashReportView />
       </>
     );
   }
