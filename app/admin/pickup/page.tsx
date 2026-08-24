@@ -312,6 +312,37 @@ export default function AdminPickupPage() {
     }
   };
 
+  // Owner override: mark item(s) picked up directly — a fast cleanup for stuck /
+  // problem orders that aren't on a scheduled appointment (walk-ins, data hiccups).
+  // Stamps each item PICKED_UP via the per-item endpoint, then refreshes.
+  const [markingPickedId, setMarkingPickedId] = useState<string | null>(null);
+  const markPickedUp = async (key: string, itemIds: string[]) => {
+    if (itemIds.length === 0) return;
+    setMarkingPickedId(key);
+    try {
+      const results = await Promise.all(
+        itemIds.map((id) =>
+          fetch(`/api/admin/items/${id}/pickup`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ pickedUp: true }),
+          }).then((r) => r.ok).catch(() => false)
+        )
+      );
+      const ok = results.filter(Boolean).length;
+      if (ok > 0) {
+        flash(`Marked ${ok} item${ok !== 1 ? "s" : ""} picked up.`, true);
+        await Promise.all([loadWaiting(), loadAppointments(), loadTransfers()]);
+      } else {
+        flash("Couldn't mark those picked up.", false);
+      }
+    } catch {
+      flash("Something went wrong.", false);
+    } finally {
+      setMarkingPickedId(null);
+    }
+  };
+
   // ── Appointment actions ──────────────────────────────────────────────────
   const [editingApptId, setEditingApptId] = useState<string | null>(null);
   const [editStartsAt, setEditStartsAt] = useState("");
@@ -1652,6 +1683,29 @@ export default function AdminPickupPage() {
                           )}
                         </ul>
                       )}
+
+                      {/* Cleanup: mark this customer's loose items picked up without a
+                          scheduled appointment — for walk-ins or fixing a stuck order. */}
+                      {expandedWaitingId === w.clerkUserId && (() => {
+                        const pickable = scopedItems.filter((it) => !it.transferring);
+                        if (pickable.length === 0) return null;
+                        const who = w.name || w.email || "this customer";
+                        return (
+                          <div className="mt-3 pt-3 border-t border-slate-100">
+                            <button
+                              onClick={() => askConfirm(
+                                `Mark all ${pickable.length} of ${who}'s item${pickable.length !== 1 ? "s" : ""} as picked up? Use this to clear a stuck order — it won't charge or notify them.`,
+                                () => markPickedUp(w.clerkUserId, pickable.map((i) => i.id)),
+                                { confirmLabel: "Mark picked up" }
+                              )}
+                              disabled={markingPickedId === w.clerkUserId}
+                              className="w-full inline-flex items-center justify-center gap-2 bg-[#5f7a45] hover:bg-[#4f6639] text-white font-bold text-base py-3 rounded-xl disabled:opacity-50"
+                            >
+                              {markingPickedId === w.clerkUserId ? "Marking…" : `✓ Mark ${pickable.length} picked up`}
+                            </button>
+                          </div>
+                        );
+                      })()}
                     </li>
                     );
                   })}
