@@ -63,8 +63,11 @@ add a webhook action:
   ```json
   { "phone": "{{contact.phone}}" }
   ```
-- **Response mapping:** expose `briefing`, `found`, `pickup`, and `links` to the AI
-  so it can phrase the answer (or relay `briefing` directly).
+- **Response mapping:** expose `briefing`, `found`, `pickup`, and `links` to the AI.
+  Best results: have it **relay `briefing` verbatim** — it's already the concise,
+  count-based pickup message ("Your 2 items are ready at Owosso… Shelf 2, doors
+  unlocked"). Don't have the bot read out the `items[]` list; that's what made the old
+  replies a long wall of items.
 
 Then paste the prompt from `bot-prompt.md` into the bot's training/prompt, so it
 knows when to call this action and to never discuss money.
@@ -114,7 +117,7 @@ firstName    string?   — for a friendly greeting
 itemCount    number
 items[]      { title, state, stateLabel, locationName }
              state ∈ picked_up | moving | ready_booked | ready_unbooked | processing
-pickup       { booked, when, locationName, address, boxed }
+pickup       { booked, when, locationName, address, boxed, spot }
 needsToBook  boolean   — has ready items but no appointment
 links        { bookPickup, account }
 briefing     string    — customer-safe message the bot can send verbatim

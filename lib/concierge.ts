@@ -53,6 +53,8 @@ export type ConciergeStatus = {
     locationName: string | null;
     address: string | null;
     boxed: boolean;
+    /** The staged spot string (e.g. "Shelf 2") when the order is boxed & waiting. */
+    spot: string | null;
   };
   needsToBook: boolean;
   links: { bookPickup: string; account: string };
@@ -68,7 +70,7 @@ function notFound(): ConciergeStatus {
     firstName: null,
     itemCount: 0,
     items: [],
-    pickup: { booked: false, when: null, locationName: null, address: null, boxed: false },
+    pickup: { booked: false, when: null, locationName: null, address: null, boxed: false, spot: null },
     needsToBook: false,
     links: LINKS,
     briefing:
@@ -195,6 +197,7 @@ export async function getBidderStatus(phone: string): Promise<ConciergeStatus> {
     locationName: nextAppt?.location?.name ?? null,
     address: nextAppt?.location?.address ?? null,
     boxed: !!nextAppt?.stagedSpot,
+    spot: nextAppt?.stagedSpot ?? null,
   };
 
   return {
@@ -209,7 +212,15 @@ export async function getBidderStatus(phone: string): Promise<ConciergeStatus> {
   };
 }
 
-/** Customer-safe prose the bot can relay verbatim. No money, ever. */
+/**
+ * Customer-safe message the bot relays verbatim. No money, ever.
+ *
+ * Deliberately CONCISE — it does NOT enumerate every item. It gives the count and
+ * the one thing the customer actually asked for: where, when, which spot, and that
+ * it's self-serve. e.g.
+ *   "Your 2 items are ready for pickup at Owosso on Thu, Jul 31 at 2:30 PM, Shelf 2.
+ *    Come on in and help yourself — the doors are unlocked!"
+ */
 function buildBriefing(
   firstName: string | null,
   items: ConciergeItem[],
@@ -225,26 +236,42 @@ function buildBriefing(
     );
   }
 
-  const lines = items.map((i) => `• ${i.title} — ${i.stateLabel}`);
+  const n = items.length;
+  const noun = (c: number) => `${c} item${c !== 1 ? "s" : ""}`;
+  const isare = (c: number) => (c === 1 ? "is" : "are");
+  const itthey = (c: number) => (c === 1 ? "it's" : "they're");
 
-  let pickupLine: string;
-  if (pickup.booked) {
-    pickupLine =
-      `Your pickup is booked for ${pickup.when}` +
-      (pickup.locationName ? ` at ${pickup.locationName}` : "") +
-      (pickup.address ? ` (${pickup.address})` : "") +
-      (pickup.boxed ? ". Your order is boxed and waiting." : ".");
-  } else if (needsToBook) {
-    pickupLine = `You still need to book a pickup time — you can grab a slot here: ${LINKS.bookPickup}`;
-  } else {
-    pickupLine = "Nothing needs a pickup time booked right now.";
+  const notReady = items.filter((i) => i.state === "moving" || i.state === "processing").length;
+  const allPickedUp = items.every((i) => i.state === "picked_up");
+
+  // Already collected.
+  if (allPickedUp) {
+    return `${hi}Looks like your ${noun(n)} ${isare(n)} already picked up — you're all set!`;
   }
 
-  return (
-    `${hi}Here's where things stand:\n` +
-    lines.join("\n") +
-    `\n\n${pickupLine}` +
-    `\n\nFor a return or refund, I'll have a team member reach out to you directly. ` +
-    `Holler if you need anything else!`
-  );
+  // Booked pickup — the common "when's my pickup" answer. Short and self-serve.
+  if (pickup.booked) {
+    const loc = pickup.locationName ? ` at ${pickup.locationName}` : "";
+    const when = pickup.when ? ` on ${pickup.when}` : "";
+    const spot = pickup.spot ? `, ${pickup.spot}` : "";
+    let msg = `${hi}Your ${noun(n)} ${isare(n)} ready for pickup${loc}${when}${spot}. Come on in and help yourself — the doors are unlocked!`;
+    if (notReady > 0 && notReady < n) {
+      msg += ` (${noun(notReady)} ${isare(notReady)} still on the way — I'll text you when ${itthey(notReady)} ready.)`;
+    }
+    return msg;
+  }
+
+  // Ready, but no time booked yet.
+  if (needsToBook) {
+    return `${hi}Your ${noun(n)} ${isare(n)} ready to grab — just pick a pickup time here and come help yourself: ${LINKS.bookPickup}`;
+  }
+
+  // Still being gathered / moved between warehouses.
+  if (notReady > 0) {
+    return `${hi}Your ${noun(n)} ${isare(n)} being gathered for pickup — I'll text you the moment ${itthey(n)} ready.`;
+  }
+
+  // Ready but nothing to book (edge) — keep it short.
+  const where = pickup.locationName ? ` at ${pickup.locationName}` : "";
+  return `${hi}Your ${noun(n)} ${isare(n)} ready for pickup${where}. Come on in and help yourself — the doors are unlocked!`;
 }
