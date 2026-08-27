@@ -601,6 +601,9 @@ function NewItemForm() {
   const [photos, setPhotos] = useState<string[]>([]);
   const [auctions, setAuctions] = useState<{ id: string; title: string }[]>([]);
   const [pickupLocations, setPickupLocations] = useState<{ id: string; name: string }[]>([]);
+  // Shelf/spot names already used for the chosen auction + warehouse — powers the
+  // storage-location autocomplete so a run of items lands in consistent spots.
+  const [spotOptions, setSpotOptions] = useState<string[]>([]);
   const [orgId, setOrgId] = useState<string>("");
   const [banner, setBanner] = useState<string | null>(null);
   const [nextCode, setNextCode] = useState<string | null>(null);
@@ -664,6 +667,20 @@ function NewItemForm() {
       );
     }).catch(() => {});
   }, []);
+
+  // Load the spot names already used for this auction + warehouse whenever either
+  // changes, so the shelf/spot field can suggest them.
+  useEffect(() => {
+    if (!formData.locationId) { setSpotOptions([]); return; }
+    const params = new URLSearchParams({ locationId: formData.locationId });
+    if (formData.auctionId) params.set("auctionId", formData.auctionId);
+    let live = true;
+    fetch(`/api/admin/items/spots?${params.toString()}`)
+      .then((r) => r.json())
+      .then((d) => { if (live && Array.isArray(d.spots)) setSpotOptions(d.spots); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [formData.locationId, formData.auctionId]);
 
   // Mint a random code so staff can tag the item before saving.
   const genCode = async () => {
@@ -1141,7 +1158,17 @@ function NewItemForm() {
                   <label className="text-sm font-semibold text-[#6f5b46] mb-1.5 block">Shelf / spot</label>
                   <input name="storageLocation" value={formData.storageLocation} onChange={handleChange}
                     placeholder="Box 1"
+                    list="nb-spot-options"
+                    autoComplete="off"
                     className={inputCls} />
+                  <datalist id="nb-spot-options">
+                    {spotOptions.map((s) => <option key={s} value={s} />)}
+                  </datalist>
+                  {spotOptions.length > 0 && (
+                    <p className="text-xs text-[#8a7559] mt-1">
+                      {spotOptions.length} spot{spotOptions.length !== 1 ? "s" : ""} used here already — type a new one or pick from the list.
+                    </p>
+                  )}
                 </div>
               </div>
 
