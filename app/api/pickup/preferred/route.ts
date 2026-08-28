@@ -57,3 +57,34 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
   }
 }
+
+/**
+ * GET /api/pickup/preferred — the active pickup locations to choose from, plus the
+ * signed-in bidder's current preference (if any). Used by the sign-up location step.
+ */
+export async function GET() {
+  try {
+    const { userId } = await auth();
+    const org = await prisma.organization.findFirst();
+    if (!org) return NextResponse.json({ locations: [], preferredLocationId: null });
+
+    const locations = await prisma.pickupLocation.findMany({
+      where: { organizationId: org.id, isActive: true },
+      select: { id: true, name: true, address: true },
+      orderBy: { name: "asc" },
+    });
+
+    let preferredLocationId: string | null = null;
+    if (userId) {
+      const p = await prisma.bidderProfile.findUnique({
+        where: { clerkUserId: userId },
+        select: { preferredPickupLocationId: true },
+      });
+      preferredLocationId = p?.preferredPickupLocationId ?? null;
+    }
+    return NextResponse.json({ locations, preferredLocationId });
+  } catch (err) {
+    console.error("[pickup/preferred GET]:", err);
+    return NextResponse.json({ locations: [], preferredLocationId: null });
+  }
+}

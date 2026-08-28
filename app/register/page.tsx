@@ -10,13 +10,15 @@ function RegisterForm() {
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect_url") || "/dashboard";
 
-  const [step, setStep] = useState<"phone" | "avatar">("phone");
+  const [step, setStep] = useState<"phone" | "avatar" | "location">("phone");
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(true);
   const [orgSlug, setOrgSlug] = useState<string | null>(null);
   const [savingAvatar, setSavingAvatar] = useState(false);
+  const [locations, setLocations] = useState<{ id: string; name: string; address: string | null }[]>([]);
+  const [savingLocation, setSavingLocation] = useState(false);
 
   // Read the org reference cookie set when user visited an org landing page
   useEffect(() => {
@@ -44,8 +46,11 @@ function RegisterForm() {
     (async () => {
       try {
         const data = await fetch("/api/profile").then(r => r.json());
-        // Returning user who already has a phone AND an avatar — nothing to ask.
-        if (data.profile?.phone && data.profile?.avatarKey) { finish(); return; }
+        const hasLoc = !!data.profile?.preferredPickupLocationId;
+        // Fully set up (phone + avatar + pickup location) — nothing to ask.
+        if (data.profile?.phone && data.profile?.avatarKey && hasLoc) { finish(); return; }
+        // Has phone + avatar but no pickup location — ask that.
+        if (data.profile?.phone && data.profile?.avatarKey) { setStep("location"); setChecking(false); return; }
         // Has a phone but never picked an avatar — jump straight to the avatar step.
         if (data.profile?.phone) { setStep("avatar"); setChecking(false); return; }
 
@@ -117,7 +122,7 @@ function RegisterForm() {
   // Phone is optional → skipping still takes them to the avatar step.
   const handleSkipPhone = () => setStep("avatar");
 
-  // Lock in the chosen avatar, then finish.
+  // Lock in the chosen avatar, then move on to the pickup-location step.
   const chooseAvatar = async (key: string) => {
     setSavingAvatar(true);
     try {
@@ -125,6 +130,29 @@ function RegisterForm() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ avatarKey: key }),
+      });
+    } catch { /* non-critical — keep moving */ }
+    setSavingAvatar(false);
+    setStep("location");
+  };
+
+  // Load the pickup locations when the location step opens.
+  useEffect(() => {
+    if (step !== "location" || locations.length) return;
+    fetch("/api/pickup/preferred")
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d.locations)) setLocations(d.locations); })
+      .catch(() => {});
+  }, [step, locations.length]);
+
+  // Save the chosen pickup location, then finish.
+  const chooseLocation = async (locationId: string) => {
+    setSavingLocation(true);
+    try {
+      await fetch("/api/pickup/preferred", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locationId }),
       });
     } catch { /* non-critical — keep moving */ }
     finish();
@@ -162,11 +190,54 @@ function RegisterForm() {
             ))}
           </div>
           <button
-            onClick={finish}
+            onClick={() => setStep("location")}
             disabled={savingAvatar}
             className="w-full text-[#8a7559] hover:text-[#4a3a2b] text-sm py-2 mt-5 disabled:opacity-50"
           >
             Skip for now
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  if (step === "location") {
+    return (
+      <main className="flex-1 flex items-center justify-center">
+        <div className="bg-white border border-[#e3d6bf] rounded-2xl p-8 max-w-md w-full mx-4">
+          <h1 className="text-2xl font-bold mb-2">Where will you pick up?</h1>
+          <p className="text-[#6f5b46] mb-6">
+            Pick your home warehouse — anything you win is brought here for you, and you schedule pickup on your own time. You can change it anytime.
+          </p>
+          {locations.length === 0 ? (
+            <p className="text-[#8a7559] text-sm py-4">Loading locations…</p>
+          ) : (
+            <div className="space-y-2.5">
+              {locations.map((l) => (
+                <button
+                  key={l.id}
+                  type="button"
+                  disabled={savingLocation}
+                  onClick={() => chooseLocation(l.id)}
+                  className="w-full text-left rounded-2xl border-2 border-[#e3d6bf] hover:border-[#6c4d39] hover:bg-[#faf5ea] px-4 py-3.5 transition-colors disabled:opacity-50 flex items-center gap-3"
+                >
+                  <svg className="w-5 h-5 text-[#6c4d39] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 21s7-6.3 7-11a7 7 0 0 0-14 0c0 4.7 7 11 7 11z" /><circle cx="12" cy="10" r="2.5" />
+                  </svg>
+                  <span className="min-w-0">
+                    <span className="block font-bold text-[#241a12]">{l.name}</span>
+                    {l.address && <span className="block text-sm text-[#6f5b46] truncate">{l.address}</span>}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+          <button
+            onClick={finish}
+            disabled={savingLocation}
+            className="w-full text-[#8a7559] hover:text-[#4a3a2b] text-sm py-2 mt-5 disabled:opacity-50"
+          >
+            {savingLocation ? "Saving…" : "Skip for now — you can set this later"}
           </button>
         </div>
       </main>
