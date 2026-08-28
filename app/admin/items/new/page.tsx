@@ -291,21 +291,33 @@ function BarcodeScanner({
   };
 
   // Picking a search result pulls full details by ASIN, falling back to the row data.
-  // The SEARCH path is the one place we show a confirm/apply step — a scan is exact,
-  // a search is a guess, so you get to eyeball it (and pick the photo) first.
+  // Tapping a result IS the confirmation — it fills the form immediately (one tap).
+  // Combo mode is the exception: it still shows the card so you can tap the ONE photo
+  // to drop into the collage.
   const pickSearchResult = async (r: SearchResult) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/asin-lookup?code=${encodeURIComponent(r.asin)}`);
-      const data = await res.json();
-      if (res.ok && data.found) {
-        setResult(data.product);
-      } else {
-        setResult({ title: r.title, description: "", brand: r.brand || "", category: "", retailValue: r.price, images: r.image ? [r.image] : [] });
+      let product: BarcodeResult;
+      try {
+        const res = await fetch(`/api/admin/asin-lookup?code=${encodeURIComponent(r.asin)}`);
+        const data = await res.json();
+        product = res.ok && data.found
+          ? data.product
+          : { title: r.title, description: "", brand: r.brand || "", category: "", retailValue: r.price, images: r.image ? [r.image] : [] };
+      } catch {
+        product = { title: r.title, description: "", brand: r.brand || "", category: "", retailValue: r.price, images: r.image ? [r.image] : [] };
       }
-    } catch {
-      setResult({ title: r.title, description: "", brand: r.brand || "", category: "", retailValue: r.price, images: r.image ? [r.image] : [] });
+
+      if (comboMode) {
+        setResult(product); // keep the card so a single photo can be picked for the collage
+      } else {
+        // One tap: fill the form now, no second "Use this" step.
+        onFill(product);
+        setResult(null);
+        setBarcode("");
+        setShowSearch(false);
+      }
     } finally {
       setSearchResults(null);
       setLoading(false);
