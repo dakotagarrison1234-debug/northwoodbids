@@ -31,7 +31,7 @@ export default function TopItemsCarousel({ items }: { items: TopItem[] }) {
     if (!el) return;
     let raf = 0;
     let last = performance.now();
-    const SPEED = 28; // px per second
+    const SPEED = 45; // px per second
     const tick = (t: number) => {
       const dt = Math.min((t - last) / 1000, 0.05);
       last = t;

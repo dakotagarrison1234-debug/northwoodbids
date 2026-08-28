@@ -25,12 +25,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       select: { slug: true, status: true, updatedAt: true, organization: { select: { slug: true } } },
       take: 2000,
     });
-    auctionUrls = auctions.map((a) => ({
-      url: `${BASE}/${a.organization.slug}/${a.slug}`,
-      lastModified: a.updatedAt,
-      changeFrequency: a.status === "DRAFT" ? ("daily" as const) : ("hourly" as const),
-      priority: a.status === "DRAFT" ? 0.6 : 0.8,
-    }));
+    auctionUrls = auctions
+      // Skip any auction with a blank/missing slug — those produce a broken URL.
+      .filter((a) => a.slug?.trim() && a.organization?.slug?.trim())
+      .map((a) => ({
+        url: `${BASE}/${a.organization.slug}/${a.slug}`,
+        lastModified: a.updatedAt,
+        changeFrequency: a.status === "DRAFT" ? ("daily" as const) : ("hourly" as const),
+        priority: a.status === "DRAFT" ? 0.6 : 0.8,
+      }));
 
     // Every biddable lot — the long tail of indexable product pages.
     const items = await prisma.item.findMany({
