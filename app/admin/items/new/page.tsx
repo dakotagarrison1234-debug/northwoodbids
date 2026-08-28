@@ -36,6 +36,7 @@ interface SearchResult {
 
 function BarcodeScanner({
   onFill,
+  onFillingChange,
   collapsed = false,
   onCollapsedChange,
   comboMode = false,
@@ -43,6 +44,11 @@ function BarcodeScanner({
   autoStart = false,
 }: {
   onFill: (r: BarcodeResult) => void;
+  // Toggles the parent's full-screen "filling…" overlay. Fired TRUE the instant a
+  // scan/lookup or a "Use" tap begins (before the network call) so it's obvious work
+  // started, and FALSE if that path dead-ends (no match, error, or a combo pick) —
+  // when it hands off to onFill, the parent owns the overlay from there.
+  onFillingChange?: (v: boolean) => void;
   collapsed?: boolean;
   onCollapsedChange?: (v: boolean) => void;
   // Combo mode: picking a result photo just adds it to the collage (no title/price
@@ -214,15 +220,18 @@ function BarcodeScanner({
 
   // A scan/lookup hit. Outside of combo mode this goes STRAIGHT into the form —
   // no "apply" step. (Combo mode still shows the picker so one photo can be chosen.)
-  const acceptProduct = (product: BarcodeResult) => {
+  // Returns true when it handed the product to onFill (parent then owns the overlay),
+  // false for a combo pick (which shows the photo picker instead).
+  const acceptProduct = (product: BarcodeResult): boolean => {
     if (comboRef.current) {
       setResult(product);
-      return;
+      return false;
     }
     onFill(product);
     setResult(null);
     setBarcode("");
     setShowSearch(false);
+    return true;
   };
 
   const doLookup = async (raw: string) => {
@@ -232,6 +241,11 @@ function BarcodeScanner({
     const isFnsku = /^X\d{2}/i.test(upper);                              // Amazon warehouse label
     const isAsin = !isFnsku && /^[A-Z0-9]{10}$/.test(upper) && /[A-Z]/.test(upper); // 10-char alphanumeric
 
+    // Show the "filling…" overlay the instant a lookup starts (before the network
+    // call). Cleared in `finally` UNLESS the product handed off to onFill, in which
+    // case the parent's fill owns the overlay through the photo import.
+    onFillingChange?.(true);
+    let handedOff = false;
     setLoading(true);
     setError(null);
     setResult(null);
@@ -245,7 +259,7 @@ function BarcodeScanner({
           setError(data.message || data.error || "No product found. Try a name search below.");
           setShowSearch(true);
         } else {
-          acceptProduct(data.product);
+          handedOff = acceptProduct(data.product);
         }
       } else {
         // Numeric UPC/EAN → UPCitemdb lookup first…
@@ -254,7 +268,7 @@ function BarcodeScanner({
         const res = await fetch(`/api/admin/barcode-lookup?upc=${clean}`);
         const data = await res.json();
         if (res.ok && data.found) {
-          acceptProduct(data.product);
+          handedOff = acceptProduct(data.product);
         } else {
           // …UPCitemdb missed or is rate-limited — fall back to an Amazon search
           // on the barcode number so a normal barcode still pulls something up.
@@ -265,7 +279,10 @@ function BarcodeScanner({
     } catch {
       setError("Lookup failed. Try a name search below or fill in manually.");
       setShowSearch(true);
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+      if (!handedOff) onFillingChange?.(false);
+    }
   };
 
   // Text-search fallback: find the product by name on Amazon and show a pick list.
@@ -295,6 +312,7 @@ function BarcodeScanner({
   // Combo mode is the exception: it still shows the card so you can tap the ONE photo
   // to drop into the collage.
   const pickSearchResult = async (r: SearchResult) => {
+    onFillingChange?.(true); // overlay the instant "Use" is tapped
     setLoading(true);
     setError(null);
     try {
@@ -310,9 +328,10 @@ function BarcodeScanner({
       }
 
       if (comboMode) {
-        setResult(product); // keep the card so a single photo can be picked for the collage
+        setResult(product);        // keep the card so a single photo can be picked
+        onFillingChange?.(false);  // no full fill in combo — drop the overlay
       } else {
-        // One tap: fill the form now, no second "Use this" step.
+        // One tap: fill the form now. onFill (parent) owns the overlay from here.
         onFill(product);
         setResult(null);
         setBarcode("");
@@ -678,7 +697,6 @@ function NewItemForm() {
   // then lift the overlay to reveal the finished form. A short minimum keeps the
   // spinner from flickering when everything's already cached.
   const handleBarcodeFill = async (result: BarcodeResult) => {
-    const t0 = Date.now();
     setFilling(true);
     setScannerCollapsed(true);
     setFormData(prev => ({
@@ -702,9 +720,7 @@ function NewItemForm() {
       }
     } catch { /* non-critical — text fields still filled */ }
 
-    const elapsed = Date.now() - t0;
-    if (elapsed < 650) await new Promise(r => setTimeout(r, 650 - elapsed));
-    setBanner("Filled from the scan — check the title, price and photos.");
+    setBanner("");        // no "filled from scan" notice — the ready form is the signal
     setFilling(false);
   };
 
@@ -955,6 +971,7 @@ function NewItemForm() {
           <BarcodeScanner
             key={scannerKey}
             onFill={handleBarcodeFill}
+            onFillingChange={setFilling}
             collapsed={scannerCollapsed}
             onCollapsedChange={setScannerCollapsed}
             comboMode={combo}
