@@ -545,50 +545,6 @@ function BarcodeScanner({
 // ── Step card ─────────────────────────────────────────────────────────────────
 // Every stage of the listing is the same shape: numbered chip, colored spine,
 // title, an at-a-glance "done" tick, and the fields. Top to bottom, no hunting.
-function Step({
-  n, title, hint, color, done, children, right,
-}: {
-  n: number;
-  title: string;
-  hint?: string;
-  color: string;
-  done?: boolean;
-  children: React.ReactNode;
-  right?: React.ReactNode;
-}) {
-  return (
-    <section
-      className="relative bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden"
-      style={{ boxShadow: "0 1px 2px rgba(36,26,18,.04)" }}
-    >
-      <span className="absolute left-0 top-0 bottom-0 w-1.5" style={{ background: color }} />
-      <div className="pl-6 pr-5 py-5">
-        <div className="flex items-center gap-3 mb-4">
-          <span
-            className="w-7 h-7 shrink-0 rounded-full grid place-items-center text-sm font-extrabold text-white"
-            style={{ background: color }}
-          >
-            {done ? "✓" : n}
-          </span>
-          <div className="min-w-0">
-            <h2 className="text-base font-bold text-[#241a12] leading-tight">{title}</h2>
-            {hint && <p className="text-xs text-[#8a7559] leading-tight mt-0.5">{hint}</p>}
-          </div>
-          {right && <div className="ml-auto shrink-0">{right}</div>}
-        </div>
-        {children}
-      </div>
-    </section>
-  );
-}
-
-// Step accent colors — each stage of the flow gets its own, so you can find the
-// section you want by color without reading a word.
-const C_SCAN = "#6c4d39";  // brown  — scan
-const C_PHOTO = "#4a7c59"; // green  — photos
-const C_DETAIL = "#c47b3e";// amber  — details
-const C_PRICE = "#3f6f8f"; // blue   — price
-const C_LOC = "#7b6a3f";   // olive  — location
 
 // ── Main form ─────────────────────────────────────────────────────────────────
 function NewItemForm() {
@@ -869,10 +825,6 @@ function NewItemForm() {
   const inputCls =
     "w-full bg-[#faf5ea] border border-[#cdbda3] rounded-xl px-4 py-3 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] focus:bg-white transition-colors";
 
-  const hasPhotos = photos.length > 0;
-  const hasDetails = formData.title.trim().length > 0;
-  const hasLocation = !!formData.locationId;
-
   return (
     <>
       <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-4 flex items-center gap-2 min-w-0">
@@ -896,19 +848,15 @@ function NewItemForm() {
         </button>
       </header>
 
-      <div data-scroll-root className="flex-1 overflow-auto px-4 sm:px-8 py-6">
-        <div className="mx-auto w-full max-w-2xl space-y-4">
+      <div data-scroll-root className="flex-1 overflow-auto px-3 sm:px-6 py-3">
+        <div className="mx-auto w-full max-w-3xl space-y-2.5">
 
-          {/* Status banner (scan landed / item saved) */}
-          {/* One banner for both outcomes, coloured by which it is — a problem
-              rendered in success-green is worse than no banner at all. */}
+          {/* Status banner (scan landed / item saved). */}
           {banner && (() => {
             const good = /saved|filled|ready/i.test(banner);
             return (
-              <div className={`rounded-xl px-4 py-3 text-base font-semibold flex items-center gap-2 border-2 ${
-                good
-                  ? "bg-[#5f7a45]/10 border-[#5f7a45]/40 text-[#3f5430]"
-                  : "bg-red-50 border-red-200 text-red-700"
+              <div className={`rounded-xl px-4 py-2.5 text-base font-semibold flex items-center gap-2 border-2 ${
+                good ? "bg-[#5f7a45]/10 border-[#5f7a45]/40 text-[#3f5430]" : "bg-red-50 border-red-200 text-red-700"
               }`}>
                 <svg width="20" height="20" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   {good ? <path d="M4 10l4 4 8-8" /> : <><circle cx="10" cy="10" r="8" /><path d="M10 6v5M10 13.5v.5" /></>}
@@ -918,320 +866,186 @@ function NewItemForm() {
             );
           })()}
 
-          {/* Previous item's code, pinned at the top after Save & next — so you can
-              still jot it down on the last item if you forgot. */}
-          {lastCode && (
-            <div className="rounded-xl bg-[#f6ecda] border-2 border-[#e3c9a3] px-4 py-2.5 flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-[#8a5a2b]">Just saved</span>
-              <span className="font-mono font-black text-[#6c4d39] text-lg leading-none">#{lastCode}</span>
-              {lastTitle && <span className="text-sm text-[#6f5b46] truncate max-w-[55%]">· {lastTitle}</span>}
-              <span className="ml-auto text-[11px] text-[#8a7559] font-medium">write this on the item</span>
+          {/* ── Big tag # + scan + combo ── */}
+          <div className="rounded-2xl bg-[#6c4d39] text-white px-4 py-3 flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#e7d8c4]">Write this # on the item</div>
+              <div className="font-mono font-black tracking-wider leading-none text-5xl sm:text-6xl">#{nextCode || "…"}</div>
+              {lastCode && <div className="text-[11px] text-[#e7d8c4] mt-1 truncate">Last saved #{lastCode}{lastTitle ? ` · ${lastTitle}` : ""}</div>}
+            </div>
+            <div className="flex flex-col gap-1.5 shrink-0">
+              <button type="button" onClick={toggleCombo}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border-2 transition-colors ${
+                  combo ? "bg-white text-[#6c4d39] border-white" : "bg-transparent text-white border-white/50 hover:bg-white/10"
+                }`}>
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1.5" y="1.5" width="6" height="6" rx="1" /><rect x="8.5" y="1.5" width="6" height="6" rx="1" /><rect x="1.5" y="8.5" width="6" height="6" rx="1" /><rect x="8.5" y="8.5" width="6" height="6" rx="1" /></svg>
+                {combo ? "Combo on" : "Combo"}
+              </button>
+            </div>
+          </div>
+
+          {/* Combo size picker (only when on). */}
+          {combo && (
+            <div className="rounded-xl bg-[#f6ecda] border border-[#e3d6bf] px-3 py-2.5 flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-bold text-[#4a3a2b]">Lot size:</span>
+              {[2, 3, 4, 5, 6].map((n) => (
+                <button key={n} type="button" onClick={() => setPackSize(n)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-bold border transition-colors ${
+                    formData.packSize === n ? "bg-[#6c4d39] text-white border-[#6c4d39]" : "bg-white text-[#4a3a2b] border-[#cdbda3]"
+                  }`}>{n}</button>
+              ))}
+              <span className="text-xs text-[#6f5b46] ml-auto">{photos.length}/{formData.packSize} photos · one code</span>
             </div>
           )}
 
-          {/* ── 1 · Scan ── */}
-          <Step
-            n={1}
-            title="Scan the barcode"
-            hint="A scan fills the form for you. Nothing to confirm."
-            color={C_SCAN}
-            done={hasDetails}
-            right={
-              <button
-                type="button"
-                onClick={toggleCombo}
-                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-bold border-2 transition-colors ${
-                  combo ? "bg-[#6c4d39] text-white border-[#6c4d39]" : "bg-white text-[#6c4d39] border-[#cdbda3] hover:bg-[#efe3d0]"
-                }`}
-              >
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1.5" y="1.5" width="6" height="6" rx="1" /><rect x="8.5" y="1.5" width="6" height="6" rx="1" /><rect x="1.5" y="8.5" width="6" height="6" rx="1" /><rect x="8.5" y="8.5" width="6" height="6" rx="1" /></svg>
-                {combo ? "Combo on" : "Combo lot"}
-              </button>
-            }
-          >
-            {combo && (
-              <div className="mb-4 rounded-xl bg-[#f6ecda] border border-[#e3d6bf] p-4">
-                <div className="text-sm font-semibold text-[#4a3a2b] mb-2">How many items in this lot?</div>
-                <div className="flex flex-wrap gap-2">
-                  {[2, 3, 4, 5, 6].map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => setPackSize(n)}
-                      className={`px-3.5 py-2 rounded-lg text-sm font-bold border transition-colors ${
-                        formData.packSize === n ? "bg-[#6c4d39] text-white border-[#6c4d39]" : "bg-white text-[#4a3a2b] border-[#cdbda3] hover:bg-[#efe3d0]"
-                      }`}
-                    >
-                      {n}-Pack
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-3 text-sm text-[#6f5b46]">
-                  <span className="font-bold text-[#6c4d39]">{photos.length} of {formData.packSize}</span> photos in the collage. Scan each item and tap <strong>one photo</strong> from it. Saves as one lot, one code.
-                </p>
-              </div>
-            )}
+          {/* Scanner (collapsed until you tap it — fills the fields below). */}
+          <BarcodeScanner
+            key={scannerKey}
+            onFill={handleBarcodeFill}
+            collapsed={scannerCollapsed}
+            onCollapsedChange={setScannerCollapsed}
+            comboMode={combo}
+            onAddComboPhoto={importImageFromUrl}
+            autoStart={scannerAutoStart}
+          />
 
-            <BarcodeScanner
-              key={scannerKey}
-              onFill={handleBarcodeFill}
-              collapsed={scannerCollapsed}
-              onCollapsedChange={setScannerCollapsed}
-              comboMode={combo}
-              onAddComboPhoto={importImageFromUrl}
-              autoStart={scannerAutoStart}
-            />
-          </Step>
-
-          {/* ── 2 · Photos ── */}
-          <Step
-            n={2}
-            title="Photos"
-            hint={hasPhotos ? "First photo is what bidders see." : "Up to 10. Scanned items pull theirs in automatically."}
-            color={C_PHOTO}
-            done={hasPhotos}
-            right={hasPhotos ? <span className="text-sm font-bold text-[#4a7c59]">{photos.length}</span> : undefined}
-          >
+          {/* ── Everything else, one dense panel ── */}
+          <div className="rounded-2xl bg-white border border-[#e3d6bf] p-3 space-y-2.5">
             <input type="file" accept="image/*" multiple id="photo-upload" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
-            {hasPhotos ? (
-              /* 2-up on a phone with the controls in a bar UNDER the photo. At
-                 3-across the badge, "Set main" and the 24px delete button all
-                 collided inside one ~87px tile. */
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {photos.map((url, i) => (
-                  <div key={i} className={`rounded-xl overflow-hidden border-2 ${i === 0 ? "border-[#4a7c59]" : "border-[#e3d6bf]"}`}>
-                    <div className="relative aspect-square bg-[#efe3d0]">
-                      <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-contain" />
-                      {i === 0 && (
-                        <span className="absolute top-2 left-2 bg-[#4a7c59] text-white text-[11px] font-bold px-2 py-1 rounded-full shadow">Main</span>
-                      )}
-                    </div>
-                    <div className="flex border-t border-[#e3d6bf]">
-                      {i === 0 ? (
-                        <span className="flex-1 min-h-[44px] flex items-center justify-center text-sm font-bold text-[#4a7c59] bg-[#4a7c59]/10">
-                          Shown first
-                        </span>
-                      ) : (
-                        <button type="button" onClick={() => setMainPhoto(i)}
-                          className="flex-1 min-h-[44px] text-sm font-bold text-[#6f5b46] bg-white active:bg-[#efe3d0]">
-                          Make main
-                        </button>
-                      )}
-                      <button type="button" aria-label="Delete photo"
-                        onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))}
-                        className="w-[44px] min-h-[44px] flex items-center justify-center text-red-600 bg-white border-l border-[#e3d6bf] active:bg-red-50">
-                        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 4h10M6.5 4V2.5h3V4M5 4v9.5h6V4M6.5 6.5v5M9.5 6.5v5" /></svg>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                <label htmlFor="photo-upload"
-                  className="min-h-[120px] rounded-xl border-2 border-dashed border-[#cdbda3] hover:border-[#4a7c59] transition-colors cursor-pointer grid place-items-center text-[#8a7559] hover:text-[#4a7c59]">
-                  <span className="text-3xl leading-none">＋</span>
-                </label>
-              </div>
-            ) : (
-              <label htmlFor="photo-upload"
-                className="border-2 border-dashed border-[#cdbda3] rounded-xl py-6 text-center hover:border-[#4a7c59] transition-colors cursor-pointer block">
-                <div className="text-[#8a7559] mb-1.5 flex justify-center">
-                  <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="6" width="20" height="15" rx="2"/><circle cx="12" cy="13.5" r="4"/><path d="M9 6l1.5-3h3L15 6"/>
-                  </svg>
-                </div>
-                <div className="text-[#6f5b46] text-base font-semibold">{uploading ? "Uploading…" : "Add photos"}</div>
-              </label>
-            )}
-          </Step>
 
-          {/* ── 3 · Details ── */}
-          <Step n={3} title="Details" color={C_DETAIL} done={hasDetails}>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-semibold text-[#6f5b46] mb-1.5 block">Title *</label>
-                <textarea ref={titleRef} name="title" value={formData.title} onChange={handleChange} rows={1}
-                  placeholder='e.g. Apple iPad Pro 12.9"'
-                  className={`${inputCls} resize-none overflow-hidden leading-snug`} />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-[#6f5b46] mb-1.5 block">Description</label>
-                <textarea name="description" value={formData.description} onChange={handleChange} rows={3}
-                  placeholder="A couple of sentences."
-                  className={`${inputCls} resize-none`} />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-[#6f5b46] mb-1.5 block">Condition *</label>
-                <div className="grid grid-cols-5 gap-1.5">
-                  {[
-                    { value: "NEW", label: "New" },
-                    { value: "LIKE_NEW", label: "Like new" },
-                    { value: "GOOD", label: "Good" },
-                    { value: "FAIR", label: "Fair" },
-                    { value: "POOR", label: "Poor" },
-                  ].map((c) => (
-                    <button
-                      key={c.value}
-                      type="button"
-                      onClick={() => setFormData((prev) => ({ ...prev, condition: c.value }))}
-                      className={`px-1 py-2.5 rounded-lg text-sm font-bold border transition-colors ${
-                        formData.condition === c.value
-                          ? "bg-[#c47b3e] text-white border-[#c47b3e]"
-                          : "bg-[#faf5ea] text-[#4a3a2b] border-[#cdbda3] hover:bg-[#efe3d0]"
-                      }`}
-                    >
-                      {c.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {/* Size sits with Condition — both are "what is this thing", and both
-                  show on the bidder's card. Free text, because clothing, shoes and
-                  bras don't share a scale; the chips just save typing on common ones. */}
-              <div>
-                <label className="text-sm font-semibold text-[#6f5b46] mb-1.5 block">
-                  Size <span className="font-normal text-[#8a7559]">(optional)</span>
-                </label>
-                <input
-                  name="size"
-                  value={formData.size}
-                  onChange={handleChange}
-                  placeholder="Medium, Size 8, One Size Fits All…"
-                  className={inputCls}
-                />
-              </div>
+            {/* Title */}
+            <textarea ref={titleRef} name="title" value={formData.title} onChange={handleChange} rows={1}
+              placeholder='Title * — e.g. Apple iPad Pro 12.9"'
+              className={`${inputCls} resize-none overflow-hidden leading-snug py-2.5`} />
 
-              <button
-                type="button"
-                onClick={() => setFormData((prev) => ({ ...prev, isPremium: !prev.isPremium }))}
-                className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-base font-bold border-2 transition-colors ${
-                  formData.isPremium
-                    ? "bg-[#c47b3e] text-white border-[#c47b3e]"
-                    : "bg-white text-[#8a7559] border-[#cdbda3] hover:bg-[#efe3d0]"
-                }`}
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill={formData.isPremium ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M8 1.5l1.8 3.9 4.2.5-3.1 2.9.8 4.2L8 11.4 4.3 13l.8-4.2L2 5.9l4.2-.5L8 1.5z" /></svg>
-                {formData.isPremium ? "Featured — pinned to the top" : "Feature this item"}
+            {/* Condition chips */}
+            <div className="grid grid-cols-5 gap-1.5">
+              {[
+                { value: "NEW", label: "New" },
+                { value: "LIKE_NEW", label: "Like new" },
+                { value: "GOOD", label: "Good" },
+                { value: "FAIR", label: "Fair" },
+                { value: "POOR", label: "Poor" },
+              ].map((c) => (
+                <button key={c.value} type="button"
+                  onClick={() => setFormData((prev) => ({ ...prev, condition: c.value }))}
+                  className={`px-1 py-2 rounded-lg text-xs font-bold border transition-colors ${
+                    formData.condition === c.value ? "bg-[#c47b3e] text-white border-[#c47b3e]" : "bg-[#faf5ea] text-[#4a3a2b] border-[#cdbda3]"
+                  }`}>{c.label}</button>
+              ))}
+            </div>
+
+            {/* Size + Feature */}
+            <div className="grid grid-cols-2 gap-2">
+              <input name="size" value={formData.size} onChange={handleChange} placeholder="Size (optional)" className={`${inputCls} py-2.5`} />
+              <button type="button" onClick={() => setFormData((prev) => ({ ...prev, isPremium: !prev.isPremium }))}
+                className={`inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-bold border-2 transition-colors ${
+                  formData.isPremium ? "bg-[#c47b3e] text-white border-[#c47b3e]" : "bg-white text-[#8a7559] border-[#cdbda3]"
+                }`}>
+                <svg width="15" height="15" viewBox="0 0 16 16" fill={formData.isPremium ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M8 1.5l1.8 3.9 4.2.5-3.1 2.9.8 4.2L8 11.4 4.3 13l.8-4.2L2 5.9l4.2-.5L8 1.5z" /></svg>
+                {formData.isPremium ? "Featured" : "Feature"}
               </button>
             </div>
-          </Step>
 
-          {/* ── 4 · Price ── */}
-          <Step n={4} title="Price" hint="Starts at $2 unless you change it." color={C_PRICE} done>
-            <div className="grid grid-cols-3 gap-2.5">
+            {/* Price row */}
+            <div className="grid grid-cols-3 gap-2">
               {[
-                { label: "Retail", name: "retailValue", placeholder: "0.00" },
+                { label: "Retail", name: "retailValue", placeholder: "0" },
                 { label: "Start *", name: "startingBid", placeholder: "2" },
                 { label: "Reserve", name: "reservePrice", placeholder: "—" },
               ].map((field) => (
                 <div key={field.name}>
-                  <label className="text-sm font-semibold text-[#6f5b46] mb-1.5 block">{field.label}</label>
+                  <label className="text-[11px] font-bold text-[#8a7559] uppercase tracking-wide mb-0.5 block">{field.label}</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-3 text-[#8a7559]">$</span>
+                    <span className="absolute left-2.5 top-2.5 text-[#8a7559]">$</span>
                     <input name={field.name} value={formData[field.name as keyof typeof formData] as string}
                       onChange={handleChange} type="number" inputMode="decimal" placeholder={field.placeholder}
-                      className={`${inputCls} pl-7 pr-2`} />
+                      className={`${inputCls} pl-6 pr-1.5 py-2.5`} />
                   </div>
                 </div>
               ))}
             </div>
-          </Step>
 
-          {/* ── 5 · Location ── */}
-          <Step n={5} title="Where it lives" color={C_LOC} done={hasLocation}>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-sm font-semibold text-[#6f5b46] mb-1.5 block">Warehouse *</label>
-                  {pickupLocations.length === 0 ? (
-                    <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
-                      No warehouses yet.{" "}
-                      <a href="/admin/pickup" className="font-semibold underline underline-offset-2">Set one up →</a>
-                    </div>
-                  ) : (
-                    <select name="locationId" value={formData.locationId} onChange={handleChange}
-                      className={`${inputCls} ${!formData.locationId ? "border-[#c47b3e]" : ""}`}>
-                      <option value="">Choose…</option>
-                      {pickupLocations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-                    </select>
-                  )}
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-[#6f5b46] mb-1.5 block">Shelf / spot</label>
-                  <input name="storageLocation" value={formData.storageLocation} onChange={handleChange}
-                    placeholder="Box 1"
-                    list="nb-spot-options"
-                    autoComplete="off"
-                    className={inputCls} />
-                  <datalist id="nb-spot-options">
-                    {spotOptions.map((s) => <option key={s} value={s} />)}
-                  </datalist>
-                  {spotOptions.length > 0 && (
-                    <p className="text-xs text-[#8a7559] mt-1">
-                      {spotOptions.length} spot{spotOptions.length !== 1 ? "s" : ""} used here already — type a new one or pick from the list.
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => setFormData((prev) => ({ ...prev, transferable: true }))}
-                  className={`px-3 py-2.5 rounded-xl text-sm font-bold border transition-colors ${
-                    formData.transferable ? "bg-[#7b6a3f] text-white border-[#7b6a3f]" : "bg-[#faf5ea] text-[#4a3a2b] border-[#cdbda3] hover:bg-[#efe3d0]"
-                  }`}>
-                  Can transfer
-                </button>
-                <button type="button" onClick={() => setFormData((prev) => ({ ...prev, transferable: false }))}
-                  className={`px-3 py-2.5 rounded-xl text-sm font-bold border transition-colors ${
-                    !formData.transferable ? "bg-[#8a4f1c] text-white border-[#8a4f1c]" : "bg-[#faf5ea] text-[#4a3a2b] border-[#cdbda3] hover:bg-[#efe3d0]"
-                  }`}>
-                  Pickup here only
-                </button>
-              </div>
-
-              {/* Auction picker only when NOT created inside an auction. */}
-              {!preselectedAuctionId && (
-                <div>
-                  <label className="text-sm font-semibold text-[#6f5b46] mb-1.5 block">Auction</label>
-                  <select name="auctionId" value={formData.auctionId} onChange={handleChange} className={inputCls}>
-                    <option value="">Save as draft</option>
-                    {auctions.map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}
+            {/* Warehouse + spot */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[11px] font-bold text-[#8a7559] uppercase tracking-wide mb-0.5 block">Warehouse *</label>
+                {pickupLocations.length === 0 ? (
+                  <a href="/admin/pickup" className="block rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm text-amber-800 font-semibold">Set one up →</a>
+                ) : (
+                  <select name="locationId" value={formData.locationId} onChange={handleChange}
+                    className={`${inputCls} py-2.5 ${!formData.locationId ? "border-[#c47b3e]" : ""}`}>
+                    <option value="">Choose…</option>
+                    {pickupLocations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
                   </select>
-                </div>
+                )}
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-[#8a7559] uppercase tracking-wide mb-0.5 block">Shelf / spot</label>
+                <input name="storageLocation" value={formData.storageLocation} onChange={handleChange}
+                  placeholder="Box 1" list="nb-spot-options" autoComplete="off" className={`${inputCls} py-2.5`} />
+                <datalist id="nb-spot-options">
+                  {spotOptions.map((s) => <option key={s} value={s} />)}
+                </datalist>
+              </div>
+            </div>
+
+            {/* Transfer + auction */}
+            <div className={`grid gap-2 ${preselectedAuctionId ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-3"}`}>
+              <button type="button" onClick={() => setFormData((prev) => ({ ...prev, transferable: true }))}
+                className={`px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${
+                  formData.transferable ? "bg-[#7b6a3f] text-white border-[#7b6a3f]" : "bg-[#faf5ea] text-[#4a3a2b] border-[#cdbda3]"
+                }`}>Can transfer</button>
+              <button type="button" onClick={() => setFormData((prev) => ({ ...prev, transferable: false }))}
+                className={`px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${
+                  !formData.transferable ? "bg-[#8a4f1c] text-white border-[#8a4f1c]" : "bg-[#faf5ea] text-[#4a3a2b] border-[#cdbda3]"
+                }`}>Pickup only</button>
+              {!preselectedAuctionId && (
+                <select name="auctionId" value={formData.auctionId} onChange={handleChange} className={`${inputCls} py-2 text-sm`}>
+                  <option value="">Save as draft</option>
+                  {auctions.map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}
+                </select>
               )}
             </div>
-          </Step>
 
-          {/* Last item's code — for when you save before writing the tag. */}
-          {lastCode && (
-            <div className="flex items-center gap-2 justify-center text-sm text-[#8a7559] pt-1">
-              <span>Last saved:</span>
-              <span className="font-mono font-bold text-[#6f5b46]">#{lastCode}</span>
-              {lastTitle && <span className="truncate max-w-[45%] hidden sm:inline">· {lastTitle}</span>}
+            {/* Photos — horizontal strip (no vertical growth). Tap a thumb to make it
+                the main photo; × removes it. Scanned items pull their photo in. */}
+            <div className="flex gap-2 overflow-x-auto pt-0.5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {photos.map((url, i) => (
+                <button type="button" key={i} onClick={() => i !== 0 && setMainPhoto(i)}
+                  className={`relative shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 ${i === 0 ? "border-[#4a7c59]" : "border-[#e3d6bf]"}`}>
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  {i === 0 && <span className="absolute bottom-0 inset-x-0 bg-[#4a7c59] text-white text-[9px] font-bold text-center leading-tight py-0.5">MAIN</span>}
+                  <span onClick={(e) => { e.stopPropagation(); setPhotos(photos.filter((_, idx) => idx !== i)); }}
+                    className="absolute top-0 right-0 w-5 h-5 grid place-items-center bg-black/55 text-white rounded-bl-lg">
+                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 3l6 6M9 3l-6 6" /></svg>
+                  </span>
+                </button>
+              ))}
+              <label htmlFor="photo-upload"
+                className="shrink-0 w-16 h-16 rounded-lg border-2 border-dashed border-[#cdbda3] grid place-items-center text-[#8a7559] cursor-pointer">
+                <span className="text-2xl leading-none">{uploading ? "…" : "＋"}</span>
+              </label>
             </div>
-          )}
 
-          <div className="h-2" />
+            {/* Description — compact, optional. */}
+            <textarea name="description" value={formData.description} onChange={handleChange} rows={2}
+              placeholder="Description (optional)"
+              className={`${inputCls} resize-none py-2`} />
+          </div>
         </div>
       </div>
 
       {/* ── Sticky action bar ── */}
-      <footer className="bar-safe-bottom safe-x border-t border-[#e3d6bf] bg-[#faf5ea] px-4 sm:px-8 pt-3 flex items-center gap-3">
-        {/* Tag # right by the Save buttons — write it on the item before saving. */}
-        {nextCode ? (
-          <div className="flex flex-col leading-none shrink-0 rounded-xl bg-[#6c4d39]/10 border border-[#6c4d39]/30 px-3 py-2">
-            <span className="text-[10px] font-bold text-[#8a7559] uppercase tracking-wide">Write on tag</span>
-            <span className="font-mono text-xl font-extrabold text-[#6c4d39] tracking-wider whitespace-nowrap mt-0.5">#{nextCode}</span>
-          </div>
-        ) : <span />}
-        <div className="flex gap-2 ml-auto min-w-0">
-          <button onClick={() => handleSave(true)} disabled={saving || uploading}
-            className="bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] disabled:opacity-50 text-[#241a12] text-base px-4 sm:px-6 py-3.5 rounded-xl font-bold transition-colors whitespace-nowrap">
-            {saving ? "Saving…" : "Save + next"}
-          </button>
-          <button onClick={() => handleSave(false)} disabled={saving || uploading}
-            className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white text-base px-4 sm:px-6 py-3.5 rounded-xl font-bold transition-colors whitespace-nowrap">
-            {saving ? "Saving…" : uploading ? "Uploading…" : "Save & done"}
-          </button>
-        </div>
+      <footer className="bar-safe-bottom safe-x border-t border-[#e3d6bf] bg-[#faf5ea] px-3 sm:px-8 pt-2.5 flex items-center gap-2">
+        <button onClick={() => handleSave(true)} disabled={saving || uploading}
+          className="flex-1 bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] disabled:opacity-50 text-[#241a12] text-base py-3.5 rounded-xl font-bold transition-colors whitespace-nowrap">
+          {saving ? "Saving…" : "Save + next"}
+        </button>
+        <button onClick={() => handleSave(false)} disabled={saving || uploading}
+          className="flex-1 bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white text-base py-3.5 rounded-xl font-bold transition-colors whitespace-nowrap">
+          {saving ? "Saving…" : uploading ? "Uploading…" : "Save & done"}
+        </button>
       </footer>
     </>
   );
