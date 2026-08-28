@@ -851,6 +851,7 @@ function NewItemForm() {
             ...prev,
             title: "",
             description: "",
+            size: "",
             retailValue: "",
             startingBid: "2",
             reservePrice: "",
