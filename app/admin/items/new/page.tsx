@@ -983,10 +983,25 @@ function NewItemForm() {
               <div>
                 <label className="text-[11px] font-bold text-[#8a7559] uppercase tracking-wide mb-0.5 block">Shelf / spot</label>
                 <input name="storageLocation" value={formData.storageLocation} onChange={handleChange}
-                  placeholder="Box 1" list="nb-spot-options" autoComplete="off" className={`${inputCls} py-2.5`} />
-                <datalist id="nb-spot-options">
-                  {spotOptions.map((s) => <option key={s} value={s} />)}
-                </datalist>
+                  placeholder="Type a new spot" autoComplete="off" className={`${inputCls} py-2.5`} />
+                {/* Spots already used for this auction + warehouse — tap to reuse.
+                    (A tappable chip row, not a native <datalist>, which doesn't render
+                    reliably on mobile.) */}
+                {spotOptions.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {spotOptions.slice(0, 12).map((s) => (
+                      <button type="button" key={s}
+                        onClick={() => setFormData((prev) => ({ ...prev, storageLocation: s }))}
+                        className={`px-2 py-1 rounded-md text-xs font-bold border transition-colors ${
+                          formData.storageLocation === s
+                            ? "bg-[#6c4d39] text-white border-[#6c4d39]"
+                            : "bg-[#faf5ea] text-[#6c4d39] border-[#cdbda3] hover:bg-[#efe3d0]"
+                        }`}>
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
