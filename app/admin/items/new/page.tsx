@@ -572,6 +572,9 @@ function NewItemForm() {
   // Shelf/spot names already used for the chosen auction + warehouse — powers the
   // storage-location autocomplete so a run of items lands in consistent spots.
   const [spotOptions, setSpotOptions] = useState<string[]>([]);
+  // Covers the form with a spinner while a scan/search auto-fills it, so the fields
+  // and photos don't visibly pop in one at a time — then reveals the filled form.
+  const [filling, setFilling] = useState(false);
   const [orgId, setOrgId] = useState<string>("");
   const [banner, setBanner] = useState<string | null>(null);
   const [nextCode, setNextCode] = useState<string | null>(null);
@@ -670,8 +673,14 @@ function NewItemForm() {
     setFormData({ ...formData, [e.target.name]: value });
   };
 
-  // A scan landed — fill the form, pull the photos, and get out of the way.
-  const handleBarcodeFill = (result: BarcodeResult) => {
+  // A scan/search landed — fill the form behind a spinner so nothing visibly pops
+  // in. We set the text fields, import ALL photos in parallel, add them in one batch,
+  // then lift the overlay to reveal the finished form. A short minimum keeps the
+  // spinner from flickering when everything's already cached.
+  const handleBarcodeFill = async (result: BarcodeResult) => {
+    const t0 = Date.now();
+    setFilling(true);
+    setScannerCollapsed(true);
     setFormData(prev => ({
       ...prev,
       title: result.title || prev.title,
@@ -680,18 +689,41 @@ function NewItemForm() {
       description: result.description ? shortenDescription(result.description, 3) : prev.description,
       retailValue: result.retailValue != null ? String(result.retailValue) : prev.retailValue,
     }));
-    result.images.forEach(url => importImageFromUrl(url));
-    setScannerCollapsed(true);
+
+    try {
+      const urls = await Promise.all((result.images ?? []).map(fetchImageUrl));
+      const good = urls.filter((u): u is string => !!u);
+      if (good.length) {
+        setPhotos(prev => {
+          const merged = [...prev];
+          for (const u of good) if (!merged.includes(u)) merged.push(u);
+          return merged.slice(0, 10);
+        });
+      }
+    } catch { /* non-critical — text fields still filled */ }
+
+    const elapsed = Date.now() - t0;
+    if (elapsed < 650) await new Promise(r => setTimeout(r, 650 - elapsed));
     setBanner("Filled from the scan — check the title, price and photos.");
+    setFilling(false);
   };
 
-  const importImageFromUrl = async (url: string) => {
+  // Import one remote image, returning the hosted URL (or null). Used by the batch
+  // fill above so we can await them all and add photos in one go.
+  const fetchImageUrl = async (url: string): Promise<string | null> => {
     try {
       const res = await fetch(`/api/admin/import-image?url=${encodeURIComponent(url)}`);
-      if (!res.ok) return;
+      if (!res.ok) return null;
       const { publicUrl } = await res.json();
-      if (publicUrl) setPhotos(prev => prev.includes(publicUrl) ? prev : [...prev, publicUrl]);
-    } catch { /* non-critical */ }
+      return publicUrl || null;
+    } catch { return null; }
+  };
+
+  // Single-image import that adds straight to the grid — used by combo mode, which
+  // adds photos one tap at a time (no bulk fill).
+  const importImageFromUrl = async (url: string) => {
+    const publicUrl = await fetchImageUrl(url);
+    if (publicUrl) setPhotos(prev => prev.includes(publicUrl) ? prev : [...prev, publicUrl]);
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -839,6 +871,15 @@ function NewItemForm() {
 
   return (
     <>
+      {/* Auto-fill overlay — spinner while a scan/search fills the form. */}
+      {filling && (
+        <div className="fixed inset-0 z-[60] bg-[#f1e7d5]/95 backdrop-blur-sm flex flex-col items-center justify-center gap-4 px-8 text-center">
+          <div className="w-14 h-14 rounded-full border-4 border-[#e3d6bf] border-t-[#6c4d39] animate-spin" />
+          <div className="text-lg font-extrabold text-[#6c4d39]">Filling the form…</div>
+          <div className="text-sm text-[#8a7559]">Pulling in the title, price &amp; photos</div>
+        </div>
+      )}
+
       <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-4 flex items-center gap-2 min-w-0">
         {preselectedAuctionId ? (
           <Link href={`/admin/auctions/${preselectedAuctionId}`} className="text-[#6f5b46] hover:text-[#241a12] text-base font-semibold shrink-0">← Auction</Link>
