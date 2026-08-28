@@ -6,8 +6,12 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        // Keep private/admin/app surfaces out of search indexes.
-        disallow: ["/admin", "/superadmin", "/api", "/dashboard", "/account", "/pickup", "/register"],
+        // Keep private/admin/app + auth/transactional surfaces out of search indexes.
+        disallow: [
+          "/admin", "/superadmin", "/api", "/dashboard", "/account", "/pickup",
+          "/register", "/sign-in", "/sign-up", "/onboarding", "/apply", "/join",
+          "/invoice", "/my-bids", "/refer", "/r/",
+        ],
       },
     ],
     sitemap: "https://northwoodbids.com/sitemap.xml",

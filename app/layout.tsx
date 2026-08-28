@@ -4,6 +4,8 @@ import { ClerkProvider } from "@clerk/nextjs";
 import HomeHeader from "@/app/components/HomeHeader";
 import ReferralClaimer from "@/app/components/ReferralClaimer";
 import ChatWidget from "@/app/components/ChatWidget";
+import JsonLd from "@/app/components/JsonLd";
+import { siteGraphLd } from "@/lib/seo";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -26,12 +28,44 @@ const bitter = Bitter({
 export const metadata: Metadata = {
   metadataBase: new URL("https://northwoodbids.com"),
   title: {
-    default: "Northwood Bids",
+    default: "Northwood Bids — Local Online Auctions in Owosso & Gladwin, MI",
     template: "%s · Northwood Bids",
   },
-  description: "Northwood Bids — live online auctions. Bid in real time, get text alerts, and pick up local.",
+  description:
+    "Bid on brand-name overstock, returns & surplus at Northwood Bids — a local online auction " +
+    "in mid-Michigan. Real-time bidding, set-your-max bids so you only pay what you want, and easy " +
+    "local pickup in Owosso and Gladwin. Free to join.",
+  keywords: [
+    "online auction Michigan",
+    "Owosso auction",
+    "Gladwin auction",
+    "liquidation auction Michigan",
+    "overstock auction",
+    "returns auction",
+    "local pickup auction",
+    "bid online Michigan",
+    "Northwood Bids",
+  ],
   applicationName: "Northwood Bids",
   manifest: "/manifest.webmanifest",
+  alternates: { canonical: "/" },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  category: "shopping",
+  // Set NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION to verify the domain in Google Search
+  // Console (or verify by DNS instead). Undefined => tag simply isn't emitted.
+  verification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
+    : undefined,
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -40,15 +74,18 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "Northwood Bids",
-    title: "Northwood Bids",
-    description: "Live online auctions — bid in real time and pick up local.",
+    locale: "en_US",
+    title: "Northwood Bids — Local Online Auctions in Owosso & Gladwin, MI",
+    description:
+      "Brand-name overstock, returns & surplus at auction prices. Bid live, pay what you want, " +
+      "pick up local in Owosso or Gladwin. Free to join.",
     url: "https://northwoodbids.com",
     images: [{ url: "/icon-512.png", width: 512, height: 512, alt: "Northwood Bids" }],
   },
   twitter: {
     card: "summary",
-    title: "Northwood Bids",
-    description: "Live online auctions — bid in real time and pick up local.",
+    title: "Northwood Bids — Local Online Auctions in Michigan",
+    description: "Brand-name overstock at auction prices. Bid live, pick up local in Owosso or Gladwin.",
     images: ["/icon-512.png"],
   },
   icons: {
@@ -93,6 +130,8 @@ export default function RootLayout({
           <link rel="dns-prefetch" href="https://pub-829fa846d09e430db535c94618889062.r2.dev" />
         </head>
         <body className="min-h-full flex flex-col">
+          {/* Site-wide brand + site-search structured data (invisible). */}
+          <JsonLd data={siteGraphLd()} />
           <HomeHeader />
           <ReferralClaimer />
           {children}

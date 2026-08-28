@@ -9,6 +9,8 @@ import TopItemsCarousel from "./components/TopItemsCarousel";
 import HomeHero from "./components/HomeHero";
 import BidTicker from "./components/BidTicker";
 import ScrollReveal from "./components/ScrollReveal";
+import JsonLd from "./components/JsonLd";
+import { localBusinessLd } from "@/lib/seo";
 import { WoodenCrate, BranchDivider } from "./components/Illustrations";
 
 function IconSearch() {
@@ -186,8 +188,15 @@ export default async function HomePage() {
     currentBid: it.currentBid,
   }));
 
+  // Local-business structured data — one entry per physical pickup location, straight
+  // from the DB, so the schema always matches reality. Powers local/map ranking.
+  const seoLocations = await prisma.pickupLocation
+    .findMany({ where: { isActive: true }, select: { name: true, address: true }, take: 20 })
+    .catch(() => [] as { name: string; address: string | null }[]);
+
   return (
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
+      {seoLocations.length > 0 && <JsonLd data={localBusinessLd(seoLocations)} />}
       <PusherRefresh channel="auctions" event="auction-updated" />
       {/* Hero */}
       <section className="relative px-5 sm:px-8 pt-4 pb-0 sm:pt-6 overflow-hidden">
