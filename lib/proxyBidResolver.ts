@@ -58,6 +58,11 @@ async function placeProxyBid(
   proxy: ProxyRecord,
   amount: number,
   displacedBidderId: string | null,
+  // The person who just took the action that triggered this resolution (placed a
+  // manual bid, or set/updated a proxy). They are NEVER sent an outbid alert for
+  // being beaten here — they're looking right at the screen, which already shows
+  // "outbid." Only a bidder who HAD the lead and lost it while away gets a text.
+  actorId: string | null = null,
   // Tie handling: when an earlier proxy ties an incoming bid at the SAME price,
   // the proxy must be able to take the lead at that equal amount (the earlier
   // bidder wins ties). Normally a proxy bid must strictly exceed the current price.
@@ -129,7 +134,14 @@ async function placeProxyBid(
   // nibbling $1 at a time against a $50 max bid triggers an auto-bid (and therefore
   // an outbid alert) on every single one of their bids. Now the cron rolls them all
   // into one text once things go quiet. See lib/outbidAlerts.ts.
-  if (displacedBidderId && displacedBidderId !== proxy.clerkUserId) {
+  //
+  // NEVER alert the actor (they just bid / set a max and are watching the screen,
+  // which already says "outbid") or the winning proxy's own owner.
+  if (
+    displacedBidderId &&
+    displacedBidderId !== proxy.clerkUserId &&
+    displacedBidderId !== actorId
+  ) {
     await queueOutbidAlert(displacedBidderId, item.id);
   }
 
@@ -209,7 +221,9 @@ export async function resolveProxiesAfterBid(
 
   try {
     // allowEqual on a tie so the earlier proxy takes the lead at the same price.
-    const result = await placeProxyBid(item, best, proxyBidAmount, manualBidderId, isTie);
+    // actor = the manual bidder — if this proxy beats them instantly, no text (they
+    // just bid and the screen already shows they're outbid).
+    const result = await placeProxyBid(item, best, proxyBidAmount, manualBidderId, manualBidderId, isTie);
     return { proxyFired: true, hasActiveProxy: true, ...result };
   } catch (e) {
     if ((e as Error).message === "STALE_BID") {
@@ -313,7 +327,8 @@ export async function resolveNewProxy(
   if (winningAmount <= currentBid) return { proxyFired: false };
 
   try {
-    const result = await placeProxyBid(item, winner, winningAmount, displacedBidderId);
+    // actor = whoever just set/updated a proxy — never text them for instantly losing.
+    const result = await placeProxyBid(item, winner, winningAmount, displacedBidderId, newProxyOwnerId);
     return { proxyFired: true, ...result };
   } catch (e) {
     if ((e as Error).message === "STALE_BID") {
