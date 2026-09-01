@@ -96,6 +96,8 @@ export default function AuctionResults({
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [busyItem, setBusyItem] = useState<string | null>(null);
   const [busyGather, setBusyGather] = useState<string | null>(null);
+  // Two-tap confirm for forfeit (it moves money / relists an item).
+  const [forfeitKey, setForfeitKey] = useState<string | null>(null);
   const [doneOpen, setDoneOpen] = useState(false);
   const [orderSearch, setOrderSearch] = useState("");
   // Each status group is a collapsible dropdown — open just the one you're working.
@@ -164,6 +166,35 @@ export default function AuctionResults({
   const markOrderPickedUp = async (order: ResultOrder) => {
     for (const it of order.items) {
       if (!it.pickedUp) await setItemPickup(order.clerkUserId, it.id, true);
+    }
+  };
+
+  // Forfeit a single item: refund this item's share if it was paid, then free it to
+  // relist (drops off "who owes" if it wasn't paid). Removes it from the order here.
+  const forfeitItem = async (clerkUserId: string, itemId: string) => {
+    setBusyItem(itemId);
+    setNote(null);
+    try {
+      const res = await fetch(`/api/admin/items/${itemId}/forfeit`, { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        setForfeitKey(null);
+        setOrders((prev) =>
+          prev
+            .map((o) =>
+              o.clerkUserId === clerkUserId
+                ? { ...o, items: o.items.filter((i) => i.id !== itemId) }
+                : o
+            )
+            .filter((o) => o.items.length > 0)
+        );
+      } else {
+        setNote({ key: itemId, text: data.error || "Couldn't forfeit this item.", ok: false });
+      }
+    } catch {
+      setNote({ key: itemId, text: "Something went wrong.", ok: false });
+    } finally {
+      setBusyItem(null);
     }
   };
 
@@ -415,6 +446,36 @@ export default function AuctionResults({
                           Picked up
                         </button>
                       </>
+                    )}
+
+                    {/* Forfeit — refund this item (if paid) + relist. Two-tap. */}
+                    {forfeitKey === it.id ? (
+                      <div className="flex flex-col items-end gap-1 mt-0.5">
+                        <button
+                          onClick={() => forfeitItem(order.clerkUserId, it.id)}
+                          disabled={busyItem === it.id}
+                          className="text-[11px] font-bold px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 whitespace-nowrap"
+                        >
+                          {busyItem === it.id
+                            ? "…"
+                            : it.paidState === "paid"
+                            ? "Refund this item & relist"
+                            : "Forfeit & relist"}
+                        </button>
+                        <button onClick={() => setForfeitKey(null)} className="text-[10px] text-slate-400 hover:text-slate-600">
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setForfeitKey(it.id); setNote(null); }}
+                        className="text-[10px] font-semibold text-red-600 hover:underline mt-0.5"
+                      >
+                        Forfeit item
+                      </button>
+                    )}
+                    {note && note.key === it.id && !note.ok && (
+                      <span className="text-[10px] text-red-600 text-right max-w-[150px] leading-tight">{note.text}</span>
                     )}
                   </div>
                 </li>
