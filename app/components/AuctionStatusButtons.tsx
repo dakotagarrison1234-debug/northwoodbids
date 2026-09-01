@@ -147,14 +147,8 @@ export default function AuctionStatusButtons({ auctionId, status, liveNotifiedAt
           </button>
         )}
 
-        {status === "CLOSED" && (
-          <button
-            onClick={() => updateStatus("SETTLED")}
-            className={`${BTN_BASE} bg-[#6c4d39] hover:bg-[#563e2c] text-white`}
-          >
-            Mark Settled
-          </button>
-        )}
+        {/* No "Mark Settled" — an auction fully closes and charges winners on its own
+            when it ends (the CLOSED state). There's no separate manual settle step. */}
       </div>
 
       {error && <p className="text-red-600 text-base mt-2">{error}</p>}
