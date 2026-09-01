@@ -335,6 +335,9 @@ model Bid {
   @@index([itemId, status, amount])
   @@index([clerkUserId])
   @@index([clerkUserId, placedAt])
+  // Org-wide time-window scans ("bids today", activity feeds) hit every bidder,
+  // so they need placedAt on its own — the composite above only helps per-user.
+  @@index([placedAt])
 }
 
 model ProxyBid {
@@ -431,6 +434,11 @@ model BidderProfile {
   lastWinbackAt  DateTime?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @default(now()) @updatedAt
+
+  // Concierge / SMS bot looks bidders up by phone number — index it so that
+  // lookup stays O(1) instead of scanning every profile as the base grows.
+  @@index([phone])
+  @@index([preferredOrgId])
 }
 
 model GameScore {
@@ -551,5 +559,24 @@ model CreditLedger {
   createdAt     DateTime @default(now())
 
   @@index([clerkUserId])
+}
+
+/**
+ * Cache of Amazon product lookups (ASIN / FNSKU → product details). Each miss costs
+ * a paid third-party API call (FNSKU→ASIN + product details), so we cache every
+ * result — hits AND misses — keyed by the scanned code. A re-scan of the same code
+ * (same item re-listed, staff double-tapping) is served from here for free until the
+ * entry ages out.
+ */
+model ProductLookupCache {
+  id        String   @id @default(cuid())
+  code      String   @unique // scanned code, uppercased (ASIN or FNSKU)
+  asin      String?
+  found     Boolean  @default(false)
+  product   Json? // the resolved Product payload when found
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([updatedAt])
 }
 

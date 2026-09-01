@@ -1,12 +1,17 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg } from "@/lib/auth";
 
 // Stripe standard US pricing: 2.9% + $0.30 per successful charge (per PaymentIntent).
 const STRIPE_PCT = 0.029;
 const STRIPE_FIXED = 0.3;
-const ROW_CAP = 20000;
+// We page through rows instead of a single capped query so totals can NEVER silently
+// under-count as volume grows. PAGE is the batch size; MAX_ROWS is a runaway ceiling
+// (years of data) — if we ever hit it we say so in the response instead of lying.
+const PAGE = 5000;
+const MAX_ROWS = 500000;
 
 const num = (d: unknown) => (d == null ? 0 : Number(d));
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -67,7 +72,9 @@ export async function GET(req: NextRequest) {
   else if (range === "90d") from = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
   else if (range === "ytd") from = new Date(now.getFullYear(), 0, 1);
 
-  const paidRows = await prisma.payment.findMany({
+  let truncated = false;
+  let paidCursor: string | undefined;
+  let paidBatch = await prisma.payment.findMany({
     where: {
       status: "PAID",
       comped: false,
@@ -76,6 +83,7 @@ export async function GET(req: NextRequest) {
       ...(from ? { createdAt: { gte: from } } : {}),
     },
     select: {
+      id: true,
       amount: true, applicationFeeAmount: true, taxAmount: true, creditApplied: true,
       stripePaymentIntentId: true, createdAt: true, paidInCash: true,
       item: {
@@ -90,8 +98,40 @@ export async function GET(req: NextRequest) {
         },
       },
     },
-    take: ROW_CAP,
+    orderBy: { id: "asc" },
+    take: PAGE,
   });
+  const paidRows = [...paidBatch];
+  while (paidBatch.length === PAGE && paidRows.length < MAX_ROWS) {
+    paidCursor = paidBatch[paidBatch.length - 1].id;
+    paidBatch = await prisma.payment.findMany({
+      where: {
+        status: "PAID",
+        comped: false,
+        item: { organizationId: orgId, OR: [{ auction: { archived: false } }, { auctionId: null }] },
+        ...(from ? { createdAt: { gte: from } } : {}),
+      },
+      select: {
+        id: true,
+        amount: true, applicationFeeAmount: true, taxAmount: true, creditApplied: true,
+        stripePaymentIntentId: true, createdAt: true, paidInCash: true,
+        item: {
+          select: {
+            auctionId: true,
+            auction: { select: { title: true, endAt: true } },
+            soldLocation: { select: { id: true, name: true } },
+            location: { select: { id: true, name: true } },
+          },
+        },
+      },
+      orderBy: { id: "asc" },
+      skip: 1,
+      cursor: { id: paidCursor },
+      take: PAGE,
+    });
+    paidRows.push(...paidBatch);
+  }
+  if (paidRows.length >= MAX_ROWS) truncated = true;
 
   // ── Allocate each Stripe charge across the rows that shared it ───────────────
   const grossOf = (p: (typeof paidRows)[number]) =>
@@ -217,15 +257,23 @@ export async function GET(req: NextRequest) {
   // have paid and what they actually paid is demand you had but didn't capture.
   // A large number here says items are closing too cheaply: too few bidders in the
   // room, increments too small, or reserves set too low.
-  const wonBids = await prisma.bid.findMany({
-    where: {
-      status: "WON",
-      item: { organizationId: orgId, OR: [{ auction: { archived: false } }, { auctionId: null }] },
-      ...(from ? { placedAt: { gte: from } } : {}),
-    },
-    select: { itemId: true, clerkUserId: true, amount: true },
-    take: ROW_CAP,
-  });
+  const wonWhere = {
+    status: "WON" as const,
+    item: { organizationId: orgId, OR: [{ auction: { archived: false } }, { auctionId: null }] },
+    ...(from ? { placedAt: { gte: from } } : {}),
+  };
+  const wonSelect = { id: true, itemId: true, clerkUserId: true, amount: true };
+  let wonCursor: string | undefined;
+  let wonBatch = await prisma.bid.findMany({ where: wonWhere, select: wonSelect, orderBy: { id: "asc" }, take: PAGE });
+  const wonBids = [...wonBatch];
+  while (wonBatch.length === PAGE && wonBids.length < MAX_ROWS) {
+    wonCursor = wonBatch[wonBatch.length - 1].id;
+    wonBatch = await prisma.bid.findMany({
+      where: wonWhere, select: wonSelect, orderBy: { id: "asc" }, skip: 1, cursor: { id: wonCursor }, take: PAGE,
+    });
+    wonBids.push(...wonBatch);
+  }
+  if (wonBids.length >= MAX_ROWS) truncated = true;
   const wonItemIds = wonBids.map((b) => b.itemId);
   const proxies = wonItemIds.length
     ? await prisma.proxyBid.findMany({
@@ -249,18 +297,25 @@ export async function GET(req: NextRequest) {
   }
 
   // ── Still owed ──────────────────────────────────────────────────────────────
-  const owedRows = await prisma.payment.findMany({
-    where: {
-      status: { in: ["PENDING", "FAILED"] },
-      comped: false,
-      item: { organizationId: orgId, OR: [{ auction: { archived: false } }, { auctionId: null }] },
-    },
-    select: {
-      clerkUserId: true, amount: true, applicationFeeAmount: true, taxAmount: true,
-      item: { select: { title: true } },
-    },
-    take: 2000,
-  });
+  const owedWhere = {
+    status: { in: ["PENDING", "FAILED"] },
+    comped: false,
+    item: { organizationId: orgId, OR: [{ auction: { archived: false } }, { auctionId: null }] },
+  } satisfies Prisma.PaymentWhereInput;
+  const owedSelect = {
+    id: true, clerkUserId: true, amount: true, applicationFeeAmount: true, taxAmount: true,
+    item: { select: { title: true } },
+  } satisfies Prisma.PaymentSelect;
+  let owedCursor: string | undefined;
+  let owedBatch = await prisma.payment.findMany({ where: owedWhere, select: owedSelect, orderBy: { id: "asc" }, take: PAGE });
+  const owedRows = [...owedBatch];
+  while (owedBatch.length === PAGE && owedRows.length < MAX_ROWS) {
+    owedCursor = owedBatch[owedBatch.length - 1].id;
+    owedBatch = await prisma.payment.findMany({
+      where: owedWhere, select: owedSelect, orderBy: { id: "asc" }, skip: 1, cursor: { id: owedCursor }, take: PAGE,
+    });
+    owedRows.push(...owedBatch);
+  }
   const owedBy = new Map<string, { amountDue: number; items: string[] }>();
   for (const p of owedRows) {
     const cur = owedBy.get(p.clerkUserId) ?? { amountDue: 0, items: [] };
@@ -307,6 +362,9 @@ export async function GET(req: NextRequest) {
     range,
     feePercent,
     taxPercent,
+    // True only if a range ever exceeds MAX_ROWS — a signal to narrow the range,
+    // never a silent under-count.
+    truncated,
     totals: {
       ...out(totals),
       buyersPaid: r2(totals.hammer + totals.premium + totals.tax),

@@ -5,6 +5,7 @@ import { autoAttachPaidItems } from "@/lib/pickup";
 import { notifyPaymentReceipt } from "@/lib/paymentNotify";
 import { vestReferralForPayer, reserveReferralCredit, releaseReferralCredit } from "@/lib/referral";
 import { settleItemsPaid } from "@/lib/settlePayments";
+import { claimItemsForCharge, releaseChargeClaims } from "@/lib/chargeGuard";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -21,9 +22,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
  * wins across orgs we settle the first org's batch and the client calls again.
  */
 export async function POST(_request: NextRequest) {
+  // Items this request has claimed to charge — released back to owed on any failure.
+  let claimedIds: string[] = [];
+  let claimedUser = "";
   try {
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    claimedUser = userId;
 
     // Every WON bid, with its item + org config.
     const wonBids = await prisma.bid.findMany({
@@ -72,8 +77,11 @@ export async function POST(_request: NextRequest) {
     const feePct = Number(org.platformFeePercent);
     const taxPct = org.taxExempt ? 0 : Number(org.taxPercent);
 
-    // Totals across the whole batch.
-    const items = group.map((b) => ({ id: b.item.id, bid: Number(b.amount) }));
+    // Claim the items (per-user lock) so a concurrent charge can't grab the same ones,
+    // then charge only what we own. Totals are computed from the claimed set.
+    const items = await claimItemsForCharge(userId, group.map((b) => ({ id: b.item.id, bid: Number(b.amount) })));
+    if (items.length === 0) return NextResponse.json({ success: true, alreadyPaid: true });
+    claimedIds = items.map((i) => i.id);
     const totalBid = items.reduce((s, i) => s + i.bid, 0);
     const feeCents = Math.round(totalBid * feePct / 100 * 100);
     const taxCents = Math.round((totalBid * 100 + feeCents) * taxPct / 100);
@@ -117,6 +125,8 @@ export async function POST(_request: NextRequest) {
       if (isAuthRequired(err)) {
         const secret = (err as { payment_intent?: { client_secret?: string; id?: string } }).payment_intent;
         if (secret?.client_secret) {
+          // Needs 3-D Secure — didn't capture. Free the claim; the confirm endpoint re-settles.
+          await releaseChargeClaims(userId, claimedIds); claimedIds = [];
           return NextResponse.json({ requiresAction: true, clientSecret: secret.client_secret, paymentIntentId: secret.id });
         }
       }
@@ -138,12 +148,18 @@ export async function POST(_request: NextRequest) {
     }
 
     if (pi.status === "requires_action" || pi.status === "requires_confirmation") {
+      await releaseChargeClaims(userId, claimedIds); claimedIds = [];
       return NextResponse.json({ requiresAction: true, clientSecret: pi.client_secret, paymentIntentId: pi.id });
     }
 
     if (discountCents > 0) await releaseReferralCredit(redemptionKey);
+    await releaseChargeClaims(userId, claimedIds); claimedIds = [];
     return NextResponse.json({ error: "Payment did not complete. Please try a different card." }, { status: 422 });
   } catch (error: unknown) {
+    // Any thrown failure means we didn't capture — free the claim so it stays owed.
+    if (claimedUser && claimedIds.length) {
+      await releaseChargeClaims(claimedUser, claimedIds).catch(() => {});
+    }
     if (isAuthRequired(error)) {
       const pi = (error as { payment_intent?: { client_secret?: string; id?: string } }).payment_intent;
       if (pi?.client_secret) {

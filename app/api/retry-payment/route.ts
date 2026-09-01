@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { autoAttachPaidItems } from "@/lib/pickup";
 import { notifyPaymentReceipt } from "@/lib/paymentNotify";
 import { vestReferralForPayer, reserveReferralCredit, releaseReferralCredit } from "@/lib/referral";
+import { claimItemsForCharge, releaseChargeClaims } from "@/lib/chargeGuard";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -17,9 +18,14 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
  * so the user can update their card and try again.
  */
 export async function POST(request: NextRequest) {
+  // Item claimed for this charge — released back to owed on any non-capture path so a
+  // concurrent charge (retry-all / admin charge-owed) can never double-charge it.
+  let claimedIds: string[] = [];
+  let claimedUser = "";
   try {
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    claimedUser = userId;
 
     const { itemId } = await request.json();
     if (!itemId) return NextResponse.json({ error: "itemId required" }, { status: 400 });
@@ -79,6 +85,14 @@ export async function POST(request: NextRequest) {
     const taxAmount = Math.round((bidAmount * 100 + feeAmount) * taxRate / 100); // cents
     const chargeAmount = Math.round(bidAmount * 100) + feeAmount + taxAmount; // total cents
 
+    // Claim this item under the per-user charge lock so a concurrent retry-all /
+    // admin charge can't grab it too. Empty = it's already paid or a charge is in flight.
+    const claim = await claimItemsForCharge(userId, [{ id: itemId, bid: bidAmount }]);
+    if (claim.length === 0) {
+      return NextResponse.json({ error: "This item is already paid or a payment is in progress." }, { status: 409 });
+    }
+    claimedIds = [itemId];
+
     // ── Bid Bucks: apply one $5 coupon to this retry too (same rules as auto-charge).
     // Reserved up front; released on every failure path. The CREDIT key is keyed to
     // item+user ONLY (not the card) so that retrying with a different card reuses the
@@ -133,12 +147,15 @@ export async function POST(request: NextRequest) {
       ) {
         const pi = (err as { payment_intent?: { client_secret?: string } }).payment_intent;
         if (pi?.client_secret) {
+          // Didn't capture — free the claim (stays owed); /confirm re-settles on success.
+          await releaseChargeClaims(userId, claimedIds); claimedIds = [];
           return NextResponse.json({ requiresAction: true, clientSecret: pi.client_secret });
         }
       }
-      // Any other create failure (decline, etc.) — give the coupon back, then let
-      // the outer handler format the user-facing message.
+      // Any other create failure (decline, etc.) — give the coupon back, free the
+      // claim, then let the outer handler format the user-facing message.
       if (discountCents > 0) await releaseReferralCredit(redemptionKey);
+      await releaseChargeClaims(userId, claimedIds); claimedIds = [];
       throw err;
     }
 
@@ -217,18 +234,26 @@ export async function POST(request: NextRequest) {
       // Card requires 3DS — hand the client secret back so the dashboard
       // can complete authentication on-session, then hit /api/retry-payment/confirm.
       // Keep the credit reservation; confirm finalizes it (or webhook releases on cancel).
+      // Free the claim so the balance reads as owed until /confirm captures it.
+      await releaseChargeClaims(userId, claimedIds); claimedIds = [];
       return NextResponse.json({
         requiresAction: true,
         clientSecret: paymentIntent.client_secret,
       });
     } else {
       if (discountCents > 0) await releaseReferralCredit(redemptionKey);
+      await releaseChargeClaims(userId, claimedIds); claimedIds = [];
       return NextResponse.json(
         { error: "Payment did not complete. Please try a different card." },
         { status: 422 }
       );
     }
   } catch (error: unknown) {
+    // Any thrown failure means we didn't capture — free the claim so it stays owed.
+    if (claimedUser && claimedIds.length) {
+      await releaseChargeClaims(claimedUser, claimedIds).catch(() => {});
+      claimedIds = [];
+    }
     // 3DS authentication required — off-session confirm is rejected, but Stripe
     // attaches the PaymentIntent to the error so the client can authenticate.
     if (

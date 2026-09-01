@@ -1,7 +1,8 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
+import { type OrgRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getUserOrg } from "@/lib/auth";
+import { getUserOrg, requireRole } from "@/lib/auth";
 import { settleItemsPaid } from "@/lib/settlePayments";
 import { autoAttachPaidItems } from "@/lib/pickup";
 
@@ -27,6 +28,10 @@ export async function POST(request: NextRequest) {
   try {
     const membership = await getUserOrg();
     if (!membership) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Recording cash / reversing a balance is an owner/admin action — not for Staff.
+    if (!(await requireRole(membership.organizationId, ["OWNER", "ADMIN"] as OrgRole[]))) {
+      return NextResponse.json({ error: "You don't have permission for this action." }, { status: 403 });
+    }
     const orgId = membership.organizationId;
     const adminId = membership.clerkUserId;
 
@@ -53,7 +58,7 @@ export async function POST(request: NextRequest) {
     const itemIdList = wonBids.map((b) => b.item.id);
     const payments = await prisma.payment.findMany({
       where: { itemId: { in: itemIdList }, clerkUserId },
-      select: { itemId: true, status: true, paidInCash: true, comped: true },
+      select: { itemId: true, status: true, paidInCash: true, comped: true, stripePaymentIntentId: true },
     });
     const payByItem = new Map(payments.map((p) => [p.itemId, p]));
 
@@ -91,6 +96,11 @@ export async function POST(request: NextRequest) {
       const p = payByItem.get(b.item.id);
       if (p?.comped) return false;      // comps are never charged
       if (p?.status === "PAID") return false; // already paid (card or cash) — never overwrite
+      // A card charge that's still PROCESSING (PENDING *with* a PaymentIntent) will
+      // settle to PAID on its own — marking it cash now would double-collect. But a
+      // PENDING row with no PaymentIntent is just an unpaid placeholder, which is
+      // exactly what cash is for, so that stays chargeable.
+      if (p?.status === "PENDING" && p.stripePaymentIntentId) return false;
       return true;
     });
     if (outstanding.length === 0) {

@@ -1,11 +1,13 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
+import { type OrgRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getUserOrg } from "@/lib/auth";
+import { getUserOrg, requireRole } from "@/lib/auth";
 import { autoAttachPaidItems } from "@/lib/pickup";
 import { notifyPaymentReceipt } from "@/lib/paymentNotify";
 import { vestReferralForPayer, reserveReferralCredit, releaseReferralCredit } from "@/lib/referral";
 import { settleItemsPaid } from "@/lib/settlePayments";
+import { claimItemsForCharge, releaseChargeClaims } from "@/lib/chargeGuard";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -20,13 +22,20 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
  * to pay from their dashboard instead.
  */
 export async function POST(request: NextRequest) {
+  let claimedIds: string[] = [];
+  let claimedUser = "";
   try {
     const membership = await getUserOrg();
     if (!membership) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Charging a customer's card is an owner/admin action — not for Staff.
+    if (!(await requireRole(membership.organizationId, ["OWNER", "ADMIN"] as OrgRole[]))) {
+      return NextResponse.json({ error: "You don't have permission for this action." }, { status: 403 });
+    }
     const orgId = membership.organizationId;
 
     const { clerkUserId } = await request.json();
     if (!clerkUserId) return NextResponse.json({ error: "clerkUserId required" }, { status: 400 });
+    claimedUser = clerkUserId;
 
     const wonBids = await prisma.bid.findMany({
       where: { clerkUserId, status: "WON", item: { organizationId: orgId } },
@@ -40,10 +49,15 @@ export async function POST(request: NextRequest) {
       select: { itemId: true },
     });
     const settledIds = new Set(settled.map((p) => p.itemId));
-    const items = wonBids
+    const candidates = wonBids
       .filter((b) => !settledIds.has(b.item.id))
       .map((b) => ({ id: b.item.id, bid: Number(b.amount) }));
+    if (candidates.length === 0) return NextResponse.json({ error: "Nothing outstanding — already paid." }, { status: 409 });
+
+    // Claim the items (per-user lock) so we can't race the customer's own payment.
+    const items = await claimItemsForCharge(clerkUserId, candidates);
     if (items.length === 0) return NextResponse.json({ error: "Nothing outstanding — already paid." }, { status: 409 });
+    claimedIds = items.map((i) => i.id);
 
     const org = await prisma.organization.findUnique({
       where: { id: orgId },
@@ -92,6 +106,7 @@ export async function POST(request: NextRequest) {
       );
     } catch (err: unknown) {
       if (discountCents > 0) await releaseReferralCredit(redemptionKey);
+      await releaseChargeClaims(clerkUserId, claimedIds); claimedIds = [];
       // Off-session cards that need authentication can't be completed by staff.
       if (typeof err === "object" && err !== null && "code" in err && (err as { code?: string }).code === "authentication_required") {
         return NextResponse.json({ error: "Their card needs the customer to approve it (3-D Secure). Ask them to pay from their dashboard." }, { status: 422 });
@@ -116,8 +131,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (discountCents > 0) await releaseReferralCredit(redemptionKey);
+    await releaseChargeClaims(clerkUserId, claimedIds); claimedIds = [];
     return NextResponse.json({ error: "Charge didn't complete. Try again or ask them to pay from their dashboard." }, { status: 422 });
   } catch (error) {
+    // Any thrown failure means we didn't capture — free the claim so it stays owed.
+    if (claimedUser && claimedIds.length) {
+      await releaseChargeClaims(claimedUser, claimedIds).catch(() => {});
+    }
     console.error("[admin/charge-owed POST]:", error);
     return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
   }

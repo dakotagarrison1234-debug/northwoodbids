@@ -14,6 +14,36 @@ import {
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 /**
+ * The audience for auction SMS blasts (started / ending-soon): bidders who have
+ * actually ENGAGED — placed at least one bid — plus anyone who explicitly chose
+ * this org as their home (preferredOrgId).
+ *
+ * This deliberately replaces the old "everyone whose preferredOrgId is null" net.
+ * That field is only ever set when someone arrives through an org link, so it's
+ * empty for almost every signup — meaning the old query texted the ENTIRE user
+ * base, dead accounts included, on every auction. At a few hundred users that's
+ * invisible; at thousands it's a real per-message bill for people who never bid.
+ * Real customers (anyone who's ever placed a bid) still get every text.
+ */
+async function engagedBidderProfiles(
+  orgId: string
+): Promise<{ clerkUserId: string; email: string | null; phone: string | null; name: string | null }[]> {
+  const bidders = await prisma.bid.findMany({ select: { clerkUserId: true }, distinct: ["clerkUserId"] });
+  const engagedIds = bidders.map((b) => b.clerkUserId);
+  return prisma.bidderProfile.findMany({
+    where: {
+      // Something to send to.
+      NOT: [{ phone: null, email: null }],
+      OR: [
+        { preferredOrgId: orgId },            // explicitly chose this org
+        { clerkUserId: { in: engagedIds } },  // has ever bid = a real participant
+      ],
+    },
+    select: { clerkUserId: true, email: true, phone: true, name: true },
+  });
+}
+
+/**
  * Deterministic charge / credit-redemption key for a winner's specific item set.
  * Same auction+user+items → same key (so cron double-ticks reuse one PaymentIntent
  * and one credit reservation); a different item set (e.g. a resumable partial
@@ -747,14 +777,7 @@ export async function notifyAuctionStartedToFollowers(
 ): Promise<number> {
   if (!process.env.GHL_AUCTION_STARTED_WEBHOOK) return 0;
 
-  const followers = await prisma.bidderProfile.findMany({
-    where: {
-      OR: [{ preferredOrgId: org.id }, { preferredOrgId: null }],
-      // No contact details = nothing to send to.
-      NOT: [{ phone: null, email: null }],
-    },
-    select: { clerkUserId: true, email: true, phone: true, name: true },
-  });
+  const followers = await engagedBidderProfiles(org.id);
   if (followers.length === 0) return 0;
 
   const auctionUrl = `${process.env.NEXT_PUBLIC_APP_URL}/${org.slug}/${auction.slug}`;
@@ -874,16 +897,10 @@ export async function notifyAuctionEndingSoon(): Promise<{ notifiedAuctions: num
     });
     const winnerIds = new Set(winningBids.map((b) => b.clerkUserId));
 
-    // Recipients = every registered user of this org (same audience as the "live"
-    // blast): claimed by this org OR unclaimed (preferredOrgId null), with contact
-    // details. This is what turns a "handful" into the whole list.
-    const registered = await prisma.bidderProfile.findMany({
-      where: {
-        OR: [{ preferredOrgId: auction.organization.id }, { preferredOrgId: null }],
-        NOT: [{ phone: null, email: null }],
-      },
-      select: { clerkUserId: true, email: true, phone: true, name: true },
-    });
+    // Recipients = the org's ENGAGED audience (same helper as the "live" blast):
+    // anyone who's ever bid, plus anyone who explicitly chose this org. Bidders
+    // currently winning get a stronger line but the audience is the same.
+    const registered = await engagedBidderProfiles(auction.organization.id);
 
     const auctionUrl = `${process.env.NEXT_PUBLIC_APP_URL}/${auction.organization.slug}/${auction.slug}`;
 
@@ -1025,9 +1042,11 @@ export async function closeExpiredItems(): Promise<{ closedItems: number; closed
     },
   });
 
-  for (const item of expiredItems) {
-    await closeItem(item as ItemWithBidsAndOrg);
-  }
+  // Pool the per-item closes instead of a flat serial loop: an auction ending with
+  // thousands of lots would otherwise close them one-at-a-time and blow the cron
+  // budget. Each closeItem is independent (its own tx + fresh top-bid read), so
+  // bounded concurrency is safe.
+  await runPooled(expiredItems, (item) => closeItem(item as ItemWithBidsAndOrg).then(() => {}), 8);
 
   // Broadcast item-level closings immediately so live grids drop ended items
   // in real time (don't wait for the whole auction to close).

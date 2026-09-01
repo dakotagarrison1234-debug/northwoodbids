@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { canAccessOrg } from "@/lib/auth";
 import { ensureItemCode } from "@/lib/itemCode";
 import { autoAttachPaidItems } from "@/lib/pickup";
+import { deleteR2ObjectsByUrl } from "@/lib/r2";
 
 // Accept only http(s) URLs for photos — blocks javascript:/data:/file: etc.
 function isHttpUrl(value: unknown): boolean {
@@ -251,6 +252,12 @@ export async function PATCH(
     }
 
     if (body.photos) {
+      // Free the R2 objects for any photo the edit dropped (old set − new set) so
+      // replaced/removed images don't accumulate as billed orphans.
+      const oldPhotos = await prisma.itemPhoto.findMany({ where: { itemId }, select: { url: true } });
+      const keptUrls = new Set<string>(body.photos);
+      const removedUrls = oldPhotos.map((p) => p.url).filter((u) => !keptUrls.has(u));
+
       await prisma.itemPhoto.deleteMany({ where: { itemId } });
       if (body.photos.length > 0) {
         await prisma.itemPhoto.createMany({
@@ -261,6 +268,7 @@ export async function PATCH(
           })),
         });
       }
+      if (removedUrls.length > 0) await deleteR2ObjectsByUrl(removedUrls);
     }
 
     const updated = await prisma.item.findUnique({
@@ -312,8 +320,13 @@ export async function DELETE(
       );
     }
 
+    // Grab the photo URLs before the cascade deletes their rows, so we can free the
+    // underlying R2 objects (the DB cascade never touches object storage).
+    const photos = await prisma.itemPhoto.findMany({ where: { itemId }, select: { url: true } });
+
     // Photos + proxy bids cascade; no bids/payments remain to block the delete.
     await prisma.item.delete({ where: { id: itemId } });
+    if (photos.length > 0) await deleteR2ObjectsByUrl(photos.map((p) => p.url));
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting item:", error);

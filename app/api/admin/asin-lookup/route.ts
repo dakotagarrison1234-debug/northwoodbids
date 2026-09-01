@@ -1,9 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Cached lookups older than this are treated as stale and re-fetched (retail value
+// is a soft reference, so a month is plenty and keeps prices from drifting too far).
+const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+// Best-effort per-user rate limit. Serverless instances don't share memory, so this
+// only caps a runaway loop hitting the SAME warm instance — but that's exactly the
+// scanner-stuck-in-a-loop case that would otherwise burn paid API calls in seconds.
+// The real cost protection is the cache below; this is a cheap second fence.
+const RL_WINDOW_MS = 60 * 1000;
+const RL_MAX = 40; // external lookups per user per minute
+const rlHits = new Map<string, number[]>();
+function rateLimited(userId: string): boolean {
+  const now = Date.now();
+  const hits = (rlHits.get(userId) ?? []).filter((t) => now - t < RL_WINDOW_MS);
+  if (hits.length >= RL_MAX) {
+    rlHits.set(userId, hits);
+    return true;
+  }
+  hits.push(now);
+  rlHits.set(userId, hits);
+  return false;
+}
 
 // Map a free-text Amazon category into our fixed category list.
 function mapCategory(raw: string): string {
@@ -174,14 +198,41 @@ export async function GET(req: NextRequest) {
 
   const code = (req.nextUrl.searchParams.get("code") || "").trim();
   if (!code) return NextResponse.json({ error: "Invalid code" }, { status: 400 });
+  const cacheKey = code.toUpperCase();
 
   try {
+    // ── Cache hit ────────────────────────────────────────────────────────────
+    // Serve a fresh cached result (hit OR miss) without touching the paid APIs.
+    const cached = await prisma.productLookupCache
+      .findUnique({ where: { code: cacheKey } })
+      .catch(() => null);
+    if (cached && Date.now() - cached.updatedAt.getTime() < CACHE_TTL_MS) {
+      if (cached.found && cached.product) {
+        return NextResponse.json({ found: true, product: cached.product, cached: true });
+      }
+      return NextResponse.json({
+        found: false,
+        cached: true,
+        message: "No product details found for that code — try a name search or fill it in manually.",
+      });
+    }
+
+    // ── Cache miss — this is where paid calls happen, so rate-limit it ─────────
+    if (rateLimited(userId)) {
+      return NextResponse.json(
+        { found: false, message: "Too many lookups in a row — wait a moment and try again." },
+        { status: 429 }
+      );
+    }
+
     const isFnsku = /^X\d{2}/i.test(code);
-    let asin = code.toUpperCase();
+    let asin = cacheKey;
 
     if (isFnsku) {
       const converted = await fnskuToAsin(asin);
       if (!converted) {
+        // Cache the miss so a re-scan of the same bad FNSKU doesn't re-bill.
+        await writeCache(cacheKey, null, false, null);
         return NextResponse.json({
           found: false,
           message: "Couldn't convert that FNSKU to a product — try a name search or fill it in manually.",
@@ -197,14 +248,35 @@ export async function GET(req: NextRequest) {
 
     const product = await fetchAmazonProduct(asin);
     if (!product || !product.title) {
+      await writeCache(cacheKey, asin, false, null);
       return NextResponse.json({
         found: false,
         message: "No product details found for that code — try a name search or fill it in manually.",
       });
     }
 
+    await writeCache(cacheKey, asin, true, product as unknown as Prisma.InputJsonValue);
     return NextResponse.json({ found: true, product });
   } catch {
     return NextResponse.json({ error: "Lookup failed" }, { status: 500 });
+  }
+}
+
+// Upsert a lookup result into the cache. Best-effort — a cache write must never
+// fail the lookup itself.
+async function writeCache(
+  code: string,
+  asin: string | null,
+  found: boolean,
+  product: Prisma.InputJsonValue | null
+): Promise<void> {
+  try {
+    await prisma.productLookupCache.upsert({
+      where: { code },
+      create: { code, asin, found, product: product ?? undefined },
+      update: { asin, found, product: product ?? undefined, updatedAt: new Date() },
+    });
+  } catch (e) {
+    console.error("ProductLookupCache write failed:", e);
   }
 }

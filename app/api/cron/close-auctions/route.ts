@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 export const maxDuration = 300; // allow serial Stripe charges to finish (Vercel Pro)
 import { NextRequest, NextResponse } from "next/server";
-import { openScheduledAuctions, closeExpiredItems, notifyAuctionEndingSoon, chargeUnchargedWinners } from "@/lib/closeAuction";
+import { openScheduledAuctions, closeExpiredItems, chargeUnchargedWinners } from "@/lib/closeAuction";
 import { flushOutbidAlerts } from "@/lib/outbidAlerts";
 
 export async function GET(request: NextRequest) {
@@ -16,7 +16,6 @@ export async function GET(request: NextRequest) {
   let openedAuctions = 0;
   let closedItems = 0;
   let closedAuctions = 0;
-  let notifiedAuctions = 0;
   let chargedWinners = 0;
   let outbidNotified = 0;
 
@@ -38,13 +37,8 @@ export async function GET(request: NextRequest) {
     console.error("[cron] flushOutbidAlerts failed:", msg, err);
   }
 
-  try {
-    // Notify active bidders when an auction is closing within the next hour
-    ({ notifiedAuctions } = await notifyAuctionEndingSoon());
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Internal error";
-    console.error("[cron] notifyAuctionEndingSoon failed:", msg, err);
-  }
+  // NOTE: the "ending soon" SMS blast has moved to its OWN cron
+  // (/api/cron/notify-ending) so a large send can never delay closing/charging.
 
   try {
     // Close items/auctions whose endAt has passed
@@ -64,6 +58,6 @@ export async function GET(request: NextRequest) {
     console.error("[cron] chargeUnchargedWinners failed:", msg, err);
   }
 
-  console.log(`[cron] Opened ${openedAuctions} auction(s), notified ${notifiedAuctions} ending soon, texted ${outbidNotified} outbid bidder(s), closed ${closedItems} item(s), ${closedAuctions} auction(s), charged ${chargedWinners} uncharged winner(s)`);
-  return NextResponse.json({ openedAuctions, notifiedAuctions, outbidNotified, closedItems, closedAuctions, chargedWinners });
+  console.log(`[cron] Opened ${openedAuctions} auction(s), texted ${outbidNotified} outbid bidder(s), closed ${closedItems} item(s), ${closedAuctions} auction(s), charged ${chargedWinners} uncharged winner(s)`);
+  return NextResponse.json({ openedAuctions, outbidNotified, closedItems, closedAuctions, chargedWinners });
 }

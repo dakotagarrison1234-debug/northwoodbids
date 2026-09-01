@@ -6,6 +6,10 @@
       "schedule": "* * * * *"
     },
     {
+      "path": "/api/cron/notify-ending",
+      "schedule": "*/3 * * * *"
+    },
+    {
       "path": "/api/cron/winback",
       "schedule": "0 17 * * *"
     },
@@ -20,6 +24,7 @@
   ],
   "functions": {
     "app/api/cron/close-auctions/route.ts": { "maxDuration": 300 },
+    "app/api/cron/notify-ending/route.ts": { "maxDuration": 300 },
     "app/api/auctions/[auctionId]/close/route.ts": { "maxDuration": 300 }
   }
 }
