@@ -80,6 +80,27 @@ function IcoClock() {
   );
 }
 
+// "Next auction" pill — cycles the bidder to the next live auction so they can keep
+// browsing/bidding without going back to the list.
+function NextAuctionLink({ href, title, position }: { href: string; title: string; position: "top" | "bottom" }) {
+  return (
+    <Link
+      href={href}
+      className={`group inline-flex items-center gap-2 rounded-xl bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold transition-colors shrink-0 ${
+        position === "top" ? "px-4 py-2.5" : "px-6 py-3.5"
+      }`}
+    >
+      <span className="flex flex-col items-start leading-tight min-w-0">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-[#e7d8c4]">Next auction</span>
+        <span className={`truncate max-w-[8rem] sm:max-w-[14rem] ${position === "top" ? "text-sm" : "text-base"}`}>{title}</span>
+      </span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 group-hover:translate-x-0.5 transition-transform">
+        <path d="M5 12h14M13 6l6 6-6 6" />
+      </svg>
+    </Link>
+  );
+}
+
 export default async function AuctionPage({ params }: Props) {
   const { orgSlug, auctionSlug } = await params;
   const { userId } = await auth();
@@ -117,6 +138,20 @@ export default async function AuctionPage({ params }: Props) {
 
   // Staff/admin viewing the public page get inline "edit listing" pencils.
   const isStaff = await canAccessOrg(auction.organizationId);
+
+  // "Next auction" cycle — the org's live auctions in end-time order, wrapping around,
+  // so a bidder can jump straight to the next one. Null when there's nowhere to go.
+  const cycleAuctions = await prisma.auction.findMany({
+    where: { organizationId: auction.organizationId, status: { in: ["OPEN", "CLOSING"] }, archived: false },
+    select: { slug: true, title: true },
+    orderBy: { endAt: "asc" },
+  });
+  let nextAuction: { slug: string; title: string } | null = null;
+  if (cycleAuctions.length > 0) {
+    const idx = cycleAuctions.findIndex((a) => a.slug === auction.slug);
+    const cand = cycleAuctions[idx === -1 ? 0 : (idx + 1) % cycleAuctions.length];
+    if (cand.slug !== auction.slug) nextAuction = cand;
+  }
 
   // Which lots has THIS user bid on? Lets each card flag "Outbid" at a glance so a
   // bidder scanning the grid can see what they're losing — not just what they're winning.
@@ -299,12 +334,7 @@ export default async function AuctionPage({ params }: Props) {
         </div>
         <div className="relative max-w-6xl mx-auto flex items-start sm:items-center justify-between gap-4">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <Link href={`/${orgSlug}`} className="text-xs text-[#8a7559] hover:text-[#6c4d39] transition-colors font-medium">
-                {orgSlug.replace(/-/g, " ")}
-              </Link>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-2 flex items-center gap-2">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1.5 flex items-center gap-2">
               <PineMark className="w-5 h-5 shrink-0" />
               {auction.title}
             </h1>
@@ -319,6 +349,9 @@ export default async function AuctionPage({ params }: Props) {
               )}
             </p>
           </div>
+          {nextAuction && (
+            <NextAuctionLink href={`/${orgSlug}/${nextAuction.slug}`} title={nextAuction.title} position="top" />
+          )}
         </div>
       </div>
 
@@ -344,6 +377,13 @@ export default async function AuctionPage({ params }: Props) {
           <AuctionItemsView items={viewItems} isStaff={isStaff} />
         )}
       </section>
+
+      {/* Cycle to the next live auction — keep browsing without backing out. */}
+      {nextAuction && (
+        <div className="px-3 sm:px-8 pb-12 max-w-6xl mx-auto flex justify-center">
+          <NextAuctionLink href={`/${orgSlug}/${nextAuction.slug}`} title={nextAuction.title} position="bottom" />
+        </div>
+      )}
     </main>
   );
 }
