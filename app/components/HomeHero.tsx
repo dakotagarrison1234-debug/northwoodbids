@@ -114,14 +114,6 @@ export default function HomeHero({
           <span className="nb-gradient-text">Going twice.</span>
         </h1>
 
-        <p
-          className="nb-rise text-[#3a2c1e] font-semibold text-base sm:text-xl max-w-lg mx-auto mb-7"
-          style={{ animationDelay: "200ms" }}
-        >
-          Local online auctions on brand-name overstock, returns &amp; surplus —
-          real deals, ending live.
-        </p>
-
         {/* stat trio */}
         <div
           className="nb-rise grid grid-cols-3 gap-2 sm:gap-4 max-w-lg mx-auto mb-8"
