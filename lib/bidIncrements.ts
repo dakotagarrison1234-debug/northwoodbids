@@ -40,29 +40,22 @@ export function getValidBidSuggestions(currentBid: number, count = 5): number[] 
 }
 
 /**
- * Returns proxy max suggestions — round numbers meaningfully above the current minimum.
- * Intentionally spaced far apart so they never accidentally land on a competing proxy's
- * exact max amount (which would leak that information to the bidder).
- *
- * Generates unique values only: starts at ~1.5x, 2x, 3x, 5x, 8x, 12x … until
- * we have `count` distinct amounts (handles very low current bids where small
- * multipliers round to the same $5 bucket).
+ * Proxy max-bid suggestions: simple $5 rungs above the current bid — e.g. a $7 bid
+ * suggests $10, $15, $20, $25. Capped at retail, since there's no reason to suggest
+ * a max above what the item's worth: we stop at the first $5 rung that reaches retail
+ * (retail $19.99 → stop at $20). Pass `retail` (0/undefined = no cap).
  */
-export function getProxySuggestions(currentBid: number, count = 4): number[] {
-  const min = currentBid > 0 ? getNextValidBid(currentBid) : 1;
-  const multipliers = [1.5, 2, 3, 5, 8, 12, 20];
-  const seen = new Set<number>();
+export function getProxySuggestions(currentBid: number, count = 4, retail?: number | null): number[] {
+  const STEP = 5;
+  // First $5 rung STRICTLY above the current bid ($7 → $10, $10 → $15).
+  const start = Math.floor((currentBid > 0 ? currentBid : 0) / STEP) * STEP + STEP;
+  // Cap at the first $5 rung that reaches/exceeds retail; no cap when retail unknown.
+  const cap = retail && retail > 0 ? Math.ceil(retail / STEP) * STEP : Infinity;
+
   const result: number[] = [];
-
-  for (const m of multipliers) {
-    if (result.length >= count) break;
-    const raw = min * m;
-    const rounded = Math.ceil(raw / 5) * 5; // round up to nearest $5
-    if (!seen.has(rounded)) {
-      seen.add(rounded);
-      result.push(rounded);
-    }
+  for (let v = start; result.length < count; v += STEP) {
+    result.push(v);
+    if (v >= cap) break; // include the rung that hits retail, then stop
   }
-
   return result;
 }

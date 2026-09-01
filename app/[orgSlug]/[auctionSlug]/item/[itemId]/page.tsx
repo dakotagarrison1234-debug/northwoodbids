@@ -544,8 +544,9 @@ export default function ItemPage() {
   const currentBid = item.currentBid || item.startingBid;
   const minBid = item.currentBid > 0 ? getNextValidBid(item.currentBid) : Math.max(Math.ceil(item.startingBid), 1);
   const minProxy = item.currentBid > 0 ? getNextValidBid(item.currentBid) : Math.max(Math.ceil(item.startingBid), 1);
-  // Fix #2: use getProxySuggestions — jumps are far apart so they can't accidentally reveal a competing proxy's max
-  const proxySuggestions = getProxySuggestions(item.currentBid || 0, 4);
+  // $5 rungs above the current bid, capped at retail (no point suggesting a max above
+  // what the item is worth).
+  const proxySuggestions = getProxySuggestions(item.currentBid || 0, 4, item.retailValue);
   const auctionClosed = item.auction?.status === "CLOSED" || item.auction?.status === "SETTLED";
   const itemSold = item.status === "SOLD" || item.status === "PENDING_PICKUP" || item.status === "PICKED_UP";
   const itemNotActive = item.status !== "ACTIVE";
