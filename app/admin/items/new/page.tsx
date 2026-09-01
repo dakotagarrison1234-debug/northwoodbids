@@ -888,10 +888,20 @@ function NewItemForm() {
 
   return (
     <>
-      {/* Auto-fill overlay — spinner while a scan/search fills the form. */}
+      {/* Auto-fill overlay — spinner while a scan/search fills the form. Shows the
+          item's tag # front-and-centre so staff can write it on the item while they
+          wait, instead of hunting for it after the form loads. */}
       {filling && (
         <div className="fixed inset-0 z-[60] bg-[#f1e7d5]/95 backdrop-blur-sm flex flex-col items-center justify-center gap-4 px-8 text-center">
           <div className="w-14 h-14 rounded-full border-4 border-[#e3d6bf] border-t-[#6c4d39] animate-spin" />
+          {formData.itemCode && (
+            <div className="flex flex-col items-center gap-1">
+              <div className="text-xs font-bold uppercase tracking-[0.18em] text-[#8a7559]">Write this on the item</div>
+              <div className="font-display text-5xl sm:text-6xl font-black tracking-tight text-[#241a12] tabular-nums leading-none">
+                #{formData.itemCode}
+              </div>
+            </div>
+          )}
           <div className="text-lg font-extrabold text-[#6c4d39]">Filling the form…</div>
           <div className="text-sm text-[#8a7559]">Pulling in the title, price &amp; photos</div>
         </div>
