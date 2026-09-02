@@ -164,10 +164,14 @@ export default function SpinWheel({
               const y1 = CY + R * Math.sin(a1);
               const large = seg > 180 ? 1 : 0;
               const isWinner = revealed && winnerIdx === i;
-              const mid = (i * seg + seg / 2 - 90) * (Math.PI / 180);
-              const tx = CX + R * 0.6 * Math.cos(mid);
-              const ty = CY + R * 0.6 * Math.sin(mid);
-              const rot = i * seg + seg / 2;
+              const midDeg = i * seg + seg / 2 - 90;
+              const mid = midDeg * (Math.PI / 180);
+              const tx = CX + R * 0.55 * Math.cos(mid);
+              const ty = CY + R * 0.55 * Math.sin(mid);
+              // Run the name ALONG the wedge's spoke (radially) so it follows its
+              // section — readable on the left, upside-down on the right, like a
+              // real prize wheel.
+              const rot = midDeg;
               return (
                 <g key={e.clerkUserId + i}>
                   <path
