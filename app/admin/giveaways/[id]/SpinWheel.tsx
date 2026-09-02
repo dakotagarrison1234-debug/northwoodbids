@@ -29,7 +29,7 @@ export default function SpinWheel({
   giveawayTitle,
   size = 360,
   onDraw,
-  onLanded,
+  onAward,
 }: {
   entrants: Entrant[];
   canSpin: boolean;
@@ -37,7 +37,7 @@ export default function SpinWheel({
   giveawayTitle: string;
   size?: number;
   onDraw: () => Promise<DrawResult | { error: string }>;
-  onLanded: (r: DrawResult) => void;
+  onAward: (r: DrawResult) => Promise<void>;
 }) {
   const R = size * 0.47;
   const CX = size / 2;
@@ -48,6 +48,7 @@ export default function SpinWheel({
   const [zoom, setZoom] = useState(false);
   const [winnerIdx, setWinnerIdx] = useState<number | null>(null);
   const [result, setResult] = useState<DrawResult | null>(null);
+  const [awarding, setAwarding] = useState(false);
   const [error, setError] = useState("");
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -95,9 +96,29 @@ export default function SpinWheel({
     settleTimer.current = setTimeout(() => {
       setSpinning(false);
       setZoom(true);
-      setResult(res);
-      onLanded(res);
+      setResult(res); // preview only — nothing is awarded until "Done"
     }, 4300);
+  };
+
+  // ✕ on the card = discard this winner and spin again (nothing was awarded).
+  const respin = () => {
+    setResult(null);
+    setZoom(false);
+    setTimeout(spin, 60);
+  };
+
+  // "Done" = commit the win (adds the prize to the winner's orders & pickups).
+  const confirmWin = async () => {
+    if (!result || awarding) return;
+    setAwarding(true);
+    try {
+      await onAward(result);
+      setResult(null);
+      setZoom(false);
+    } catch {
+      setError("Couldn't award the prize. Try again.");
+    }
+    setAwarding(false);
   };
 
   return (
@@ -186,41 +207,48 @@ export default function SpinWheel({
 
       {/* ── Winner card (screenshot & share) ─────────────────────────────────── */}
       {result && !spinning && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50" onClick={() => setResult(null)}>
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-[#f3ead6] via-[#fbf4e6] to-[#eaf3ec] border-4 border-[#4a7c59]/30"
-          >
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50">
+          <div className="relative w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-[#f3ead6] via-[#fbf4e6] to-[#eaf3ec] border-4 border-[#4a7c59]/30">
             <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-[#4a7c59]/15 blur-2xl" aria-hidden />
-            <div className="relative px-7 py-8 text-center">
+            <div className="relative px-7 pt-8 pb-6 text-center">
               <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[#8a7559]">{brand}</div>
               <div className="text-sm font-bold text-[#6f5b46] mt-0.5">{giveawayTitle}</div>
 
-              <div className="my-5 text-6xl">🎉</div>
+              <div className="my-4 text-6xl">🎉</div>
 
               <div className="text-xs font-black uppercase tracking-[0.24em] text-[#4a7c59]">Winner</div>
               <div className="font-display text-4xl font-black text-[#241a12] leading-tight mt-1 break-words">
                 {result.winner.name}
               </div>
 
-              <div className="mt-5 inline-block rounded-2xl bg-white/70 border border-[#e3d6bf] px-5 py-3">
+              <div className="mt-4 inline-block rounded-2xl bg-white/70 border border-[#e3d6bf] px-5 py-3">
                 <div className="text-[11px] font-bold uppercase tracking-wider text-[#8a7559]">Won</div>
                 <div className="text-lg font-black text-[#6c4d39] leading-tight">{result.prize.title}</div>
               </div>
 
-              <div className="mt-6 text-[11px] text-[#8a7559]">
+              <div className="mt-4 text-[11px] text-[#8a7559]">
                 {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
               </div>
             </div>
-          </div>
 
-          <button
-            onClick={() => setResult(null)}
-            className="absolute top-4 right-4 z-[81] bg-white/90 text-[#241a12] font-bold rounded-full w-10 h-10 flex items-center justify-center shadow"
-            aria-label="Close"
-          >
-            ✕
-          </button>
+            {/* Actions — sit below the shareable card face */}
+            <div className="relative px-6 pb-6 flex flex-col gap-2">
+              <button
+                onClick={confirmWin}
+                disabled={awarding}
+                className="w-full bg-[#4a7c59] hover:bg-[#3c6449] text-white font-black px-5 py-3.5 rounded-xl text-base disabled:opacity-50"
+              >
+                {awarding ? "Awarding…" : "Done — add to their orders"}
+              </button>
+              <button
+                onClick={respin}
+                disabled={awarding}
+                className="w-full bg-white border border-[#cdbda3] text-[#6f5b46] font-bold px-5 py-2.5 rounded-xl text-sm disabled:opacity-50"
+              >
+                ✕ Not this one — re-spin
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

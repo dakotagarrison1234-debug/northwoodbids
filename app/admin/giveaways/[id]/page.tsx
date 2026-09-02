@@ -157,6 +157,31 @@ export default function ManageGiveaway() {
     return r as DrawResult;
   }, [id]);
 
+  // Commit a previewed win (fires on the card's "Done" button).
+  const award = useCallback(async (r: DrawResult): Promise<void> => {
+    const res = await fetch(`/api/admin/giveaways/${id}/award`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clerkUserId: r.winner.clerkUserId, itemId: r.prize.id }),
+    });
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "award failed"); }
+    load();
+  }, [id, load]);
+
+  // Undo a committed win (someone won who shouldn't have) — frees the prize to re-draw.
+  const [confirmRevert, setConfirmRevert] = useState<string | null>(null);
+  const revert = async (itemId: string) => {
+    const res = await fetch(`/api/admin/giveaways/${id}/revert`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ itemId }),
+    });
+    const r = await res.json();
+    if (!res.ok) setMsg(r.error || "Couldn't undo.");
+    setConfirmRevert(null);
+    load();
+  };
+
   if (!d) return <div className="max-w-3xl mx-auto px-4 py-10 text-[#8a7559]">Loading…</div>;
 
   const g = d.giveaway;
@@ -230,7 +255,7 @@ export default function ManageGiveaway() {
                 brand="Northwood Bids"
                 giveawayTitle={g.title}
                 onDraw={draw}
-                onLanded={() => setTimeout(load, 400)}
+                onAward={award}
               />
             </>
           )}
@@ -376,7 +401,7 @@ export default function ManageGiveaway() {
               giveawayTitle={g.title}
               size={presentSize}
               onDraw={draw}
-              onLanded={() => setTimeout(load, 400)}
+              onAward={award}
             />
           ) : (
             <div className="text-[#fbf4e6] text-lg font-bold">🎉 All prizes drawn!</div>
@@ -390,11 +415,24 @@ export default function ManageGiveaway() {
           <h2 className="font-bold text-lg text-[#241a12] mb-2">Winners ({d.winners.length})</h2>
           <div className="space-y-2">
             {d.winners.map((w) => (
-              <div key={w.clerkUserId + w.itemId} className="flex items-center justify-between rounded-xl border border-[#dcecdf] bg-[#f2f9f4] px-4 py-3">
-                <div>
-                  <div className="font-bold text-[#241a12]">🎉 {w.name}</div>
-                  <div className="text-xs text-[#4a7c59]">won {w.itemTitle} — added to their pickups</div>
+              <div key={w.clerkUserId + w.itemId} className="flex items-center justify-between gap-3 rounded-xl border border-[#dcecdf] bg-[#f2f9f4] px-4 py-3">
+                <div className="min-w-0">
+                  <div className="font-bold text-[#241a12] truncate">🎉 {w.name}</div>
+                  <div className="text-xs text-[#4a7c59] truncate">won {w.itemTitle} — added to their pickups</div>
                 </div>
+                {w.itemId && (
+                  confirmRevert === w.itemId ? (
+                    <div className="shrink-0 flex items-center gap-2">
+                      <span className="text-xs text-[#8a7559]">Undo?</span>
+                      <button onClick={() => revert(w.itemId!)} className="text-xs font-bold text-red-600 border border-red-200 rounded-full px-2.5 py-1 hover:bg-red-50">Yes, undo</button>
+                      <button onClick={() => setConfirmRevert(null)} className="text-xs text-[#8a7559]">cancel</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setConfirmRevert(w.itemId)} className="shrink-0 text-xs font-semibold text-[#8a7559] underline">
+                      Undo win
+                    </button>
+                  )
+                )}
               </div>
             ))}
           </div>
