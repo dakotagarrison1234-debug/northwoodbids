@@ -116,26 +116,30 @@ export default function ManageGiveaway() {
   };
 
   // ── Entrants ──────────────────────────────────────────────────────────────
+  type Match = { clerkUserId: string; name: string; email: string; inWheel: boolean; removed: boolean; won: boolean };
   const [q, setQ] = useState("");
-  const [results, setResults] = useState<{ clerkUserId: string; name: string; email: string }[]>([]);
+  const [results, setResults] = useState<Match[]>([]);
+
+  const runSearch = useCallback((term: string) => {
+    if (!term.trim()) { setResults([]); return; }
+    fetch(`/api/admin/giveaways/${id}/entries?q=${encodeURIComponent(term)}`)
+      .then((r) => r.json())
+      .then((r) => setResults(r.bidders ?? []))
+      .catch(() => {});
+  }, [id]);
+
   useEffect(() => {
-    if (!q.trim()) { setResults([]); return; }
-    const t = setTimeout(() => {
-      fetch(`/api/admin/giveaways/${id}/entries?q=${encodeURIComponent(q)}`)
-        .then((r) => r.json())
-        .then((r) => setResults(r.bidders ?? []))
-        .catch(() => {});
-    }, 250);
+    const t = setTimeout(() => runSearch(q), 250);
     return () => clearTimeout(t);
-  }, [q, id]);
+  }, [q, runSearch]);
 
   const addName = async (clerkUserId: string) => {
     await fetch(`/api/admin/giveaways/${id}/entries`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clerkUserId }) });
-    setQ(""); setResults([]); load();
+    runSearch(q); load();
   };
   const setRemoved = async (clerkUserId: string, removed: boolean) => {
     await fetch(`/api/admin/giveaways/${id}/entries`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clerkUserId, removed }) });
-    load();
+    runSearch(q); load();
   };
 
   const draw = useCallback(async (): Promise<DrawResult | { error: string }> => {
@@ -234,7 +238,7 @@ export default function ManageGiveaway() {
                   {p.wonBy ? ` · 🎉 ${p.wonBy.name}` : ""}
                 </div>
               </div>
-              {!p.wonBy && isDraft && (
+              {!p.wonBy && (
                 <button onClick={() => removePrize(p.id)} className="text-red-600 text-sm font-semibold shrink-0">Remove</button>
               )}
             </div>
@@ -279,26 +283,47 @@ export default function ManageGiveaway() {
             : "Bidders who submitted a valid entry are in. You can hand-add or remove anyone."}
         </p>
 
-        <div className="relative mb-3">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Add a bidder by name, email, or phone…" className="w-full bg-white border border-[#cdbda3] rounded-xl px-3 py-2.5 text-[#241a12]" />
-          {results.length > 0 && (
-            <div className="absolute z-10 left-0 right-0 mt-1 bg-white border border-[#cdbda3] rounded-xl shadow-lg overflow-hidden">
-              {results.map((r) => (
-                <button key={r.clerkUserId} onClick={() => addName(r.clerkUserId)} className="w-full text-left px-3 py-2 hover:bg-[#f6ecda] text-sm">
-                  <span className="font-semibold text-[#241a12]">{r.name}</span>
-                  {r.email && <span className="text-[#8a7559]"> · {r.email}</span>}
-                </button>
-              ))}
+        <div className="mb-3">
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a bidder to add or remove…" className="w-full bg-white border border-[#cdbda3] rounded-xl px-3 py-2.5 text-[#241a12]" />
+          {q.trim() && (
+            <div className="mt-1 bg-white border border-[#cdbda3] rounded-xl overflow-hidden divide-y divide-[#efe6d4]">
+              {results.length === 0 ? (
+                <div className="px-3 py-3 text-sm text-[#8a7559]">No matching bidders.</div>
+              ) : (
+                results.map((r) => (
+                  <div key={r.clerkUserId} className="flex items-center justify-between gap-2 px-3 py-2">
+                    <div className="min-w-0">
+                      <div className="font-semibold text-[#241a12] text-sm truncate">{r.name}</div>
+                      {r.email && <div className="text-xs text-[#8a7559] truncate">{r.email}</div>}
+                    </div>
+                    {r.won ? (
+                      <span className="shrink-0 text-xs font-bold text-[#4a7c59]">🎉 Won</span>
+                    ) : r.inWheel ? (
+                      <button onClick={() => setRemoved(r.clerkUserId, true)} className="shrink-0 text-xs font-bold text-red-600 border border-red-200 rounded-full px-3 py-1 hover:bg-red-50">
+                        Remove
+                      </button>
+                    ) : r.removed ? (
+                      <button onClick={() => setRemoved(r.clerkUserId, false)} className="shrink-0 text-xs font-bold text-[#4a7c59] border border-[#cdecd4] rounded-full px-3 py-1 hover:bg-[#f2f9f4]">
+                        Restore
+                      </button>
+                    ) : (
+                      <button onClick={() => addName(r.clerkUserId)} className="shrink-0 text-xs font-bold text-[#6c4d39] border border-[#cdbda3] rounded-full px-3 py-1 hover:bg-[#f6ecda]">
+                        Add
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>
 
         {d.removed.length > 0 && (
           <div className="rounded-xl border border-[#e3d6bf] bg-[#fbf4e6] p-3">
-            <div className="text-xs font-bold uppercase tracking-wide text-[#8a7559] mb-2">Removed from wheel</div>
+            <div className="text-xs font-bold uppercase tracking-wide text-[#8a7559] mb-2">Removed from wheel ({d.removed.length})</div>
             <div className="flex flex-wrap gap-2">
               {d.removed.map((r) => (
-                <button key={r.clerkUserId} onClick={() => setRemoved(r.clerkUserId, false)} className="text-xs bg-white border border-[#cdbda3] rounded-full px-3 py-1 text-[#6f5b46]">
+                <button key={r.clerkUserId} onClick={() => setRemoved(r.clerkUserId, false)} className="text-xs bg-white border border-[#cdbda3] rounded-full px-3 py-1 text-[#6f5b46] hover:bg-[#f6ecda]">
                   {r.name} · restore
                 </button>
               ))}

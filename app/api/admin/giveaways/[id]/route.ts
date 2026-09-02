@@ -73,9 +73,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         wonBy: winner ? { clerkUserId: winner.clerkUserId, name: nameById.get(winner.clerkUserId) ?? "Bidder" } : null,
       };
     }),
-    // Only a sample goes to the browser (the wheel just needs names to show; the
-    // draw itself is server-side over the full pool). counts.eligible is the true total.
-    pool: pool.slice(0, 300),
+    // The whole pool goes to the browser so the wheel can show every name (fairness).
+    // Capped high only to keep the SVG from becoming unrenderable; counts.eligible is
+    // the true total, and the draw itself is server-side over the full pool.
+    pool: pool.slice(0, 1500),
     winners: winnerRows.map((w) => ({
       clerkUserId: w.clerkUserId,
       name: nameById.get(w.clerkUserId) ?? "Bidder",

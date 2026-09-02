@@ -9,13 +9,15 @@ async function ownGiveaway(id: string, orgId: string) {
   return g && g.organizationId === orgId ? g : null;
 }
 
-// GET /api/admin/giveaways/[id]/entries?q=... — search registered bidders to hand-add.
+// GET /api/admin/giveaways/[id]/entries?q=... — search registered bidders and report
+// each one's current state on THIS giveaway's wheel so the admin can add or remove.
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const membership = await getUserOrg();
   if (!membership) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const orgId = membership.organizationId;
   const { id } = await params;
-  if (!(await ownGiveaway(id, orgId))) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const g = await prisma.giveaway.findUnique({ where: { id }, select: { organizationId: true, requirement: true } });
+  if (!g || g.organizationId !== orgId) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const q = (request.nextUrl.searchParams.get("q") || "").trim();
   if (!q) return NextResponse.json({ bidders: [] });
@@ -32,8 +34,33 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     take: 12,
   });
 
+  const ids = matches.map((m) => m.clerkUserId);
+  const entries = ids.length
+    ? await prisma.giveawayEntry.findMany({
+        where: { giveawayId: id, clerkUserId: { in: ids } },
+        select: { clerkUserId: true, removed: true, won: true },
+      })
+    : [];
+  const byUser = new Map(entries.map((e) => [e.clerkUserId, e]));
+
   return NextResponse.json({
-    bidders: matches.map((m) => ({ clerkUserId: m.clerkUserId, name: m.name || "Bidder", email: m.email || "" })),
+    bidders: matches.map((m) => {
+      const e = byUser.get(m.clerkUserId);
+      // For NONE everyone's in unless removed; for INFO/ANSWER only entered rows are in.
+      const inWheel = e?.won
+        ? true
+        : g.requirement === "NONE"
+          ? !e?.removed
+          : !!e && !e.removed;
+      return {
+        clerkUserId: m.clerkUserId,
+        name: m.name || "Bidder",
+        email: m.email || "",
+        inWheel,
+        removed: !!e?.removed,
+        won: !!e?.won,
+      };
+    }),
   });
 }
 
