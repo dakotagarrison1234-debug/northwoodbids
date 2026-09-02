@@ -209,6 +209,16 @@ export default function SpinWheel({
       {result && !spinning && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50">
           <div className="relative w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-[#f3ead6] via-[#fbf4e6] to-[#eaf3ec] border-4 border-[#4a7c59]/30">
+            {/* Discrete ✕ — re-spins (never awards) */}
+            <button
+              onClick={respin}
+              disabled={awarding}
+              aria-label="Re-spin"
+              title="Not this one — re-spin"
+              className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/80 hover:bg-white text-[#6f5b46] font-bold flex items-center justify-center shadow disabled:opacity-40"
+            >
+              ✕
+            </button>
             <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-[#4a7c59]/15 blur-2xl" aria-hidden />
             <div className="relative px-7 pt-8 pb-6 text-center">
               <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[#8a7559]">{brand}</div>
@@ -231,8 +241,8 @@ export default function SpinWheel({
               </div>
             </div>
 
-            {/* Actions — sit below the shareable card face */}
-            <div className="relative px-6 pb-6 flex flex-col gap-2">
+            {/* Action — awards the win. Use the ✕ up top to re-spin instead. */}
+            <div className="relative px-6 pb-6">
               <button
                 onClick={confirmWin}
                 disabled={awarding}
@@ -240,13 +250,7 @@ export default function SpinWheel({
               >
                 {awarding ? "Awarding…" : "Done — add to their orders"}
               </button>
-              <button
-                onClick={respin}
-                disabled={awarding}
-                className="w-full bg-white border border-[#cdbda3] text-[#6f5b46] font-bold px-5 py-2.5 rounded-xl text-sm disabled:opacity-50"
-              >
-                ✕ Not this one — re-spin
-              </button>
+              <div className="text-center text-[11px] text-[#8a7559] mt-2">Tap ✕ to re-spin without awarding</div>
             </div>
           </div>
         </div>
