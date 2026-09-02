@@ -45,6 +45,14 @@ export default function ManageGiveaway() {
   const [d, setD] = useState<Detail | null>(null);
   const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
   const [msg, setMsg] = useState("");
+  const [presenting, setPresenting] = useState(false);
+  const [presentSize, setPresentSize] = useState(360);
+  useEffect(() => {
+    const calc = () => setPresentSize(Math.max(260, Math.min(460, Math.min(window.innerWidth - 40, window.innerHeight - 300))));
+    calc();
+    window.addEventListener("resize", calc);
+    return () => window.removeEventListener("resize", calc);
+  }, []);
 
   const load = useCallback(() => {
     fetch(`/api/admin/giveaways/${id}`)
@@ -207,12 +215,24 @@ export default function ManageGiveaway() {
           ) : d.counts.eligible === 0 ? (
             <div className="text-center py-6 text-[#8a7559]">No eligible entrants yet.</div>
           ) : (
-            <SpinWheel
-              entrants={d.pool}
-              canSpin={canSpin}
-              onDraw={draw}
-              onLanded={() => setTimeout(load, 400)}
-            />
+            <>
+              <div className="flex justify-center mb-3">
+                <button
+                  onClick={() => setPresenting(true)}
+                  className="inline-flex items-center gap-2 bg-[#241a12] hover:bg-black text-[#f6ecda] font-bold px-5 py-2.5 rounded-xl text-sm"
+                >
+                  ⛶ Full-screen draw (for the camera)
+                </button>
+              </div>
+              <SpinWheel
+                entrants={d.pool}
+                canSpin={canSpin}
+                brand="Northwood Bids"
+                giveawayTitle={g.title}
+                onDraw={draw}
+                onLanded={() => setTimeout(load, 400)}
+              />
+            </>
           )}
         </section>
       )}
@@ -331,6 +351,38 @@ export default function ManageGiveaway() {
           </div>
         )}
       </section>
+
+      {/* ── Full-screen presentation (customer-facing draw) ────────────────── */}
+      {presenting && (
+        <div className="fixed inset-0 z-[70] bg-gradient-to-b from-[#241a12] to-[#12100c] flex flex-col items-center justify-center px-4">
+          <button
+            onClick={() => setPresenting(false)}
+            className="absolute top-4 right-4 text-[#f1e7d5]/70 hover:text-[#f1e7d5] font-bold text-sm bg-white/10 rounded-full px-4 py-2"
+          >
+            Exit ✕
+          </button>
+          <div className="text-center mb-3">
+            <div className="text-[#f0a35a] font-black uppercase tracking-[0.24em] text-xs">Northwood Bids Giveaway</div>
+            <div className="text-[#fbf4e6] font-display text-2xl sm:text-3xl font-black mt-1">{g.title}</div>
+            <div className="text-[#c9b79a] text-sm mt-1">
+              {d.counts.eligible.toLocaleString()} entered · {unclaimed} prize{unclaimed !== 1 ? "s" : ""} left
+            </div>
+          </div>
+          {canSpin ? (
+            <SpinWheel
+              entrants={d.pool}
+              canSpin={canSpin}
+              brand="Northwood Bids"
+              giveawayTitle={g.title}
+              size={presentSize}
+              onDraw={draw}
+              onLanded={() => setTimeout(load, 400)}
+            />
+          ) : (
+            <div className="text-[#fbf4e6] text-lg font-bold">🎉 All prizes drawn!</div>
+          )}
+        </div>
+      )}
 
       {/* ── Winners ────────────────────────────────────────────────────────── */}
       {d.winners.length > 0 && (

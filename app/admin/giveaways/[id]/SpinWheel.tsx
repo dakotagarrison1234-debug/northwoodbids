@@ -5,13 +5,11 @@ import { useMemo, useRef, useState } from "react";
 export type Entrant = { clerkUserId: string; name: string };
 export type DrawResult = { winner: Entrant; prize: { id: string; title: string }; remaining: number };
 
-// Alternating wedge colours; the winning wedge gets the gold highlight.
 const COLORS = ["#6c4d39", "#8a6b4f", "#4a7c59", "#b07a3c", "#7a5340", "#5f7f66"];
 const WIN_COLOR = "#f0a35a";
-const SIZE = 360;
-const R = 168;
-const CX = SIZE / 2;
-const CY = SIZE / 2;
+// Show a name on EVERY wedge up to this many entrants (fairness); above it the wedges
+// are too thin to read anyway and we rely on the end-of-spin zoom + winner card.
+const LABEL_ALL_UP_TO = 300;
 
 function firstName(n: string) {
   const f = n.trim().split(/\s+/)[0] || n;
@@ -19,43 +17,50 @@ function firstName(n: string) {
 }
 
 /**
- * The giveaway wheel. EVERY entrant is a wedge — no sampling — so the draw is
- * visibly fair no matter how many names there are. The server picks the winner
- * (authoritative); the wheel then rotates to that entrant's real wedge, and once
- * it slows it zooms into the pointer so you can read the winning wedge even when
- * the wedges are tiny.
+ * The giveaway wheel. EVERY entrant is a labelled wedge so a crowd can see there's no
+ * funny business. The server picks the winner; the wheel rotates to that entrant's real
+ * wedge, zooms in so the winning name is readable, and pops a branded winner card that's
+ * built to screenshot and share.
  */
 export default function SpinWheel({
   entrants,
   canSpin,
+  brand,
+  giveawayTitle,
+  size = 360,
   onDraw,
   onLanded,
 }: {
   entrants: Entrant[];
   canSpin: boolean;
+  brand: string;
+  giveawayTitle: string;
+  size?: number;
   onDraw: () => Promise<DrawResult | { error: string }>;
   onLanded: (r: DrawResult) => void;
 }) {
+  const R = size * 0.47;
+  const CX = size / 2;
+  const CY = size / 2;
+
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [zoom, setZoom] = useState(false);
   const [winnerIdx, setWinnerIdx] = useState<number | null>(null);
-  const [flash, setFlash] = useState<string | null>(null);
+  const [result, setResult] = useState<DrawResult | null>(null);
   const [error, setError] = useState("");
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // The wedges we draw. When a winner falls outside the (capped) list we append them
-  // so their wedge still exists to land on.
   const [extra, setExtra] = useState<Entrant | null>(null);
   const segments = useMemo(() => (extra ? [...entrants, extra] : entrants), [entrants, extra]);
   const n = Math.max(segments.length, 1);
   const seg = 360 / n;
-  const showText = n <= 30;
+  const labelAll = n <= LABEL_ALL_UP_TO;
 
   const spin = async () => {
     if (spinning || !canSpin) return;
     setError("");
-    setFlash(null);
+    setResult(null);
     setZoom(false);
     setWinnerIdx(null);
     setExtra(null);
@@ -68,12 +73,11 @@ export default function SpinWheel({
       return;
     }
 
-    // Land on the winner's ACTUAL wedge. If they're beyond the drawn list, append them.
     let idx = entrants.findIndex((e) => e.clerkUserId === res.winner.clerkUserId);
     let count = entrants.length;
     if (idx < 0) {
       setExtra(res.winner);
-      idx = entrants.length; // appended at the end
+      idx = entrants.length;
       count = entrants.length + 1;
     }
     setWinnerIdx(idx);
@@ -90,18 +94,15 @@ export default function SpinWheel({
     if (settleTimer.current) clearTimeout(settleTimer.current);
     settleTimer.current = setTimeout(() => {
       setSpinning(false);
-      setZoom(true); // zoom into the pointer so the tiny winning wedge is readable
-      setFlash(res.winner.name);
+      setZoom(true);
+      setResult(res);
       onLanded(res);
     }, 4300);
   };
 
-  const winnerName = flash ? firstName(flash) : "";
-
   return (
     <div className="flex flex-col items-center">
-      <div className="relative" style={{ width: SIZE, height: SIZE + 22, maxWidth: "100%" }}>
-        {/* pointer */}
+      <div className="relative" style={{ width: size, height: size + 22, maxWidth: "100%" }}>
         <div className="absolute left-1/2 -translate-x-1/2 z-20" style={{ top: 0 }} aria-hidden>
           <svg width="36" height="32" viewBox="0 0 36 32">
             <path d="M18 32 L4 5 Q18 -4 32 5 Z" fill="#241a12" />
@@ -109,7 +110,6 @@ export default function SpinWheel({
           </svg>
         </div>
 
-        {/* zoom wrapper — scales into the top/pointer once the wheel settles */}
         <div
           className="absolute inset-0"
           style={{
@@ -120,9 +120,9 @@ export default function SpinWheel({
           }}
         >
           <svg
-            width={SIZE}
-            height={SIZE}
-            viewBox={`0 0 ${SIZE} ${SIZE}`}
+            width={size}
+            height={size}
+            viewBox={`0 0 ${size} ${size}`}
             style={{
               transform: `rotate(${rotation}deg)`,
               transition: spinning ? "transform 4.2s cubic-bezier(0.12,0.72,0.12,1)" : "none",
@@ -150,12 +150,12 @@ export default function SpinWheel({
                     stroke={isWinner ? "#241a12" : "#f1e7d5"}
                     strokeWidth={isWinner ? 1.4 : n > 60 ? 0.3 : 0.8}
                   />
-                  {(showText || isWinner) && (
+                  {(labelAll || isWinner) && (
                     <text
                       x={tx}
                       y={ty}
                       fill={isWinner ? "#241a12" : "#fbf4e6"}
-                      fontSize={isWinner ? Math.min(11, Math.max(6, seg * 0.9)) : n > 14 ? 8 : 11}
+                      fontSize={isWinner ? Math.min(12, Math.max(6, seg * 0.9)) : n > 40 ? 7 : n > 14 ? 9 : 11}
                       fontWeight={isWinner ? 800 : 700}
                       textAnchor="middle"
                       dominantBaseline="middle"
@@ -177,22 +177,52 @@ export default function SpinWheel({
       <button
         onClick={spin}
         disabled={spinning || !canSpin}
-        className="mt-2 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-black uppercase tracking-wide px-10 py-3.5 rounded-xl text-base disabled:opacity-40 transition-colors"
+        className="mt-2 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-black uppercase tracking-wide px-12 py-4 rounded-xl text-lg disabled:opacity-40 transition-colors shadow-lg"
       >
         {spinning ? "Spinning…" : "Spin"}
       </button>
 
-      {flash && !spinning && (
-        <div className="mt-3 text-center">
-          <div className="text-xs font-bold uppercase tracking-wider text-[#8a7559]">Winner</div>
-          <div className="text-3xl font-black text-[#4a7c59]">🎉 {flash}</div>
-          <button onClick={() => setZoom(false)} className="mt-1 text-xs text-[#8a7559] underline">
-            zoom out
+      {error && <div className="mt-3 text-sm font-semibold text-red-600">{error}</div>}
+
+      {/* ── Winner card (screenshot & share) ─────────────────────────────────── */}
+      {result && !spinning && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50" onClick={() => setResult(null)}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-[#f3ead6] via-[#fbf4e6] to-[#eaf3ec] border-4 border-[#4a7c59]/30"
+          >
+            <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-[#4a7c59]/15 blur-2xl" aria-hidden />
+            <div className="relative px-7 py-8 text-center">
+              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[#8a7559]">{brand}</div>
+              <div className="text-sm font-bold text-[#6f5b46] mt-0.5">{giveawayTitle}</div>
+
+              <div className="my-5 text-6xl">🎉</div>
+
+              <div className="text-xs font-black uppercase tracking-[0.24em] text-[#4a7c59]">Winner</div>
+              <div className="font-display text-4xl font-black text-[#241a12] leading-tight mt-1 break-words">
+                {result.winner.name}
+              </div>
+
+              <div className="mt-5 inline-block rounded-2xl bg-white/70 border border-[#e3d6bf] px-5 py-3">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-[#8a7559]">Won</div>
+                <div className="text-lg font-black text-[#6c4d39] leading-tight">{result.prize.title}</div>
+              </div>
+
+              <div className="mt-6 text-[11px] text-[#8a7559]">
+                {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setResult(null)}
+            className="absolute top-4 right-4 z-[81] bg-white/90 text-[#241a12] font-bold rounded-full w-10 h-10 flex items-center justify-center shadow"
+            aria-label="Close"
+          >
+            ✕
           </button>
         </div>
       )}
-      {winnerName && spinning && <span className="sr-only">{winnerName}</span>}
-      {error && <div className="mt-3 text-sm font-semibold text-red-600">{error}</div>}
     </div>
   );
 }
