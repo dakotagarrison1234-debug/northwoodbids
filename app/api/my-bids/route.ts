@@ -244,6 +244,49 @@ export async function GET() {
     }
   }
 
+  // ── Giveaway prizes ─────────────────────────────────────────────────────────
+  // Won giveaway items have a WON bid but NO auction, so the loop above skips them.
+  // Surface them as free past wins so they show alongside auction wins.
+  const giveawayWins = await prisma.bid.findMany({
+    where: { clerkUserId: userId, status: "WON", item: { giveawayId: { not: null } } },
+    select: {
+      item: {
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          storageLocation: true,
+          updatedAt: true,
+          photos: { where: { isPrimary: true }, take: 1, select: { url: true } },
+          giveaway: { select: { id: true, title: true } },
+        },
+      },
+    },
+  });
+  for (const gw of giveawayWins) {
+    const it = gw.item;
+    past.push({
+      itemId: it.id,
+      auctionId: null,
+      itemTitle: it.title,
+      itemStatus: it.status,
+      storageLocation: it.storageLocation ?? null,
+      photo: it.photos[0]?.url ?? null,
+      auctionTitle: `🎁 ${it.giveaway?.title ?? "Giveaway"}`,
+      auctionSlug: `giveaway:${it.giveaway?.id ?? it.id}`,
+      auctionEndAt: it.updatedAt,
+      auctionStatus: "CLOSED",
+      orgName: "",
+      orgSlug: "",
+      myBid: 0,
+      finalBid: 0,
+      outcome: "won" as const,
+      paid: true,
+      pickedUp: it.status === "PICKED_UP",
+      giveaway: true,
+    });
+  }
+
   return NextResponse.json({ profile, winning, losing, past, unpaidWins });
   } catch (err) {
     console.error("[my-bids GET]:", err);

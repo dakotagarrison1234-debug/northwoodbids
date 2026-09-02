@@ -30,7 +30,7 @@ interface BidBase {
 }
 interface WinningBid extends BidBase { myBid: number; currentBid: number; itemEndAt: string | null; }
 interface LosingBid extends BidBase { myBid: number; currentBid: number; itemEndAt: string | null; }
-interface PastBid extends BidBase { myBid: number; finalBid: number; outcome: "won" | "lost" | "unsold"; paid: boolean; pickedUp?: boolean; storageLocation?: string | null; }
+interface PastBid extends BidBase { myBid: number; finalBid: number; outcome: "won" | "lost" | "unsold"; paid: boolean; pickedUp?: boolean; storageLocation?: string | null; giveaway?: boolean; }
 interface UnpaidWin extends BidBase {
   amountOwed: number;
   paymentFailed?: boolean;
@@ -1087,9 +1087,9 @@ function BidderDashboardInner() {
                             <div className="font-semibold text-sm truncate">{b.itemTitle}</div>
                             <div className="flex flex-wrap gap-1.5 mt-1">
                               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                b.paid ? "bg-[#5f7a45]/15 text-[#4a6235]" : "bg-orange-500/15 text-orange-600"
+                                b.giveaway ? "bg-[#4a7c59]/15 text-[#2f7a48]" : b.paid ? "bg-[#5f7a45]/15 text-[#4a6235]" : "bg-orange-500/15 text-orange-600"
                               }`}>
-                                {b.paid ? "Paid" : "Awaiting payment"}
+                                {b.giveaway ? "🎁 Free win" : b.paid ? "Paid" : "Awaiting payment"}
                               </span>
                               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                                 b.pickedUp ? "bg-[#5f7a45]/18 text-[#3f5226]" : "bg-[#c47b3e]/20 text-[#8a4f1c]"
@@ -1099,7 +1099,7 @@ function BidderDashboardInner() {
                             </div>
                           </div>
                           <div className="text-right shrink-0">
-                            <div className="text-[#6c4d39] font-extrabold">{money(b.finalBid)}</div>
+                            <div className="text-[#6c4d39] font-extrabold">{b.giveaway ? "Free" : money(b.finalBid)}</div>
                           </div>
                         </div>
                       ))}

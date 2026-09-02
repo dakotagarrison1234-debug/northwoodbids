@@ -160,6 +160,12 @@ enum AuctionStatus {
   transferRequestId   String?
   transferRequest     TransferRequest?   @relation(fields: [transferRequestId], references: [id], onDelete: SetNull)
 
+  // Set when the item is a GIVEAWAY prize instead of an auction lot. Such items are
+  // never in an auction (auctionId null), rest in DRAFT until drawn, then flip to
+  // PENDING_PICKUP for the winner exactly like an auction win.
+  giveawayId          String?
+  giveaway            Giveaway?          @relation(fields: [giveawayId], references: [id], onDelete: SetNull)
+
   @@index([status, itemEndAt])
   @@index([auctionId, status])
   @@index([pickupAppointmentId])
@@ -167,6 +173,7 @@ enum AuctionStatus {
   @@index([soldLocationId])
   @@index([organizationId, status])
   @@index([itemCode])
+  @@index([giveawayId])
 }
 
 model PickupLocation {
@@ -578,5 +585,72 @@ model ProductLookupCache {
   updatedAt DateTime @default(now()) @updatedAt
 
   @@index([updatedAt])
+}
+
+enum GiveawayStatus {
+  DRAFT // being set up — not shown publicly
+  ACTIVE // live on the home page; bidders can enter
+  DRAWN // all prizes drawn — winners assigned
+}
+
+enum GiveawayRequirementType {
+  NONE // every registered bidder is automatically in the wheel
+  INFO // must submit a piece of info to enter (e.g. their state); any non-empty value accepted
+  ANSWER // must submit the CORRECT answer to enter (case-insensitive match)
+}
+
+/**
+ * A giveaway/raffle. Prizes are Items attached via Item.giveawayId — the number of
+ * prize items IS the number of winners. Entry is either automatic (NONE) or gated by
+ * a submitted answer (INFO/ANSWER). Winners are drawn by an admin spinning a wheel;
+ * each draw awards one prize and is recorded as if the winner had won it at auction.
+ */
+model Giveaway {
+  id                String                  @id @default(cuid())
+  organizationId    String
+  title             String
+  description       String?
+  status            GiveawayStatus          @default(DRAFT)
+  requirement       GiveawayRequirementType @default(NONE)
+  // Prompt shown to entrants for INFO/ANSWER (e.g. "What state do you live in?").
+  requirementPrompt String?
+  // Expected answer for ANSWER giveaways (compared case-insensitively, trimmed).
+  requirementAnswer String?
+  // Optional display-only deadline; winners are still drawn manually by the admin.
+  endsAt            DateTime?
+  archived          Boolean                 @default(false)
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @default(now()) @updatedAt
+  items             Item[]
+  entries           GiveawayEntry[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, archived])
+}
+
+/**
+ * One row per bidder relationship to a giveaway. Serves three jobs:
+ *  - opt-in submissions for INFO/ANSWER giveaways (answer),
+ *  - admin overrides for NONE giveaways (removed = pulled from the wheel; manual =
+ *    hand-added), and
+ *  - the winner record (won + wonItemId).
+ * For NONE giveaways the wheel is "all bidders minus removed"; a row only needs to
+ * exist to record a removal, a manual add, or a win.
+ */
+model GiveawayEntry {
+  id          String   @id @default(cuid())
+  giveawayId  String
+  giveaway    Giveaway @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
+  clerkUserId String
+  answer      String? // submitted info/answer (INFO/ANSWER)
+  removed     Boolean  @default(false) // admin pulled them from the wheel
+  manual      Boolean  @default(false) // admin hand-added them
+  won         Boolean  @default(false)
+  wonItemId   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  @@unique([giveawayId, clerkUserId])
+  @@index([giveawayId])
 }
 
