@@ -210,22 +210,14 @@ export default function SpinWheel({
 
       {error && <div className="mt-3 text-sm font-semibold text-red-600">{error}</div>}
 
-      {/* ── Winner card (screenshot & share) ─────────────────────────────────── */}
+      {/* ── Winner reveal ────────────────────────────────────────────────────── */}
       {result && !spinning && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50">
+        <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center p-4 bg-black/50">
+          {/* The card itself is ONLY the shareable winner content — no admin buttons,
+              nothing a customer shouldn't see. This is the part you screenshot. */}
           <div className="relative w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-[#f3ead6] via-[#fbf4e6] to-[#eaf3ec] border-4 border-[#4a7c59]/30">
-            {/* Discrete ✕ — re-spins (never awards) */}
-            <button
-              onClick={respin}
-              disabled={awarding}
-              aria-label="Re-spin"
-              title="Not this one — re-spin"
-              className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/80 hover:bg-white text-[#6f5b46] font-bold flex items-center justify-center shadow disabled:opacity-40"
-            >
-              ✕
-            </button>
             <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-[#4a7c59]/15 blur-2xl" aria-hidden />
-            <div className="relative px-7 pt-8 pb-6 text-center">
+            <div className="relative px-7 pt-8 pb-7 text-center">
               <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[#8a7559]">{brand}</div>
               <div className="text-sm font-bold text-[#6f5b46] mt-0.5">{giveawayTitle}</div>
 
@@ -245,18 +237,24 @@ export default function SpinWheel({
                 {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
               </div>
             </div>
+          </div>
 
-            {/* Action — awards the win. Use the ✕ up top to re-spin instead. */}
-            <div className="relative px-6 pb-6">
-              <button
-                onClick={confirmWin}
-                disabled={awarding}
-                className="w-full bg-[#4a7c59] hover:bg-[#3c6449] text-white font-black px-5 py-3.5 rounded-xl text-base disabled:opacity-50"
-              >
-                {awarding ? "Awarding…" : "Done — add to their orders"}
-              </button>
-              <div className="text-center text-[11px] text-[#8a7559] mt-2">Tap ✕ to re-spin without awarding</div>
-            </div>
+          {/* Admin controls — OUTSIDE the card so they never appear on a screenshot. */}
+          <div className="w-full max-w-sm mt-4 flex flex-col gap-2">
+            <button
+              onClick={confirmWin}
+              disabled={awarding}
+              className="w-full bg-[#4a7c59] hover:bg-[#3c6449] text-white font-black px-5 py-3.5 rounded-xl text-base disabled:opacity-50 shadow-lg"
+            >
+              {awarding ? "Awarding…" : "Done — add to their orders"}
+            </button>
+            <button
+              onClick={respin}
+              disabled={awarding}
+              className="w-full bg-white/10 hover:bg-white/20 text-[#f1e7d5] font-semibold px-5 py-2.5 rounded-xl text-sm disabled:opacity-50 border border-white/20"
+            >
+              Re-spin
+            </button>
           </div>
         </div>
       )}
