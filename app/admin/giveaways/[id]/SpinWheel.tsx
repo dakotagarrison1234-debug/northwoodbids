@@ -47,6 +47,9 @@ export default function SpinWheel({
   const [spinning, setSpinning] = useState(false);
   const [zoom, setZoom] = useState(false);
   const [winnerIdx, setWinnerIdx] = useState<number | null>(null);
+  // Only true AFTER the wheel stops — keeps the winning wedge from being highlighted
+  // (and thus visible) while it's still spinning.
+  const [revealed, setRevealed] = useState(false);
   const [result, setResult] = useState<DrawResult | null>(null);
   const [awarding, setAwarding] = useState(false);
   const [error, setError] = useState("");
@@ -64,6 +67,7 @@ export default function SpinWheel({
     setResult(null);
     setZoom(false);
     setWinnerIdx(null);
+    setRevealed(false);
     setExtra(null);
     setSpinning(true);
 
@@ -95,6 +99,7 @@ export default function SpinWheel({
     if (settleTimer.current) clearTimeout(settleTimer.current);
     settleTimer.current = setTimeout(() => {
       setSpinning(false);
+      setRevealed(true); // now it's safe to highlight the winning wedge
       setZoom(true);
       setResult(res); // preview only — nothing is awarded until "Done"
     }, 4300);
@@ -158,7 +163,7 @@ export default function SpinWheel({
               const x1 = CX + R * Math.cos(a1);
               const y1 = CY + R * Math.sin(a1);
               const large = seg > 180 ? 1 : 0;
-              const isWinner = winnerIdx === i;
+              const isWinner = revealed && winnerIdx === i;
               const mid = (i * seg + seg / 2 - 90) * (Math.PI / 180);
               const tx = CX + R * 0.6 * Math.cos(mid);
               const ty = CY + R * 0.6 * Math.sin(mid);
