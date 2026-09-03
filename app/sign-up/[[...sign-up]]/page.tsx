@@ -4,62 +4,110 @@ import AuthSwitch from "@/app/components/AuthSwitch";
 const LOGO_URL =
   "https://assets.cdn.filesafe.space/TwuL7EwKfW8oGIV0Zo5q/media/6a373b261c5d711b35bf4e56.png";
 
-function ValueRow({ title, desc, children }: { title: string; desc: string; children: React.ReactNode }) {
-  return (
-    <li className="flex items-start gap-3">
-      <span className="w-9 h-9 rounded-xl bg-[#6c4d39]/10 border border-[#6c4d39]/20 text-[#6c4d39] flex items-center justify-center shrink-0">
-        {children}
-      </span>
-      <div>
-        <p className="font-semibold text-[#241a12] text-sm">{title}</p>
-        <p className="text-sm text-[#6f5b46] leading-relaxed">{desc}</p>
-      </div>
-    </li>
-  );
-}
+const VALUE_PROPS: { emoji: string; title: string; desc: string }[] = [
+  { emoji: "🆕", title: "99% brand-new", desc: "Overstock & shelf-pulls — not broken junk." },
+  { emoji: "🔎", title: "No condition tricks", desc: "Every lot's real condition, stated plain. No sneaky “Unknown.”" },
+  { emoji: "💲", title: "Bidding starts at $2", desc: "Every single lot opens at just two bucks." },
+  { emoji: "🚚", title: "Free transfers", desc: "Won it at the other barn? We bring it to your pickup — free." },
+  { emoji: "🎁", title: "Free money: Bid Bucks", desc: "Earn $5 when a friend wins — up to $25 off your bills." },
+  { emoji: "🔒", title: "Only charged if you win", desc: "Card saved safely with Stripe. No win, no charge." },
+];
 
 export default function SignUpPage() {
   return (
-    <div className="min-h-screen bg-[#f1e7d5] text-[#241a12] flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-4xl grid gap-10 lg:grid-cols-2 items-center">
-        {/* Value prop */}
+    <div className="min-h-screen bg-gradient-to-b from-[#f3ead6] via-[#f1e7d5] to-[#ece0c9] text-[#241a12] px-4 py-8 sm:py-12">
+      <div className="w-full max-w-5xl mx-auto grid gap-8 lg:gap-12 lg:grid-cols-2 items-center">
+        {/* ── Pitch ─────────────────────────────────────────────────────────── */}
         <div className="text-center lg:text-left">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={LOGO_URL}
             alt="Northwood Bids"
-            className="h-28 sm:h-32 w-auto max-w-[280px] object-contain mx-auto lg:mx-0 mb-5 drop-shadow-sm"
+            className="h-24 sm:h-28 w-auto max-w-[260px] object-contain mx-auto lg:mx-0 mb-4 drop-shadow-sm"
           />
-          <h1 className="font-display text-3xl sm:text-4xl font-black leading-tight mb-3">
-            Create your free account
+
+          <span className="inline-flex items-center gap-1.5 bg-[#4a7c59] text-white text-[11px] font-black uppercase tracking-[0.16em] px-3 py-1 rounded-full mb-3">
+            ✋ Free to join · 30 seconds
+          </span>
+
+          <h1 className="font-display text-[2.3rem] sm:text-5xl font-black leading-[0.95] mb-3">
+            Real deals.
+            <br />
+            <span className="text-[#6c4d39]">Real conditions.</span>
+            <br />
+            Actual steals.
           </h1>
-          <p className="text-[#6f5b46] text-base leading-relaxed mb-7 max-w-md mx-auto lg:mx-0">
-            Bid in real time, get outbid the moment it happens, and check out
-            securely when you win — with a handshake feel.
+          <p className="text-[#6f5b46] text-base sm:text-lg leading-relaxed mb-6 max-w-md mx-auto lg:mx-0">
+            Brand-name overstock auctioned honest — bidding opens at <strong className="text-[#241a12]">$2</strong>,
+            conditions stated straight, and your card&apos;s only touched if you win.
           </p>
-          <ul className="space-y-4 max-w-md mx-auto lg:mx-0 text-left">
-            <ValueRow title="Bid in real time" desc="Place bids or set a max bid and we'll auto-bid for you.">
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M13 7l4 4-8 8H5v-4l8-8z" /><path d="m18.5 2.5 3 3" />
-              </svg>
-            </ValueRow>
-            <ValueRow title="Never miss a win" desc="Get instant outbid and win alerts by text and email.">
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-            </ValueRow>
-            <ValueRow title="Secure checkout" desc="Your card is stored safely with Stripe and only charged if you win.">
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="m9 12 2 2 4-4" />
-              </svg>
-            </ValueRow>
-          </ul>
+
+          {/* Value grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-xl mx-auto lg:mx-0 text-left">
+            {VALUE_PROPS.map((v) => (
+              <div key={v.title} className="flex items-start gap-3 bg-white/70 border border-[#e3d6bf] rounded-2xl px-3.5 py-3">
+                <span className="text-2xl leading-none shrink-0">{v.emoji}</span>
+                <div className="min-w-0">
+                  <p className="font-black text-[#241a12] text-sm leading-tight">{v.title}</p>
+                  <p className="text-[#6f5b46] text-xs leading-snug mt-0.5">{v.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-[#8a7559] text-xs mt-5">
+            Local pickup in Owosso &amp; Gladwin, Michigan.
+          </p>
         </div>
 
-        {/* Clerk sign-up */}
-        <div className="flex flex-col items-center lg:items-end w-full">
-          <AuthSwitch active="up" />
-          <SignUp forceRedirectUrl="/register" signInUrl="/sign-in" />
+        {/* ── Sign-up form ──────────────────────────────────────────────────── */}
+        <div className="flex flex-col items-center w-full">
+          <div className="w-full max-w-md bg-white border border-[#e3d6bf] rounded-3xl shadow-[0_24px_60px_-24px_rgba(108,77,57,0.5)] p-5 sm:p-7">
+            <div className="text-center mb-4">
+              <h2 className="font-display text-2xl font-black text-[#241a12]">Create your free account</h2>
+              <p className="text-sm text-[#6f5b46] mt-1">Start bidding in under a minute.</p>
+            </div>
+
+            <AuthSwitch active="up" />
+
+            <div className="mt-3">
+              <SignUp
+                forceRedirectUrl="/register"
+                signInUrl="/sign-in"
+                appearance={{
+                  variables: {
+                    colorPrimary: "#6c4d39",
+                    colorBackground: "#ffffff",
+                    borderRadius: "12px",
+                    fontFamily: "inherit",
+                    fontSize: "15px",
+                  },
+                  elements: {
+                    rootBox: "w-full",
+                    cardBox: "w-full shadow-none",
+                    card: "shadow-none border-0 p-0 bg-transparent w-full",
+                    header: "hidden",
+                    formButtonPrimary:
+                      "bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold normal-case text-base py-3 rounded-xl shadow-none",
+                    formFieldInput:
+                      "bg-[#faf5ea] border border-[#cdbda3] rounded-xl py-3 text-[#241a12] focus:border-[#6c4d39]",
+                    formFieldLabel: "text-[#6f5b46] font-semibold",
+                    socialButtonsBlockButton:
+                      "border border-[#cdbda3] rounded-xl py-3 hover:bg-[#faf5ea] text-[#241a12] normal-case font-semibold",
+                    dividerLine: "bg-[#e3d6bf]",
+                    dividerText: "text-[#8a7559]",
+                    footer: "hidden",
+                    footerAction: "hidden",
+                  },
+                }}
+              />
+            </div>
+          </div>
+
+          <p className="text-[#8a7559] text-xs mt-4 text-center flex items-center justify-center gap-1.5">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            Secured by Stripe &amp; Clerk · we never sell your info
+          </p>
         </div>
       </div>
     </div>
