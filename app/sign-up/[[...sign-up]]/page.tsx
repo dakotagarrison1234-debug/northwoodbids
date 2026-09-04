@@ -1,16 +1,17 @@
 import { SignUp } from "@clerk/nextjs";
 import AuthSwitch from "@/app/components/AuthSwitch";
+import { IcoNew, IcoMagnifier, IcoCoin, IcoTruck, IcoGift, IcoShield, IcoBolt } from "@/app/components/BidIcons";
 
 const LOGO_URL =
   "https://assets.cdn.filesafe.space/TwuL7EwKfW8oGIV0Zo5q/media/6a373b261c5d711b35bf4e56.png";
 
-const VALUE_PROPS: { emoji: string; title: string; desc: string }[] = [
-  { emoji: "🆕", title: "99% brand-new", desc: "Overstock & shelf-pulls — not broken junk." },
-  { emoji: "🔎", title: "No condition tricks", desc: "Every lot's real condition, stated plain. No sneaky “Unknown.”" },
-  { emoji: "💲", title: "Bidding starts at $2", desc: "Every single lot opens at just two bucks." },
-  { emoji: "🚚", title: "Free transfers", desc: "Won it at the other barn? We bring it to your pickup — free." },
-  { emoji: "🎁", title: "Free money: Bid Bucks", desc: "Earn $5 when a friend wins — up to $25 off your bills." },
-  { emoji: "🔒", title: "Only charged if you win", desc: "Card saved safely with Stripe. No win, no charge." },
+const VALUE_PROPS: { Icon: (p: { className?: string }) => React.ReactElement; title: string; desc: string }[] = [
+  { Icon: IcoNew, title: "99% brand-new", desc: "Overstock & shelf-pulls — not broken junk." },
+  { Icon: IcoMagnifier, title: "No condition tricks", desc: "Every lot's real condition, stated plain. No sneaky “Unknown.”" },
+  { Icon: IcoCoin, title: "Bidding starts at $2", desc: "Every single lot opens at just two bucks." },
+  { Icon: IcoTruck, title: "Free transfers", desc: "Won it at the other barn? We bring it to your pickup — free." },
+  { Icon: IcoGift, title: "Free money: Bid Bucks", desc: "Earn $5 when a friend wins — up to $25 off your bills." },
+  { Icon: IcoShield, title: "Only charged if you win", desc: "Card saved safely with Stripe. No win, no charge." },
 ];
 
 export default function SignUpPage() {
@@ -27,7 +28,7 @@ export default function SignUpPage() {
           />
 
           <span className="inline-flex items-center gap-1.5 bg-[#4a7c59] text-white text-[11px] font-black uppercase tracking-[0.16em] px-3 py-1 rounded-full mb-3">
-            ✋ Free to join · 30 seconds
+            <IcoBolt className="w-3.5 h-3.5" /> Free to join · 30 seconds
           </span>
 
           <h1 className="font-display text-[2.3rem] sm:text-5xl font-black leading-[0.95] mb-3">
@@ -46,7 +47,9 @@ export default function SignUpPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-xl mx-auto lg:mx-0 text-left">
             {VALUE_PROPS.map((v) => (
               <div key={v.title} className="flex items-start gap-3 bg-white/70 border border-[#e3d6bf] rounded-2xl px-3.5 py-3">
-                <span className="text-2xl leading-none shrink-0">{v.emoji}</span>
+                <span className="w-9 h-9 rounded-xl bg-[#6c4d39]/10 text-[#6c4d39] flex items-center justify-center shrink-0">
+                  <v.Icon className="w-5 h-5" />
+                </span>
                 <div className="min-w-0">
                   <p className="font-black text-[#241a12] text-sm leading-tight">{v.title}</p>
                   <p className="text-[#6f5b46] text-xs leading-snug mt-0.5">{v.desc}</p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { BidCritter } from "@/app/components/BidIcons";
 
 export type Entrant = { clerkUserId: string; name: string };
 export type DrawResult = { winner: Entrant; prize: { id: string; title: string }; remaining: number };
@@ -225,7 +226,7 @@ export default function SpinWheel({
               <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[#8a7559]">{brand}</div>
               <div className="text-sm font-bold text-[#6f5b46] mt-0.5">{giveawayTitle}</div>
 
-              <div className="my-4 text-6xl">🎉</div>
+              <div className="my-3 flex justify-center"><BidCritter className="w-20 h-20" /></div>
 
               <div className="text-xs font-black uppercase tracking-[0.24em] text-[#4a7c59]">Winner</div>
               <div className="font-display text-4xl font-black text-[#241a12] leading-tight mt-1 break-words">

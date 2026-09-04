@@ -1,6 +1,10 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import {
+  IcoCoin, IcoGift, IcoSpark, IcoTicket, IcoMegaphone, IcoLink, IcoShare,
+  IcoBolt, IcoUsers, IcoCheck, IcoLock, IcoTrophy, BidCritter,
+} from "@/app/components/BidIcons";
 
 type Referral = {
   name: string;
@@ -32,7 +36,7 @@ function Ticket({ state }: { state: CouponState }) {
       <div className="nb-bb-pop relative rounded-xl p-3 text-center text-[#7a2e00] overflow-hidden shadow-[0_6px_16px_-6px_rgba(255,120,0,0.7)]" style={{ background: "linear-gradient(160deg,#ffe08a,#ffb300)" }}>
         <div className="nb-bb-shine absolute inset-0 pointer-events-none" />
         <p className="relative font-display text-2xl font-black leading-none">$5</p>
-        <p className="relative text-[9px] font-black uppercase tracking-wider mt-1">Ready! 🔥</p>
+        <p className="relative text-[9px] font-black uppercase tracking-wider mt-1">Ready</p>
       </div>
     );
   }
@@ -40,27 +44,29 @@ function Ticket({ state }: { state: CouponState }) {
     return (
       <div className="relative rounded-xl border-2 border-[#cdbda3] bg-[#efe3d0] text-[#8a7559] p-3 text-center">
         <p className="font-display text-2xl font-black leading-none line-through decoration-2">$5</p>
-        <p className="text-[9px] font-black uppercase tracking-wider mt-1">Used ✓</p>
+        <p className="text-[9px] font-black uppercase tracking-wider mt-1">Used</p>
       </div>
     );
   }
   return (
     <div className="relative rounded-xl border-2 border-dashed border-[#e0b3a0] bg-white/50 text-[#c08a6a] p-3 text-center">
-      <p className="font-display text-2xl font-black leading-none opacity-60">$5</p>
-      <p className="text-[9px] font-black uppercase tracking-wider mt-1">🔒 Locked</p>
+      <IcoLock className="w-4 h-4 mx-auto mb-0.5 opacity-70" />
+      <p className="font-display text-lg font-black leading-none opacity-60">$5</p>
+      <p className="text-[9px] font-black uppercase tracking-wider mt-0.5">Locked</p>
     </div>
   );
 }
 
 function StatusBadge({ status }: { status: Referral["status"] }) {
   const map = {
-    EARNED: { label: "💰 Earned $5", cls: "bg-green-100 text-green-700 border-green-200" },
-    PENDING: { label: "⏳ Almost…", cls: "bg-amber-100 text-amber-700 border-amber-200" },
-    CAPPED: { label: "Counted", cls: "bg-[#efe3d0] text-[#6f5b46] border-[#cdbda3]" },
+    EARNED: { label: "Earned $5", cls: "bg-green-100 text-green-700 border-green-200", Icon: IcoCoin },
+    PENDING: { label: "Almost there", cls: "bg-amber-100 text-amber-700 border-amber-200", Icon: IcoSpark },
+    CAPPED: { label: "Counted", cls: "bg-[#efe3d0] text-[#6f5b46] border-[#cdbda3]", Icon: IcoCheck },
   }[status];
+  const Icon = map.Icon;
   return (
-    <span className={`text-xs font-black uppercase tracking-wide border px-2 py-0.5 rounded-full whitespace-nowrap ${map.cls}`}>
-      {map.label}
+    <span className={`inline-flex items-center gap-1 text-xs font-black uppercase tracking-wide border px-2 py-0.5 rounded-full whitespace-nowrap ${map.cls}`}>
+      <Icon className="w-3.5 h-3.5" /> {map.label}
     </span>
   );
 }
@@ -96,7 +102,7 @@ export default function ReferPage() {
     if (!data) return;
     const shareData = {
       title: "Northwood Bids",
-      text: "🎁 Join me on Northwood Bids — brand-name deals for pennies, and we BOTH cash in!",
+      text: "Join me on Northwood Bids — brand-name deals for pennies, and we both cash in.",
       url: data.link,
     };
     if (typeof navigator !== "undefined" && navigator.share) {
@@ -146,22 +152,22 @@ export default function ReferPage() {
             style={{ background: "linear-gradient(140deg,#ff2d55 0%,#ff6a00 48%,#ffc21f 100%)" }}
           >
             <div className="nb-bb-shine absolute inset-0 pointer-events-none" />
-            {/* floating coins */}
-            <span className="nb-bb-float absolute left-4 top-5 text-2xl select-none" style={{ animationDelay: "0s" }}>🪙</span>
-            <span className="nb-bb-float absolute right-5 top-10 text-xl select-none" style={{ animationDelay: ".6s" }}>💵</span>
-            <span className="nb-bb-float absolute left-8 bottom-6 text-xl select-none" style={{ animationDelay: "1.1s" }}>✨</span>
-            <span className="nb-bb-float absolute right-8 bottom-8 text-2xl select-none" style={{ animationDelay: "1.6s" }}>🎁</span>
+            {/* floating brand graphics */}
+            <IcoCoin className="nb-bb-float absolute left-4 top-5 w-7 h-7 text-white/90" />
+            <IcoGift className="nb-bb-float absolute right-5 top-9 w-6 h-6 text-white/90" />
+            <IcoSpark className="nb-bb-float absolute left-9 bottom-6 w-5 h-5 text-white/80" />
+            <IcoCoin className="nb-bb-float absolute right-9 bottom-8 w-6 h-6 text-white/80" />
 
             <div className="relative">
-              <span className="inline-block bg-black/25 backdrop-blur-sm text-white text-[11px] font-black uppercase tracking-[0.18em] px-3 py-1 rounded-full">
-                🔥 Everyone wins · limited
+              <span className="inline-flex items-center gap-1.5 bg-black/25 backdrop-blur-sm text-white text-[11px] font-black uppercase tracking-[0.18em] px-3 py-1 rounded-full">
+                <IcoSpark className="w-3.5 h-3.5" /> Everyone wins · limited
               </span>
               <h1 className="font-display font-black leading-[0.92] mt-3 drop-shadow-[0_2px_0_rgba(0,0,0,0.15)]">
                 <span className="block text-[2.6rem] sm:text-6xl">FREE $5</span>
                 <span className="block text-xl sm:text-2xl mt-1 font-extrabold">every time a friend wins</span>
               </h1>
               <p className="mt-3 text-base sm:text-lg font-bold text-white/95">
-                Stack up to <span className="bg-white text-[#e11d48] px-2 py-0.5 rounded-lg font-black">${maxDollars} OFF</span> — just share your link! 🤯
+                Stack up to <span className="bg-white text-[#e11d48] px-2 py-0.5 rounded-lg font-black">${maxDollars} OFF</span> — just share your link.
               </p>
 
               {/* Progress toward the max */}
@@ -171,10 +177,7 @@ export default function ReferPage() {
                   <span>${maxDollars} max</span>
                 </div>
                 <div className="h-4 rounded-full bg-black/25 overflow-hidden ring-2 ring-white/40">
-                  <div
-                    className="h-full rounded-full transition-[width] duration-700"
-                    style={{ width: `${pct}%`, background: "linear-gradient(90deg,#fff6c9,#ffd23f)" }}
-                  />
+                  <div className="h-full rounded-full transition-[width] duration-700" style={{ width: `${pct}%`, background: "linear-gradient(90deg,#fff6c9,#ffd23f)" }} />
                 </div>
               </div>
 
@@ -183,10 +186,10 @@ export default function ReferPage() {
                 onClick={share}
                 className="nb-bb-pulse mt-6 w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white text-[#e11d48] font-black text-lg px-10 py-4 rounded-2xl shadow-[0_10px_25px_-8px_rgba(0,0,0,0.5)] active:scale-95 transition-transform"
               >
-                📣 SHARE &amp; GRAB $5
+                <IcoMegaphone className="w-5 h-5" /> SHARE &amp; GRAB $5
               </button>
               <p className="mt-2 text-xs font-bold text-white/85">
-                {availDollars > 0 ? `💰 You've got $${availDollars} waiting to come off your next win!` : "It's free money. Seriously."}
+                {availDollars > 0 ? `You've got $${availDollars} waiting to come off your next win.` : "It's free money. Seriously."}
               </p>
             </div>
           </div>
@@ -194,8 +197,8 @@ export default function ReferPage() {
           {/* Coupon stash */}
           <div className="mt-5 bg-white border border-[#e3d6bf] rounded-2xl p-5">
             <div className="flex items-baseline justify-between gap-3">
-              <p className="text-[#241a12] font-black text-lg">🎟️ Your $5 tickets</p>
-              <p className="text-sm font-bold text-[#e11d48]">
+              <p className="text-[#241a12] font-black text-lg inline-flex items-center gap-2"><IcoTicket className="w-5 h-5 text-[#6c4d39]" /> Your $5 tickets</p>
+              <p className="text-sm font-black text-[#e11d48]">
                 {data.availableCount > 0 ? `${data.availableCount} READY` : data.redeemedCount >= data.cap ? "All used" : "None yet"}
               </p>
             </div>
@@ -204,9 +207,9 @@ export default function ReferPage() {
             </div>
             <p className="text-[#6f5b46] text-sm mt-3">
               {data.availableCount > 0 ? (
-                <>You have <strong className="text-[#e11d48]">${availDollars}</strong> ready — a $5 ticket comes off your next winning bill automatically. No codes. 🙌</>
+                <>You have <strong className="text-[#e11d48]">${availDollars}</strong> ready — a $5 ticket comes off your next winning bill automatically. No codes.</>
               ) : data.earnedCount >= data.cap ? (
-                "You maxed it out — legend. Thanks for spreading the word! 👑"
+                "You maxed it out — legend. Thanks for spreading the word!"
               ) : (
                 "Grab a $5 ticket every time a friend you invited wins & pays. Up to 5!"
               )}
@@ -215,7 +218,7 @@ export default function ReferPage() {
 
           {/* Share link */}
           <div className="mt-4 bg-white border border-[#e3d6bf] rounded-2xl p-5">
-            <p className="text-[#241a12] font-black">🔗 Your magic link</p>
+            <p className="text-[#241a12] font-black inline-flex items-center gap-2"><IcoLink className="w-5 h-5 text-[#6c4d39]" /> Your magic link</p>
             <p className="text-[#6f5b46] text-sm mt-0.5">Anyone who joins with it is tied to you — forever.</p>
             <div className="mt-3 flex flex-col sm:flex-row gap-2">
               <input
@@ -226,10 +229,10 @@ export default function ReferPage() {
               />
               <div className="flex gap-2">
                 <button onClick={copy} className="flex-1 sm:flex-none bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] text-[#241a12] text-sm font-bold px-4 py-3 rounded-xl transition-colors whitespace-nowrap">
-                  {copied ? "Copied! ✓" : "Copy"}
+                  {copied ? "Copied!" : "Copy"}
                 </button>
-                <button onClick={share} className="flex-1 sm:flex-none text-white text-sm font-black px-5 py-3 rounded-xl transition-transform active:scale-95 whitespace-nowrap" style={{ background: "linear-gradient(135deg,#ff2d55,#ff6a00)" }}>
-                  Share 🚀
+                <button onClick={share} className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 text-white text-sm font-black px-5 py-3 rounded-xl transition-transform active:scale-95 whitespace-nowrap" style={{ background: "linear-gradient(135deg,#ff2d55,#ff6a00)" }}>
+                  <IcoShare className="w-4 h-4" /> Share
                 </button>
               </div>
             </div>
@@ -241,7 +244,7 @@ export default function ReferPage() {
           {/* Coupons used */}
           {data.redemptions.length > 0 && (
             <div className="mt-4 bg-white border border-[#e3d6bf] rounded-2xl p-5">
-              <p className="text-[#241a12] font-black">💸 Money you&apos;ve saved</p>
+              <p className="text-[#241a12] font-black inline-flex items-center gap-2"><IcoCoin className="w-5 h-5 text-[#4a7c59]" /> Money you&apos;ve saved</p>
               <div className="mt-3 divide-y divide-[#efe3d0]">
                 {data.redemptions.map((r, i) => (
                   <div key={i} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
@@ -249,7 +252,7 @@ export default function ReferPage() {
                       <p className="text-[#241a12] text-sm font-medium truncate">{r.auctionTitle}</p>
                       <p className="text-[#8a7559] text-xs">{new Date(r.date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</p>
                     </div>
-                    <span className="text-green-700 font-black text-sm whitespace-nowrap">−${r.amount.toFixed(0)} 🎉</span>
+                    <span className="text-green-700 font-black text-sm whitespace-nowrap">−${r.amount.toFixed(0)}</span>
                   </div>
                 ))}
               </div>
@@ -258,12 +261,12 @@ export default function ReferPage() {
 
           {/* How it works */}
           <div className="mt-4 bg-white border border-[#e3d6bf] rounded-2xl p-5">
-            <p className="text-[#241a12] font-black mb-3">⚡ 4 steps to free money</p>
+            <p className="text-[#241a12] font-black mb-3 inline-flex items-center gap-2"><IcoBolt className="w-5 h-5 text-[#6c4d39]" /> 4 steps to free money</p>
             <ol className="space-y-3">
               {[
                 ["Blast your link", "Fire it to a friend who's not on Northwood Bids yet. Text, DM, story — anywhere."],
                 ["They join & bid", "They sign up through your link and start scoring deals."],
-                ["They win & pay", "The second they win an item and their card is charged — ka-ching, you get $5."],
+                ["They win & pay", "The second they win an item and their card is charged, you get $5."],
                 ["You save, automatically", "Your $5 comes off your NEXT winning bill. No codes, no hoops."],
               ].map(([title, body], i) => (
                 <li key={i} className="flex gap-3">
@@ -280,11 +283,11 @@ export default function ReferPage() {
           {/* Invites */}
           <div className="mt-4 bg-white border border-[#e3d6bf] rounded-2xl p-5">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-[#241a12] font-black">👥 Your crew</p>
+              <p className="text-[#241a12] font-black inline-flex items-center gap-2"><IcoUsers className="w-5 h-5 text-[#6c4d39]" /> Your crew</p>
               {data.totalRedeemed > 0 && (<span className="text-xs font-bold text-[#6f5b46]">${data.totalRedeemed.toFixed(0)} saved so far</span>)}
             </div>
             {data.referrals.length === 0 ? (
-              <p className="text-[#8a7559] text-sm mt-3">No invites yet — share your link above and start stacking! 💪</p>
+              <p className="text-[#8a7559] text-sm mt-3">No invites yet — share your link above and start stacking.</p>
             ) : (
               <div className="mt-3 divide-y divide-[#efe3d0]">
                 {data.referrals.map((r, i) => (
@@ -311,7 +314,8 @@ export default function ReferPage() {
             </p>
           </div>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 flex flex-col items-center gap-2">
+            <BidCritter className="w-12 h-12 opacity-90" />
             <Link href="/dashboard" className="text-[#6c4d39] hover:text-[#563e2c] text-sm font-semibold underline underline-offset-2">Back to My Bids</Link>
           </div>
         </>

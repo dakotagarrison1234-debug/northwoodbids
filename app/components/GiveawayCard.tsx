@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { IcoGift, IcoCheck } from "@/app/components/BidIcons";
 
 type Prize = { id: string; title: string; retailValue: number | null; photo: string | null };
 type Giveaway = {
@@ -73,7 +74,7 @@ export default function GiveawayCard() {
 
           <div className="flex-1 min-w-0 text-center sm:text-left">
             <div className="inline-flex items-center gap-1.5 bg-[#4a7c59] text-white text-[11px] font-black uppercase tracking-[0.14em] px-3 py-1 rounded-full mb-2">
-              🎁 Free Giveaway
+              <IcoGift className="w-3.5 h-3.5" /> Free Giveaway
             </div>
             <h3 className="font-display text-2xl sm:text-3xl font-black text-[#241a12] leading-tight">{g.title}</h3>
             <p className="text-sm text-[#6f5b46] mt-1">
@@ -90,11 +91,11 @@ export default function GiveawayCard() {
                 </Link>
               ) : entered ? (
                 <div className="inline-flex items-center gap-2 bg-[#dff0e4] text-[#2f7a48] font-bold px-4 py-2.5 rounded-xl text-sm">
-                  ✅ You're entered — good luck!
+                  <IcoCheck className="w-4 h-4" /> You're entered — good luck!
                 </div>
               ) : g.requirement === "NONE" ? (
                 <div className="inline-flex items-center gap-2 bg-[#dff0e4] text-[#2f7a48] font-bold px-4 py-2.5 rounded-xl text-sm">
-                  ✅ You're automatically entered!
+                  <IcoCheck className="w-4 h-4" /> You're automatically entered!
                 </div>
               ) : (
                 <div className="max-w-sm mx-auto sm:mx-0">

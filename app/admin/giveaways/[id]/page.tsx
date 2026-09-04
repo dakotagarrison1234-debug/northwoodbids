@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import SpinWheel, { type DrawResult } from "./SpinWheel";
+import { IcoTrophy, IcoCheck } from "@/app/components/BidIcons";
 
 type Requirement = "NONE" | "INFO" | "ANSWER";
 type Prize = {
@@ -236,7 +237,7 @@ export default function ManageGiveaway() {
             </div>
           </div>
           {unclaimed === 0 ? (
-            <div className="text-center py-6 text-[#4a7c59] font-bold">🎉 All prizes drawn!</div>
+            <div className="flex items-center justify-center gap-2 py-6 text-[#4a7c59] font-bold"><IcoTrophy className="w-5 h-5" /> All prizes drawn!</div>
           ) : d.counts.eligible === 0 ? (
             <div className="text-center py-6 text-[#8a7559]">No eligible entrants yet.</div>
           ) : (
@@ -246,7 +247,7 @@ export default function ManageGiveaway() {
                   onClick={() => setPresenting(true)}
                   className="inline-flex items-center gap-2 bg-[#241a12] hover:bg-black text-[#f6ecda] font-bold px-5 py-2.5 rounded-xl text-sm"
                 >
-                  ⛶ Full-screen draw (for the camera)
+                  Full-screen draw (for the camera)
                 </button>
               </div>
               <SpinWheel
@@ -280,7 +281,7 @@ export default function ManageGiveaway() {
                 <div className="font-semibold text-[#241a12] truncate">{p.title}</div>
                 <div className="text-xs text-[#8a7559]">
                   {p.retailValue != null ? `$${p.retailValue.toFixed(2)} value` : "No value set"}
-                  {p.wonBy ? ` · 🎉 ${p.wonBy.name}` : ""}
+                  {p.wonBy ? ` · won by ${p.wonBy.name}` : ""}
                 </div>
               </div>
               {!p.wonBy && (
@@ -342,7 +343,7 @@ export default function ManageGiveaway() {
                       {r.email && <div className="text-xs text-[#8a7559] truncate">{r.email}</div>}
                     </div>
                     {r.won ? (
-                      <span className="shrink-0 text-xs font-bold text-[#4a7c59]">🎉 Won</span>
+                      <span className="shrink-0 inline-flex items-center gap-1 text-xs font-bold text-[#4a7c59]"><IcoCheck className="w-3.5 h-3.5" /> Won</span>
                     ) : r.inWheel ? (
                       <button onClick={() => setRemoved(r.clerkUserId, true)} className="shrink-0 text-xs font-bold text-red-600 border border-red-200 rounded-full px-3 py-1 hover:bg-red-50">
                         Remove
@@ -404,7 +405,7 @@ export default function ManageGiveaway() {
               onAward={award}
             />
           ) : (
-            <div className="text-[#fbf4e6] text-lg font-bold">🎉 All prizes drawn!</div>
+            <div className="text-[#fbf4e6] text-lg font-bold">All prizes drawn!</div>
           )}
         </div>
       )}
@@ -417,7 +418,7 @@ export default function ManageGiveaway() {
             {d.winners.map((w) => (
               <div key={w.clerkUserId + w.itemId} className="flex items-center justify-between gap-3 rounded-xl border border-[#dcecdf] bg-[#f2f9f4] px-4 py-3">
                 <div className="min-w-0">
-                  <div className="font-bold text-[#241a12] truncate">🎉 {w.name}</div>
+                  <div className="font-bold text-[#241a12] truncate inline-flex items-center gap-1.5"><IcoTrophy className="w-4 h-4 text-[#4a7c59]" /> {w.name}</div>
                   <div className="text-xs text-[#4a7c59] truncate">won {w.itemTitle} — added to their pickups</div>
                 </div>
                 {w.itemId && (
