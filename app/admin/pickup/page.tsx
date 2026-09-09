@@ -767,6 +767,12 @@ export default function AdminPickupPage() {
   const todayStaged = todayAppts.filter((a) => a.stagedSpot).length;
   const todayItems = todayAppts.reduce((s, a) => s + a.items.length, 0);
   const allTodayStaged = todayAppts.length > 0 && todayStaged === todayAppts.length;
+  // An appointment is "late" once it's more than an hour past its slot and still not
+  // collected — flag those red so nobody's overdue pickup slips through the cracks.
+  const LATE_AFTER_MS = 60 * 60 * 1000;
+  const nowMs = Date.now();
+  const isLate = (a: Appointment) =>
+    a.status === "SCHEDULED" && nowMs - new Date(a.startsAt).getTime() > LATE_AFTER_MS;
   const allActiveTransfers = transfers.filter(
     (t) => t.status === "REQUESTED" || t.status === "LOADED"
   );
@@ -1243,8 +1249,10 @@ export default function AdminPickupPage() {
                     return (
                       <div
                         key={a.id}
-                        className={`bg-white border-2 rounded-xl overflow-hidden ${
-                          a.stagedSpot ? "border-[#5f7a45]/40" : "border-[#e3c9a3]"
+                        className={`border-2 rounded-xl overflow-hidden ${
+                          isLate(a)
+                            ? "bg-red-50 border-red-400"
+                            : a.stagedSpot ? "bg-white border-[#5f7a45]/40" : "bg-white border-[#e3c9a3]"
                         }`}
                       >
                         <button
@@ -1270,6 +1278,9 @@ export default function AdminPickupPage() {
                             <div className="text-sm text-[#6f5b46] flex flex-wrap items-center gap-x-2 gap-y-1 mt-0.5">
                               <span>{a.items.length} item{a.items.length !== 1 ? "s" : ""}</span>
                               <LocationBadge name={a.location.name} size="sm" />
+                              {isLate(a) && (
+                                <span className="px-2 py-0.5 rounded-full bg-red-600 text-white font-black text-xs uppercase tracking-wide">Late</span>
+                              )}
                               {!a.stagedSpot && a.items.length > 0 && a.items.every((it) => it.grabbed) && (
                                 <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-bold text-xs">Gathered ✓</span>
                               )}
@@ -1327,7 +1338,7 @@ export default function AdminPickupPage() {
                       {laterAppts.map((a) => {
                         const expanded = selectedApptId === a.id;
                         return (
-                          <div key={a.id} className="bg-white border border-[#e3d6bf] rounded-xl overflow-hidden">
+                          <div key={a.id} className={`border rounded-xl overflow-hidden ${isLate(a) ? "bg-red-50 border-red-400" : "bg-white border-[#e3d6bf]"}`}>
                             {/* Compact row — name, time, location, item count. Click to expand. */}
                             <button
                               onClick={() => setSelectedApptId(expanded ? null : a.id)}
@@ -1343,6 +1354,9 @@ export default function AdminPickupPage() {
                                 <div className="text-sm text-[#6f5b46] mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
                                   <span className="font-semibold text-[#241a12]">{fmtDateTime(a.startsAt)}</span>
                                   <LocationBadge name={a.location.name} size="sm" />
+                                  {isLate(a) && (
+                                    <span className="px-2 py-0.5 rounded-full bg-red-600 text-white font-black text-xs uppercase tracking-wide">Late</span>
+                                  )}
                                   {/* Staged orders are ready to hand over — call that out on the row. */}
                                   {a.stagedSpot && (
                                     <span className="inline-flex items-center gap-1 bg-[#5f7a45]/12 text-[#4f6639] border border-[#5f7a45]/25 rounded-full px-2 py-0.5 font-bold">
