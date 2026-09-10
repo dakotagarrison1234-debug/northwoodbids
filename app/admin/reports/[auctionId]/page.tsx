@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireUserOrg } from "@/lib/auth";
+import { ensureSoldLocations } from "@/lib/soldLocation";
 import { Donut } from "../Charts";
 
 // Match the aggregate reports endpoint exactly so a single-auction view can never
@@ -27,6 +28,10 @@ export default async function AuctionReportPage({ params }: Props) {
   const membership = await requireUserOrg();
   const orgId = membership.organization.id;
   const isNone = auctionId === "none";
+
+  // Heal any sold item missing its selling-warehouse snapshot so commission never
+  // credits the pickup/transfer destination.
+  await ensureSoldLocations(orgId);
 
   const orgConfig = await prisma.organization.findUnique({
     where: { id: orgId },
@@ -96,8 +101,9 @@ export default async function AuctionReportPage({ params }: Props) {
     const t = num(p.taxAmount), cr = num(p.creditApplied ?? 0);
     itemsSold += 1;
     hammer += sale; premium += prem; tax += t; credit += cr; fees += fee;
-    // Commission stays with the source (sold-at) location, not the pickup one.
-    const wLabel = (p.item?.soldLocation ?? p.item?.location)?.name ?? "Unassigned";
+    // Commission stays with the SELLING warehouse snapshot only — never the live
+    // location, which after a pickup transfer is the destination.
+    const wLabel = p.item?.soldLocation?.name ?? "Unassigned";
     byWarehouse.set(wLabel, (byWarehouse.get(wLabel) ?? 0) + (sale + prem - cr - fee));
     if (p.stripePaymentIntentId) pis.add(p.stripePaymentIntentId);
     else if (!p.paidInCash && grossOf(p) > 0) soloCharges++;

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg } from "@/lib/auth";
+import { ensureSoldLocations } from "@/lib/soldLocation";
 
 // Stripe standard US pricing: 2.9% + $0.30 per successful charge (per PaymentIntent).
 const STRIPE_PCT = 0.029;
@@ -56,6 +57,10 @@ export async function GET(req: NextRequest) {
   const membership = await getUserOrg();
   if (!membership) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const orgId = membership.organizationId;
+
+  // Heal any sold item missing its selling-warehouse snapshot (pre-feature sales),
+  // so commission can never leak to the pickup/transfer destination.
+  await ensureSoldLocations(orgId);
 
   const orgConfig = await prisma.organization.findUnique({
     where: { id: orgId },
@@ -229,9 +234,11 @@ export async function GET(req: NextRequest) {
     if (!byAuction.has(aKey)) {
       byAuction.set(aKey, newBucket(aKey, aLabel, p.item?.auction?.endAt?.toISOString() ?? null));
     }
-    // Source (commission) location: soldLocation if snapshotted, else the live
-    // location for older rows.
-    const srcLoc = p.item?.soldLocation ?? p.item?.location;
+    // Source (commission) location = the SELLING warehouse snapshot only. Never fall
+    // back to the live location — after a pickup transfer that's the destination,
+    // which would credit the wrong warehouse. (ensureSoldLocations above fills any
+    // recoverable gap; what's left null is honestly unassigned.)
+    const srcLoc = p.item?.soldLocation;
     const wKey = srcLoc?.id ?? "none";
     const wLabel = srcLoc?.name ?? "Unassigned";
     if (!byWarehouse.has(wKey)) byWarehouse.set(wKey, newBucket(wKey, wLabel));
