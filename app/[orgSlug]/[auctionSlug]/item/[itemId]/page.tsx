@@ -7,6 +7,7 @@ import { useUser, SignInButton } from "@clerk/nextjs";
 import Pusher from "pusher-js";
 import Countdown from "@/app/components/Countdown";
 import { getNextValidBid, getProxySuggestions } from "@/lib/bidIncrements";
+import { IcoTrophy } from "@/app/components/BidIcons";
 import CardSetupModal from "@/app/components/CardSetupModal";
 import MaxBidExplainerModal from "@/app/components/MaxBidExplainerModal";
 import ExpandableDescription from "@/app/components/ExpandableDescription";
@@ -939,20 +940,13 @@ export default function ItemPage() {
                     </div>
                   )}
                 </div>
-
-                {/* Slim divider — tight margins so the quick bid stays above the fold. */}
-                <div className="flex items-center gap-3 my-2.5">
-                  <div className="flex-1 h-px bg-[#e3d6bf]" />
-                  <span className="text-[11px] text-[#b3a085] uppercase tracking-wide">or take the lead now</span>
-                  <div className="flex-1 h-px bg-[#e3d6bf]" />
-                </div>
                 </>
                 )}
 
-                {/* QUICK BID — double tap for the next increment. No wrapper card; it
-                    sits flush as a sibling of the max-bid box, so the two methods are
-                    one tight unit rather than two nested cards with double gutters. */}
-                <div>
+                {/* The quick "Bid $X" button lives in the sticky bar at the bottom of the
+                    screen now (always in reach, one thumb). This card keeps the max bid,
+                    any bid message, the winning summary, and the total preview. */}
+                <div className={showWinning ? "" : "mt-2.5"}>
                   {message && (
                     <div className={`text-sm mb-2 px-3 py-2 rounded-lg ${
                       message.type === "success" ? "bg-green-100 text-green-800" : "bg-red-500/20 text-red-600"
@@ -961,11 +955,13 @@ export default function ItemPage() {
                     </div>
                   )}
 
-                  {showWinning ? (
+                  {showWinning && (
                     /* The single winning indicator. You can't outbid yourself, so no bid
                        controls — just confirm the lead and the amount, total shown below. */
                     <div className={`rounded-xl bg-green-50 border-2 border-green-300 px-4 py-3.5 flex items-center gap-3 ${winFlash ? "nb-pop" : ""}`}>
-                      <span className="text-2xl shrink-0">🎉</span>
+                      <span className="w-9 h-9 rounded-full bg-green-600 text-white grid place-items-center shrink-0">
+                        <IcoTrophy className="w-5 h-5" />
+                      </span>
                       <div className="min-w-0">
                         <p className="text-base font-extrabold text-green-800 leading-tight">
                           You&apos;re winning at ${currentBid.toLocaleString()}
@@ -975,57 +971,6 @@ export default function ItemPage() {
                         </p>
                       </div>
                     </div>
-                  ) : (
-                    <>
-                      <button
-                        onClick={handleQuickBid}
-                        disabled={placing}
-                        className={`relative w-full overflow-hidden rounded-2xl font-extrabold text-white transition-all duration-150 disabled:opacity-60 select-none ${
-                          quickArmed
-                            ? "bg-[#c47b3e] scale-[0.98] shadow-inner"
-                            : "bg-[#4a7c59] active:scale-[0.98] shadow-[0_4px_0_#3c6449]"
-                        }`}
-                        style={{ minHeight: 76, WebkitTapHighlightColor: "transparent" }}
-                      >
-                        {/* Success wash — a quick sweep of light across the button. */}
-                        {bidFlash && (
-                          <span className="pointer-events-none absolute inset-0 bg-white/35 animate-[quickbid-sweep_600ms_ease-out]" />
-                        )}
-                        <span className="relative flex flex-col items-center justify-center py-3 px-4">
-                          {placing ? (
-                            <span className="text-lg">Placing…</span>
-                          ) : quickArmed ? (
-                            <>
-                              <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/90">
-                                Tap again to confirm
-                              </span>
-                              <span className="text-3xl leading-tight tabular-nums">
-                                ${minBid.toLocaleString()}
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/85">
-                                Double tap to bid
-                              </span>
-                              <span className="text-3xl leading-tight tabular-nums">
-                                ${minBid.toLocaleString()}
-                              </span>
-                            </>
-                          )}
-                        </span>
-                        {/* Arming window, draining left to right — shows the confirm
-                            state is temporary without needing to explain it. */}
-                        {quickArmed && (
-                          <span className="pointer-events-none absolute bottom-0 left-0 h-1 bg-white/70 animate-[quickbid-drain_2600ms_linear_forwards]" />
-                        )}
-                      </button>
-
-                      {/* Removed the "Next bid up from $X" line that used to sit here:
-                          it restated the current bid already shown large at the top of
-                          the page, and read as an orphan sentence floating between the
-                          button and the total box. */}
-                    </>
                   )}
 
                   {/* Total-due preview */}
@@ -1181,7 +1126,69 @@ export default function ItemPage() {
         </div>
       </div>
 
-      <div className="pb-8" />
+      {/* Clearance so the sticky bid bar never covers the last content. */}
+      <div className="pb-28" />
+
+      {/* ── Sticky bid bar ──
+          Always in reach at the bottom of the screen: current bid on the left, the
+          next bid as one big button on the right. Double-tap to place (first tap arms,
+          second confirms) — same safety as before, just always a thumb away. */}
+      {!biddingLocked && isLoaded && (
+        <div className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+          <div className="max-w-2xl mx-auto bg-white border border-[#e3d6bf] rounded-2xl shadow-[0_-8px_30px_-10px_rgba(36,26,18,0.35)] px-4 py-3 flex items-center gap-3">
+            <div className="min-w-0 flex-1 flex items-baseline gap-2">
+              <span className={`font-extrabold text-3xl leading-none tabular-nums ${priceColor}`}>
+                ${currentBid.toLocaleString()}
+              </span>
+              <span className="text-xs font-semibold text-[#8a7559] leading-tight">
+                {item.currentBid > 0 ? "Current" : "Starting"}<br />bid
+              </span>
+            </div>
+
+            {!isSignedIn ? (
+              <SignInButton mode="modal">
+                <button className="shrink-0 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-extrabold px-6 py-3.5 rounded-xl text-base">
+                  Sign in to bid
+                </button>
+              </SignInButton>
+            ) : showWinning ? (
+              <span className="shrink-0 inline-flex items-center gap-1.5 bg-green-50 border-2 border-green-300 text-green-800 font-extrabold px-4 py-3 rounded-xl text-sm">
+                <IcoTrophy className="w-4 h-4" /> You&apos;re winning
+              </span>
+            ) : (
+              <button
+                onClick={handleQuickBid}
+                disabled={placing}
+                className={`relative shrink-0 overflow-hidden rounded-xl font-extrabold text-white text-lg px-7 py-3.5 transition-all duration-150 disabled:opacity-60 select-none tabular-nums ${
+                  quickArmed
+                    ? "bg-[#c47b3e] scale-[0.97] shadow-inner"
+                    : "bg-[#4a7c59] active:scale-[0.97] shadow-[0_4px_0_#3c6449]"
+                }`}
+                style={{ WebkitTapHighlightColor: "transparent", minWidth: 140 }}
+              >
+                {bidFlash && (
+                  <span className="pointer-events-none absolute inset-0 bg-white/35 animate-[quickbid-sweep_600ms_ease-out]" />
+                )}
+                <span className="relative flex flex-col items-center leading-tight">
+                  {placing ? (
+                    <span>Placing…</span>
+                  ) : quickArmed ? (
+                    <>
+                      <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/90">Tap again</span>
+                      <span>Bid ${minBid.toLocaleString()}</span>
+                    </>
+                  ) : (
+                    <span>Bid ${minBid.toLocaleString()}</span>
+                  )}
+                </span>
+                {quickArmed && (
+                  <span className="pointer-events-none absolute bottom-0 left-0 h-1 bg-white/70 animate-[quickbid-drain_2600ms_linear_forwards]" />
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Card setup modal — shown when user tries to bid without a card on file */}
       {showCardModal && (
