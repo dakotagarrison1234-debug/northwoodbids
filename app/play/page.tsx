@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useUser, SignInButton } from "@clerk/nextjs";
 import { Avatar, AVATARS } from "@/app/components/Avatars";
+import { IcoSpark, IcoTarget, IcoGavel, IcoTrophy } from "@/app/components/BidIcons";
 import { SoundFx } from "./_sound";
 
 type Lot = { id: string; title: string; photo: string | null; href: string | null };
@@ -388,7 +389,7 @@ export default function PlayPage() {
       setFrenzy(frenzyHitsRef.current > 0 || startedFrenzy);
 
       const milestone = roundRef.current % 10 === 0;
-      const label = milestone ? `${roundRef.current} LOTS! 🔥`
+      const label = milestone ? `${roundRef.current} LOTS!`
         : startedFrenzy ? "GAVEL FRENZY! ×2"
         : wasGolden ? `GOLDEN! +${pts.toLocaleString()}`
         : bull ? `BULLSEYE! +${pts.toLocaleString()}`
@@ -520,7 +521,7 @@ export default function PlayPage() {
 
                   <p className="font-display text-2xl sm:text-3xl font-black text-[#ffe4b0] leading-tight mb-2 px-2"
                      style={{ textShadow: "0 2px 14px rgba(245,158,11,0.45), 0 1px 0 #1a120b" }}>
-                    Think you&apos;ve got the fastest gavel? 🔨
+                    Think you&apos;ve got the fastest gavel? <IcoGavel className="inline w-7 h-7 -mt-1 text-[#ffe4b0]" />
                   </p>
                   <p className="text-[#f3e7cf] text-base sm:text-lg font-semibold leading-snug max-w-md mx-auto mb-3">
                     Time your slam to land inside the glowing <span className="text-[#bff08a] font-black">SOLD</span> zone
@@ -529,14 +530,14 @@ export default function PlayPage() {
 
                   {/* quick, readable "how to win" chips */}
                   <div className="flex flex-wrap items-center justify-center gap-2 mb-6 max-w-sm mx-auto">
-                    <span className="text-sm font-bold text-[#f3e7cf] bg-white/10 border border-white/15 rounded-full px-3 py-1">🎯 Hit the bullseye = bonus</span>
-                    <span className="text-sm font-bold text-[#f3e7cf] bg-white/10 border border-white/15 rounded-full px-3 py-1">🔥 Stack combos</span>
-                    <span className="text-sm font-bold text-[#f3e7cf] bg-white/10 border border-white/15 rounded-full px-3 py-1">⚡ 3 misses = out</span>
+                    <span className="inline-flex items-center gap-1.5 text-sm font-bold text-[#f3e7cf] bg-white/10 border border-white/15 rounded-full px-3 py-1"><IcoTarget className="w-4 h-4" /> Hit the bullseye = bonus</span>
+                    <span className="inline-flex items-center gap-1.5 text-sm font-bold text-[#f3e7cf] bg-white/10 border border-white/15 rounded-full px-3 py-1"><IcoSpark className="w-4 h-4" /> Stack combos</span>
+                    <span className="inline-flex items-center gap-1.5 text-sm font-bold text-[#f3e7cf] bg-white/10 border border-white/15 rounded-full px-3 py-1">3 misses = out</span>
                   </div>
 
                   {leaders[0] && (
-                    <p className="text-[#ffd9a0] text-sm font-bold mb-4">
-                      👑 Top score to beat: <span className="tabular-nums">{leaders[0].score.toLocaleString()}</span>
+                    <p className="text-[#ffd9a0] text-sm font-bold mb-4 inline-flex items-center gap-1.5">
+                      <IcoTrophy className="w-4 h-4" /> Top score to beat: <span className="tabular-nums">{leaders[0].score.toLocaleString()}</span>
                     </p>
                   )}
 
@@ -569,7 +570,7 @@ export default function PlayPage() {
                       </div>
                       <div className="text-[10px] uppercase tracking-widest font-bold text-[#d8c19a]">Multiplier</div>
                       {frenzy ? (
-                        <span className="mt-1 text-[11px] font-black text-[#fff2cf] px-2.5 py-0.5 rounded-full bg-[#b45309]/60 border border-[#f59e0b]/70 animate-pulse whitespace-nowrap">🔥 FRENZY ×2</span>
+                        <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-black text-[#fff2cf] px-2.5 py-0.5 rounded-full bg-[#b45309]/60 border border-[#f59e0b]/70 animate-pulse whitespace-nowrap"><IcoSpark className="w-3 h-3" /> FRENZY ×2</span>
                       ) : combo > 1 ? (
                         <span className="mt-1 text-[11px] font-bold text-[#e9d9bd]">{combo}× combo</span>
                       ) : null}
@@ -651,7 +652,7 @@ export default function PlayPage() {
 
                   {newBest && (
                     <div className="best-badge inline-flex items-center gap-1.5 font-display font-black text-[#b45309] text-sm mb-2">
-                      ⭐ NEW PERSONAL BEST!
+                      <IcoSpark className="w-4 h-4" /> NEW PERSONAL BEST!
                     </div>
                   )}
 
@@ -731,7 +732,7 @@ export default function PlayPage() {
                 {leaders.map((l) => (
                   <li key={l.rank} className={`cv-card board-row flex items-center gap-3 rounded-xl px-2.5 py-2 ${l.rank === 1 ? "first" : ""}`}>
                     <span className={`w-6 text-center font-display font-black ${l.rank === 1 ? "text-[#b45309]" : l.rank <= 3 ? "text-[#6c4d39]" : "text-[#a8997d]"}`}>
-                      {l.rank === 1 ? "👑" : l.rank}
+                      {l.rank === 1 ? <IcoTrophy className="w-4 h-4 inline" /> : l.rank}
                     </span>
                     <div className="w-8 h-8 rounded-full overflow-hidden bg-[#efe3d0] shrink-0 grid place-items-center ring-1 ring-[#e3d6bf]">
                       {l.avatarKey ? <Avatar avatarKey={l.avatarKey} className="w-full h-full" /> : <span className="text-[#b3a085] text-xs">?</span>}

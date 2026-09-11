@@ -272,7 +272,7 @@ export async function GET() {
       itemStatus: it.status,
       storageLocation: it.storageLocation ?? null,
       photo: it.photos[0]?.url ?? null,
-      auctionTitle: `🎁 ${it.giveaway?.title ?? "Giveaway"}`,
+      auctionTitle: `Giveaway: ${it.giveaway?.title ?? "Prize"}`,
       auctionSlug: `giveaway:${it.giveaway?.id ?? it.id}`,
       auctionEndAt: it.updatedAt,
       auctionStatus: "CLOSED",

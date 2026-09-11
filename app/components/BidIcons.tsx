@@ -164,6 +164,25 @@ export function IcoTrophy({ className = "w-5 h-5" }: P) {
   );
 }
 
+export function IcoTarget({ className = "w-5 h-5" }: P) {
+  return (
+    <svg {...base(className)}>
+      <circle cx="12" cy="12" r="8.5" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function IcoGavel({ className = "w-5 h-5" }: P) {
+  return (
+    <svg {...base(className)}>
+      <path d="m13 7 4 4-8 8H5v-4l8-8z" />
+      <path d="m10.5 4.5 3 3M16.5 10.5l3 3M18.5 2.5l3 3M2.5 21.5h9" />
+    </svg>
+  );
+}
+
 /**
  * The Bid Critter — Northwood's woodland mascot (a little fox), used for
  * celebratory moments (winner cards, giveaway hero). Rustic palette, not

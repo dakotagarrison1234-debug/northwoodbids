@@ -775,7 +775,7 @@ export default function ItemPage() {
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-extrabold text-red-700 leading-tight">You&apos;ve been outbid</div>
                   <div className="text-xs text-red-600 leading-tight mt-0.5">
-                    Someone went higher — raise your bid below to get back in front.
+                    Someone went higher — tap Bid at the bottom to get back in front.
                   </div>
                 </div>
               </div>
@@ -1206,7 +1206,7 @@ export default function ItemPage() {
               setHasCard(true);
               refreshCardStatus();
               setMessage({
-                text: "Card saved! Click Place Bid to confirm your bid.",
+                text: "Card saved! Tap Bid at the bottom to place your bid.",
                 type: "success",
               });
             }}

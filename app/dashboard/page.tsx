@@ -8,6 +8,7 @@ import Pusher from "pusher-js";
 import UserMenu from "@/app/components/UserMenu";
 import CardSetupModal from "@/app/components/CardSetupModal";
 import { PineMark, WoodenCrate } from "@/app/components/Illustrations";
+import { IcoTrophy, IcoGift } from "@/app/components/BidIcons";
 import Skeleton from "@/app/components/Skeleton";
 import PickupStatusCard from "@/app/components/PickupStatusCard";
 import ItemCardTimer from "@/app/components/ItemCardTimer";
@@ -738,7 +739,9 @@ function BidderDashboardInner() {
                         </div>
                         <div className="text-right shrink-0">
                           <div className="text-[#6c4d39] font-bold text-sm">${b.myBid.toLocaleString()}</div>
-                          <div className="text-xs text-[#563e2c] font-semibold mt-0.5">{ended ? "🎉 You won" : "✓ Winning"}</div>
+                          <div className="text-xs text-[#563e2c] font-semibold mt-0.5 inline-flex items-center gap-1">
+                            {ended ? <><IcoTrophy className="w-3.5 h-3.5" /> You won</> : "✓ Winning"}
+                          </div>
                         </div>
                       </Link>
                       );
@@ -961,8 +964,8 @@ function BidderDashboardInner() {
                             <div className="text-right shrink-0">
                               <div className="text-[#8a7559] text-xs">your winning bid</div>
                               <div className="text-[#5f7a45] font-extrabold text-lg">{money(b.myBid)}</div>
-                              <div className="text-xs bg-[#5f7a45]/15 text-[#4a6235] font-bold px-2 py-0.5 rounded-full mt-0.5 inline-block">
-                                {ended ? "🎉 You won" : "✓ Winning — all set"}
+                              <div className="text-xs bg-[#5f7a45]/15 text-[#4a6235] font-bold px-2 py-0.5 rounded-full mt-0.5 inline-flex items-center gap-1">
+                                {ended ? <><IcoTrophy className="w-3.5 h-3.5" /> You won</> : "✓ Winning — all set"}
                               </div>
                             </div>
                             <Link
@@ -1089,7 +1092,7 @@ function BidderDashboardInner() {
                               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                                 b.giveaway ? "bg-[#4a7c59]/15 text-[#2f7a48]" : b.paid ? "bg-[#5f7a45]/15 text-[#4a6235]" : "bg-orange-500/15 text-orange-600"
                               }`}>
-                                {b.giveaway ? "🎁 Free win" : b.paid ? "Paid" : "Awaiting payment"}
+                                {b.giveaway ? <span className="inline-flex items-center gap-1"><IcoGift className="w-3.5 h-3.5" /> Free win</span> : b.paid ? "Paid" : "Awaiting payment"}
                               </span>
                               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                                 b.pickedUp ? "bg-[#5f7a45]/18 text-[#3f5226]" : "bg-[#c47b3e]/20 text-[#8a4f1c]"
