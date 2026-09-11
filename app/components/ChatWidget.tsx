@@ -53,7 +53,8 @@ function shouldShow(pathname: string | null): boolean {
   if (!pathname) return false;
   if (HIDE_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"))) return false;
   if (pathname === "/") return true; // home
-  if (pathname.includes("/item/")) return true; // item preview
+  // Item pages have the sticky bid bar along the bottom — the bubble would sit on it.
+  if (pathname.includes("/item/")) return false;
   // Auction / bid-preview page: /{orgSlug}/{auctionSlug}
   const segs = pathname.split("/").filter(Boolean);
   if (segs.length === 2 && !RESERVED_FIRST.has(segs[0])) return true;

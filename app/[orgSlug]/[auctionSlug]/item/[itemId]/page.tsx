@@ -1130,19 +1130,15 @@ export default function ItemPage() {
         </div>
       </div>
 
-      {/* Clearance so the sticky bid bar (raised above the chat bubble on phones)
-          never covers the last content. */}
-      <div className="pb-44 sm:pb-28" />
+      {/* Clearance so the sticky bid bar never covers the last content. */}
+      <div className="pb-28" />
 
       {/* ── Sticky bid bar ──
           Always in reach at the bottom of the screen: current bid on the left, the
           next bid as one big button on the right. Double-tap to place (first tap arms,
           second confirms) — same safety as before, just always a thumb away. */}
       {!biddingLocked && isLoaded && (
-        /* Sits ABOVE the bottom-right chat bubble on phones so the bubble never covers
-           the bid button; drops to the bottom on wider screens where the centered bar
-           doesn't reach the corner. */
-        <div className="fixed inset-x-0 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] sm:bottom-0 z-40 px-3 sm:pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+        <div className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
           <div className="max-w-2xl mx-auto bg-white border border-[#e3d6bf] rounded-2xl shadow-[0_-8px_30px_-10px_rgba(36,26,18,0.35)] px-4 py-3 flex items-center gap-3">
             <div className="min-w-0 flex-1 flex items-baseline gap-2">
               <span className={`font-extrabold text-3xl leading-none tabular-nums ${priceColor}`}>
