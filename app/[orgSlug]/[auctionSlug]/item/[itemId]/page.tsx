@@ -732,31 +732,29 @@ export default function ItemPage() {
               `grid-cols-2` containing a single child, which left a literal empty
               half-width hole beside it. */}
           <div className="mt-2 rounded-2xl border border-[#e3d6bf] bg-white overflow-hidden">
-            <div className="flex items-stretch divide-x divide-[#e3d6bf]">
-              <div className="flex-1 px-4 py-3 min-w-0">
-                <div className="text-[#8a7559] text-xs font-semibold uppercase tracking-wide">
-                  {item.currentBid > 0 ? "Current bid" : "Starting bid"}
+            {/* The current bid lives ONLY in the sticky bar at the bottom now — this
+                row is just retail context + activity, so the number isn't shown twice. */}
+            <div className="flex items-center justify-between gap-3 px-4 py-3">
+              {item.retailValue ? (
+                <div className="min-w-0">
+                  <div className="text-[#8a7559] text-xs font-semibold uppercase tracking-wide">Retail</div>
+                  <div className="text-[#a32d2d] font-extrabold text-xl leading-tight tabular-nums mt-0.5 line-through decoration-2 decoration-[#a32d2d]/50">
+                    ${item.retailValue.toLocaleString()}
+                  </div>
                 </div>
-                <div className={`font-extrabold text-3xl leading-tight tabular-nums mt-0.5 truncate ${priceColor}`}>
-                  ${currentBid.toLocaleString()}
-                </div>
+              ) : (
+                <div className="text-[#8a7559] text-xs font-semibold uppercase tracking-wide">Bidding</div>
+              )}
+              <div className="text-right shrink-0">
+                {item.retailValue && currentBid > 0 && item.retailValue > currentBid ? (
+                  <div className="font-extrabold text-lg leading-tight text-[#4a7c59]">
+                    {Math.round((1 - currentBid / item.retailValue) * 100)}% off
+                  </div>
+                ) : null}
                 <div className="text-xs text-[#8a7559] mt-0.5">
                   {bidCount} bid{bidCount !== 1 ? "s" : ""}
                 </div>
               </div>
-              {item.retailValue ? (
-                <div className="px-4 py-3 shrink-0 flex flex-col justify-center bg-[#faf5ea]">
-                  <div className="text-[#8a7559] text-xs font-semibold uppercase tracking-wide">Retail</div>
-                  <div className="text-[#a32d2d] font-extrabold text-xl leading-tight tabular-nums mt-0.5">
-                    ${item.retailValue.toLocaleString()}
-                  </div>
-                  {currentBid > 0 && item.retailValue > currentBid && (
-                    <div className="text-[11px] font-bold text-[#4a7c59] mt-0.5">
-                      {Math.round((1 - currentBid / item.retailValue) * 100)}% below
-                    </div>
-                  )}
-                </div>
-              ) : null}
             </div>
 
           {/* ── 4. Bidding — SAME card, divided by a hairline. One unified surface
