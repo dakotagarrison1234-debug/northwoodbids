@@ -727,7 +727,7 @@ function BidderDashboardInner() {
                     </button>
                   </div>
                   <div className="space-y-2">
-                    {winning.slice(0, 3).map((b) => {
+                    {winning.map((b) => {
                       const ended = new Date(b.itemEndAt ?? b.auctionEndAt).getTime() <= Date.now();
                       return (
                       <Link key={b.itemId} href={`/${b.orgSlug}/${b.auctionSlug}/item/${b.itemId}`}
@@ -759,7 +759,7 @@ function BidderDashboardInner() {
                     </button>
                   </div>
                   <div className="space-y-2">
-                    {losingSorted.slice(0, 3).map((b) => (
+                    {losingSorted.map((b) => (
                       <div key={b.itemId} className="flex items-center gap-2 bg-white border border-red-500/15 rounded-2xl pl-4 pr-2 py-3 hover:border-red-200 transition-all">
                         <Link href={`/${b.orgSlug}/${b.auctionSlug}/item/${b.itemId}`} className="flex items-center gap-3 flex-1 min-w-0">
                           <Photo url={b.photo} title={b.itemTitle} />

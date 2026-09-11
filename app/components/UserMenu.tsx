@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useUser, useClerk } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { Avatar, hasAvatar } from "./Avatars";
+import { IcoStar } from "./BidIcons";
 
 interface MeData {
   orgId?: string | null;
@@ -237,6 +238,7 @@ export default function UserMenu() {
 
           <SectionLabel>My Bids</SectionLabel>
           <NavLink href="/dashboard" iconEl={<IcoGavel />} label="My Bids" sublabel="Active, past wins & invoices" onClick={close} accent="red" />
+          <NavLink href="/watchlist" iconEl={<IcoStar className="w-4 h-4" filled />} label="Watchlist" sublabel="Lots you're keeping an eye on" onClick={close} />
           <NavLink href="/pickup" iconEl={<IcoPickup />} label="Pickup" sublabel="Schedule item collection" onClick={close} />
           <NavLink href="/refer" iconEl={<IcoGift />} label="Bid Bucks" sublabel="Invite friends, get $5 off" onClick={close} accent="brown" />
 

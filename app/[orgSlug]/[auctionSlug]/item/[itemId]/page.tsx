@@ -7,6 +7,7 @@ import { useUser, SignInButton } from "@clerk/nextjs";
 import Pusher from "pusher-js";
 import Countdown from "@/app/components/Countdown";
 import { getNextValidBid, getProxySuggestions } from "@/lib/bidIncrements";
+import { IcoStar, IcoShare } from "@/app/components/BidIcons";
 import CardSetupModal from "@/app/components/CardSetupModal";
 import MaxBidExplainerModal from "@/app/components/MaxBidExplainerModal";
 import ExpandableDescription from "@/app/components/ExpandableDescription";
@@ -81,6 +82,57 @@ export default function ItemPage() {
   const [cardBrand, setCardBrand] = useState<string | null>(null);
   const [showCardModal, setShowCardModal] = useState(false);
   const [showMaxBidExplainer, setShowMaxBidExplainer] = useState(false);
+
+  // ── Watchlist + share ──
+  const [watched, setWatched] = useState(false);
+  const [watchBusy, setWatchBusy] = useState(false);
+  const [refCode, setRefCode] = useState<string | null>(null);
+  const [shareNote, setShareNote] = useState<string | null>(null);
+
+  // Star state + the user's referral code (so a share doubles as a Bid Bucks invite).
+  // Prefetched on mount: navigator.share must fire inside the tap, so no awaits then.
+  useEffect(() => {
+    if (!isSignedIn) return;
+    fetch("/api/watchlist").then((r) => r.json()).then((d) => {
+      if (Array.isArray(d.ids)) setWatched(d.ids.includes(itemId));
+    }).catch(() => {});
+    fetch("/api/referral/summary").then((r) => (r.ok ? r.json() : null)).then((d) => {
+      if (d?.code) setRefCode(String(d.code));
+    }).catch(() => {});
+  }, [isSignedIn, itemId]);
+
+  const toggleWatch = async () => {
+    if (watchBusy) return;
+    const next = !watched;
+    setWatched(next); // optimistic
+    setWatchBusy(true);
+    try {
+      const res = next
+        ? await fetch("/api/watchlist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ itemId }) })
+        : await fetch(`/api/watchlist?itemId=${encodeURIComponent(itemId)}`, { method: "DELETE" });
+      if (!res.ok) setWatched(!next); // revert
+    } catch { setWatched(!next); }
+    setWatchBusy(false);
+  };
+
+  const shareItem = async () => {
+    if (typeof window === "undefined" || !item) return;
+    const path = window.location.pathname;
+    // Signed-in bidders share through their referral link so the recipient lands on
+    // THIS lot and, if they sign up, credits the sharer's Bid Bucks.
+    const url = refCode
+      ? `${window.location.origin}/r/${refCode}?to=${encodeURIComponent(path)}`
+      : `${window.location.origin}${path}`;
+    const data = { title: item.title, text: `Check out this lot on Northwood Bids — bidding starts at $2.`, url };
+    if (navigator.share) {
+      try { await navigator.share(data); return; } catch { /* cancelled */ return; }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareNote("Link copied");
+      setTimeout(() => setShareNote(null), 1800);
+    } catch { /* ignore */ }
+  };
 
   // Stable bidder anonymization map
   const bidderMapRef = useRef<Map<string, string>>(new Map());
@@ -694,7 +746,49 @@ export default function ItemPage() {
               attributes sit under the name, as a supporting line. */}
           {/* Smaller + tighter line-height so a long title stays 1-2 lines instead of
               eating vertical space. font-sans (not display) is narrower per glyph. */}
-          <h1 className="text-lg sm:text-xl font-bold leading-snug">{item.title}</h1>
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="text-lg sm:text-xl font-bold leading-snug min-w-0">{item.title}</h1>
+            {/* Watch + Share — small, quiet, always in the same spot. */}
+            <div className="flex items-center gap-1.5 shrink-0 -mt-0.5">
+              {isSignedIn ? (
+                <button
+                  onClick={toggleWatch}
+                  disabled={watchBusy}
+                  aria-pressed={watched}
+                  aria-label={watched ? "Remove from watchlist" : "Add to watchlist"}
+                  title={watched ? "Watching" : "Watch this lot"}
+                  className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-colors ${
+                    watched
+                      ? "bg-[#c47b3e] border-[#c47b3e] text-white"
+                      : "bg-white border-[#cdbda3] text-[#6f5b46] hover:border-[#c47b3e] hover:text-[#c47b3e]"
+                  }`}
+                >
+                  <IcoStar className="w-5 h-5" filled={watched} />
+                </button>
+              ) : (
+                <SignInButton mode="modal">
+                  <button aria-label="Sign in to watch this lot" title="Watch this lot" className="w-10 h-10 rounded-xl border bg-white border-[#cdbda3] text-[#6f5b46] flex items-center justify-center hover:border-[#c47b3e] hover:text-[#c47b3e]">
+                    <IcoStar className="w-5 h-5" />
+                  </button>
+                </SignInButton>
+              )}
+              <div className="relative">
+                <button
+                  onClick={shareItem}
+                  aria-label="Share this lot"
+                  title="Share"
+                  className="w-10 h-10 rounded-xl border bg-white border-[#cdbda3] text-[#6f5b46] flex items-center justify-center hover:border-[#6c4d39] hover:text-[#6c4d39] transition-colors"
+                >
+                  <IcoShare className="w-5 h-5" />
+                </button>
+                {shareNote && (
+                  <span className="absolute right-0 top-full mt-1 whitespace-nowrap bg-[#241a12] text-[#f6ecda] text-xs font-bold px-2.5 py-1 rounded-lg">
+                    {shareNote}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
 
           <div className="flex items-start justify-between gap-2 mt-1.5">
             <div className="flex items-center gap-1.5 flex-wrap min-w-0">

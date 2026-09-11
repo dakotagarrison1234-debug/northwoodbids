@@ -165,6 +165,7 @@ enum AuctionStatus {
   // PENDING_PICKUP for the winner exactly like an auction win.
   giveawayId          String?
   giveaway            Giveaway?          @relation(fields: [giveawayId], references: [id], onDelete: SetNull)
+  watchers            WatchlistItem[]
 
   @@index([status, itemEndAt])
   @@index([auctionId, status])
@@ -585,6 +586,22 @@ model ProductLookupCache {
   updatedAt DateTime @default(now()) @updatedAt
 
   @@index([updatedAt])
+}
+
+/**
+ * A bidder's watchlist — lots they've starred to keep an eye on. Only live and
+ * upcoming lots are ever shown; rows for lots that have ended are pruned the next
+ * time the list is read, so it can never fill with stale history.
+ */
+model WatchlistItem {
+  id          String   @id @default(cuid())
+  clerkUserId String
+  itemId      String
+  item        Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([clerkUserId, itemId])
+  @@index([clerkUserId])
 }
 
 enum GiveawayStatus {

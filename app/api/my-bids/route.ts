@@ -8,9 +8,10 @@ export async function GET() {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Cap counts DISTINCT ITEMS, not raw bids — a heavy bidder on a single item must
-  // never push their other items (including unpaid/won ones) past the limit and hide them.
-  const ITEM_CAP = 500;
+  // Counts DISTINCT ITEMS, not raw bids. Deliberately huge: a bidder must see EVERY
+  // lot they're in — 100 outbid items means 100 on screen, never a silent cutoff.
+  // The number only exists as a runaway guard, not a view limit.
+  const ITEM_CAP = 10000;
 
   const [profile, biddedItems] = await Promise.all([
     prisma.bidderProfile.findUnique({

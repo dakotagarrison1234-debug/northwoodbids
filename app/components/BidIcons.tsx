@@ -164,6 +164,24 @@ export function IcoTrophy({ className = "w-5 h-5" }: P) {
   );
 }
 
+/** Watchlist star — outline by default, solid when `filled` (i.e. currently watching). */
+export function IcoStar({ className = "w-5 h-5", filled = false }: P & { filled?: boolean }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth={1.9}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 17.1 6.6 20l1.1-6.1L3.2 9.6l6.1-.8z" />
+    </svg>
+  );
+}
+
 export function IcoTarget({ className = "w-5 h-5" }: P) {
   return (
     <svg {...base(className)}>
