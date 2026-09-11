@@ -7,7 +7,6 @@ import { useUser, SignInButton } from "@clerk/nextjs";
 import Pusher from "pusher-js";
 import Countdown from "@/app/components/Countdown";
 import { getNextValidBid, getProxySuggestions } from "@/lib/bidIncrements";
-import { IcoTrophy } from "@/app/components/BidIcons";
 import CardSetupModal from "@/app/components/CardSetupModal";
 import MaxBidExplainerModal from "@/app/components/MaxBidExplainerModal";
 import ExpandableDescription from "@/app/components/ExpandableDescription";
@@ -958,17 +957,22 @@ export default function ItemPage() {
                   {showWinning && (
                     /* The single winning indicator. You can't outbid yourself, so no bid
                        controls — just confirm the lead and the amount, total shown below. */
-                    <div className={`rounded-xl bg-green-50 border-2 border-green-300 px-4 py-3.5 flex items-center gap-3 ${winFlash ? "nb-pop" : ""}`}>
-                      <span className="w-9 h-9 rounded-full bg-green-600 text-white grid place-items-center shrink-0">
-                        <IcoTrophy className="w-5 h-5" />
-                      </span>
+                    <div className={`rounded-2xl bg-[#241a12] text-[#f6ecda] px-4 py-3.5 flex items-center justify-between gap-3 ${winFlash ? "nb-pop" : ""}`}>
                       <div className="min-w-0">
-                        <p className="text-base font-extrabold text-green-800 leading-tight">
-                          You&apos;re winning at ${currentBid.toLocaleString()}
+                        <div className="flex items-center gap-2">
+                          <span className="relative flex h-2 w-2 shrink-0">
+                            <span className="absolute inline-flex h-full w-full rounded-full bg-[#f0a35a] opacity-75 animate-ping" />
+                            <span className="relative inline-flex h-2 w-2 rounded-full bg-[#f0a35a]" />
+                          </span>
+                          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#f0a35a]">You&apos;re in the lead</p>
+                        </div>
+                        <p className="text-xs text-[#f6ecda]/70 leading-tight mt-1">
+                          We&apos;ll text you the second anyone passes you.
                         </p>
-                        <p className="text-xs text-green-700 leading-tight mt-0.5">
-                          We&apos;ll alert you the moment someone passes you.
-                        </p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="font-extrabold text-2xl leading-none tabular-nums">${currentBid.toLocaleString()}</div>
+                        <div className="text-[10px] font-bold uppercase tracking-wide text-[#f6ecda]/60 mt-0.5">your bid</div>
                       </div>
                     </div>
                   )}
@@ -1126,15 +1130,19 @@ export default function ItemPage() {
         </div>
       </div>
 
-      {/* Clearance so the sticky bid bar never covers the last content. */}
-      <div className="pb-28" />
+      {/* Clearance so the sticky bid bar (raised above the chat bubble on phones)
+          never covers the last content. */}
+      <div className="pb-44 sm:pb-28" />
 
       {/* ── Sticky bid bar ──
           Always in reach at the bottom of the screen: current bid on the left, the
           next bid as one big button on the right. Double-tap to place (first tap arms,
           second confirms) — same safety as before, just always a thumb away. */}
       {!biddingLocked && isLoaded && (
-        <div className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+        /* Sits ABOVE the bottom-right chat bubble on phones so the bubble never covers
+           the bid button; drops to the bottom on wider screens where the centered bar
+           doesn't reach the corner. */
+        <div className="fixed inset-x-0 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] sm:bottom-0 z-40 px-3 sm:pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
           <div className="max-w-2xl mx-auto bg-white border border-[#e3d6bf] rounded-2xl shadow-[0_-8px_30px_-10px_rgba(36,26,18,0.35)] px-4 py-3 flex items-center gap-3">
             <div className="min-w-0 flex-1 flex items-baseline gap-2">
               <span className={`font-extrabold text-3xl leading-none tabular-nums ${priceColor}`}>
@@ -1152,8 +1160,12 @@ export default function ItemPage() {
                 </button>
               </SignInButton>
             ) : showWinning ? (
-              <span className="shrink-0 inline-flex items-center gap-1.5 bg-green-50 border-2 border-green-300 text-green-800 font-extrabold px-4 py-3 rounded-xl text-sm">
-                <IcoTrophy className="w-4 h-4" /> You&apos;re winning
+              <span className="shrink-0 inline-flex items-center gap-2 bg-[#241a12] text-[#f6ecda] font-extrabold px-5 py-3.5 rounded-xl text-base tracking-tight">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-[#f0a35a] opacity-75 animate-ping" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[#f0a35a]" />
+                </span>
+                Winning
               </span>
             ) : (
               <button
