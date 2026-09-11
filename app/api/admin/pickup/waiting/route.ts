@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg } from "@/lib/auth";
+import { healPickupLinks } from "@/lib/pickupIntegrity";
 
 // Winners with paid items that aren't on an appointment yet. Now returns each
 // person's item list too, so staff can gather them early (before a booking).
@@ -9,6 +10,10 @@ export async function GET() {
   const membership = await getUserOrg();
   if (!membership) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const orgId = membership.organizationId;
+
+  // Put any dangling item (cancelled appt / finished transfer) back in the waiting
+  // list before we read it — nothing may be invisible.
+  await healPickupLinks(orgId);
 
   const items = await prisma.item.findMany({
     // Exclude items out on an active transfer — they live on the Transfers board and

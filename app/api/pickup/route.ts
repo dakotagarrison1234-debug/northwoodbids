@@ -8,6 +8,7 @@ import {
   getUnscheduledPickupItemIds,
 } from "@/lib/pickup";
 import { notifyAppointmentBooked } from "@/lib/appointmentNotify";
+import { healPickupLinks } from "@/lib/pickupIntegrity";
 
 type ItemCard = {
   id: string;
@@ -27,6 +28,10 @@ export async function GET() {
 
     const org = await prisma.organization.findFirst();
     if (!org) return NextResponse.json({ error: "No organization" }, { status: 404 });
+
+    // Re-surface any item dangling on a cancelled appointment / finished transfer
+    // so the customer always sees everything they've paid for.
+    await healPickupLinks(org.id);
 
     // The bidder's chosen preferred pickup location (drives ready-vs-transfer).
     const profile = await prisma.bidderProfile.findUnique({

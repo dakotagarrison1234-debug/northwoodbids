@@ -285,23 +285,86 @@ export default function AdminPickupPage() {
 
   // Add loose / just-arrived items to a customer's existing appointment ("click and
   // add"). Reloads the waiting list + appointments so the item moves onto the order.
+  // ── "Find an item" — the answer to "where did it go?" ──
+  // Asks the server for ONE honest location per item (appointment / transfer /
+  // loose / collected). Nothing can hide from this; it also heals dangling links.
+  type Located = {
+    id: string; title: string; itemCode: string | null; status: string;
+    warehouse: { id: string; name: string } | null; storageLocation: string | null; gatherSpot: string | null;
+    owner: { clerkUserId: string; name: string | null; phone: string | null } | null;
+    place:
+      | { kind: "collected"; pickedUpAt: string | null; appointmentId: string | null }
+      | { kind: "appointment"; appointmentId: string; startsAt: string; status: string; locationId: string; locationName: string; stagedSpot: string | null }
+      | { kind: "transfer"; transferId: string; status: string; toLocationId: string; toLocationName: string; stagedSpot: string | null }
+      | { kind: "loose" }
+      | { kind: "not_won" };
+  };
+  const [locateQ, setLocateQ] = useState("");
+  const [located, setLocated] = useState<Located[] | null>(null);
+  const [locating, setLocating] = useState(false);
+  useEffect(() => {
+    if (!locateQ.trim()) { setLocated(null); return; }
+    setLocating(true);
+    const t = setTimeout(() => {
+      fetch(`/api/admin/pickup/locate?q=${encodeURIComponent(locateQ.trim())}`)
+        .then((r) => r.json())
+        .then((d) => setLocated(d.results ?? []))
+        .catch(() => setLocated([]))
+        .finally(() => setLocating(false));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [locateQ]);
+
+  // Jump straight to wherever the item is, switching tab + warehouse as needed.
+  const jumpTo = (r: Located) => {
+    const p = r.place;
+    if (p.kind === "appointment") {
+      setTab("pickups");
+      setApptLocationId(p.locationId);
+      setSelectedApptId(p.appointmentId);
+      setTimeout(() => document.getElementById(`appt-${p.appointmentId}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 250);
+    } else if (p.kind === "transfer") {
+      setTab("transfers");
+      setTimeout(() => document.getElementById(`transfer-${p.transferId}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 250);
+    } else if (p.kind === "loose") {
+      setTab("pickups");
+      if (r.warehouse) setApptLocationId(r.warehouse.id);
+      if (r.owner) setExpandedWaitingId(r.owner.clerkUserId);
+      setTimeout(() => r.owner && document.getElementById(`waiting-${r.owner.clerkUserId}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 250);
+    } else if (p.kind === "collected") {
+      setTab("pickups");
+      setShowCollected(true);
+      if (p.appointmentId) {
+        setSelectedApptId(p.appointmentId);
+        setTimeout(() => document.getElementById(`appt-${p.appointmentId}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 250);
+      }
+    }
+    setLocateQ("");
+  };
+
   const [addingApptId, setAddingApptId] = useState<string | null>(null);
-  const addToAppointment = async (apptId: string, itemIds: string[]) => {
+  const addToAppointment = async (appt: Appointment, itemIds: string[]) => {
     if (itemIds.length === 0) return;
-    setAddingApptId(apptId);
+    setAddingApptId(appt.id);
     try {
-      const res = await fetch(`/api/admin/pickup/appointments/${apptId}/add-items`, {
+      const res = await fetch(`/api/admin/pickup/appointments/${appt.id}/add-items`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ itemIds }),
       });
       const data = await res.json();
       if (data.success) {
+        const when = new Date(appt.startsAt).toLocaleString("en-US", { timeZone: "America/Detroit", weekday: "short", hour: "numeric", minute: "2-digit" });
         flash(
-          `Added ${data.added} item${data.added !== 1 ? "s" : ""} to the pickup${data.unstaged ? " — re-gather & re-stage the box" : ""}.`,
+          `Added ${data.added} item${data.added !== 1 ? "s" : ""} to ${bidderPrimary(appt.bidder)}'s ${when} pickup at ${appt.location.name}${data.unstaged ? " — re-gather & re-stage the box" : ""}.`,
           true
         );
         await Promise.all([loadWaiting(), loadAppointments()]);
+        // NEVER let the item vanish from view: if that pickup is at a warehouse the
+        // board is currently hiding, switch to it, then open the pickup it went onto.
+        if (apptLocationId !== "all" && apptLocationId !== appt.locationId) setApptLocationId(appt.locationId);
+        setSelectedApptId(appt.id);
+        setTimeout(() => document.getElementById(`appt-${appt.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 250);
       } else {
         flash(data.error || "Couldn't add to the pickup.", false);
       }
@@ -1103,7 +1166,63 @@ export default function AdminPickupPage() {
   return (
     <>
       <header className="border-b border-[#e3d6bf] px-4 sm:px-8 py-4">
-        <h1 className="text-2xl sm:text-3xl font-semibold">Pickup</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h1 className="text-2xl sm:text-3xl font-semibold">Pickup</h1>
+          {/* Find an item — where is it RIGHT NOW? Tag #, title, or customer. */}
+          <div className="relative w-full sm:max-w-md">
+            <input
+              type="text"
+              value={locateQ}
+              onChange={(e) => setLocateQ(e.target.value)}
+              placeholder="Find an item — tag #, title, or customer…"
+              className="w-full bg-white border-2 border-slate-300 rounded-2xl pl-10 pr-4 min-h-[44px] text-base text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-900"
+            />
+            <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="10.5" cy="10.5" r="6.5" /><path d="M20 20l-4.5-4.5" /></svg>
+            {locateQ.trim() && (
+              <div className="absolute z-30 left-0 right-0 mt-1 bg-white border-2 border-slate-200 rounded-2xl shadow-xl overflow-hidden max-h-[60vh] overflow-y-auto">
+                {locating && !located ? (
+                  <div className="px-4 py-3 text-sm text-slate-500">Looking…</div>
+                ) : !located || located.length === 0 ? (
+                  <div className="px-4 py-3 text-sm text-slate-500">No sold items match that.</div>
+                ) : (
+                  located.map((r) => {
+                    const p = r.place;
+                    const where =
+                      p.kind === "appointment"
+                        ? `On ${new Date(p.startsAt).toLocaleString("en-US", { timeZone: "America/Detroit", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} pickup · ${p.locationName}${p.stagedSpot ? ` · staged ${p.stagedSpot}` : ""}`
+                        : p.kind === "transfer"
+                        ? `On transfer to ${p.toLocationName} (${p.status === "LOADED" ? "loaded / in transit" : "gathering"})${p.stagedSpot ? ` · staged ${p.stagedSpot}` : ""}`
+                        : p.kind === "collected"
+                        ? `Collected${p.pickedUpAt ? " " + new Date(p.pickedUpAt).toLocaleDateString("en-US", { timeZone: "America/Detroit", month: "short", day: "numeric" }) : ""}`
+                        : p.kind === "loose"
+                        ? `Waiting — loose at ${r.warehouse?.name ?? "no warehouse set"}${r.gatherSpot ? ` · gathered ${r.gatherSpot}` : r.storageLocation ? ` · shelf ${r.storageLocation}` : ""}`
+                        : "Sold, but no winner on record";
+                    const tone =
+                      p.kind === "appointment" ? "text-blue-700 bg-blue-50" :
+                      p.kind === "transfer" ? "text-amber-800 bg-amber-50" :
+                      p.kind === "collected" ? "text-slate-600 bg-slate-100" :
+                      p.kind === "loose" ? "text-[#4f6639] bg-[#5f7a45]/12" : "text-red-700 bg-red-50";
+                    return (
+                      <button key={r.id} onClick={() => jumpTo(r)} className="w-full text-left px-4 py-3 border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="font-bold text-slate-900 truncate">
+                              {r.itemCode && <span className="font-mono text-[#6c4d39] mr-1.5">{r.itemCode}</span>}
+                              {r.title}
+                            </div>
+                            <div className="text-xs text-slate-500 truncate">{r.owner?.name ?? "—"}{r.owner?.phone ? ` · ${r.owner.phone}` : ""}</div>
+                          </div>
+                          <span className="shrink-0 text-xs font-bold text-slate-700">Jump →</span>
+                        </div>
+                        <div className={`mt-1.5 inline-block text-xs font-bold px-2 py-0.5 rounded-full ${tone}`}>{where}</div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </div>
+        </div>
         {/* Horizontal-scroll tab strip so four tabs never wrap or squash on a phone. */}
         <div className="flex gap-2 mt-3 overflow-x-auto -mx-4 px-4 pb-1 sm:mx-0 sm:px-0">
           {(["pickups", "transfers", "locations"] as const).map((t) => {
@@ -1249,6 +1368,7 @@ export default function AdminPickupPage() {
                     return (
                       <div
                         key={a.id}
+                        id={`appt-${a.id}`}
                         className={`border-2 rounded-xl overflow-hidden ${
                           isLate(a)
                             ? "bg-red-50 border-red-400"
@@ -1338,7 +1458,7 @@ export default function AdminPickupPage() {
                       {laterAppts.map((a) => {
                         const expanded = selectedApptId === a.id;
                         return (
-                          <div key={a.id} className={`border rounded-xl overflow-hidden ${isLate(a) ? "bg-red-50 border-red-400" : "bg-white border-[#e3d6bf]"}`}>
+                          <div key={a.id} id={`appt-${a.id}`} className={`border rounded-xl overflow-hidden ${isLate(a) ? "bg-red-50 border-red-400" : "bg-white border-[#e3d6bf]"}`}>
                             {/* Compact row — name, time, location, item count. Click to expand. */}
                             <button
                               onClick={() => setSelectedApptId(expanded ? null : a.id)}
@@ -1553,7 +1673,16 @@ export default function AdminPickupPage() {
                     const allScopedGathered = scopedItems.length > 0 && scopedGathered === scopedItems.length;
                     // Does this customer already have a booked pickup? If so, their loose
                     // items at that pickup's warehouse can be added straight to it.
-                    const custAppt = appointments.find((ap) => ap.clerkUserId === w.clerkUserId && ap.status === "SCHEDULED");
+                    // Pick the RIGHT pickup: the one at the warehouse you're working (or
+                    // where their loose items actually are) — never blindly their first.
+                    const custAppts = appointments
+                      .filter((ap) => ap.clerkUserId === w.clerkUserId && ap.status === "SCHEDULED")
+                      .sort((x, y) => new Date(x.startsAt).getTime() - new Date(y.startsAt).getTime());
+                    const scopedName = apptLocationId !== "all" ? locations.find((l) => l.id === apptLocationId)?.name : undefined;
+                    const custAppt =
+                      (scopedName ? custAppts.find((ap) => ap.location.name === scopedName) : undefined) ??
+                      custAppts.find((ap) => w.itemList.some((i) => !i.transferring && i.warehouse === ap.location.name)) ??
+                      custAppts[0];
                     const addableToAppt = custAppt
                       ? w.itemList.filter((i) => !i.transferring && i.warehouse === custAppt.location.name)
                       : [];
@@ -1561,7 +1690,7 @@ export default function AdminPickupPage() {
                       ? new Date(custAppt.startsAt).toLocaleString("en-US", { timeZone: "America/Detroit", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
                       : "";
                     return (
-                    <li key={w.clerkUserId} className={`bg-white border-2 rounded-2xl p-4 ${
+                    <li key={w.clerkUserId} id={`waiting-${w.clerkUserId}`} className={`bg-white border-2 rounded-2xl p-4 ${
                       w.hasLocation ? "border-slate-200" : "border-amber-200 bg-amber-50/40"
                     }`}>
                       <div className="flex items-start justify-between gap-3">
@@ -1634,13 +1763,13 @@ export default function AdminPickupPage() {
                           "click and add" so an arrived transfer isn't stranded. */}
                       {custAppt && addableToAppt.length > 0 && (
                         <button
-                          onClick={() => addToAppointment(custAppt.id, addableToAppt.map((i) => i.id))}
+                          onClick={() => addToAppointment(custAppt, addableToAppt.map((i) => i.id))}
                           disabled={addingApptId === custAppt.id}
                           className="w-full mt-3 inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base py-3 rounded-xl disabled:opacity-50"
                         >
                           {addingApptId === custAppt.id
                             ? "Adding…"
-                            : `＋ Add ${addableToAppt.length} item${addableToAppt.length !== 1 ? "s" : ""} to their ${apptWhen} pickup`}
+                            : `＋ Add ${addableToAppt.length} item${addableToAppt.length !== 1 ? "s" : ""} to their ${apptWhen} pickup at ${custAppt.location.name}`}
                         </button>
                       )}
 
@@ -1770,7 +1899,7 @@ export default function AdminPickupPage() {
               activeTransfers.map((t) => {
                 const expanded = expandedTransferId === t.id;
                 return (
-                <div key={t.id} className="bg-white border border-[#cdbda3] rounded-xl overflow-hidden">
+                <div key={t.id} id={`transfer-${t.id}`} className="bg-white border border-[#cdbda3] rounded-xl overflow-hidden">
                   <button
                     type="button"
                     onClick={() => setExpandedTransferId(expanded ? null : t.id)}

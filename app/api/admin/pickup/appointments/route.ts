@@ -2,12 +2,17 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg } from "@/lib/auth";
+import { healPickupLinks } from "@/lib/pickupIntegrity";
 
 // GET /api/admin/pickup/appointments — all SCHEDULED + COLLECTED appts for the org
 export async function GET() {
   try {
     const membership = await getUserOrg();
     if (!membership) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+    // Re-surface any item left dangling on a cancelled appointment / finished
+    // transfer before we build the board, so nothing can ever be invisible.
+    await healPickupLinks(membership.organizationId);
 
     const appointments = await prisma.pickupAppointment.findMany({
       where: {

@@ -80,6 +80,15 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       });
     }
 
+    // Cancelling via PATCH must free the items exactly like DELETE does — otherwise
+    // they'd stay linked to a cancelled appointment and appear in NO list ("gone").
+    if (status === "CANCELLED") {
+      await prisma.item.updateMany({
+        where: { pickupAppointmentId: id, status: "PENDING_PICKUP" },
+        data: { pickupAppointmentId: null },
+      });
+    }
+
     // When marked COLLECTED, mark all attached items as picked up.
     if (status === "COLLECTED") {
       await prisma.item.updateMany({
