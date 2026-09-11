@@ -13,6 +13,7 @@ import ScrollReveal from "./components/ScrollReveal";
 import JsonLd from "./components/JsonLd";
 import { localBusinessLd } from "@/lib/seo";
 import { WoodenCrate, BranchDivider } from "./components/Illustrations";
+import SectionHeader from "./components/SectionHeader";
 
 function IconSearch() {
   return (
@@ -181,13 +182,41 @@ export default async function HomePage() {
     }, 0)
   );
 
-  // Ticker feed: the hottest lots as a streaming live board.
-  const tickerLots = topItems.slice(0, 14).map((it) => ({
-    id: it.id,
-    title: it.title,
-    href: it.href,
-    currentBid: it.currentBid,
-  }));
+  // Ticker feed: the LATEST bids landing across live lots — "what just happened",
+  // a different story from the carousel's "what's hottest". It skips any lot the
+  // carousel already showcases so the two strips never repeat the same names
+  // side by side (falling back to overlap only if there's too little activity).
+  const carouselIds = new Set(topItems.slice(0, 12).map((it) => it.id));
+  const recentBids = await prisma.bid.findMany({
+    where: { item: { status: "ACTIVE", auction: { status: { in: ["OPEN", "CLOSING"] }, archived: false } } },
+    orderBy: { placedAt: "desc" },
+    take: 80,
+    select: {
+      amount: true,
+      itemId: true,
+      item: {
+        select: {
+          title: true,
+          auction: { select: { slug: true, organization: { select: { slug: true } } } },
+        },
+      },
+    },
+  });
+  const seenTicker = new Set<string>();
+  const latestLots: { id: string; title: string; href: string; currentBid: number }[] = [];
+  for (const b of recentBids) {
+    if (seenTicker.has(b.itemId)) continue; // one entry per lot — its most recent bid
+    if (!b.item.auction?.slug || !b.item.auction.organization?.slug) continue;
+    seenTicker.add(b.itemId);
+    latestLots.push({
+      id: b.itemId,
+      title: b.item.title,
+      href: `/${b.item.auction.organization.slug}/${b.item.auction.slug}/item/${b.itemId}`,
+      currentBid: Number(b.amount),
+    });
+  }
+  const fresh = latestLots.filter((l) => !carouselIds.has(l.id));
+  const tickerLots = (fresh.length >= 4 ? fresh : latestLots).slice(0, 14);
 
   // Local-business structured data — one entry per physical pickup location, straight
   // from the DB, so the schema always matches reality. Powers local/map ranking.
@@ -228,14 +257,16 @@ export default async function HomePage() {
       )}
 
       {/* Live Auctions */}
-      <section id="live-auctions" className="px-6 sm:px-8 pt-4 pb-14 sm:pb-16 max-w-6xl mx-auto">
-        <div className="flex items-center gap-3 mb-8">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#6c4d39] animate-pulse shrink-0" />
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#241a12]">Live Auctions</h2>
-          {activeAuctions.length > 0 && (
-            <span className="text-[#8a7559] text-sm font-medium">({activeAuctions.length})</span>
-          )}
-        </div>
+      <section id="live-auctions" className="px-6 sm:px-8 pt-8 pb-14 sm:pb-16 max-w-6xl mx-auto">
+        <BranchDivider className="w-56 h-6 mx-auto mb-6 opacity-80" />
+        <SectionHeader
+          variant="live"
+          eyebrow="Bidding is open"
+          title="Live Right Now"
+          tagline="Going once, going twice — get your bids in before the gavel drops."
+          count={activeAuctions.length}
+          countLabel={activeAuctions.length === 1 ? "auction" : "auctions"}
+        />
         {activeAuctions.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
             {activeAuctions.map((auction, idx) => (
@@ -273,11 +304,15 @@ export default async function HomePage() {
       {/* Upcoming Auctions */}
       {upcomingAuctions.length > 0 && (
         <section id="upcoming" className="px-6 sm:px-8 pb-14 sm:pb-16 max-w-6xl mx-auto">
-          <div className="flex items-center gap-3 mb-8">
-            <span className="text-[#8a7559]"><IconClock /></span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#241a12]">Coming Soon</h2>
-            <span className="text-[#8a7559] text-sm font-medium">({upcomingAuctions.length})</span>
-          </div>
+          <BranchDivider className="w-56 h-6 mx-auto mb-6 opacity-80" />
+          <SectionHeader
+            variant="upcoming"
+            eyebrow="Preview before it opens"
+            title="On Deck"
+            tagline="Scope the next drop early and line up your max bids."
+            count={upcomingAuctions.length}
+            countLabel={upcomingAuctions.length === 1 ? "auction" : "auctions"}
+          />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
             {upcomingAuctions.map((auction, idx) => (
               <ScrollReveal key={auction.id} delay={Math.min(idx, 5) * 80} className="h-full [&>*]:h-full nb-lift rounded-2xl">

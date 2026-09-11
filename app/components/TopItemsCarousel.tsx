@@ -2,7 +2,7 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import ItemCardTimer from "@/app/components/ItemCardTimer";
-import { IcoSpark } from "@/app/components/BidIcons";
+import SectionHeader from "@/app/components/SectionHeader";
 
 export type TopItem = {
   id: string;
@@ -55,10 +55,12 @@ export default function TopItemsCarousel({ items }: { items: TopItem[] }) {
 
   return (
     <section className="max-w-6xl mx-auto px-6 sm:px-8 pt-8">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="inline-flex items-center gap-2 text-xl sm:text-2xl font-extrabold tracking-tight text-[#241a12]"><IcoSpark className="w-5 h-5 text-[#c47b3e]" /> Hot right now</span>
-        <span className="text-[#8a7559] text-sm font-medium hidden sm:inline">— most-bid lots across live auctions</span>
-      </div>
+      <SectionHeader
+        variant="hot"
+        eyebrow="Most bid-on right now"
+        title="Heating Up"
+        tagline="The lots everyone's fighting over across every live auction."
+      />
       <div
         ref={ref}
         onMouseEnter={pause}
