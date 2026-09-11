@@ -99,21 +99,21 @@ function InvoiceInner() {
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M10 3 5 8l5 5" />
             </svg>
-            Back to My Bids
+            Your bids
           </Link>
           {data && !error && (
             <button
               onClick={() => window.print()}
               className="bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors"
             >
-              Print / Save PDF
+              Print or save PDF
             </button>
           )}
         </div>
 
         <div className="bg-white border border-[#e3d6bf] rounded-2xl shadow-sm print:border-0 print:shadow-none print:rounded-none p-5 sm:p-10 text-black">
           {loading ? (
-            <p className="text-[#8a7559] text-sm py-12 text-center">Loading receipt…</p>
+            <p className="text-[#8a7559] text-sm py-12 text-center">Pulling up your receipt</p>
           ) : error ? (
             <div className="py-12 text-center">
               <div className="w-12 h-12 rounded-full bg-red-50 border border-red-500/20 flex items-center justify-center mx-auto mb-4 text-red-600">
@@ -121,7 +121,7 @@ function InvoiceInner() {
                   <circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" />
                 </svg>
               </div>
-              <p className="text-base font-semibold text-[#241a12]">We couldn&apos;t load this receipt</p>
+              <p className="font-display text-lg font-bold text-[#241a12]">Couldn&apos;t load this receipt</p>
               <p className="text-sm text-[#8a7559] mt-1.5">{error}</p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-6">
                 <button
@@ -134,14 +134,15 @@ function InvoiceInner() {
                   href="/dashboard"
                   className="text-sm text-[#6c4d39] hover:text-[#563e2c] font-semibold transition-colors"
                 >
-                  Back to My Bids
+                  Your bids
                 </Link>
               </div>
             </div>
           ) : data?.empty ? (
-            <p className="text-[#6f5b46] text-base py-12 text-center">
-              No paid items for this auction yet.
-            </p>
+            <div className="py-12 text-center">
+              <p className="font-display text-lg font-bold text-[#241a12]">Nothing paid on this auction yet</p>
+              <p className="text-sm text-[#8a7559] mt-1.5">Your receipt fills in as soon as a win settles.</p>
+            </div>
           ) : data ? (
             <>
               {/* Header */}
@@ -149,10 +150,10 @@ function InvoiceInner() {
                 <div className="flex items-center gap-2.5 min-w-0">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={LOGO_URL} alt={data.business.name} className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0" />
-                  <div className="font-display text-base sm:text-xl font-bold leading-tight truncate">{data.business.name}</div>
+                  <div className="font-display text-base sm:text-xl font-black leading-tight truncate tracking-tight">{data.business.name}</div>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="font-display text-xl sm:text-2xl font-bold leading-none">Receipt</div>
+                  <div className="font-display text-xl sm:text-2xl font-black leading-none tracking-tight">Receipt</div>
                   <div className="text-xs sm:text-sm text-[#6f5b46] mt-1">
                     {new Date(data.date).toLocaleDateString("en-US", {
                       year: "numeric",
@@ -166,13 +167,13 @@ function InvoiceInner() {
               {/* Meta */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6 text-sm">
                 <div className="min-w-0">
-                  <div className="text-[#8a7559] uppercase tracking-wide text-xs font-semibold mb-1">
+                  <div className="text-[#8a7559] uppercase tracking-[0.14em] text-[10px] font-black mb-1">
                     Auction
                   </div>
                   <div className="font-semibold break-words">{data.auction.title}</div>
                 </div>
                 <div className="min-w-0 sm:text-left">
-                  <div className="text-[#8a7559] uppercase tracking-wide text-xs font-semibold mb-1">
+                  <div className="text-[#8a7559] uppercase tracking-[0.14em] text-[10px] font-black mb-1">
                     Buyer
                   </div>
                   <div className="font-semibold break-words">{data.buyer.name || "Bidder"}</div>
@@ -281,7 +282,7 @@ function InvoiceInner() {
                       <span>−{money(data.totals.credit)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between py-2.5 font-bold text-base">
+                  <div className="flex justify-between py-2.5 font-display font-black text-base">
                     <span>Grand total</span>
                     <span>{money(data.totals.grandTotal)}</span>
                   </div>
@@ -289,7 +290,7 @@ function InvoiceInner() {
               </div>
 
               <p className="text-xs text-[#8a7559] mt-8 pt-4 border-t border-[#e3d6bf]">
-                Thank you for your purchase. This receipt reflects items paid in full for this auction.
+                Thanks for bidding with Northwood. This receipt covers items paid in full for this auction. Pickup in Owosso or Gladwin.
               </p>
             </>
           ) : null}

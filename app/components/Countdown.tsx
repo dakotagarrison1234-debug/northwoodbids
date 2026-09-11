@@ -8,6 +8,11 @@ interface Props {
 
 type Tier = "closed" | "urgent" | "soon" | "normal";
 
+/**
+ * Inline "time left" for the lot page. Colour walks the brand ramp as the clock
+ * runs down: moss (plenty of time) → amber (inside the hour) → red + pulse
+ * (final five minutes). Same props as before; only the presentation changed.
+ */
 export default function Countdown({ endAt, onExpire }: Props) {
   const [timeLeft, setTimeLeft] = useState("");
   const [tier, setTier] = useState<Tier>("normal");
@@ -32,8 +37,6 @@ export default function Countdown({ endAt, onExpire }: Props) {
       const h = Math.floor((diff % 86400000) / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
-      // Color by urgency so the timer reads at a glance: green plenty of time,
-      // amber under an hour, red in the final few minutes.
       setTier(diff < 300_000 ? "urgent" : diff < 3_600_000 ? "soon" : "normal");
       if (d > 0) setTimeLeft(`${d}d ${h}h ${m}m`);
       else if (h > 0) setTimeLeft(`${h}h ${m}m ${s}s`);
@@ -47,12 +50,31 @@ export default function Countdown({ endAt, onExpire }: Props) {
 
   const cls =
     tier === "urgent"
-      ? "text-red-600 font-extrabold animate-pulse"
+      ? "text-[#b42318] font-extrabold"
       : tier === "soon"
-      ? "text-amber-600 font-bold"
+      ? "text-[#b06a28] font-bold"
       : tier === "closed"
       ? "text-[#8a7559] font-semibold"
-      : "text-green-700 font-bold";
+      : "text-[#3c6449] font-bold";
 
-  return <span className={cls}>{timeLeft || "..."}</span>;
+  const dot =
+    tier === "urgent"
+      ? "bg-[#d92d20]"
+      : tier === "soon"
+      ? "bg-[#f0a35a]"
+      : tier === "closed"
+      ? "bg-[#cdbda3]"
+      : "bg-[#4a7c59]";
+
+  return (
+    <span className={`inline-flex items-center gap-1.5 tabular-nums ${cls}`}>
+      <span className="relative flex h-1.5 w-1.5 shrink-0" aria-hidden="true">
+        {tier === "urgent" && (
+          <span className="absolute inline-flex h-full w-full rounded-full bg-[#d92d20] opacity-75 animate-ping" />
+        )}
+        <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${dot}`} />
+      </span>
+      {timeLeft || "..."}
+    </span>
+  );
 }

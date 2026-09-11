@@ -349,3 +349,106 @@ body.woody-hidden [class*="lc_text-widget"] {
   visibility: hidden !important;
   pointer-events: none !important;
 }
+
+/* ───────────────────────────────────────────────────────────
+   Site shell polish — header, drawer, focus, section bands.
+   Small, reusable, and quiet. Everything respects reduced-motion.
+   ─────────────────────────────────────────────────────────── */
+
+/* Leather focus ring for keyboard users — no harsh blue outline on cream. */
+.nb-focus:focus-visible {
+  outline: 2px solid #6c4d39;
+  outline-offset: 2px;
+  border-radius: 0.75rem;
+}
+
+/* Header nav link: quiet by default, a short leather underline slides in on
+   hover, and stays put (plus espresso text) on the active route. */
+.nb-nav {
+  position: relative;
+  color: #6f5b46;
+  transition: color 0.18s ease, background-color 0.18s ease;
+}
+.nb-nav::after {
+  content: "";
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: 0.2rem;
+  height: 2px;
+  border-radius: 2px;
+  background: #6c4d39;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.22s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.nb-nav:hover { color: #241a12; }
+.nb-nav:hover::after { transform: scaleX(1); }
+.nb-nav[aria-current="page"] { color: #241a12; font-weight: 600; }
+.nb-nav[aria-current="page"]::after { transform: scaleX(1); }
+
+/* Header search field expanding into the row. */
+@keyframes nb-search-in {
+  from { opacity: 0; transform: translateY(-4px) scaleX(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+.nb-search-in { animation: nb-search-in 0.22s cubic-bezier(0.2, 0.7, 0.2, 1); transform-origin: right center; }
+
+/* Account drawer slides in from the right; backdrop fades in with it. */
+@keyframes nb-drawer-in {
+  from { transform: translateX(28px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+@keyframes nb-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.nb-drawer-in { animation: nb-drawer-in 0.26s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.nb-fade-in   { animation: nb-fade-in 0.22s ease-out; }
+
+/* Drawer row: icon warms from tan to leather on hover; active route gets a
+   cream fill and a leather rail on the left. */
+.nb-drawer-link { position: relative; transition: background-color 0.15s ease, color 0.15s ease; }
+.nb-drawer-link[aria-current="page"] { background: #f6efe1; }
+.nb-drawer-link[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 10px; bottom: 10px;
+  width: 3px; border-radius: 3px;
+  background: #6c4d39;
+}
+
+/* Cream section band — for grouped content that should feel like its own
+   plank on the page without a heavy card. */
+.nb-band {
+  background: #fbf4e6;
+  border-top: 1px solid #e3d6bf;
+  border-bottom: 1px solid #e3d6bf;
+}
+
+/* Spinner: an inner gold tick sweeps opposite the leather ring so it reads as
+   "working" rather than "stuck". */
+@keyframes nb-spin-rev {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+.nb-spin-rev { animation: nb-spin-rev 1.4s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nb-search-in, .nb-drawer-in, .nb-fade-in { animation: none; }
+  .nb-nav::after { transition: none; }
+  .nb-spin-rev { animation: none; }
+}
+
+/* Search fields draw their own clear button; hide WebKit's native one. */
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Site header: symmetric vertical padding that also clears the status bar. */
+.nb-header-pad {
+  padding-top: calc(env(safe-area-inset-top) + 0.625rem);
+  padding-bottom: 0.625rem;
+}

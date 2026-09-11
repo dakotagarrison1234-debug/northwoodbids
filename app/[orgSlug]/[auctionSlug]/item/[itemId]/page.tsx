@@ -7,11 +7,58 @@ import { useUser, SignInButton } from "@clerk/nextjs";
 import Pusher from "pusher-js";
 import Countdown from "@/app/components/Countdown";
 import { getNextValidBid, getProxySuggestions } from "@/lib/bidIncrements";
-import { IcoStar, IcoShare } from "@/app/components/BidIcons";
+import { IcoStar, IcoShare, IcoBolt, IcoTruck, IcoLock, IcoGavel } from "@/app/components/BidIcons";
+import { PineMark } from "@/app/components/Illustrations";
+import LocationBadge from "@/app/components/LocationBadge";
 import CardSetupModal from "@/app/components/CardSetupModal";
 import MaxBidExplainerModal from "@/app/components/MaxBidExplainerModal";
 import ExpandableDescription from "@/app/components/ExpandableDescription";
 import Skeleton from "@/app/components/Skeleton";
+
+/* ── Presentation helpers (display only) ─────────────────────────────────── */
+
+/** "just now" / "4m ago" / "3h ago" / "Tue 2:14 PM" — for the bid ledger. */
+function relTime(iso: string, now: number): string {
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return iso;
+  const diff = Math.max(0, now - t);
+  if (diff < 45_000) return "just now";
+  const m = Math.floor(diff / 60_000);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}d ago`;
+  return new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+/** Small on-brand section heading: pine mark + slab-serif title + hairline. */
+function SectionLabel({ children, aside }: { children: React.ReactNode; aside?: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2 mb-2.5">
+      <PineMark className="w-4 h-4 shrink-0" />
+      <h3 className="font-display font-bold text-base text-[#241a12] leading-none">{children}</h3>
+      <span className="flex-1 h-px bg-[#e3d6bf]" aria-hidden="true" />
+      {aside}
+    </div>
+  );
+}
+
+/** Meta chip — one look for condition / size / pack / category / collection. */
+function Chip({ tone = "cream", children }: { tone?: "cream" | "ink" | "leather" | "moss" | "amber"; children: React.ReactNode }) {
+  const tones = {
+    cream: "bg-[#efe3d0] border-[#e3d6bf] text-[#6f5b46]",
+    ink: "bg-[#241a12] border-[#241a12] text-[#f6ecda]",
+    leather: "bg-[#6c4d39]/10 border-[#6c4d39]/25 text-[#563e2c]",
+    moss: "bg-[#4a7c59]/12 border-[#4a7c59]/30 text-[#3c6449]",
+    amber: "bg-[#f0a35a]/20 border-[#c47b3e]/40 text-[#8a4f1c]",
+  }[tone];
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full border whitespace-nowrap ${tones}`}>
+      {children}
+    </span>
+  );
+}
 
 interface Item {
   id: string;
@@ -167,6 +214,13 @@ export default function ItemPage() {
   const [selectedPhotoIdx, setSelectedPhotoIdx] = useState(0);
   const touchStartXRef = useRef<number | null>(null);
 
+  // Slow clock for the bid ledger's relative times ("4m ago"). Display only.
+  const [ledgerNow, setLedgerNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setLedgerNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
   // Load item data
   useEffect(() => {
     fetch(`/api/items/${itemId}`)
@@ -188,7 +242,8 @@ export default function ItemPage() {
           setLiveBids(sorted.reverse().slice(0, 5).map((b: Item["bids"][0]) => ({
             user: assignBidder(b.bidder ?? b.clerkUserId ?? ""),
             amount: b.amount,
-            time: new Date(b.placedAt).toLocaleTimeString(),
+            // ISO timestamp — rendered as a relative "4m ago" in the ledger.
+            time: b.placedAt,
             isProxy: b.isProxy ?? false,
           })));
         }
@@ -578,8 +633,9 @@ export default function ItemPage() {
     return (
       <main className="min-h-screen bg-[#f1e7d5] text-[#241a12] flex items-center justify-center px-5">
         <div className="text-center max-w-sm w-full">
-          <h1 className="text-2xl font-bold mb-2">Item not found</h1>
-          <p className="text-[#6f5b46] text-sm mb-6">This item may have been removed or the link is incorrect.</p>
+          <IcoGavel className="w-10 h-10 text-[#cdbda3] mx-auto mb-3" />
+          <h1 className="font-display text-2xl font-bold mb-2">That lot&apos;s gone quiet</h1>
+          <p className="text-[#6f5b46] text-sm mb-6">It may have been pulled, or the link is off by a character. Plenty more on the block.</p>
           <div className="flex flex-col gap-2.5">
             <Link href={`/${orgSlug}/${auctionSlug}`} className="w-full bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold py-3 rounded-xl transition-colors">
               Back to auction
@@ -654,7 +710,7 @@ export default function ItemPage() {
               have to scroll past a full screen of photo to bid. Full square returns on
               desktop (lg) where the layout is two columns and height isn't the constraint. */}
           <div
-            className="w-full h-[34vh] lg:h-auto lg:aspect-square bg-white rounded-2xl overflow-hidden mb-2 flex items-center justify-center relative select-none"
+            className="w-full h-[34vh] lg:h-auto lg:aspect-square bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden mb-2 flex items-center justify-center relative select-none shadow-[0_10px_30px_-18px_rgba(36,26,18,0.35)]"
             onTouchStart={(e) => { touchStartXRef.current = e.touches[0].clientX; }}
             onTouchEnd={(e) => {
               if (touchStartXRef.current === null || item.photos.length < 2) return;
@@ -679,40 +735,59 @@ export default function ItemPage() {
                 className="object-contain"
               />
             ) : (
-              <div className="text-[#8a7559] text-sm">No photo</div>
+              <div className="flex flex-col items-center gap-2 text-[#b3a085]">
+                <IcoGavel className="w-8 h-8" />
+                <span className="text-xs font-semibold uppercase tracking-wide">Photo coming</span>
+              </div>
             )}
+
+            {/* Corner tag: how far under retail the bidding sits right now. */}
+            {item.retailValue && currentBid > 0 && item.retailValue > currentBid && (
+              <span className="absolute top-2.5 left-2.5 z-10 inline-flex items-center gap-1 bg-[#c47b3e] text-white text-[11px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full shadow-sm">
+                {Math.round((1 - currentBid / item.retailValue) * 100)}% off retail
+              </span>
+            )}
+            {(item.packSize ?? 0) > 1 && (
+              <span className="absolute top-2.5 right-2.5 z-10 inline-flex items-center bg-[#241a12]/85 text-[#f6ecda] text-[11px] font-bold px-2.5 py-1 rounded-full backdrop-blur-sm">
+                {item.packSize}-pack lot
+              </span>
+            )}
+
             {/* Prev / Next arrows */}
             {item.photos.length > 1 && (
               <>
                 <button
                   onClick={() => setSelectedPhotoIdx(prev => (prev - 1 + item.photos.length) % item.photos.length)}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-sm transition-colors"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/90 hover:bg-white border border-[#e3d6bf] rounded-full flex items-center justify-center shadow-sm transition-colors"
                   aria-label="Previous photo"
                 >
-                  <svg className="w-4 h-4 text-[#4a3a2b]" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                  <svg className="w-4 h-4 text-[#4a3a2b]" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
                     <path d="M10 4L6 8l4 4" />
                   </svg>
                 </button>
                 <button
                   onClick={() => setSelectedPhotoIdx(prev => (prev + 1) % item.photos.length)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-sm transition-colors"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/90 hover:bg-white border border-[#e3d6bf] rounded-full flex items-center justify-center shadow-sm transition-colors"
                   aria-label="Next photo"
                 >
-                  <svg className="w-4 h-4 text-[#4a3a2b]" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                  <svg className="w-4 h-4 text-[#4a3a2b]" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
                     <path d="M6 4l4 4-4 4" />
                   </svg>
                 </button>
-                {/* Dot indicators */}
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                {/* Dot indicators — pill grows on the active photo. */}
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-[#241a12]/55 backdrop-blur-sm px-2 py-1 rounded-full">
                   {item.photos.map((_, i) => (
                     <button
                       key={i}
                       onClick={() => setSelectedPhotoIdx(i)}
-                      className={`w-1.5 h-1.5 rounded-full transition-colors ${i === selectedPhotoIdx ? "bg-[#6c4d39]" : "bg-[#b3a085]"}`}
+                      className={`h-1.5 rounded-full transition-all duration-200 ${i === selectedPhotoIdx ? "w-4 bg-[#f0a35a]" : "w-1.5 bg-[#f6ecda]/70 hover:bg-[#f6ecda]"}`}
                       aria-label={`Go to photo ${i + 1}`}
                     />
                   ))}
                 </div>
+                <span className="absolute bottom-2 right-2.5 text-[10px] font-bold tabular-nums text-[#f6ecda] bg-[#241a12]/55 backdrop-blur-sm px-2 py-1 rounded-full">
+                  {selectedPhotoIdx + 1} / {item.photos.length}
+                </span>
               </>
             )}
           </div>
@@ -721,15 +796,18 @@ export default function ItemPage() {
               of visible holes; with 6 you got one orphan on a second row. Fixed-width
               items that scroll sideways handle any count with no gaps. */}
           {item.photos.length > 1 && (
-            <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
               {item.photos.map((photo, i) => (
                 <button
                   key={i}
                   onClick={() => setSelectedPhotoIdx(i)}
-                  className={`relative w-16 h-16 shrink-0 bg-white rounded-lg overflow-hidden border-2 transition-colors ${
-                    i === selectedPhotoIdx ? "border-[#6c4d39]" : "border-[#e3d6bf] hover:border-[#6c4d39]/40"
+                  className={`relative w-16 h-16 shrink-0 bg-white rounded-xl overflow-hidden border-2 transition-all ${
+                    i === selectedPhotoIdx
+                      ? "border-[#c47b3e] shadow-[0_0_0_2px_rgba(240,163,90,0.35)]"
+                      : "border-[#e3d6bf] opacity-80 hover:opacity-100 hover:border-[#6c4d39]/40"
                   }`}
                   aria-label={`Photo ${i + 1}`}
+                  aria-current={i === selectedPhotoIdx ? "true" : undefined}
                 >
                   <Image src={photo.url} alt={`Photo ${i + 1}`} fill sizes="64px" className="object-contain" />
                 </button>
@@ -790,32 +868,31 @@ export default function ItemPage() {
             </div>
           </div>
 
-          <div className="flex items-start justify-between gap-2 mt-1.5">
+          {/* One consistent chip family: size leads (a lone "M" gets lost otherwise),
+              then pack, condition, category. The clock sits at the end of the row. */}
+          <div className="flex items-start justify-between gap-2 mt-2">
             <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-              {(item.packSize ?? 0) > 1 && (
-                <span className="text-xs text-white bg-[#241a12] px-2.5 py-1 rounded-full font-bold">{item.packSize}-Pack lot</span>
-              )}
-              {/* Bigger and darker than the other pills — a lone "M" gets lost at the
-                  same weight as "good" and "Apparel". */}
               {item.size && (
-                <span className="text-sm text-white bg-[#241a12] px-3 py-1.5 rounded-lg font-extrabold uppercase tracking-wide">
-                  Size {item.size}
-                </span>
+                <Chip tone="ink">
+                  <span className="opacity-70 font-semibold">Size</span>
+                  <span className="uppercase tracking-wide">{item.size}</span>
+                </Chip>
               )}
-              <span className="text-xs text-[#6f5b46] bg-[#efe3d0] border border-[#e3d6bf] px-2.5 py-1 rounded-full capitalize font-medium">
-                {item.condition.replace("_", " ").toLowerCase()}
-              </span>
-              {item.category && (
-                <span className="text-xs text-[#6c4d39] bg-[#6c4d39]/10 border border-[#6c4d39]/20 px-2.5 py-1 rounded-full font-medium">{item.category}</span>
+              {(item.packSize ?? 0) > 1 && <Chip tone="leather">{item.packSize}-pack lot</Chip>}
+              <Chip tone="cream">
+                <span className="capitalize">{item.condition.replace("_", " ").toLowerCase()}</span>
+              </Chip>
+              {item.category && <Chip tone="cream">{item.category}</Chip>}
+              {hasActiveProxy && (
+                <Chip tone="moss">
+                  <IcoBolt className="w-3 h-3" /> Max bid active
+                </Chip>
               )}
             </div>
             {/* Countdown lives here — filling the dead space beside the condition
                 instead of eating a whole row of its own. Just the clock, no label. */}
             {effectiveEndAt && !biddingLocked && (
-              <span className="shrink-0 inline-flex items-center gap-1 text-sm whitespace-nowrap pt-0.5">
-                <svg className="w-3.5 h-3.5 text-[#8a7559]" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
-                  <circle cx="8" cy="8" r="6" /><path d="M8 5v3l2 1.5" />
-                </svg>
+              <span className="shrink-0 inline-flex items-center text-sm whitespace-nowrap pt-1">
                 <Countdown endAt={effectiveEndAt} onExpire={handleExpire} />
               </span>
             )}
@@ -825,29 +902,30 @@ export default function ItemPage() {
               Price and retail side by side in one block. Retail used to live in a
               `grid-cols-2` containing a single child, which left a literal empty
               half-width hole beside it. */}
-          <div className="mt-2 rounded-2xl border border-[#e3d6bf] bg-white overflow-hidden">
+          <div className="mt-2.5 rounded-2xl border border-[#e3d6bf] bg-white overflow-hidden shadow-[0_10px_30px_-18px_rgba(36,26,18,0.3)]">
             {/* The current bid lives ONLY in the sticky bar at the bottom now — this
                 row is just retail context + activity, so the number isn't shown twice. */}
-            <div className="flex items-center justify-between gap-3 px-4 py-3">
+            <div className="flex items-center justify-between gap-3 px-4 py-3 bg-[#fbf4e6]/70">
               {item.retailValue ? (
-                <div className="min-w-0">
-                  <div className="text-[#8a7559] text-xs font-semibold uppercase tracking-wide">Retail</div>
-                  <div className="text-[#a32d2d] font-extrabold text-xl leading-tight tabular-nums mt-0.5 line-through decoration-2 decoration-[#a32d2d]/50">
+                <div className="min-w-0 flex items-baseline gap-2">
+                  <span className="text-[#8a7559] text-[11px] font-black uppercase tracking-[0.14em]">Retail</span>
+                  <span className="text-[#a32d2d] font-extrabold text-xl leading-none tabular-nums line-through decoration-2 decoration-[#a32d2d]/50">
                     ${item.retailValue.toLocaleString()}
-                  </div>
+                  </span>
                 </div>
               ) : (
-                <div className="text-[#8a7559] text-xs font-semibold uppercase tracking-wide">Bidding</div>
+                <div className="text-[#8a7559] text-[11px] font-black uppercase tracking-[0.14em]">Bidding open</div>
               )}
-              <div className="text-right shrink-0">
+              <div className="flex items-center gap-2 shrink-0">
                 {item.retailValue && currentBid > 0 && item.retailValue > currentBid ? (
-                  <div className="font-extrabold text-lg leading-tight text-[#4a7c59]">
+                  <span className="font-extrabold text-sm leading-none text-[#3c6449] bg-[#4a7c59]/12 border border-[#4a7c59]/30 px-2 py-1 rounded-full">
                     {Math.round((1 - currentBid / item.retailValue) * 100)}% off
-                  </div>
+                  </span>
                 ) : null}
-                <div className="text-xs text-[#8a7559] mt-0.5">
+                <span className="text-xs font-semibold text-[#8a7559] tabular-nums inline-flex items-center gap-1">
+                  <IcoGavel className="w-3.5 h-3.5" />
                   {bidCount} bid{bidCount !== 1 ? "s" : ""}
-                </div>
+                </span>
               </div>
             </div>
 
@@ -875,30 +953,29 @@ export default function ItemPage() {
               </div>
             )}
 
-            {hasActiveProxy && (
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                <span className="text-xs bg-[#6c4d39]/15 text-[#563e2c] px-2.5 py-1 rounded-full font-semibold">
-                  Max bid active
-                </span>
-              </div>
-            )}
-
             {biddingLocked ? (
-              <div className="bg-[#efe3d0] rounded-xl px-4 py-3 text-center text-[#6f5b46]">
-                {itemSold
-                  ? "This item has been sold."
-                  : auctionClosed
-                  ? "Bidding has closed for this auction."
-                  : itemNotActive
-                  ? "This item is not currently available for bidding."
-                  : "Bidding for this item has ended."}
+              <div className="bg-[#efe3d0] border border-[#e3d6bf] rounded-xl px-4 py-3.5 flex items-center gap-3">
+                <span className="w-9 h-9 rounded-full bg-white border border-[#e3d6bf] grid place-items-center text-[#8a7559] shrink-0">
+                  <IcoGavel className="w-4.5 h-4.5" />
+                </span>
+                <div className="min-w-0">
+                  <div className="font-display font-bold text-sm text-[#241a12] leading-tight">
+                    {itemSold ? "Sold. Hammer's down." : auctionClosed ? "This auction has closed." : itemNotActive ? "Not open for bidding right now." : "Bidding on this lot has ended."}
+                  </div>
+                  <div className="text-xs text-[#6f5b46] mt-0.5">
+                    {itemSold ? "Plenty more on the block." : "Browse what else is open — most lots start at $2."}
+                  </div>
+                </div>
               </div>
             ) : !isLoaded ? null : !isSignedIn ? (
-              <div className="text-center">
-                <p className="text-[#6f5b46] text-sm mb-3">You must be signed in to place a bid.</p>
+              <div className="bg-[#f6ecda] border border-[#e3d6bf] rounded-xl px-4 py-3.5">
+                <div className="flex items-center gap-2 text-sm text-[#4a3a2b] mb-3">
+                  <IcoLock className="w-4 h-4 text-[#6c4d39] shrink-0" />
+                  <span>Sign in to bid. Your card is only charged if you win.</span>
+                </div>
                 <SignInButton mode="modal">
-                  <button className="w-full bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold py-3 rounded-xl">
-                    Sign In to Bid
+                  <button className="w-full bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold py-3 rounded-xl transition-colors">
+                    Sign in to bid
                   </button>
                 </SignInButton>
               </div>
@@ -911,29 +988,30 @@ export default function ItemPage() {
                 {/* ═══════════════════════════════════════════════════════════
                     MAX BID — PRIMARY option
                 ═══════════════════════════════════════════════════════════ */}
-                <div className="bg-[#f6ecda] border-2 border-[#6c4d39]/30 rounded-2xl p-3">
+                <div className="relative bg-[#f6ecda] border-2 border-[#6c4d39]/30 rounded-2xl p-3 overflow-hidden">
+                  <PineMark className="absolute -right-3 -bottom-3 w-16 h-16 opacity-[0.07] pointer-events-none" />
                   {/* One-line header — title, ? and the Recommended tag on a single row
                       instead of a title + subtitle + tag stack. */}
-                  <div className="flex items-center justify-between gap-2 mb-2.5">
+                  <div className="relative flex items-center justify-between gap-2 mb-2.5">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <h3 className="font-bold text-sm text-[#241a12] shrink-0">Set a max bid</h3>
+                      <h3 className="font-display font-bold text-[15px] text-[#241a12] shrink-0">Set a max bid</h3>
                       <button
                         onClick={() => setShowMaxBidExplainer(true)}
                         aria-label="Learn how max bidding works"
-                        className="w-4 h-4 rounded-full bg-[#6c4d39]/20 text-[#6c4d39] text-[10px] font-bold flex items-center justify-center hover:bg-[#6c4d39]/35 transition-colors leading-none shrink-0"
+                        className="w-4.5 h-4.5 rounded-full bg-[#6c4d39]/20 text-[#6c4d39] text-[10px] font-black flex items-center justify-center hover:bg-[#6c4d39]/35 transition-colors leading-none shrink-0"
                       >
                         ?
                       </button>
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-wide text-[#6c4d39] bg-[#6c4d39]/10 px-2 py-0.5 rounded-full shrink-0">
-                      Recommended
+                    <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wide text-[#8a4f1c] bg-[#f0a35a]/25 border border-[#c47b3e]/40 px-2 py-0.5 rounded-full shrink-0">
+                      <IcoBolt className="w-2.5 h-2.5" /> Recommended
                     </span>
                   </div>
 
                   {/* Plain-English one-liner, always visible. The "?" still opens the
                       full walkthrough, but nobody should have to tap to grasp the gist. */}
-                  <p className="text-xs text-[#6f5b46] leading-snug mb-2.5">
-                    Enter the most you&apos;d pay. We bid just enough to keep you on top — and never more than this.
+                  <p className="relative text-xs text-[#6f5b46] leading-snug mb-2.5">
+                    Name the most you&apos;d pay. We bid just enough to keep you on top — never a dollar past it.
                   </p>
 
                   {proxyMessage && (
@@ -946,13 +1024,13 @@ export default function ItemPage() {
 
                   {userProxy ? (
                     /* Active max bid display */
-                    <div className="flex items-center justify-between gap-2 bg-white rounded-xl px-4 py-3">
+                    <div className="relative flex items-center justify-between gap-2 bg-white border border-[#e3d6bf] rounded-xl px-4 py-3">
                       <div className="min-w-0">
                         <p className="text-[#4a3a2b] text-sm font-medium">
-                          Your max bid:{" "}
-                          <span className="text-[#6c4d39] font-bold text-base">${userProxy.maxAmount.toLocaleString()}</span>
+                          Your ceiling:{" "}
+                          <span className="text-[#6c4d39] font-extrabold text-base tabular-nums">${userProxy.maxAmount.toLocaleString()}</span>
                         </p>
-                        <p className="text-[#8a7559] text-xs mt-0.5">We&apos;re auto-bidding on your behalf up to this amount.</p>
+                        <p className="text-[#8a7559] text-xs mt-0.5">We&apos;re holding the line for you up to this amount.</p>
                       </div>
                       <div className="flex gap-2 shrink-0">
                         <button
@@ -1133,24 +1211,26 @@ export default function ItemPage() {
               rather than adding height inside the bid area. Only the "no card" warning
               is loud, since that one blocks bidding. */}
           {item.org?.stripeChargesEnabled && hasCard !== null && (
-            <div className="flex items-center justify-between mt-2 px-1">
-              <div className="flex items-center gap-1.5 text-xs text-[#8a7559]">
-                <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
+            <div className={`flex items-center justify-between gap-3 mt-2 px-3 py-2 rounded-xl border ${
+              hasCard ? "border-transparent" : "bg-[#f0a35a]/15 border-[#c47b3e]/40"
+            }`}>
+              <div className="flex items-center gap-1.5 text-xs text-[#8a7559] min-w-0">
+                <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" aria-hidden="true">
                   <rect x="2" y="5" width="16" height="12" rx="2" />
                   <path d="M2 9h16" />
                 </svg>
                 {hasCard
                   ? cardBrand
-                    ? <span className="text-[#6f5b46]">{cardBrand.charAt(0).toUpperCase() + cardBrand.slice(1)} ···· {cardLast4}</span>
-                    : <span className="text-[#6f5b46]">Card on file</span>
-                  : <span className="text-amber-600 font-medium">No card on file — add one to bid</span>
+                    ? <span className="text-[#6f5b46] truncate">{cardBrand.charAt(0).toUpperCase() + cardBrand.slice(1)} ···· {cardLast4} · charged only if you win</span>
+                    : <span className="text-[#6f5b46] truncate">Card on file · charged only if you win</span>
+                  : <span className="text-[#8a4f1c] font-semibold">No card on file yet — add one to bid</span>
                 }
               </div>
               <button
                 onClick={() => setShowCardModal(true)}
-                className="text-xs text-[#6c4d39] hover:text-[#c47b3e] font-medium transition-colors"
+                className="text-xs text-[#6c4d39] hover:text-[#c47b3e] font-bold transition-colors shrink-0"
               >
-                {hasCard ? "Update card" : "Add card"}
+                {hasCard ? "Update" : "Add card"}
               </button>
             </div>
           )}
@@ -1161,36 +1241,31 @@ export default function ItemPage() {
               between the title and the price, pushing the actual price off screen on a
               phone. The pickup facts are one tidy list rather than pills and a loose
               sentence floating beside them. */}
-          {(item.description || item.locationName || item.transferable === false || item.taxDeductible) && (
-            <div className="bg-white border border-[#e3d6bf] rounded-2xl p-4 sm:p-5 mb-6">
-              <h3 className="font-bold text-base text-[#241a12] mb-2">Details</h3>
+          {(item.description || item.locationName || item.transferable !== undefined || item.taxDeductible) && (
+            <div className="mt-5 bg-white border border-[#e3d6bf] rounded-2xl p-4 sm:p-5">
+              <SectionLabel>About this lot</SectionLabel>
 
               {item.description && <ExpandableDescription text={item.description} />}
 
-              <dl className="mt-3 divide-y divide-[#efe3d0] border-t border-[#efe3d0]">
-                {item.locationName && (
-                  <div className="flex items-start justify-between gap-3 py-2.5">
-                    <dt className="text-sm text-[#8a7559] shrink-0">Located at</dt>
-                    <dd className="text-sm font-semibold text-[#241a12] text-right break-words min-w-0">{item.locationName}</dd>
-                  </div>
+              {/* Where it lives + how you collect it — chips, same family as the header row. */}
+              <div className={`flex flex-wrap items-center gap-1.5 ${item.description ? "mt-4 pt-3.5 border-t border-[#efe3d0]" : ""}`}>
+                {item.locationName && <LocationBadge name={item.locationName} size="sm" />}
+                {item.transferable === false ? (
+                  <Chip tone="amber">
+                    <IcoLock className="w-3 h-3" /> Pickup here only
+                  </Chip>
+                ) : (
+                  <Chip tone="moss">
+                    <IcoTruck className="w-3 h-3" /> Free transfer to your spot
+                  </Chip>
                 )}
-                <div className="flex items-start justify-between gap-3 py-2.5">
-                  <dt className="text-sm text-[#8a7559] shrink-0">Collection</dt>
-                  <dd className="text-sm font-semibold text-right">
-                    {item.transferable === false ? (
-                      <span className="text-[#8a5a2b]">Pickup at this location only</span>
-                    ) : (
-                      <span className="text-[#4a7c59]">Can transfer to your usual spot</span>
-                    )}
-                  </dd>
-                </div>
-                {item.taxDeductible && (
-                  <div className="flex items-start justify-between gap-3 py-2.5">
-                    <dt className="text-sm text-[#8a7559] shrink-0">Tax</dt>
-                    <dd className="text-sm font-semibold text-[#241a12] text-right">Tax deductible</dd>
-                  </div>
-                )}
-              </dl>
+                {item.taxDeductible && <Chip tone="cream">Tax deductible</Chip>}
+              </div>
+              <p className="text-[11px] text-[#8a7559] mt-2.5 leading-snug">
+                {item.transferable === false
+                  ? "This one stays put. Plan to collect it at the location above."
+                  : "Win it anywhere, collect it at Owosso or Gladwin. Transfers ride along free, usually within a week."}
+              </p>
             </div>
           )}
 
@@ -1199,24 +1274,57 @@ export default function ItemPage() {
             <MaxBidExplainerModal onClose={() => setShowMaxBidExplainer(false)} />
           )}
 
-          {/* Last 5 bids */}
+          {/* Bid ledger — last 5. Bidders are masked (no names on the wire); "auto"
+              marks a bid our max-bid engine placed on someone's behalf. */}
           {liveBids.length > 0 && (
-            <div>
-              <h3 className="font-bold text-base text-[#241a12] mb-3">Recent bids</h3>
-              <div className="space-y-2">
-                {liveBids.map((bid, i) => (
-                  <div key={i} className="flex items-center justify-between bg-white rounded-lg px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[#6f5b46]">Bid {liveBids.length - i}</span>
-                      {bid.isProxy && (
-                        <span className="text-xs text-[#6c4d39] bg-[#6c4d39]/10 px-1.5 py-0.5 rounded">auto</span>
-                      )}
-                    </div>
-                    <span className="text-[#6c4d39] font-semibold">${bid.amount.toLocaleString()}</span>
-                    <span className="text-[#8a7559] text-sm">{bid.time}</span>
-                  </div>
-                ))}
-              </div>
+            <div className="mt-5 bg-white border border-[#e3d6bf] rounded-2xl p-4 sm:p-5">
+              <SectionLabel aside={<span className="text-[11px] font-semibold text-[#8a7559] tabular-nums">last {liveBids.length}</span>}>
+                Bid ledger
+              </SectionLabel>
+              <ol className="divide-y divide-[#efe3d0] -mx-1">
+                {liveBids.map((bid, i) => {
+                  const masked = bid.user.startsWith("Bidder") ? bid.user.replace(/^Bidder\s*/, "") : "";
+                  // Top of the ledger is the standing bid only if it matches the live price
+                  // (a late-arriving event could briefly reorder things).
+                  const leading = i === 0 && bid.amount >= item.currentBid;
+                  return (
+                    <li key={i} className={`flex items-center gap-3 px-1 py-2.5 ${leading ? "bg-[#fbf4e6]/70 rounded-xl" : ""}`}>
+                      <span
+                        className={`w-8 h-8 rounded-full grid place-items-center text-[11px] font-black shrink-0 border ${
+                          leading ? "bg-[#241a12] border-[#241a12] text-[#f0a35a]" : "bg-[#efe3d0] border-[#e3d6bf] text-[#6f5b46]"
+                        }`}
+                        aria-hidden="true"
+                      >
+                        B
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-semibold text-[#241a12]">
+                            Bidder<span className="text-[#b3a085] tracking-widest ml-0.5">•••</span>
+                            {masked && <span className="sr-only">{masked}</span>}
+                          </span>
+                          {bid.isProxy && (
+                            <span className="inline-flex items-center gap-0.5 text-[10px] font-black uppercase tracking-wide text-[#3c6449] bg-[#4a7c59]/12 border border-[#4a7c59]/30 px-1.5 py-0.5 rounded-full">
+                              <IcoBolt className="w-2.5 h-2.5" /> auto
+                            </span>
+                          )}
+                          {leading && !biddingLocked && (
+                            <span className="text-[10px] font-black uppercase tracking-wide text-[#8a4f1c] bg-[#f0a35a]/20 border border-[#c47b3e]/40 px-1.5 py-0.5 rounded-full">
+                              leading
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-[#8a7559] mt-0.5">
+                          {bid.time === "just now" ? "just now" : relTime(bid.time, ledgerNow)}
+                        </div>
+                      </div>
+                      <span className={`font-extrabold tabular-nums ${leading ? "text-[#241a12] text-base" : "text-[#6c4d39] text-sm"}`}>
+                        ${bid.amount.toLocaleString()}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
             </div>
           )}
         </div>

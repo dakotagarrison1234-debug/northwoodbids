@@ -465,15 +465,28 @@ export default function PlayPage() {
 
   return (
     <div className="min-h-screen text-[#241a12] arcade-root">
-      <header className="bar-safe-top safe-x border-b border-[#e3d6bf] px-6 sm:px-8 pb-4 flex items-center gap-2 bg-[#fffdf7]/85 backdrop-blur sticky top-0 z-20">
-        <Link href="/" className="text-[#6c4d39] hover:text-[#241a12] text-base font-semibold shrink-0">← Home</Link>
-        <span className="text-[#8a7559]">/</span>
-        <h1 className="text-2xl font-extrabold font-display">Auction Arcade</h1>
+      <header className="bar-safe-top safe-x border-b border-[#e3d6bf] px-4 sm:px-8 pb-3 flex items-center gap-3 bg-[#fffdf7]/85 backdrop-blur sticky top-0 z-20">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-[#6c4d39] hover:text-[#241a12] text-sm font-bold shrink-0 border border-[#e3d6bf] bg-white hover:bg-[#faf5ea] rounded-full pl-2.5 pr-3.5 py-1.5 transition-colors"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 2L4 6l4 4" /></svg>
+          Home
+        </Link>
+        <div className="min-w-0 flex items-center gap-2.5">
+          <span className="hidden sm:grid w-9 h-9 rounded-xl bg-[#6c4d39] text-[#f6ecda] place-items-center shrink-0 shadow-[0_3px_0_#3f2c1f]">
+            <IcoGavel className="w-5 h-5" />
+          </span>
+          <div className="min-w-0 leading-none">
+            <h1 className="font-display text-xl sm:text-2xl font-black text-[#241a12] truncate">Auction Arcade</h1>
+            <p className="hidden sm:block text-[10px] font-black uppercase tracking-[0.18em] text-[#8a7559] mt-1">Time the gavel, win the lot</p>
+          </div>
+        </div>
         <button
           onClick={toggleMute}
           aria-label={muted ? "Unmute sound" : "Mute sound"}
           aria-pressed={muted}
-          className="ml-auto w-10 h-10 rounded-full grid place-items-center text-[#6c4d39] hover:text-[#241a12] hover:bg-[#efe3d0] transition-colors"
+          className="ml-auto w-10 h-10 rounded-full grid place-items-center text-[#6c4d39] hover:text-[#241a12] border border-[#e3d6bf] bg-white hover:bg-[#efe3d0] transition-colors shrink-0"
           title={muted ? "Unmute" : "Mute"}
         >
           {muted ? (
@@ -544,7 +557,7 @@ export default function PlayPage() {
                   <button onClick={startGame} className="start-btn font-display font-black text-2xl px-14 py-4 rounded-2xl text-white">
                     PLAY NOW
                   </button>
-                  <p className="text-[#d8c19a] text-xs mt-4 font-medium">Tap the button or press <kbd className="kbd">Space</kbd> — it&apos;s free & fun.</p>
+                  <p className="text-[#d8c19a] text-xs mt-4 font-medium">Tap the button or press <kbd className="kbd">Space</kbd>. Free to play, bragging rights included.</p>
                 </div>
               )}
 
@@ -588,7 +601,7 @@ export default function PlayPage() {
                     <div className="lot-spot" aria-hidden="true" />
                     {golden && (
                       <span className="golden-badge absolute -top-2.5 right-3 z-10 text-[11px] font-display font-black text-[#5a3a00] px-2.5 py-0.5 rounded-full">
-                        ✦ GOLDEN ×3
+                        <IcoSpark className="inline w-3 h-3 -mt-0.5" /> GOLDEN ×3
                       </span>
                     )}
                     <div className={`relative w-20 h-20 rounded-xl overflow-hidden bg-[#efe3d0] shrink-0 grid place-items-center shadow-md ${golden ? "ring-2 ring-[#f59e0b]" : "ring-2 ring-[#fffdf7]"}`}>
@@ -681,7 +694,7 @@ export default function PlayPage() {
                     <div className="mb-5">
                       <p className="text-[#f3e7cf] text-base mb-2 font-semibold">Sign in to save your score to the board.</p>
                       <SignInButton mode="modal">
-                        <button className="bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] text-[#241a12] font-semibold px-5 py-2.5 rounded-xl">Sign in to save your score</button>
+                        <button className="inline-flex items-center gap-2 bg-[#fbf4e6] hover:bg-white border border-[#cdbda3] hover:border-[#6c4d39] text-[#241a12] font-bold px-5 py-2.5 rounded-xl transition-colors"><IcoTrophy className="w-4 h-4 text-[#c47b3e]" /> Sign in to save your score</button>
                       </SignInButton>
                     </div>
                   )}
@@ -692,8 +705,8 @@ export default function PlayPage() {
 
                   {lot?.href && (
                     <div className="mt-5 text-sm">
-                      <Link href={lot.href} className="text-[#6c4d39] font-semibold underline underline-offset-2 hover:text-[#241a12]">
-                        See &quot;{lot.title}&quot; in the real auction →
+                      <Link href={lot.href} className="inline-flex items-center gap-1.5 text-[#6c4d39] font-bold hover:text-[#241a12] border border-[#cdbda3] hover:border-[#6c4d39] bg-white rounded-full px-4 py-2 transition-colors">
+                        <IcoGavel className="w-4 h-4" /> Bid on &quot;{lot.title}&quot; for real
                       </Link>
                     </div>
                   )}

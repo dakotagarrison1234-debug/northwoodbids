@@ -3,8 +3,8 @@
  * ItemCardTimer — always-on "time left" badge for item cards in browse/grid/home
  * views. Shows the remaining time at ANY range (days → hours → the final m:ss),
  * so a bidder can always see how long a lot has left without opening it. Colour
- * escalates as it gets close: neutral far out, amber inside 12h, red inside the
- * last hour, red-pulsing in the final 5 minutes.
+ * walks the brand ramp as it gets close: moss far out, amber inside 12h, red
+ * inside the last hour, red with a pulsing clock in the final 5 minutes.
  *
  * It subscribes to the item's Pusher channel only once it's near the end, so
  * popcorn (anti-snipe) extensions push a new end time in real time without a
@@ -89,22 +89,31 @@ export default function ItemCardTimer({ itemId, endAt: initialEndAt, inline, pla
       ? `${hours}h ${mins}m`
       : `${mins}:${secs.toString().padStart(2, "0")}`;
 
-  // ── Plain variant: no pill, just small coloured text next to the condition.
-  //    Stays quiet (muted) until it's close, then goes amber → red → red-pulse. ──
+  // Shared urgency ramp (matches Countdown on the lot page):
+  // moss (plenty of time) → amber (inside 12h) → red (final hour) → red + pulse (5 min).
+  const urgency: "ended" | "urgent" | "hour" | "soon" | "calm" =
+    remaining <= 0
+      ? "ended"
+      : remaining <= URGENT_MS
+      ? "urgent"
+      : remaining <= HOUR_MS
+      ? "hour"
+      : remaining <= SOON_MS
+      ? "soon"
+      : "calm";
+
+  // ── Plain variant: no pill, just small coloured text next to the condition. ──
   if (plain) {
-    const t =
-      remaining <= 0
-        ? "text-[#8a7559]"
-        : remaining <= URGENT_MS
-        ? "text-red-600 animate-pulse"
-        : remaining <= HOUR_MS
-        ? "text-red-600"
-        : remaining <= SOON_MS
-        ? "text-[#b06a28]"
-        : "text-[#8a7559]";
+    const t = {
+      ended: "text-[#8a7559]",
+      urgent: "text-[#b42318]",
+      hour: "text-[#b42318]",
+      soon: "text-[#b06a28]",
+      calm: "text-[#3c6449]",
+    }[urgency];
     return (
-      <span className={`inline-flex items-center gap-0.5 tabular-nums font-semibold ${t}`}>
-        <ClockIcon />
+      <span className={`inline-flex items-center gap-1 tabular-nums font-semibold ${t}`}>
+        <ClockIcon pulse={urgency === "urgent"} />
         {label}
       </span>
     );
@@ -114,7 +123,7 @@ export default function ItemCardTimer({ itemId, endAt: initialEndAt, inline, pla
     ? "inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold tabular-nums"
     : "absolute top-2.5 left-2.5 z-10 inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full font-bold tabular-nums shadow-sm backdrop-blur-sm";
 
-  if (remaining <= 0) {
+  if (urgency === "ended") {
     return (
       <span className={`${base} ${inline ? "bg-[#f1e7d5] text-[#6f5b46]" : "bg-[#f1e7d5]/90 text-[#6f5b46]"}`}>
         <ClockIcon />
@@ -123,29 +132,43 @@ export default function ItemCardTimer({ itemId, endAt: initialEndAt, inline, pla
     );
   }
 
-  const tone =
-    remaining <= URGENT_MS
-      ? "bg-red-500/95 text-white animate-pulse"
-      : remaining <= HOUR_MS
-      ? "bg-red-500/90 text-white"
-      : remaining <= SOON_MS
-      ? "bg-[#c47b3e]/90 text-white"
-      : inline
-      ? "bg-[#efe3d0] text-[#6f5b46]"
-      : "bg-[#241a12]/75 text-white";
+  const tone = inline
+    ? {
+        urgent: "bg-[#d92d20] text-white",
+        hour: "bg-[#fdecec] text-[#b42318] border border-[#f3b8b3]",
+        soon: "bg-[#f0a35a]/25 text-[#8a4f1c] border border-[#c47b3e]/40",
+        calm: "bg-[#4a7c59]/12 text-[#3c6449] border border-[#4a7c59]/25",
+      }[urgency]
+    : {
+        urgent: "bg-[#d92d20] text-white",
+        hour: "bg-[#b42318]/92 text-white",
+        soon: "bg-[#c47b3e]/92 text-white",
+        calm: "bg-[#2f4a37]/85 text-[#f1e7d5]",
+      }[urgency];
 
   return (
     <span className={`${base} ${tone}`}>
-      <ClockIcon />
+      <ClockIcon pulse={urgency === "urgent"} />
       {label}
       {hours > 0 || days > 0 ? " left" : ""}
     </span>
   );
 }
 
-function ClockIcon() {
+function ClockIcon({ pulse = false }: { pulse?: boolean }) {
   return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className={pulse ? "animate-pulse" : undefined}
+    >
       <circle cx="12" cy="12" r="9" />
       <path d="M12 7v5l3 3" />
     </svg>

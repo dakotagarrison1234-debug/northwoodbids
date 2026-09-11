@@ -5,6 +5,21 @@ import SearchBar from "@/app/components/SearchBar";
 import LocalDate from "@/app/components/LocalDate";
 import OrgLogo from "@/app/components/OrgLogo";
 import ItemCardTimer from "@/app/components/ItemCardTimer";
+import { WoodenCrate, BranchDivider, PineMark } from "@/app/components/Illustrations";
+import { IcoMagnifier, BidCritter } from "@/app/components/BidIcons";
+
+// Small uppercase group label with a count chip — one per result type.
+function GroupHeader({ label, count }: { label: string; count: number }) {
+  return (
+    <div className="flex items-center gap-2.5 mb-3.5">
+      <h2 className="font-display text-lg font-black tracking-tight text-[#241a12]">{label}</h2>
+      <span className="inline-flex items-center rounded-full bg-[#6c4d39] text-white text-[11px] font-black px-2 py-0.5 tabular-nums">
+        {count}
+      </span>
+      <span aria-hidden className="flex-1 h-px bg-[#e3d6bf]" />
+    </div>
+  );
+}
 
 interface Props {
   searchParams: Promise<{ q?: string }>;
@@ -17,15 +32,17 @@ export default async function SearchPage({ searchParams }: Props) {
   if (query.length < 2) {
     return (
       <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
-        <div className="max-w-2xl mx-auto px-6 sm:px-8 py-16 text-center">
-          <div className="flex justify-center mb-6 text-[#b3a085]">
-            <svg className="w-12 h-12" fill="none" viewBox="0 0 48 48" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
-              <circle cx="22" cy="22" r="14" />
-              <path d="m40 40-8-8" />
-            </svg>
+        <div className="max-w-2xl mx-auto px-6 sm:px-8 py-14 sm:py-20 text-center">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#6c4d39] text-[#f6ecda] shadow-[0_8px_20px_-10px_rgba(108,77,57,0.9)] mb-5">
+            <IcoMagnifier className="w-7 h-7" />
           </div>
+          <h1 className="font-display text-3xl sm:text-4xl font-black tracking-tight leading-[0.95] mb-2">
+            What are you after?
+          </h1>
+          <p className="text-[#6f5b46] text-sm mb-7">Search live lots by name, brand or category.</p>
           <SearchBar size="large" />
-          <p className="text-[#8a7559] text-sm mt-5">Type at least 2 characters to search</p>
+          <p className="text-[#8a7559] text-xs mt-4">Type at least two characters.</p>
+          <BranchDivider className="w-48 h-5 mx-auto mt-12 opacity-80" />
         </div>
       </main>
     );
@@ -83,64 +100,75 @@ export default async function SearchPage({ searchParams }: Props) {
           <SearchBar defaultValue={query} size="large" />
         </div>
 
-        <p className="text-[#8a7559] text-sm mb-8">
-          {total === 0
-            ? <>No results for <span className="text-[#241a12] font-semibold">&ldquo;{query}&rdquo;</span></>
-            : <>{total} result{total !== 1 ? "s" : ""} for <span className="text-[#241a12] font-semibold">&ldquo;{query}&rdquo;</span></>
-          }
-        </p>
+        {/* Results headline */}
+        <div className="mb-8">
+          <p className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-[#6c4d39]">
+            <PineMark className="w-3.5 h-3.5" /> Search results
+          </p>
+          <h1 className="font-display text-2xl sm:text-3xl font-black tracking-tight leading-tight mt-1 break-words">
+            {total === 0 ? (
+              <>Nothing on the floor for &ldquo;{query}&rdquo;</>
+            ) : (
+              <>
+                <span className="tabular-nums">{total}</span> {total === 1 ? "match" : "matches"} for &ldquo;{query}&rdquo;
+              </>
+            )}
+          </h1>
+          {total > 0 && (
+            <p className="text-sm text-[#6f5b46] mt-1">Only lots in live auctions show up here. Highest bids first.</p>
+          )}
+        </div>
 
-        {/* Items */}
+        {/* Lots */}
         {items.length > 0 && (
           <section className="mb-10">
-            <h2 className="text-xs font-bold text-[#8a7559] uppercase tracking-[0.12em] mb-4">
-              Items ({items.length})
-            </h2>
+            <GroupHeader label="Lots" count={items.length} />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {items.map(item => (
                 <Link
                   key={item.id}
                   href={`/${item.organization.slug}/${item.auction?.slug}/item/${item.id}`}
-                  className="bg-white border border-[#e3d6bf] hover:border-[#6c4d39]/40 rounded-2xl p-4 flex items-center gap-4 transition-all hover:shadow-[0_0_20px_rgba(108,77,57,0.05)] group"
+                  className="nb-lift bg-white border border-[#e3d6bf] hover:border-[#6c4d39]/40 rounded-2xl p-3 flex items-center gap-3.5 group"
                 >
-                  {item.photos[0] ? (
-                    <img
-                      src={item.photos[0].url}
-                      alt={item.title}
-                      className="w-14 h-14 object-cover rounded-xl shrink-0"
-                    />
-                  ) : (
-                    <div className="w-14 h-14 bg-[#efe3d0] rounded-xl shrink-0 flex items-center justify-center text-[#8a7559]">
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth={1.5}>
-                        <rect x="2" y="2" width="16" height="16" rx="2.5" />
-                        <circle cx="7" cy="7" r="2" />
-                        <path d="m18 13-4-4L4 18" />
-                      </svg>
-                    </div>
-                  )}
+                  <div className="w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-[#faf5ea] ring-1 ring-[#efe0c9] flex items-center justify-center">
+                    {item.photos[0] ? (
+                      <img
+                        src={item.photos[0].url}
+                        alt={item.title}
+                        className="w-full h-full object-contain p-1"
+                      />
+                    ) : (
+                      <WoodenCrate className="w-10 h-9 opacity-70" />
+                    )}
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold truncate group-hover:text-[#6c4d39] transition-colors text-sm">
+                    <div className="font-semibold text-sm leading-snug line-clamp-2 group-hover:text-[#6c4d39] transition-colors">
                       {item.title}
                     </div>
-                    <div className="text-xs text-[#8a7559] mt-0.5">{item.organization.name}</div>
-                    {item.auction &&
-                    item.status === "ACTIVE" &&
-                    (item.auction.status === "OPEN" || item.auction.status === "CLOSING") ? (
-                      <div className="mt-1">
+                    <div className="mt-1 flex items-center gap-2 text-[11px] text-[#8a7559]">
+                      <span className="truncate">{item.auction?.title ?? item.organization.name}</span>
+                      {item.auction &&
+                      item.status === "ACTIVE" &&
+                      (item.auction.status === "OPEN" || item.auction.status === "CLOSING") ? (
                         <ItemCardTimer
                           itemId={item.id}
                           endAt={new Date(item.itemEndAt ?? item.auction.endAt).toISOString()}
                           inline
                         />
-                      </div>
-                    ) : item.auction?.endAt ? (
-                      <div className="text-xs text-[#8a7559] mt-0.5">
-                        Closes <LocalDate iso={new Date(item.auction.endAt).toISOString()} />
-                      </div>
-                    ) : null}
+                      ) : item.auction?.endAt ? (
+                        <span className="shrink-0">
+                          Closes <LocalDate iso={new Date(item.auction.endAt).toISOString()} />
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
-                  <div className="text-[#6c4d39] font-extrabold text-lg shrink-0">
-                    ${(Number(item.currentBid) || 0).toLocaleString()}
+                  <div className="text-right shrink-0 leading-none">
+                    <div className="text-[9px] font-bold uppercase tracking-wider text-[#8a7559]">
+                      {Number(item.currentBid) > 0 ? "Current bid" : "Starts at"}
+                    </div>
+                    <div className="font-display font-black text-lg text-[#6c4d39] tabular-nums mt-0.5">
+                      ${(Number(item.currentBid) > 0 ? Number(item.currentBid) : Number(item.startingBid) || 0).toLocaleString()}
+                    </div>
                   </div>
                 </Link>
               ))}
@@ -151,26 +179,28 @@ export default async function SearchPage({ searchParams }: Props) {
         {/* Auctions */}
         {auctions.length > 0 && (
           <section className="mb-10">
-            <h2 className="text-xs font-bold text-[#8a7559] uppercase tracking-[0.12em] mb-4">
-              Live Auctions ({auctions.length})
-            </h2>
+            <GroupHeader label="Live auctions" count={auctions.length} />
             <div className="space-y-2.5">
               {auctions.map(auction => {
                 return (
                   <Link
                     key={auction.id}
                     href={`/${auction.organization.slug}/${auction.slug}`}
-                    className="bg-white border border-[#e3d6bf] hover:border-[#6c4d39]/40 rounded-2xl p-4 flex items-center justify-between gap-4 transition-all hover:shadow-[0_0_20px_rgba(108,77,57,0.05)] group"
+                    className="nb-lift bg-white border border-[#e3d6bf] hover:border-[#6c4d39]/40 rounded-2xl p-4 flex items-center justify-between gap-4 group"
                   >
                     <div className="min-w-0">
-                      <div className="font-semibold truncate group-hover:text-[#6c4d39] transition-colors">
+                      <div className="font-display font-black text-base tracking-tight truncate group-hover:text-[#6c4d39] transition-colors">
                         {auction.title}
                       </div>
-                      <div className="text-xs text-[#8a7559] mt-0.5">
-                        {auction.organization.name} · {auction.items.length} items
+                      <div className="text-xs text-[#8a7559] mt-0.5 tabular-nums">
+                        {auction.organization.name} &middot; {auction.items.length} lot{auction.items.length !== 1 ? "s" : ""}
                       </div>
                     </div>
-                    <span className="text-xs bg-[#6c4d39]/15 text-[#6c4d39] border border-[#6c4d39]/20 px-2 py-0.5 rounded-full shrink-0 font-semibold">
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.14em] bg-[#e4f2e4] text-[#2f5d3a] border border-[#4a7c59]/30 px-2.5 py-1 rounded-full shrink-0">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="absolute inline-flex h-full w-full rounded-full bg-[#4a7c59] opacity-70 animate-ping" />
+                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#4a7c59]" />
+                      </span>
                       Live
                     </span>
                   </Link>
@@ -183,15 +213,13 @@ export default async function SearchPage({ searchParams }: Props) {
         {/* Businesses */}
         {orgs.length > 0 && (
           <section className="mb-10">
-            <h2 className="text-xs font-bold text-[#8a7559] uppercase tracking-[0.12em] mb-4">
-              Businesses ({orgs.length})
-            </h2>
+            <GroupHeader label="Auction houses" count={orgs.length} />
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {orgs.map(org => (
                 <Link
                   key={org.id}
                   href={`/${org.slug}`}
-                  className="bg-white border border-[#e3d6bf] hover:border-[#cdbda3] rounded-2xl p-4 transition-all group"
+                  className="nb-lift bg-white border border-[#e3d6bf] hover:border-[#6c4d39]/40 rounded-2xl p-4 group"
                 >
                   <div className="mb-3">
                     <OrgLogo name={org.name} logoUrl={org.logoUrl} size="sm" />
@@ -199,9 +227,9 @@ export default async function SearchPage({ searchParams }: Props) {
                   <div className="font-semibold text-sm truncate group-hover:text-[#6c4d39] transition-colors">
                     {org.name}
                   </div>
-                  <div className="text-xs text-[#8a7559] mt-1">
+                  <div className="text-xs text-[#8a7559] mt-1 tabular-nums">
                     {org.auctions.length > 0
-                      ? <span className="text-[#6c4d39] font-medium">{org.auctions.length} live now</span>
+                      ? <span className="text-[#2f5d3a] font-bold">{org.auctions.length} live now</span>
                       : `${org._count.auctions} auction${org._count.auctions !== 1 ? "s" : ""}`
                     }
                   </div>
@@ -212,20 +240,17 @@ export default async function SearchPage({ searchParams }: Props) {
         )}
 
         {total === 0 && (
-          <div className="text-center py-16">
-            <div className="flex justify-center mb-4 text-[#b3a085]">
-              <svg className="w-10 h-10" fill="none" viewBox="0 0 40 40" stroke="currentColor" strokeWidth={1.2} strokeLinecap="round">
-                <circle cx="18" cy="18" r="12" />
-                <path d="m34 34-7-7" />
-                <path d="M18 13v5M18 21v2" />
-              </svg>
-            </div>
-            <p className="text-[#8a7559] font-semibold mb-2">No results found</p>
-            <p className="text-[#8a7559] text-sm mb-4">
-              Only active items in live auctions appear in search.
+          <div className="text-center py-14 px-6 rounded-2xl border border-dashed border-[#cdbda3] bg-[#fbf4e6]/80">
+            <BidCritter className="nb-float w-20 h-20 mx-auto mb-4" />
+            <p className="font-display text-2xl font-black tracking-tight text-[#241a12] mb-1.5">Came up empty</p>
+            <p className="text-[#6f5b46] text-sm max-w-sm mx-auto leading-relaxed">
+              Only lots in live auctions are searchable. Try a brand name, a shorter word, or browse the whole floor.
             </p>
-            <Link href="/" className="text-[#6c4d39] hover:text-[#c47b3e] text-sm transition-colors">
-              Browse all live auctions
+            <Link
+              href="/auctions"
+              className="inline-flex items-center gap-2 mt-6 rounded-xl bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold text-sm px-6 py-3 transition-colors"
+            >
+              Browse live auctions
             </Link>
           </div>
         )}

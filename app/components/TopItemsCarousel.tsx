@@ -67,35 +67,53 @@ export default function TopItemsCarousel({ items }: { items: TopItem[] }) {
         onMouseLeave={resume}
         onTouchStart={pause}
         onTouchEnd={resumeSoon}
-        className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex gap-3 overflow-x-auto pt-2 -mt-2 pb-3 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {loop.map((it, i) => (
-          <Link
-            key={`${it.id}-${i}`}
-            href={it.href}
-            className="group shrink-0 w-40 sm:w-44 bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden hover:border-[#6c4d39]/40 hover:shadow-[0_4px_18px_rgba(108,77,57,0.10)] transition-all"
-          >
-            <div className="relative aspect-square bg-[#faf5ea] overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={it.photo} alt="" loading="lazy" className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform" />
-              <ItemCardTimer itemId={it.id} endAt={it.endsAt} />
-            </div>
-            <div className="p-2.5">
-              <div className="text-sm font-semibold text-[#241a12] leading-tight line-clamp-2 min-h-[2.5em]">{it.title}</div>
-              <div className="mt-1.5 flex items-center justify-between gap-1">
-                <span className="text-base font-extrabold text-[#4a7c59] tabular-nums">{money(it.currentBid)}</span>
-                {it.bidCount > 0 && (
-                  <span className="text-[11px] font-bold text-[#8a5a2b] bg-[#f6ecda] border border-[#e3c9a3] px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                    {it.bidCount} bid{it.bidCount !== 1 ? "s" : ""}
+        {loop.map((it, i) => {
+          const off =
+            it.retailValue > 0 && it.currentBid < it.retailValue
+              ? Math.round((1 - it.currentBid / it.retailValue) * 100)
+              : 0;
+          return (
+            <Link
+              key={`${it.id}-${i}`}
+              href={it.href}
+              className="group nb-lift shrink-0 w-40 sm:w-44 bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden hover:border-[#c47b3e]/50"
+            >
+              <div className="relative aspect-square bg-[#faf5ea] overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={it.photo} alt="" loading="lazy" className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300" />
+                <ItemCardTimer itemId={it.id} endAt={it.endsAt} />
+                {off >= 20 && (
+                  <span className="absolute bottom-2 right-2 z-10 rounded-md bg-[#c47b3e] text-white text-[10px] font-black px-1.5 py-0.5 shadow-sm tabular-nums">
+                    {off}% off
                   </span>
                 )}
               </div>
-              {it.retailValue > 0 && (
-                <div className="text-[11px] text-[#8a7559] mt-0.5">MSRP {money(it.retailValue)}</div>
-              )}
-            </div>
-          </Link>
-        ))}
+              <div className="p-2.5">
+                <div className="text-sm font-semibold text-[#241a12] leading-tight line-clamp-2 min-h-[2.5em] group-hover:text-[#6c4d39] transition-colors">
+                  {it.title}
+                </div>
+                <div className="mt-2 flex items-end justify-between gap-1">
+                  <div className="leading-none">
+                    <div className="text-[9px] font-bold uppercase tracking-wider text-[#8a7559]">Current bid</div>
+                    <div className="mt-0.5 font-display text-lg font-black text-[#4a7c59] tabular-nums">{money(it.currentBid)}</div>
+                  </div>
+                  {it.bidCount > 0 && (
+                    <span className="text-[10px] font-black text-[#a85f28] bg-[#f7e4c9] px-1.5 py-0.5 rounded-full whitespace-nowrap tabular-nums">
+                      {it.bidCount} bid{it.bidCount !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                </div>
+                {it.retailValue > 0 && (
+                  <div className="text-[11px] text-[#8a7559] mt-1 tabular-nums">
+                    Retail <span className="line-through">{money(it.retailValue)}</span>
+                  </div>
+                )}
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );

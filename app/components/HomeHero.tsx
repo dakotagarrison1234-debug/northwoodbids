@@ -106,13 +106,19 @@ export default function HomeHero({
 
         {/* headline */}
         <h1
-          className="nb-rise font-display text-[3rem] leading-[0.94] sm:text-7xl font-black tracking-tight text-[#241a12] mb-4"
+          className="nb-rise font-display text-[3rem] leading-[0.94] sm:text-7xl font-black tracking-tight text-[#241a12] mb-3"
           style={{ animationDelay: "120ms" }}
         >
           Going once.
           <br />
           <span className="nb-gradient-text">Going twice.</span>
         </h1>
+        <p
+          className="nb-rise text-[#6f5b46] text-sm sm:text-base font-medium mb-7 max-w-md mx-auto leading-snug"
+          style={{ animationDelay: "200ms" }}
+        >
+          Name-brand overstock, every lot from $2. Bid online, pick up in Owosso or Gladwin.
+        </p>
 
         {/* stat trio */}
         <div

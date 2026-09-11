@@ -2,14 +2,14 @@
 import { useEffect, useState } from "react";
 
 /**
- * Always-on live countdown for an auction card. Unlike the old "urgency pill" — which
- * only appeared inside 48h and showed a static "Ends in 3h" that never moved — this
- * ticks every second for ANY future date, so every card has a live clock the way a
- * home-shopping channel always shows one. The ticking is the thing that pulls a
- * browser into "I should bid before this runs out."
+ * Always-on live countdown for an auction card. Ticks every second for ANY future
+ * date, so every card carries a moving clock — the thing that turns a browser
+ * into a bidder. Renders as a little segmented clock: two boxed units ("3d 4h",
+ * "6h 22m", then "12m 30s" in the last hour) that shift colour as the moment
+ * gets close — moss while there's time, amber inside 12h, red in the final hour.
  *
- * `target` is the moment we're counting to (auction end for live, auction start for
- * upcoming). `mode` only changes the label + colour.
+ * `targetIso` is the moment we count to (auction end for live, start for
+ * upcoming). `mode` changes only the label + colour.
  */
 export default function AuctionCountdown({
   targetIso,
@@ -28,13 +28,16 @@ export default function AuctionCountdown({
     return () => clearInterval(id);
   }, [targetIso]);
 
-  // Pre-hydration / first paint: render a neutral placeholder of the same size so
-  // the card doesn't jump when the real value lands.
+  const label = mode === "opens" ? "Opens in" : "Ends in";
+
+  // Pre-hydration / first paint: same footprint, neutral colour, so the card
+  // doesn't jump when the real value lands.
   if (ms === null) {
     return (
       <div className="flex items-center gap-1.5 text-[#8a7559]">
-        <ClockIcon />
-        <span className="text-sm font-semibold tabular-nums">— — —</span>
+        <span className="text-[10px] font-black uppercase tracking-[0.14em]">{label}</span>
+        <Unit v="--" u="" tone="bg-[#efe3d0] text-[#8a7559]" />
+        <Unit v="--" u="" tone="bg-[#efe3d0] text-[#8a7559]" />
       </div>
     );
   }
@@ -42,8 +45,13 @@ export default function AuctionCountdown({
   if (ms <= 0) {
     return (
       <div className="flex items-center gap-1.5 text-[#8a7559]">
-        <ClockIcon />
-        <span className="text-sm font-bold">{mode === "opens" ? "Starting…" : "Closing…"}</span>
+        <span className="relative flex h-1.5 w-1.5">
+          <span className="absolute inline-flex h-full w-full rounded-full bg-[#c47b3e] opacity-70 animate-ping" />
+          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#c47b3e]" />
+        </span>
+        <span className="text-[11px] font-black uppercase tracking-[0.14em]">
+          {mode === "opens" ? "Opening now" : "Closing now"}
+        </span>
       </div>
     );
   }
@@ -54,60 +62,56 @@ export default function AuctionCountdown({
   const mins = Math.floor((totalSec % 3600) / 60);
   const secs = totalSec % 60;
 
-  // Under an hour is the pressure zone — go red and show seconds ticking.
+  // Pressure zones (live auctions only): amber inside 12h, red inside the hour.
   const urgent = mode === "ends" && ms <= 60 * 60 * 1000;
   const soon = mode === "ends" && ms <= 12 * 60 * 60 * 1000;
 
-  // Show the two most significant units so it reads cleanly at any range:
-  // "3d 4h", "6h 22m", or "12m 30s" in the final hour.
-  const parts: { v: number; u: string }[] =
+  const parts: { v: string; u: string }[] =
     days > 0
-      ? [{ v: days, u: "d" }, { v: hours, u: "h" }]
+      ? [{ v: String(days), u: "d" }, { v: pad(hours), u: "h" }]
       : hours > 0
-      ? [{ v: hours, u: "h" }, { v: mins, u: "m" }]
-      : [{ v: mins, u: "m" }, { v: secs, u: "s" }];
+      ? [{ v: String(hours), u: "h" }, { v: pad(mins), u: "m" }]
+      : [{ v: String(mins), u: "m" }, { v: pad(secs), u: "s" }];
 
-  const color = urgent
-    ? "text-red-600"
+  const labelTone = urgent
+    ? "text-red-700"
     : soon
-    ? "text-amber-600"
+    ? "text-[#a85f28]"
     : mode === "opens"
     ? "text-[#6c4d39]"
-    : "text-[#4a7c59]";
+    : "text-[#2f5d3a]";
+
+  const unitTone = urgent
+    ? "bg-red-600 text-white"
+    : soon
+    ? "bg-[#c47b3e] text-white"
+    : mode === "opens"
+    ? "bg-[#6c4d39] text-[#f6ecda]"
+    : "bg-[#4a7c59] text-white";
 
   return (
-    <div className={`flex items-center gap-1.5 ${color}`}>
-      <ClockIcon urgent={urgent} />
-      <span className="text-[11px] font-bold uppercase tracking-wide opacity-80">
-        {mode === "opens" ? "Opens in" : "Ends in"}
-      </span>
-      <span className="flex items-center gap-1 tabular-nums font-extrabold text-sm">
-        {parts.map((p) => (
-          <span key={p.u}>
-            {p.v}
-            <span className="text-[11px] font-bold opacity-70">{p.u}</span>
-          </span>
-        ))}
-      </span>
+    <div className={`flex items-center gap-1.5 ${labelTone}`} aria-live="off">
+      <span className="text-[10px] font-black uppercase tracking-[0.14em]">{label}</span>
+      {parts.map((p) => (
+        <Unit key={p.u} v={p.v} u={p.u} tone={unitTone} pulse={urgent} />
+      ))}
     </div>
   );
 }
 
-function ClockIcon({ urgent = false }: { urgent?: boolean }) {
+function pad(n: number) {
+  return n.toString().padStart(2, "0");
+}
+
+function Unit({ v, u, tone, pulse = false }: { v: string; u: string; tone: string; pulse?: boolean }) {
   return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={urgent ? "animate-pulse" : ""}
+    <span
+      className={`inline-flex items-baseline rounded-md px-1.5 py-0.5 leading-none tabular-nums shadow-sm ${tone} ${
+        pulse ? "animate-pulse" : ""
+      }`}
     >
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3 3" />
-    </svg>
+      <span className="font-display font-black text-[13px]">{v}</span>
+      {u && <span className="text-[9px] font-bold ml-px opacity-85">{u}</span>}
+    </span>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import ItemCardTimer from "@/app/components/ItemCardTimer";
+import { WoodenCrate, PineMark } from "@/app/components/Illustrations";
 
 /**
  * A fully pre-computed, serializable view of one lot. All the branching (price
@@ -90,47 +91,75 @@ export default function AuctionItemsView({
 
   return (
     <>
-      {/* Filter/sort + view toggle */}
-      <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xs text-[#8a7559] font-medium shrink-0">
-            {shownItems.length} item{shownItems.length !== 1 ? "s" : ""}
+      {/* Toolbar: lot count + bid filter on the left, grid/list toggle on the right */}
+      <div className="flex items-center justify-between gap-3 mb-4 sm:mb-5 flex-wrap rounded-2xl bg-[#fbf4e6] border border-[#e3d6bf] px-3 py-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="inline-flex items-center gap-1.5 text-xs text-[#6f5b46] font-bold shrink-0 tabular-nums">
+            <PineMark className="w-3.5 h-3.5" />
+            {shownItems.length} lot{shownItems.length !== 1 ? "s" : ""}
           </span>
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value as typeof sort)}
-            aria-label="Filter items by bids"
-            className="bg-white border border-[#cdbda3] rounded-xl px-2.5 py-2 text-xs font-bold text-[#6f5b46] focus:outline-none focus:border-[#6c4d39]"
-          >
-            <option value="featured">Featured</option>
-            <option value="nobids">No bids</option>
-            <option value="high">Highest bids</option>
-            <option value="low">Lowest bids</option>
-          </select>
+          <span aria-hidden className="h-4 w-px bg-[#e3d6bf]" />
+          <label className="relative inline-flex items-center">
+            <span className="sr-only">Filter lots by bids</span>
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as typeof sort)}
+              className="appearance-none bg-white border border-[#e3d6bf] hover:border-[#cdbda3] rounded-xl pl-3 pr-8 py-1.5 text-xs font-bold text-[#6c4d39] focus:outline-none focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 transition-colors cursor-pointer"
+            >
+              <option value="featured">Featured first</option>
+              <option value="nobids">No bids yet</option>
+              <option value="high">Highest bid</option>
+              <option value="low">Lowest bid</option>
+            </select>
+            <svg
+              className="pointer-events-none absolute right-2.5 w-3.5 h-3.5 text-[#8a7559]"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </label>
         </div>
-        <div className="inline-flex rounded-xl border border-[#cdbda3] bg-white overflow-hidden shrink-0" role="group" aria-label="View">
+        <div className="inline-flex rounded-xl border border-[#e3d6bf] bg-white overflow-hidden shrink-0 p-0.5 gap-0.5" role="group" aria-label="View">
           {(
             [
               { v: "grid", label: "Grid", Icon: GridIcon },
               { v: "list", label: "List", Icon: ListIcon },
             ] as const
-          ).map(({ v, label, Icon }, i) => (
+          ).map(({ v, label, Icon }) => (
             <button
               key={v}
               onClick={() => choose(v)}
               aria-pressed={view === v}
-              className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold transition-colors ${
-                i === 1 ? "border-l border-[#e3d6bf]" : ""
-              } ${view === v ? "bg-[#6c4d39] text-white" : "text-[#6f5b46] hover:bg-[#efe3d0]"}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[9px] text-xs font-bold transition-colors ${
+                view === v ? "bg-[#6c4d39] text-white shadow-sm" : "text-[#6f5b46] hover:bg-[#f1e7d5]"
+              }`}
             >
               <Icon />
-              {label}
+              <span className="hidden sm:inline">{label}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {view === "grid" ? (
+      {shownItems.length === 0 ? (
+        <div className="text-center py-14 px-6 rounded-2xl border border-dashed border-[#cdbda3] bg-[#fbf4e6]/70">
+          <WoodenCrate className="nb-float w-24 h-20 mx-auto mb-3" />
+          <p className="font-display text-xl font-black tracking-tight text-[#241a12]">Every lot here has a bid on it</p>
+          <p className="text-sm text-[#8a7559] mt-1">Switch the filter back to see the whole floor.</p>
+          <button
+            onClick={() => setSort("featured")}
+            className="mt-4 rounded-xl bg-[#6c4d39] hover:bg-[#563e2c] text-white text-sm font-bold px-5 py-2.5 transition-colors"
+          >
+            Show all lots
+          </button>
+        </div>
+      ) : view === "grid" ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3 items-stretch">
           {shownItems.map((item) => (
             <div key={item.id} className="flex flex-col h-full">
@@ -154,17 +183,13 @@ export default function AuctionItemsView({
                       className="object-contain p-1 group-hover:scale-105 transition-transform duration-300"
                     />
                   ) : (
-                    <div className="flex flex-col items-center gap-1.5 text-[#b3a085]">
-                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                        <rect x="3" y="3" width="18" height="18" rx="3" />
-                        <circle cx="8.5" cy="8.5" r="2" />
-                        <path d="m21 15-5-5L5 21" />
-                      </svg>
-                      <span className="text-xs">No photo</span>
+                    <div className="flex flex-col items-center gap-1 text-[#b3a085] bg-[#faf5ea] absolute inset-0 justify-center">
+                      <WoodenCrate className="w-14 h-12 opacity-70" />
+                      <span className="text-[11px] font-semibold">Photo coming</span>
                     </div>
                   )}
                   {item.badge && (
-                    <div className={`absolute top-2 right-2 z-10 text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm backdrop-blur-sm ${item.badge.cls}`}>
+                    <div className={`absolute top-2 right-2 z-10 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider shadow-sm backdrop-blur-sm ${item.badge.cls}`}>
                       {item.badge.text}
                     </div>
                   )}
@@ -183,7 +208,7 @@ export default function AuctionItemsView({
                 {/* Info — tight; timer rides next to the condition as quiet text.
                     Condition truncates first; the timer is shrink-0 so it never gets cut. */}
                 <div className="flex flex-col flex-1 p-2.5">
-                  <h3 className="font-bold text-sm leading-tight line-clamp-2 group-hover:text-[#6c4d39] transition-colors break-words">
+                  <h3 className="font-semibold text-sm leading-tight line-clamp-2 text-[#241a12] group-hover:text-[#6c4d39] transition-colors break-words">
                     {item.title}
                   </h3>
                   <div className="flex items-center gap-1.5 mt-1 text-[11px] text-[#8a7559]">
@@ -197,15 +222,15 @@ export default function AuctionItemsView({
                   </div>
                   <div className="mt-auto pt-2 flex items-end justify-between gap-2">
                     <div className="min-w-0">
-                      <div className="text-[10px] text-[#8a7559] uppercase tracking-wide leading-none">{item.priceLabel}</div>
-                      <div className={`font-extrabold text-lg leading-tight tabular-nums truncate ${item.isItemUnsold ? "text-[#8a7559]" : "text-[#6c4d39]"}`}>
+                      <div className="text-[9px] font-bold text-[#8a7559] uppercase tracking-wider leading-none">{item.priceLabel}</div>
+                      <div className={`font-display font-black text-lg leading-tight tabular-nums truncate mt-0.5 ${item.isItemUnsold ? "text-[#8a7559]" : "text-[#6c4d39]"}`}>
                         ${item.priceValue.toLocaleString()}
                       </div>
                     </div>
                     {item.retailValue > 0 && (
                       <div className="text-right shrink-0 leading-none whitespace-nowrap">
-                        <span className="text-[10px] text-[#8a7559]">retail </span>
-                        <span className="text-[12px] font-bold text-[#a32d2d] tabular-nums line-through">${item.retailValue.toLocaleString()}</span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-[#8a7559]">retail </span>
+                        <span className="text-[12px] font-bold text-[#8a7559] tabular-nums line-through">${item.retailValue.toLocaleString()}</span>
                       </div>
                     )}
                   </div>
@@ -238,7 +263,7 @@ export default function AuctionItemsView({
                     ? "nb-premium border-2"
                     : item.winning
                     ? "border-[#6c4d39]/50 shadow-[0_0_0_1px_rgba(108,77,57,0.12)]"
-                    : "border-[#e3d6bf] hover:border-[#6c4d39]/40 hover:shadow-[0_4px_20px_rgba(108,77,57,0.08)]"
+                    : "border-[#e3d6bf] hover:border-[#6c4d39]/40 hover:shadow-[0_8px_24px_-12px_rgba(60,40,25,0.35)]"
                 }`}
               >
                 {/* Thumb — framed, self-centered, whole product shown */}
@@ -254,11 +279,7 @@ export default function AuctionItemsView({
                   ) : item.primaryPhoto ? (
                     <Image src={item.primaryPhoto} alt={item.title} fill sizes="112px" className="object-contain p-1.5" />
                   ) : (
-                    <svg className="w-8 h-8 text-[#b3a085]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <rect x="3" y="3" width="18" height="18" rx="3" />
-                      <circle cx="8.5" cy="8.5" r="2" />
-                      <path d="m21 15-5-5L5 21" />
-                    </svg>
+                    <WoodenCrate className="w-12 h-10 opacity-70" />
                   )}
                   {item.isCombo && (
                     <span className="absolute bottom-1 left-1 bg-[#241a12]/85 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold z-10">
@@ -273,7 +294,7 @@ export default function AuctionItemsView({
                     {(item.badge || item.isItemLive) && (
                       <div className="flex items-center gap-1.5 mb-1">
                         {item.badge && (
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${item.badge.cls}`}>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider ${item.badge.cls}`}>
                             {item.badge.text}
                           </span>
                         )}
@@ -282,7 +303,7 @@ export default function AuctionItemsView({
                         )}
                       </div>
                     )}
-                    <h3 className="font-bold text-[15px] sm:text-base leading-snug line-clamp-2 group-hover:text-[#6c4d39] transition-colors break-words">
+                    <h3 className="font-semibold text-[15px] sm:text-base leading-snug line-clamp-2 text-[#241a12] group-hover:text-[#6c4d39] transition-colors break-words">
                       {item.title}
                     </h3>
                     <div className="flex items-center gap-2 mt-1 text-[11px] sm:text-xs text-[#8a7559]">
@@ -297,16 +318,16 @@ export default function AuctionItemsView({
 
                   <div className="flex items-end justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-[10px] text-[#8a7559] uppercase tracking-wide leading-none mb-1">
+                      <div className="text-[9px] font-bold text-[#8a7559] uppercase tracking-wider leading-none mb-1">
                         {item.priceLabel}
                       </div>
                       <div className="flex items-baseline gap-2 flex-wrap">
-                        <span className={`font-extrabold text-xl sm:text-2xl leading-none tabular-nums ${item.isItemUnsold ? "text-[#8a7559]" : "text-[#6c4d39]"}`}>
+                        <span className={`font-display font-black text-xl sm:text-2xl leading-none tabular-nums ${item.isItemUnsold ? "text-[#8a7559]" : "text-[#6c4d39]"}`}>
                           ${item.priceValue.toLocaleString()}
                         </span>
                         {item.retailValue > 0 && (
-                          <span className="text-[11px] font-semibold text-[#a32d2d] tabular-nums">
-                            retail ${item.retailValue.toLocaleString()}
+                          <span className="text-[11px] font-semibold text-[#8a7559] tabular-nums">
+                            retail <span className="line-through">${item.retailValue.toLocaleString()}</span>
                           </span>
                         )}
                       </div>

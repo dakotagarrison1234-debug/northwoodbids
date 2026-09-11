@@ -1,53 +1,81 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-// Shows the first sentence of a description; a down-arrow "Read more" reveals the rest.
-// Falls back gracefully when the text is short or has no clear sentence break.
-export default function ExpandableDescription({ text }: { text: string }) {
+/**
+ * Lot description with an elegant expand / collapse.
+ *
+ * Collapsed, the text is clamped to a few lines and fades out into the card so
+ * it reads as "there's more here" without a hard cut. "Read more" opens it with
+ * a smooth height transition; the button only appears when the text actually
+ * overflows the clamp, so short descriptions render plain.
+ */
+export default function ExpandableDescription({ text, lines = 4 }: { text: string; lines?: number }) {
   const [open, setOpen] = useState(false);
+  const [overflows, setOverflows] = useState(false);
+  const bodyRef = useRef<HTMLParagraphElement | null>(null);
   const trimmed = text.trim();
 
-  // Preview = first sentence (ends in . ! or ?), else first ~160 characters.
-  const sentence = trimmed.match(/^[\s\S]*?[.!?](?=\s|$)/)?.[0]?.trim() ?? "";
-  let preview = sentence;
-  if (!preview || preview.length < 40) {
-    preview = trimmed.length > 160 ? trimmed.slice(0, 160).trim() : trimmed;
-  }
+  // Measure once mounted (and again on resize): does the clamp actually hide anything?
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const measure = () => {
+      if (open) return;
+      setOverflows(el.scrollHeight > el.clientHeight + 2);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [open, trimmed]);
 
-  const hasMore = preview.length < trimmed.length;
-
-  if (!hasMore) {
-    return <p className="text-[#6f5b46] mb-6 whitespace-pre-line">{trimmed}</p>;
-  }
-
-  const endsPunctuated = /[.!?]$/.test(preview);
+  const clampStyle = open
+    ? undefined
+    : ({ display: "-webkit-box", WebkitLineClamp: lines, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties);
 
   return (
-    <div className="mb-6">
-      <p className="text-[#6f5b46] whitespace-pre-line">
-        {open ? trimmed : endsPunctuated ? preview : `${preview}…`}
-      </p>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        className="mt-1.5 inline-flex items-center gap-1 text-sm font-semibold text-[#6c4d39] hover:text-[#563e2c] transition-colors"
+    <div className="relative">
+      <p
+        ref={bodyRef}
+        style={clampStyle}
+        className="text-[15px] text-[#4a3a2b] leading-relaxed whitespace-pre-line"
       >
-        {open ? "Show less" : "Read more"}
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={`transition-transform ${open ? "rotate-180" : ""}`}
+        {trimmed}
+      </p>
+
+      {/* Soft fade so the clamp never looks like a broken line. */}
+      {!open && overflows && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white to-white/0"
+        />
+      )}
+
+      {(overflows || open) && (
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className="mt-2 inline-flex items-center gap-1.5 text-sm font-bold text-[#6c4d39] hover:text-[#563e2c] transition-colors"
         >
-          <path d="M6 9l6 6 6-6" />
-        </svg>
-      </button>
+          <span className="border-b border-dashed border-[#6c4d39]/50 group-hover:border-[#563e2c]">
+            {open ? "Show less" : "Read the full description"}
+          </span>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+            aria-hidden="true"
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }

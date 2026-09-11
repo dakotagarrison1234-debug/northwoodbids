@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import LocationBadge from "@/app/components/LocationBadge";
+import EmptyState from "@/app/components/EmptyState";
+import { IcoTruck, IcoCheck, IcoLock, IcoTarget, IcoMegaphone } from "@/app/components/BidIcons";
+import { PineMark } from "@/app/components/Illustrations";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface ItemCard {
@@ -93,6 +96,15 @@ function fmtDayShort(iso: string) {
     day: "numeric",
   });
 }
+function fmtWeekday(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", { timeZone: "America/Detroit", weekday: "short" });
+}
+function fmtDayNum(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", { timeZone: "America/Detroit", day: "numeric" });
+}
+function fmtMonthShort(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", { timeZone: "America/Detroit", month: "short" });
+}
 function fmtMonthDay(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", {
     timeZone: "America/Detroit",
@@ -162,12 +174,78 @@ function downloadAppointmentIcs(appt: Appointment) {
   URL.revokeObjectURL(url);
 }
 
+// ── Small UI bits ─────────────────────────────────────────────────────────────
+function IcoChevL() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3 5 8l5 5" /></svg>
+  );
+}
+function IcoChevR() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3l5 5-5 5" /></svg>
+  );
+}
+function IcoCalendar({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+  );
+}
+function IcoPin({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21s-7-6.3-7-11a7 7 0 1 1 14 0c0 4.7-7 11-7 11z" /><circle cx="12" cy="10" r="2.5" /></svg>
+  );
+}
+
 function ItemPhoto({ url, title }: { url: string | null; title: string }) {
   return url ? (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={url} alt={title} className="w-16 h-16 rounded-xl object-cover shrink-0" />
+    <img src={url} alt={title} className="w-14 h-14 rounded-xl object-cover shrink-0 border border-[#e3d6bf]" />
   ) : (
-    <div className="w-16 h-16 bg-[#efe3d0] rounded-xl flex items-center justify-center text-[#8a7559] shrink-0">—</div>
+    <div className="w-14 h-14 bg-[#efe3d0] rounded-xl border border-[#e3d6bf] shrink-0" />
+  );
+}
+
+/** Compact item line used in lists (no photo): dot, title, optional spot/from. */
+function ItemLine({ title, extra }: { title: string; extra?: React.ReactNode }) {
+  return (
+    <li className="flex items-start gap-2 text-sm text-[#241a12]">
+      <span className="w-1.5 h-1.5 rounded-full bg-[#c47b3e] mt-2 shrink-0" aria-hidden />
+      <span className="min-w-0 leading-snug">{title} {extra}</span>
+    </li>
+  );
+}
+
+/** Section label used throughout the page. */
+function Eyebrow({ children, tone = "leather" }: { children: React.ReactNode; tone?: "leather" | "amber" | "moss" }) {
+  const c = tone === "amber" ? "text-[#a85f28]" : tone === "moss" ? "text-[#2f5d3a]" : "text-[#6c4d39]";
+  return <div className={`text-[11px] font-black uppercase tracking-[0.18em] ${c}`}>{children}</div>;
+}
+
+/** "What happens next" strip — the three beats of a pickup, in order. */
+function NextSteps({ hasAppointment, transferring }: { hasAppointment: boolean; transferring: boolean }) {
+  const steps = [
+    { Icon: IcoTruck, title: transferring ? "It rides over" : "We pull your order", text: transferring ? "Wins from the other warehouse move to yours, free, in about 5 to 6 days." : "Once you book, staff gather your items and box them up." },
+    { Icon: IcoMegaphone, title: "We text you", text: hasAppointment ? "You'll get a text with your box number when it's staged." : "A quick text lets you know it's ready and where to find it." },
+    { Icon: IcoCheck, title: "Grab it and go", text: "Show up in your window, find your box, tap \"I picked up\". Done." },
+  ];
+  return (
+    <div className="bg-white border border-[#e3d6bf] rounded-2xl px-5 py-4">
+      <Eyebrow>What happens next</Eyebrow>
+      <ol className="mt-3 grid gap-3 sm:grid-cols-3">
+        {steps.map((s, i) => (
+          <li key={s.title} className="flex gap-3 sm:flex-col sm:gap-2">
+            <span className="w-9 h-9 rounded-xl bg-[#faf5ea] border border-[#e3d6bf] text-[#6c4d39] flex items-center justify-center shrink-0 relative">
+              <s.Icon className="w-4 h-4" />
+              <span className="absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full bg-[#6c4d39] text-white text-[9px] font-black flex items-center justify-center">{i + 1}</span>
+            </span>
+            <div className="min-w-0">
+              <div className="text-sm font-bold text-[#241a12]">{s.title}</div>
+              <div className="text-xs text-[#6f5b46] mt-0.5 leading-snug">{s.text}</div>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }
 
@@ -217,8 +295,8 @@ function SlotPicker({
 
   if (days.length === 0) {
     return (
-      <div className="rounded-xl border border-[#e3d6bf] bg-white px-4 py-6 text-base text-[#8a7559]">
-        No times are available at this location right now. Please check back soon.
+      <div className="rounded-xl border border-dashed border-[#cdbda3] bg-[#faf5ea] px-4 py-6 text-sm text-[#6f5b46] text-center">
+        No open windows at {location.name} right now. New times post regularly; check back shortly.
       </div>
     );
   }
@@ -228,7 +306,7 @@ function SlotPicker({
   const hasPrev = pageStart > 0;
   const hasNext = pageStart + DAYS_PER_PAGE < days.length;
   const rangeLabel = pageDays.length
-    ? `${fmtMonthDay(pageDays[0].iso)} – ${fmtMonthDay(pageDays[pageDays.length - 1].iso)}`
+    ? `${fmtMonthDay(pageDays[0].iso)} to ${fmtMonthDay(pageDays[pageDays.length - 1].iso)}`
     : "";
 
   const goPrev = () => {
@@ -243,7 +321,7 @@ function SlotPicker({
   };
 
   const navBtn =
-    "flex items-center gap-1 rounded-xl border-2 border-[#e3d6bf] bg-white px-3 py-2 text-sm font-semibold text-[#241a12] hover:bg-[#efe3d0] disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
+    "inline-flex items-center gap-1 rounded-lg border border-[#e3d6bf] bg-white px-2.5 py-1.5 text-xs font-bold text-[#6c4d39] hover:bg-[#faf5ea] disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
 
   // Today never appears in the slot list once the 8am cutoff has passed. Say why,
   // or it just looks like the schedule is broken.
@@ -253,27 +331,31 @@ function SlotPicker({
   return (
     <div className="space-y-5">
       {todayMissing && (
-        <p className="text-sm text-[#6f5b46] bg-[#f6ecda] border border-[#e3c9a3] rounded-xl px-4 py-2.5">
-          Same-day pickups close at <strong>8:00 AM</strong> so we have time to pull your order —
-          the soonest you can book is shown below.
+        <p className="text-sm text-[#6f5b46] bg-[#faf5ea] border border-[#e3d6bf] rounded-xl px-4 py-2.5 flex items-start gap-2">
+          <IcoLock className="w-4 h-4 text-[#8a7559] shrink-0 mt-0.5" />
+          <span>Same-day windows close at <strong className="text-[#241a12]">8:00 AM</strong> so we have time to pull your order. The soonest open day is below.</span>
         </p>
       )}
 
       {/* Week navigation */}
       <div>
-        <label className="block text-base font-semibold text-[#241a12] mb-2">Pick a day (Michigan time)</label>
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <button type="button" onClick={goPrev} disabled={!hasPrev} className={navBtn} aria-label="Previous week">
-            <span aria-hidden>‹</span> Earlier
-          </button>
-          <span className="text-base font-semibold text-[#6f5b46]">{rangeLabel}</span>
-          <button type="button" onClick={goNext} disabled={!hasNext} className={navBtn} aria-label="Next week">
-            Later <span aria-hidden>›</span>
-          </button>
+        <div className="flex items-center justify-between gap-2 mb-2.5">
+          <div>
+            <Eyebrow>1. Pick a day</Eyebrow>
+            <div className="text-xs text-[#8a7559] mt-0.5">{rangeLabel} · Michigan time</div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button type="button" onClick={goPrev} disabled={!hasPrev} className={navBtn} aria-label="Previous week">
+              <IcoChevL /> Earlier
+            </button>
+            <button type="button" onClick={goNext} disabled={!hasNext} className={navBtn} aria-label="Next week">
+              Later <IcoChevR />
+            </button>
+          </div>
         </div>
 
         {/* Day buttons for this week */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
           {pageDays.map((d) => {
             const isSel = selectedDay === d.key;
             return (
@@ -284,13 +366,16 @@ function SlotPicker({
                   setSelectedDay(d.key);
                   setSelected(null);
                 }}
-                className={`rounded-xl border-2 px-3 py-3 text-left transition-colors ${
-                  isSel ? "border-[#6c4d39] bg-[#6c4d39] text-white" : "border-[#e3d6bf] bg-white hover:bg-[#efe3d0]"
+                aria-pressed={isSel}
+                className={`rounded-xl border-2 px-1 py-2.5 text-center transition-colors nb-focus ${
+                  isSel ? "border-[#6c4d39] bg-[#6c4d39] text-white" : "border-[#e3d6bf] bg-white hover:bg-[#faf5ea] hover:border-[#cdbda3]"
                 }`}
               >
-                <div className="text-base font-semibold leading-tight">{fmtDayShort(d.iso)}</div>
-                <div className={`text-xs mt-0.5 ${isSel ? "text-[#e7dcc6]" : "text-[#8a7559]"}`}>
-                  {d.slots.length} time{d.slots.length !== 1 ? "s" : ""}
+                <div className={`text-[10px] font-bold uppercase tracking-wider ${isSel ? "text-[#e7dcc6]" : "text-[#8a7559]"}`}>{fmtWeekday(d.iso)}</div>
+                <div className="font-display text-xl font-black leading-none mt-0.5">{fmtDayNum(d.iso)}</div>
+                <div className={`text-[10px] mt-0.5 ${isSel ? "text-[#e7dcc6]" : "text-[#8a7559]"}`}>{fmtMonthShort(d.iso)}</div>
+                <div className={`text-[10px] font-semibold mt-1 ${isSel ? "text-white" : "text-[#4a7c59]"}`}>
+                  {d.slots.length} open
                 </div>
               </button>
             );
@@ -299,52 +384,54 @@ function SlotPicker({
       </div>
 
       {/* Times for the chosen day */}
-      {activeDay ? (
-        <div>
-          <label className="block text-base font-semibold text-[#241a12] mb-2">
-            Pick a time — {fmtDayShort(activeDay.iso)}
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {activeDay.slots.map((s) => {
-              const isSelected = selected === s.startsAt;
-              const low = s.remaining > 0 && s.remaining <= 2;
-              return (
-                <button
-                  key={s.startsAt}
-                  type="button"
-                  onClick={() => setSelected(s.startsAt)}
-                  className={`flex flex-col items-center rounded-xl border-2 px-4 py-3 text-base font-semibold transition-colors ${
-                    isSelected
-                      ? "border-[#6c4d39] bg-[#6c4d39] text-white"
-                      : "border-[#e3d6bf] bg-white text-[#241a12] hover:bg-[#efe3d0]"
-                  }`}
-                >
-                  <span>{fmtTime(s.startsAt)}</span>
-                  {low && (
-                    <span
-                      className={`mt-0.5 text-xs font-bold ${
-                        isSelected ? "text-[#f1e7d5]" : s.remaining === 1 ? "text-red-600" : "text-amber-600"
-                      }`}
-                    >
-                      {s.remaining === 1 ? "Last one!" : `${s.remaining} left`}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ) : (
-        <p className="text-base text-[#8a7559]">Pick a day above to see available times.</p>
-      )}
+      <div>
+        <Eyebrow>2. Pick a time</Eyebrow>
+        {activeDay ? (
+          <>
+            <div className="text-xs text-[#8a7559] mt-0.5 mb-2.5">{fmtDayShort(activeDay.iso)} · 30-minute windows</div>
+            <div className="flex flex-wrap gap-2">
+              {activeDay.slots.map((s) => {
+                const isSelected = selected === s.startsAt;
+                const low = s.remaining > 0 && s.remaining <= 2;
+                return (
+                  <button
+                    key={s.startsAt}
+                    type="button"
+                    onClick={() => setSelected(s.startsAt)}
+                    aria-pressed={isSelected}
+                    className={`flex flex-col items-center rounded-xl border-2 px-4 py-2.5 text-sm font-bold transition-colors nb-focus ${
+                      isSelected
+                        ? "border-[#6c4d39] bg-[#6c4d39] text-white"
+                        : "border-[#e3d6bf] bg-white text-[#241a12] hover:bg-[#faf5ea] hover:border-[#cdbda3]"
+                    }`}
+                  >
+                    <span>{fmtTime(s.startsAt)}</span>
+                    {low && (
+                      <span
+                        className={`mt-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                          isSelected ? "text-[#f1e7d5]" : s.remaining === 1 ? "text-red-600" : "text-[#a85f28]"
+                        }`}
+                      >
+                        {s.remaining === 1 ? "Last spot" : `${s.remaining} left`}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-[#8a7559] mt-1">Choose a day above and the open windows show up here.</p>
+        )}
+      </div>
 
       <button
         type="button"
         disabled={!selected || busy}
         onClick={() => selected && onBook(location.id, selected)}
-        className="w-full bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-base py-3.5 rounded-xl transition-colors"
+        className="w-full bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-base py-3.5 rounded-xl transition-colors"
       >
-        {busy ? "Saving…" : selected ? `${submitLabel} — ${fmtDateTime(selected)}` : submitLabel}
+        {busy ? "Saving" : selected ? `${submitLabel}: ${fmtDateTime(selected)}` : submitLabel}
       </button>
     </div>
   );
@@ -402,7 +489,7 @@ export default function PickupPage() {
       });
       const d = await res.json();
       if (d.success) {
-        setMsg({ text: "Your pickup is scheduled!", ok: true });
+        setMsg({ text: "Booked. We'll text you when your order is staged.", ok: true });
         load();
       } else {
         setMsg({ text: d.error || "Could not schedule. Please try again.", ok: false });
@@ -427,7 +514,7 @@ export default function PickupPage() {
       });
       const d = await res.json();
       if (d.success) {
-        setMsg({ text: "Your pickup has been updated.", ok: true });
+        setMsg({ text: "New time locked in.", ok: true });
         setRescheduling(false);
         load();
       } else {
@@ -457,7 +544,7 @@ export default function PickupPage() {
         setRescheduling(false);
         setMsg({
           text: d.transferred > 0
-            ? `Set! ${d.transferred} item${d.transferred !== 1 ? "s" : ""} elsewhere will be transferred here (usually 5–6 days).`
+            ? `Done. ${d.transferred} item${d.transferred !== 1 ? "s" : ""} from the other warehouse will ride over (usually 5 to 6 days).`
             : "Pickup location set.",
           ok: true,
         });
@@ -485,7 +572,7 @@ export default function PickupPage() {
       const res = await fetch(`/api/pickup/${id}`, { method: "DELETE" });
       const d = await res.json();
       if (d.success) {
-        setMsg({ text: "Your pickup was cancelled.", ok: true });
+        setMsg({ text: "Pickup cancelled. Your items are waiting whenever you're ready to rebook.", ok: true });
         setRescheduling(false);
         load();
       } else {
@@ -515,7 +602,7 @@ export default function PickupPage() {
       const res = await fetch(`/api/pickup/${id}/collect`, { method: "POST" });
       const d = await res.json();
       if (d.success) {
-        setMsg({ text: "All set — thanks for picking up! Enjoy your wins.", ok: true });
+        setMsg({ text: "All squared away. Enjoy the haul.", ok: true });
         load();
       } else {
         setMsg({ text: d.error || "Could not update. Please try again.", ok: false });
@@ -529,16 +616,34 @@ export default function PickupPage() {
   const collectById = (id: string) =>
     setConfirmDialog({
       text: "Mark this order as picked up? Only do this once you actually have your items.",
-      confirmLabel: "Yes, I got it",
+      confirmLabel: "Yes, I have it",
       onConfirm: () => doCollect(id),
     });
+
+  const backLink = (
+    <Link href="/dashboard" className="inline-flex items-center gap-1 text-sm text-[#6c4d39] hover:text-[#563e2c] font-semibold shrink-0">
+      <IcoChevL /> Your bids
+    </Link>
+  );
+
+  const pageHeader = (
+    <div className="flex items-end justify-between gap-3 mb-6">
+      <div className="min-w-0">
+        <div className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-[#a85f28]">
+          <PineMark className="w-3.5 h-3.5" /> Owosso &amp; Gladwin
+        </div>
+        <h1 className="font-display text-3xl sm:text-4xl font-black leading-[0.95] tracking-tight mt-1">Pickup</h1>
+      </div>
+      {backLink}
+    </div>
+  );
 
   if (!isLoaded || loading) {
     return (
       <main className="min-h-screen bg-[#f1e7d5] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 rounded-full border-2 border-[#6c4d39]/30 border-t-[#6c4d39] animate-spin" />
-          <p className="text-[#8a7559] text-base">Loading your pickup…</p>
+          <p className="text-[#8a7559] text-sm">Checking the warehouse</p>
         </div>
       </main>
     );
@@ -546,24 +651,19 @@ export default function PickupPage() {
   if (loadError || !data) {
     return (
       <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
-        <div className="max-w-2xl mx-auto px-6 sm:px-8 py-8">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-semibold">Pickup</h1>
-            <Link href="/dashboard" className="text-base text-[#6c4d39] hover:text-[#563e2c] font-semibold">
-              ← My Bids
-            </Link>
-          </div>
+        <div className="max-w-2xl mx-auto px-5 sm:px-8 py-6 sm:py-8">
+          {pageHeader}
           <div className="bg-white border border-[#e3d6bf] rounded-2xl px-6 py-12 text-center">
             <div className="w-12 h-12 rounded-full bg-red-50 border border-red-500/20 flex items-center justify-center mx-auto mb-4 text-red-600">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" />
               </svg>
             </div>
-            <p className="text-lg font-semibold text-[#241a12]">We couldn&apos;t load your pickup details</p>
-            <p className="text-base text-[#8a7559] mt-2">Please check your connection and try again.</p>
+            <p className="font-display text-lg font-bold text-[#241a12]">Couldn&apos;t reach the pickup desk</p>
+            <p className="text-sm text-[#8a7559] mt-2">Check your connection and give it another go.</p>
             <button
               onClick={retryLoad}
-              className="inline-block mt-6 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold text-base px-6 py-3.5 rounded-xl transition-colors"
+              className="inline-block mt-6 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold text-sm px-6 py-3 rounded-xl transition-colors"
             >
               Try again
             </button>
@@ -604,63 +704,76 @@ export default function PickupPage() {
 
   const banner = msg && (
     <div
-      className={`mb-6 rounded-xl px-4 py-3.5 text-base font-medium border ${
-        msg.ok ? "bg-[#5f7a45]/10 text-[#5f7a45] border-[#5f7a45]/30" : "bg-red-50 text-red-600 border-red-500/20"
+      role="status"
+      className={`mb-6 rounded-xl px-4 py-3.5 text-sm font-semibold border flex items-start gap-2 ${
+        msg.ok ? "bg-[#4a7c59]/10 text-[#2f5d3a] border-[#4a7c59]/30" : "bg-red-50 text-red-700 border-red-500/20"
       }`}
     >
-      {msg.text}
-    </div>
-  );
-
-  const header = (
-    <div className="flex items-center justify-between mb-6">
-      <h1 className="text-3xl font-semibold">Pickup</h1>
-      <Link href="/dashboard" className="text-base text-[#6c4d39] hover:text-[#563e2c] font-semibold">← My Bids</Link>
+      {msg.ok && <IcoCheck className="w-4 h-4 shrink-0 mt-0.5" />}
+      <span>{msg.text}</span>
     </div>
   );
 
   // ── Location chooser (first-run + switch) ──────────────────────────────────
   const LocationChooser = (
     <div className="space-y-5">
-      <div className="bg-white border-2 border-[#6c4d39]/25 rounded-2xl px-6 py-5">
-        <h2 className="text-xl font-semibold text-[#241a12]">
-          {switching ? "Switch pickup location" : "Where would you like to pick up?"}
+      <div className="bg-white border border-[#e3d6bf] rounded-2xl px-5 sm:px-6 py-5">
+        <Eyebrow>{switching ? "Switch warehouse" : "First things first"}</Eyebrow>
+        <h2 className="font-display text-2xl font-black text-[#241a12] mt-1">
+          {switching ? "Move everything to a new home" : "Where do you want to pick up?"}
         </h2>
-        <p className="text-base text-[#6f5b46] mt-2">
+        <p className="text-sm text-[#6f5b46] mt-2 leading-relaxed">
           {switching
-            ? "This moves all of your items to the new location and clears any scheduled time, so you'll pick a new one. Items already loaded on a truck keep heading to their current destination."
-            : "Pick where you'll collect your wins. Everything you win is sent here automatically — items won at another location are transferred (usually 5–6 days), and we'll text you the moment they arrive. You can switch anytime."}
+            ? "Every item you have waiting moves to the new warehouse and any booked time is cleared, so you'll pick a fresh one. Anything already loaded on a truck keeps heading where it was going."
+            : "Pick your home warehouse. Every win ends up there: anything from the other location rides over free (usually 5 to 6 days) and we text you when it lands. Switch anytime."}
         </p>
       </div>
       {locations.length === 0 ? (
-        <div className="rounded-xl border border-[#e3d6bf] bg-white px-4 py-6 text-base text-[#8a7559]">
-          Pickup isn&apos;t available yet. Please check back soon.
+        <div className="rounded-xl border border-dashed border-[#cdbda3] bg-[#faf5ea] px-4 py-6 text-sm text-[#6f5b46] text-center">
+          Pickup isn&apos;t open for booking yet. Check back soon.
         </div>
       ) : (
-        <div className="space-y-2">
-          {locations.map((l) => (
-            <button
-              key={l.id}
-              type="button"
-              disabled={choosing}
-              onClick={() => choosePreferred(l.id)}
-              className={`w-full text-left rounded-xl border-2 px-4 py-3.5 transition-colors disabled:opacity-50 ${
-                preferredId === l.id ? "border-[#6c4d39] bg-[#efe3d0]" : "border-[#e3d6bf] bg-white hover:bg-[#efe3d0]"
-              }`}
-            >
-              <div className="font-semibold text-base text-[#241a12] flex items-center justify-between gap-2">
-                <span>{l.name}</span>
-                {preferredId === l.id && <span className="text-xs text-[#6c4d39] font-bold">Current</span>}
-              </div>
-              {l.address && <div className="text-base text-[#6f5b46] mt-0.5">{l.address}</div>}
-              {l.instructions && <div className="text-sm text-[#8a7559] mt-1">{l.instructions}</div>}
-            </button>
-          ))}
+        <div className="grid gap-3 sm:grid-cols-2">
+          {locations.map((l) => {
+            const current = preferredId === l.id;
+            return (
+              <button
+                key={l.id}
+                type="button"
+                disabled={choosing}
+                onClick={() => choosePreferred(l.id)}
+                className={`text-left rounded-2xl border-2 px-4 py-4 transition-all disabled:opacity-50 nb-lift nb-focus ${
+                  current ? "border-[#6c4d39] bg-[#faf5ea]" : "border-[#e3d6bf] bg-white hover:border-[#cdbda3]"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <span className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${current ? "bg-[#6c4d39] text-white" : "bg-[#c47b3e]/12 text-[#a85f28]"}`}>
+                    <IcoPin className="w-5 h-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-display font-black text-lg text-[#241a12] leading-tight">{l.name}</span>
+                      {current && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-[#2f5d3a] bg-[#4a7c59]/12 border border-[#4a7c59]/30 rounded-full px-2 py-0.5 shrink-0">
+                          <IcoCheck className="w-3 h-3" /> Current
+                        </span>
+                      )}
+                    </div>
+                    {l.address && <div className="text-sm text-[#6f5b46] mt-0.5">{l.address}</div>}
+                    {l.instructions && <div className="text-xs text-[#8a7559] mt-1.5 leading-snug">{l.instructions}</div>}
+                    <div className="text-xs text-[#4a7c59] font-semibold mt-2">
+                      {l.slots?.length ? `${l.slots.length} open windows this stretch` : "Windows post soon"}
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
       {switching && (
-        <button onClick={() => setSwitching(false)} className="text-base text-[#6c4d39] hover:text-[#563e2c] font-semibold">
-          ← Keep {preferredName}
+        <button onClick={() => setSwitching(false)} className="inline-flex items-center gap-1 text-sm text-[#6c4d39] hover:text-[#563e2c] font-semibold">
+          <IcoChevL /> Keep {preferredName}
         </button>
       )}
     </div>
@@ -668,15 +781,22 @@ export default function PickupPage() {
 
   return (
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
-      <div className="max-w-2xl mx-auto px-6 sm:px-8 py-8">
-        {header}
+      <div className="max-w-2xl mx-auto px-5 sm:px-8 py-6 sm:py-8">
+        {pageHeader}
         {banner}
 
         {/* No pickup locations configured by the business yet */}
         {locations.length === 0 && (
-          <div className="bg-white border border-[#e3d6bf] rounded-2xl px-6 py-12 text-center text-base text-[#8a7559]">
-            Pickup isn&apos;t available yet. Please check back soon.
-          </div>
+          <EmptyState
+            framed
+            title="Pickup isn't open for booking yet"
+            message="We're setting up the pickup calendar. Anything you win is safe with us until it is."
+            cta={
+              <Link href="/auctions" className="inline-block bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold text-sm px-6 py-3 rounded-xl transition-colors">
+                Browse live auctions
+              </Link>
+            }
+          />
         )}
 
         {/* ── Choose / switch location — available ANYTIME, even with no items yet ── */}
@@ -686,76 +806,92 @@ export default function PickupPage() {
         {locations.length > 0 && preferredId && !switching && (
           <div className="space-y-6">
             {/* Minimized pickup-location pill — small but clearly tappable to switch */}
-            <div className="flex items-center justify-between gap-3 bg-white border border-[#e3d6bf] rounded-xl px-4 py-2.5">
-              <div className="flex items-center gap-2 min-w-0 text-sm">
-                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#6c4d39" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                  <path d="M8 1.5c-2.5 0-4.5 2-4.5 4.5C3.5 9.5 8 14.5 8 14.5s4.5-5 4.5-8.5C12.5 3.5 10.5 1.5 8 1.5z" /><circle cx="8" cy="6" r="1.6" />
-                </svg>
-                <span className="text-[#8a7559]">Pickup at</span>
-                <span className="font-semibold text-[#241a12] truncate">{preferredName}</span>
+            <div className="flex items-center justify-between gap-3 bg-white border border-[#e3d6bf] rounded-xl pl-3 pr-2 py-2">
+              <div className="flex items-center gap-2.5 min-w-0 text-sm">
+                <span className="w-8 h-8 rounded-lg bg-[#c47b3e]/12 text-[#a85f28] flex items-center justify-center shrink-0">
+                  <IcoPin className="w-4 h-4" />
+                </span>
+                <div className="min-w-0 leading-tight">
+                  <div className="text-[10px] font-black uppercase tracking-wider text-[#8a7559]">Home warehouse</div>
+                  <div className="font-bold text-[#241a12] truncate">{preferredName}</div>
+                </div>
               </div>
-              <button onClick={() => { setSwitching(true); setRescheduling(false); }} className="text-sm text-[#6c4d39] hover:text-[#563e2c] font-semibold shrink-0">
+              <button
+                onClick={() => { setSwitching(true); setRescheduling(false); }}
+                className="text-xs font-bold text-[#6c4d39] hover:bg-[#faf5ea] border border-[#e3d6bf] rounded-lg px-3 py-1.5 shrink-0 transition-colors"
+              >
                 Switch
               </button>
             </div>
 
             {/* Chosen location is no longer open for scheduling — guide them to switch */}
             {!preferredSched && (
-              <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3.5 text-base text-amber-800">
-                Your pickup location isn&apos;t available for scheduling right now.{" "}
-                <button onClick={() => { setSwitching(true); setRescheduling(false); }} className="font-semibold underline underline-offset-2">
-                  Choose another location
+              <div className="rounded-xl border border-[#c47b3e]/40 bg-[#f0a35a]/12 px-4 py-3.5 text-sm text-[#8a4f1c]">
+                {preferredName} isn&apos;t taking bookings right now.{" "}
+                <button onClick={() => { setSwitching(true); setRescheduling(false); }} className="font-bold underline underline-offset-2">
+                  Pick another warehouse
                 </button>{" "}
-                to schedule a time.
+                to book a time.
               </div>
             )}
 
             {/* Nothing waiting yet — but the location is set for future wins */}
             {!appointment && ready.length === 0 && transferCount === 0 && (
-              <div className="bg-white border border-[#e3d6bf] rounded-2xl px-6 py-10 text-center">
-                <p className="text-base text-[#6f5b46]">Nothing waiting for pickup yet.</p>
-                <p className="text-sm text-[#8a7559] mt-1">Anything you win will be sent to <span className="font-semibold">{preferredName}</span> automatically — you&apos;ll schedule a time here once it&apos;s ready.</p>
-                <Link href="/auctions" className="inline-block mt-5 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold text-base px-6 py-3 rounded-xl transition-colors">
-                  Browse auctions
-                </Link>
-              </div>
+              <EmptyState
+                art="critter"
+                framed
+                title="Nothing waiting at the dock"
+                message={`Win something and it lands at ${preferredName} automatically. You'll book a time here once it's ready.`}
+                cta={
+                  <Link href="/auctions" className="inline-block bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold text-sm px-6 py-3 rounded-xl transition-colors">
+                    Browse live auctions
+                  </Link>
+                }
+              />
             )}
 
             {/* Scheduled appointment */}
             {appointment && !rescheduling && (
               <>
-                <div className={`bg-white border-2 rounded-2xl overflow-hidden ${apptPassed ? "border-amber-300" : "border-green-200"}`}>
-                  <div className={`border-b px-6 py-5 ${apptPassed ? "bg-amber-50 border-amber-200" : "bg-green-50 border-green-200"}`}>
-                    <div className={`text-base font-semibold ${apptPassed ? "text-amber-700" : "text-green-700"}`}>
-                      {apptPassed ? "Your pickup time has passed" : "Your pickup is scheduled for"}
+                <div className={`bg-white border-2 rounded-2xl overflow-hidden ${apptPassed ? "border-[#c47b3e]/50" : "border-[#4a7c59]/40"}`}>
+                  <div className={`px-5 sm:px-6 py-5 ${apptPassed ? "bg-[#f0a35a]/15" : "bg-[#4a7c59]/10"}`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <Eyebrow tone={apptPassed ? "amber" : "moss"}>
+                        {apptPassed ? "Window passed" : "You're booked"}
+                      </Eyebrow>
+                      <span className="inline-flex items-center gap-1.5 text-[#6f5b46] text-xs font-semibold">
+                        <IcoCalendar className="w-3.5 h-3.5" /> 30-min window
+                      </span>
                     </div>
-                    <div className={`text-2xl font-extrabold mt-1 ${apptPassed ? "text-amber-700" : "text-green-700"}`}>{fmtDateTime(appointment.startsAt)}</div>
-                    {apptPassed && <div className="text-sm text-[#6f5b46] mt-2">Please reschedule below, or contact us if you already picked up.</div>}
+                    <div className={`font-display text-2xl sm:text-3xl font-black leading-tight mt-1 ${apptPassed ? "text-[#8a4f1c]" : "text-[#2f5d3a]"}`}>
+                      {fmtDateTime(appointment.startsAt)}
+                    </div>
+                    {apptPassed && <div className="text-sm text-[#6f5b46] mt-2">Pick a new time below, or reach out if you already collected.</div>}
                   </div>
                   {/* Order is boxed and waiting — the single most useful thing we can
                       tell them, so it sits above everything else. */}
                   {appointment.stagedSpot && (
-                    <div className="bg-[#5f7a45] text-white px-6 py-7 text-center">
-                      <div className="text-sm font-bold uppercase tracking-[0.15em] text-[#d8e6c8]">
-                        Your Pick Up Is Staged
+                    <div className="bg-[#4a7c59] text-white px-6 py-7 text-center">
+                      <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[#d8e6c8]">
+                        Staged and waiting
                       </div>
-                      <div className="text-5xl sm:text-6xl font-extrabold leading-none mt-2 mb-1 break-words">
+                      <div className="font-display text-5xl sm:text-6xl font-black leading-none mt-2 mb-1 break-words">
                         {appointment.stagedSpot}
                       </div>
-                      <p className="text-lg text-white font-semibold mt-3">
+                      <p className="text-base text-white/90 font-semibold mt-3">
                         Look for it when you arrive at {appointment.location.name}.
                       </p>
                     </div>
                   )}
-                  <div className="px-6 py-5">
+                  <div className="px-5 sm:px-6 py-5">
                     <LocationBadge name={appointment.location.name} />
-                    {appointment.location.address && <div className="text-base text-[#6f5b46] mt-0.5">{appointment.location.address}</div>}
+                    {appointment.location.address && <div className="text-sm text-[#6f5b46] mt-1.5">{appointment.location.address}</div>}
                     {appointment.location.instructions && (
-                      <div className="text-base text-[#8a7559] mt-2 bg-[#f1e7d5] rounded-xl px-4 py-3">{appointment.location.instructions}</div>
+                      <div className="text-sm text-[#6f5b46] mt-3 bg-[#faf5ea] border border-[#e3d6bf] rounded-xl px-4 py-3 leading-relaxed">{appointment.location.instructions}</div>
                     )}
                     <button type="button" onClick={() => downloadAppointmentIcs(appointment)}
-                      className="mt-4 inline-flex items-center gap-2 bg-[#efe3d0] hover:bg-[#e3d6bf] border border-[#cdbda3] text-[#6c4d39] font-semibold text-base px-4 py-2.5 rounded-xl transition-colors">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+                      className="mt-4 inline-flex items-center gap-2 bg-white hover:bg-[#faf5ea] border border-[#cdbda3] text-[#6c4d39] font-bold text-sm px-4 py-2.5 rounded-xl transition-colors">
+                      <IcoCalendar className="w-4 h-4" />
                       Add to calendar
                     </button>
 
@@ -764,31 +900,34 @@ export default function PickupPage() {
                       type="button"
                       onClick={() => collectById(appointment.id)}
                       disabled={busy}
-                      className="mt-3 w-full bg-[#5f7a45] hover:bg-[#4f6639] disabled:opacity-50 text-white font-bold text-base py-3.5 rounded-xl transition-colors"
+                      className="mt-3 w-full inline-flex items-center justify-center gap-2 bg-[#4a7c59] hover:bg-[#3d6749] disabled:opacity-50 text-white font-bold text-base py-3.5 rounded-xl transition-colors"
                     >
-                      I picked up my order
+                      <IcoCheck className="w-5 h-5" /> I picked up my order
                     </button>
                   </div>
                 </div>
 
                 {/* Items on this pickup */}
                 <div>
-                  <h2 className="text-xl font-semibold mb-3">{appointment.items.length} item{appointment.items.length !== 1 ? "s" : ""} ready for this pickup</h2>
-                  <div className="space-y-5">
+                  <div className="flex items-baseline justify-between gap-3 mb-3">
+                    <h2 className="font-display text-xl font-black text-[#241a12]">On this pickup</h2>
+                    <span className="text-xs font-bold text-[#8a7559]">{appointment.items.length} item{appointment.items.length !== 1 ? "s" : ""}</span>
+                  </div>
+                  <div className="space-y-4">
                     {groupByAuction(appointment.items).map(([auctionTitle, items]) => (
                       <div key={auctionTitle}>
-                        <div className="text-base font-semibold text-[#6f5b46] mb-2">{auctionTitle}</div>
+                        <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#8a7559] mb-2">{auctionTitle}</div>
                         <div className="space-y-2">
                           {items.map((it) => (
-                            <div key={it.id} className="flex items-center gap-3 bg-white border border-[#e3d6bf] rounded-xl px-4 py-3">
+                            <div key={it.id} className="flex items-center gap-3 bg-white border border-[#e3d6bf] rounded-xl px-3.5 py-3">
                               <ItemPhoto url={it.photo} title={it.title} />
                               <div className="min-w-0 flex-1">
-                                <div className="font-medium text-base text-[#241a12]">{it.title}</div>
+                                <div className="font-semibold text-sm text-[#241a12] leading-snug">{it.title}</div>
                                 {/* Once the order is staged, every item is in the staged
                                     box — the shelf it used to sit on is stale, and showing
                                     both would send the customer to two different places. */}
                                 {!appointment.stagedSpot && it.storageLocation && (
-                                  <div className="mt-1 text-sm text-[#6f5b46]">Find it at <SpotChip spot={it.storageLocation} /></div>
+                                  <div className="mt-1 text-xs text-[#6f5b46]">Find it at <SpotChip spot={it.storageLocation} /></div>
                                 )}
                               </div>
                             </div>
@@ -799,18 +938,23 @@ export default function PickupPage() {
                   </div>
                 </div>
 
-                <p className="text-base text-[#8a7559] bg-[#efe3d0] rounded-xl px-4 py-3">
-                  {transferCount > 0
-                    ? `${transferCount} more item${transferCount !== 1 ? "s are" : " is"} being transferred here (see below) — they'll be added automatically when they arrive. `
-                    : ""}
-                  New items you win at {preferredName} are added to this pickup automatically.
+                <p className="text-sm text-[#6f5b46] bg-[#faf5ea] border border-[#e3d6bf] rounded-xl px-4 py-3 flex items-start gap-2">
+                  <IcoTarget className="w-4 h-4 text-[#6c4d39] shrink-0 mt-0.5" />
+                  <span>
+                    {transferCount > 0
+                      ? `${transferCount} more item${transferCount !== 1 ? "s are" : " is"} riding over (see below) and will join this pickup on arrival. `
+                      : ""}
+                    Anything new you win at {preferredName} joins this pickup automatically.
+                  </span>
                 </p>
 
+                <NextSteps hasAppointment transferring={transferCount > 0} />
+
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <button onClick={() => setRescheduling(true)} className="flex-1 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold text-base py-3.5 rounded-xl transition-colors">
+                  <button onClick={() => setRescheduling(true)} className="flex-1 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold text-sm py-3.5 rounded-xl transition-colors">
                     {apptPassed ? "Pick a new time" : "Reschedule"}
                   </button>
-                  <button onClick={cancel} disabled={busy} className="flex-1 bg-white border-2 border-red-500/30 text-red-600 hover:bg-red-50 disabled:opacity-50 font-semibold text-base py-3.5 rounded-xl transition-colors">
+                  <button onClick={cancel} disabled={busy} className="flex-1 bg-white border border-red-500/30 text-red-600 hover:bg-red-50 disabled:opacity-50 font-bold text-sm py-3.5 rounded-xl transition-colors">
                     Cancel pickup
                   </button>
                 </div>
@@ -822,16 +966,19 @@ export default function PickupPage() {
             {appointment && rescheduling && (() => {
               const apptSched = locations.find((l) => l.id === appointment.location.id);
               return (
-                <div className="space-y-5">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">Pick a new time</h2>
-                    <button onClick={() => setRescheduling(false)} className="text-base text-[#6c4d39] hover:text-[#563e2c] font-semibold">Cancel</button>
+                <div className="bg-white border-2 border-[#6c4d39]/25 rounded-2xl px-5 sm:px-6 py-5 space-y-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <Eyebrow>Reschedule</Eyebrow>
+                      <h2 className="font-display text-2xl font-black text-[#241a12] mt-0.5">Pick a new window</h2>
+                    </div>
+                    <button onClick={() => setRescheduling(false)} className="text-sm text-[#6c4d39] hover:text-[#563e2c] font-bold">Keep current</button>
                   </div>
                   {apptSched ? (
                     <SlotPicker location={apptSched} onBook={(_loc, startsAt) => reschedule(appointment.location.id, startsAt)} busy={busy} submitLabel="Update pickup" />
                   ) : (
-                    <div className="rounded-xl border border-[#e3d6bf] bg-white px-4 py-6 text-base text-[#8a7559]">
-                      This location isn&apos;t open for scheduling right now. You can cancel this pickup, or contact us for help.
+                    <div className="rounded-xl border border-dashed border-[#cdbda3] bg-[#faf5ea] px-4 py-6 text-sm text-[#6f5b46] text-center">
+                      This warehouse isn&apos;t taking bookings right now. You can cancel this pickup, or reach out and we&apos;ll sort it.
                     </div>
                   )}
                 </div>
@@ -841,25 +988,37 @@ export default function PickupPage() {
             {/* No appointment yet: schedule the ready items */}
             {!appointment && (
               ready.length > 0 ? (
-                <div className="bg-white border-2 border-[#6c4d39]/25 rounded-2xl px-6 py-6 space-y-5">
-                  <div>
-                    <div className="text-lg font-semibold text-[#241a12]">
-                      {ready.length} item{ready.length !== 1 ? "s" : ""} ready to pick up
+                <>
+                  <div className="bg-white border-2 border-[#6c4d39]/25 rounded-2xl px-5 sm:px-6 py-5 space-y-5">
+                    <div>
+                      <Eyebrow tone="moss">Ready at {preferredName}</Eyebrow>
+                      <h2 className="font-display text-2xl font-black text-[#241a12] mt-0.5">
+                        {ready.length} item{ready.length !== 1 ? "s" : ""} paid and waiting
+                      </h2>
+                      <p className="text-sm text-[#6f5b46] mt-1">
+                        Pick a window below{transferCount > 0 ? ". Your transferring items can be added once they arrive" : ""}.
+                      </p>
+                      <ul className="mt-3 space-y-1.5">
+                        {ready.map((it) => (<ItemLine key={it.id} title={it.title} extra={<SpotChip spot={it.storageLocation} />} />))}
+                      </ul>
                     </div>
-                    <p className="text-sm text-[#8a7559] mt-0.5">Pick a day & time below to collect{transferCount > 0 ? " what's ready — your transferring items can be added once they arrive" : ""}.</p>
-                    <ul className="mt-3 space-y-1 text-base text-[#241a12]">
-                      {ready.map((it) => (<li key={it.id}>• {it.title} <SpotChip spot={it.storageLocation} /></li>))}
-                    </ul>
+                    {preferredSched ? (
+                      <SlotPicker location={preferredSched} onBook={book} busy={busy} submitLabel="Book pickup" />
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-[#cdbda3] bg-[#faf5ea] px-4 py-6 text-sm text-[#6f5b46] text-center">No open windows right now.</div>
+                    )}
                   </div>
-                  {preferredSched ? (
-                    <SlotPicker location={preferredSched} onBook={book} busy={busy} submitLabel="Schedule pickup" />
-                  ) : (
-                    <div className="rounded-xl border border-[#e3d6bf] bg-white px-4 py-6 text-base text-[#8a7559]">No times are available right now.</div>
-                  )}
-                </div>
+                  <NextSteps hasAppointment={false} transferring={transferCount > 0} />
+                </>
               ) : transferCount > 0 ? (
-                <div className="rounded-2xl border border-[#e3d6bf] bg-white px-5 py-5 text-base text-[#6f5b46]">
-                  Nothing&apos;s ready to collect yet — your items are being transferred to {preferredName} (see below). We&apos;ll text you the moment they arrive, then you can schedule a time.
+                <div className="rounded-2xl border border-[#e3d6bf] bg-white px-5 py-5 flex items-start gap-3">
+                  <span className="w-10 h-10 rounded-xl bg-[#f0a35a]/15 text-[#a85f28] flex items-center justify-center shrink-0">
+                    <IcoTruck className="w-5 h-5" />
+                  </span>
+                  <div className="text-sm text-[#6f5b46]">
+                    <p className="font-display font-bold text-[#241a12] text-base">Nothing to grab just yet</p>
+                    <p className="mt-0.5 leading-relaxed">Your items are on their way to {preferredName}. We text you the moment they land, then you book a time.</p>
+                  </div>
                 </div>
               ) : null
             )}
@@ -867,22 +1026,31 @@ export default function PickupPage() {
             {/* Being transferred */}
             {transferCount > 0 && (
               <div>
-                <h2 className="text-base font-bold text-[#8a5a2b] uppercase tracking-wider mb-3">
-                  {transferCount} item{transferCount !== 1 ? "s" : ""} being transferred to {preferredName}
-                </h2>
-                <div className="space-y-4">
+                <div className="flex items-baseline justify-between gap-3 mb-3">
+                  <h2 className="font-display text-xl font-black text-[#241a12]">Moving to {preferredName}</h2>
+                  <span className="text-xs font-bold text-[#8a7559]">{transferCount} item{transferCount !== 1 ? "s" : ""}</span>
+                </div>
+                <div className="space-y-3">
                   {pendingTransfers.map((t) => (
-                    <div key={t.id} className="rounded-2xl border-2 border-amber-200 bg-amber-50 px-5 py-5">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="text-base font-semibold text-[#241a12]">{t.items.length} item{t.items.length !== 1 ? "s" : ""} on the way</div>
-                        <span className="text-sm px-3 py-1 rounded-full font-bold shrink-0 bg-amber-50 text-amber-700 border border-amber-200">
-                          {t.status === "LOADED" ? "Loaded / in transit" : "Being gathered"}
-                        </span>
+                    <div key={t.id} className="relative rounded-2xl border border-[#c47b3e]/35 bg-white overflow-hidden">
+                      <span className="absolute left-0 top-4 bottom-4 w-1.5 rounded-full bg-[#c47b3e]" aria-hidden />
+                      <div className="pl-6 pr-5 py-4">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 text-sm font-bold text-[#241a12]">
+                            <IcoTruck className="w-4 h-4 text-[#a85f28]" />
+                            {t.items.length} item{t.items.length !== 1 ? "s" : ""} on the way
+                          </div>
+                          <span className="text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full font-black shrink-0 bg-[#f0a35a]/15 text-[#8a4f1c] border border-[#c47b3e]/30">
+                            {t.status === "LOADED" ? "On the truck" : "Being gathered"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-[#6f5b46] mt-1.5">Usually 5 to 6 days. We text you at drop-off and they join your pickup on their own.</p>
+                        <ul className="mt-3 space-y-1.5">
+                          {t.items.map((it) => (
+                            <ItemLine key={it.id} title={it.title} extra={<span className="text-[#8a7559] text-xs">from {it.fromLocationName}</span>} />
+                          ))}
+                        </ul>
                       </div>
-                      <p className="text-base text-[#6f5b46] mt-2">Usually 5–6 days. We&apos;ll text you the moment they&apos;re dropped off — then they join your pickup automatically.</p>
-                      <ul className="mt-3 space-y-1 text-base text-[#241a12]">
-                        {t.items.map((it) => (<li key={it.id}>• {it.title} <span className="text-[#8a7559] text-sm">— from {it.fromLocationName}</span></li>))}
-                      </ul>
                     </div>
                   ))}
                 </div>
@@ -892,24 +1060,26 @@ export default function PickupPage() {
             {/* Pick up at other locations — non-transferable items at their own warehouse */}
             {(otherAppointments.length > 0 || otherLocationGroups.length > 0) && (
               <div className="pt-2">
-                <h2 className="text-base font-bold text-[#8a5a2b] uppercase tracking-wider mb-1">Pick up at other locations</h2>
-                <p className="text-sm text-[#8a7559] mb-3">Some items can&apos;t be transferred — collect them at the warehouse they&apos;re at.</p>
+                <h2 className="font-display text-xl font-black text-[#241a12]">Collect at the other warehouse</h2>
+                <p className="text-xs text-[#8a7559] mt-1 mb-3">A few things can&apos;t ride the truck. These stay where you won them.</p>
                 <div className="space-y-4">
                   {otherAppointments.map((a) => (
-                    <div key={a.id} className="bg-white border-2 border-green-200 rounded-2xl overflow-hidden">
-                      <div className="bg-green-50 border-b border-green-200 px-5 py-4">
-                        <div className="text-base font-semibold text-green-700">Scheduled for</div>
-                        <div className="text-xl font-extrabold text-green-700 mt-0.5">{fmtDateTime(a.startsAt)}</div>
+                    <div key={a.id} className="bg-white border-2 border-[#4a7c59]/40 rounded-2xl overflow-hidden">
+                      <div className="bg-[#4a7c59]/10 px-5 py-4">
+                        <Eyebrow tone="moss">Booked</Eyebrow>
+                        <div className="font-display text-xl font-black text-[#2f5d3a] mt-0.5">{fmtDateTime(a.startsAt)}</div>
                       </div>
                       <div className="px-5 py-4">
                         <LocationBadge name={a.location.name} />
-                        {a.location.address && <div className="text-base text-[#6f5b46] mt-0.5">{a.location.address}</div>}
-                        <ul className="mt-3 space-y-1 text-base text-[#241a12]">
-                          {a.items.map((it) => (<li key={it.id}>• {it.title} <SpotChip spot={it.storageLocation} /></li>))}
+                        {a.location.address && <div className="text-sm text-[#6f5b46] mt-1.5">{a.location.address}</div>}
+                        <ul className="mt-3 space-y-1.5">
+                          {a.items.map((it) => (<ItemLine key={it.id} title={it.title} extra={<SpotChip spot={it.storageLocation} />} />))}
                         </ul>
                         <div className="mt-3 flex flex-wrap gap-2">
-                          <button type="button" onClick={() => downloadAppointmentIcs(a)} className="inline-flex items-center gap-2 bg-[#efe3d0] hover:bg-[#e3d6bf] border border-[#cdbda3] text-[#6c4d39] font-semibold text-sm px-4 py-2 rounded-xl transition-colors">Add to calendar</button>
-                          <button type="button" onClick={() => cancelById(a.id)} disabled={busy} className="bg-white border border-red-500/30 text-red-600 hover:bg-red-50 disabled:opacity-50 font-semibold text-sm px-4 py-2 rounded-xl transition-colors">Cancel</button>
+                          <button type="button" onClick={() => downloadAppointmentIcs(a)} className="inline-flex items-center gap-2 bg-white hover:bg-[#faf5ea] border border-[#cdbda3] text-[#6c4d39] font-bold text-sm px-4 py-2 rounded-xl transition-colors">
+                            <IcoCalendar className="w-4 h-4" /> Add to calendar
+                          </button>
+                          <button type="button" onClick={() => cancelById(a.id)} disabled={busy} className="bg-white border border-red-500/30 text-red-600 hover:bg-red-50 disabled:opacity-50 font-bold text-sm px-4 py-2 rounded-xl transition-colors">Cancel</button>
                         </div>
                       </div>
                     </div>
@@ -918,21 +1088,21 @@ export default function PickupPage() {
                     const sched = locations.find((l) => l.id === locId);
                     const name = items[0]?.locationName ?? sched?.name ?? "this location";
                     return (
-                      <div key={locId} className="bg-white border-2 border-[#8a5a2b]/25 rounded-2xl px-6 py-5 space-y-4">
+                      <div key={locId} className="bg-white border-2 border-[#c47b3e]/35 rounded-2xl px-5 sm:px-6 py-5 space-y-5">
                         <div>
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
                             <LocationBadge name={name} />
-                            <span className="text-xs text-[#8a5a2b] font-semibold">Not transferable</span>
+                            <span className="text-[10px] uppercase tracking-wider font-black text-[#8a4f1c]">Stays put</span>
                           </div>
-                          <p className="text-sm text-[#8a7559]">Collect {items.length === 1 ? "this item" : "these items"} at {name} — pick a time below.</p>
-                          <ul className="mt-2 space-y-1 text-base text-[#241a12]">
-                            {items.map((it) => (<li key={it.id}>• {it.title} <SpotChip spot={it.storageLocation} /></li>))}
+                          <p className="text-sm text-[#6f5b46]">Collect {items.length === 1 ? "this item" : "these items"} at {name}. Pick a window below.</p>
+                          <ul className="mt-2.5 space-y-1.5">
+                            {items.map((it) => (<ItemLine key={it.id} title={it.title} extra={<SpotChip spot={it.storageLocation} />} />))}
                           </ul>
                         </div>
                         {sched ? (
-                          <SlotPicker location={sched} onBook={book} busy={busy} submitLabel={`Schedule at ${name}`} />
+                          <SlotPicker location={sched} onBook={book} busy={busy} submitLabel={`Book at ${name}`} />
                         ) : (
-                          <div className="rounded-xl border border-[#e3d6bf] bg-white px-4 py-6 text-base text-[#8a7559]">No times are available at {name} right now.</div>
+                          <div className="rounded-xl border border-dashed border-[#cdbda3] bg-[#faf5ea] px-4 py-6 text-sm text-[#6f5b46] text-center">No open windows at {name} right now.</div>
                         )}
                       </div>
                     );
@@ -946,17 +1116,17 @@ export default function PickupPage() {
 
       {/* In-app confirmation — native confirm() is blocked in the installed app. */}
       {confirmDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setConfirmDialog(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#241a12]/50 px-4" onClick={() => setConfirmDialog(null)}>
           <div className="bg-white rounded-2xl border border-[#cdbda3] max-w-sm w-full p-6 shadow-xl text-left" onClick={(e) => e.stopPropagation()}>
-            <p className="text-base text-[#241a12]">{confirmDialog.text}</p>
+            <p className="text-base text-[#241a12] leading-relaxed">{confirmDialog.text}</p>
             <div className="mt-5 flex gap-3">
-              <button onClick={() => setConfirmDialog(null)} className="flex-1 bg-white border border-[#cdbda3] text-[#6f5b46] hover:bg-[#efe3d0] font-semibold text-base py-3 rounded-xl">
+              <button onClick={() => setConfirmDialog(null)} className="flex-1 bg-white border border-[#cdbda3] text-[#6f5b46] hover:bg-[#faf5ea] font-bold text-sm py-3 rounded-xl">
                 Back
               </button>
               <button
                 onClick={() => { const fn = confirmDialog.onConfirm; setConfirmDialog(null); fn(); }}
-                className={`flex-1 text-white font-semibold text-base py-3 rounded-xl ${
-                  confirmDialog.danger ? "bg-red-600 hover:bg-red-700" : "bg-[#5f7a45] hover:bg-[#4f6639]"
+                className={`flex-1 text-white font-bold text-sm py-3 rounded-xl ${
+                  confirmDialog.danger ? "bg-red-600 hover:bg-red-700" : "bg-[#4a7c59] hover:bg-[#3d6749]"
                 }`}
               >
                 {confirmDialog.confirmLabel}

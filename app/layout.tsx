@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Bitter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import HomeHeader from "@/app/components/HomeHeader";
+import { GlobalFooter } from "@/app/components/SiteFooter";
 import ReferralClaimer from "@/app/components/ReferralClaimer";
 import ChatWidget from "@/app/components/ChatWidget";
 import JsonLd from "@/app/components/JsonLd";
@@ -121,7 +122,7 @@ export default function RootLayout({
     <ClerkProvider>
       <html
         lang="en"
-        className={`${geistSans.variable} ${geistMono.variable} ${bitter.variable} h-full antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${bitter.variable} h-full antialiased scroll-smooth`}
       >
         <head>
           {/* Warm up the TLS/DNS to the image CDNs so photos paint sooner. */}
@@ -135,6 +136,7 @@ export default function RootLayout({
           <HomeHeader />
           <ReferralClaimer />
           {children}
+          <GlobalFooter />
           {/* Woody — GHL support chat widget (only on customer-browsing pages). */}
           <ChatWidget />
         </body>

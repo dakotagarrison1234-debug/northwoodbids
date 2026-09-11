@@ -3,9 +3,10 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useUser, useClerk } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Avatar, hasAvatar } from "./Avatars";
-import { IcoStar } from "./BidIcons";
+import { IcoStar, IcoGavel, IcoMagnifier, IcoTruck, IcoGift, IcoTrophy, IcoTicket } from "./BidIcons";
+import { PineMark } from "./Illustrations";
 
 interface MeData {
   orgId?: string | null;
@@ -16,45 +17,37 @@ interface MeData {
   avatarKey?: string | null;
 }
 
-// ── Icons ──────────────────────────────────────────────────────────────────────
-function IcoGavel() {
-  return <svg width="16" height="16" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 2L6 6l4 4 4-4-4-4zM2 14l5-5"/><path d="M6 10l-4 4"/></svg>;
-}
-function IcoSearch() {
-  return <svg width="16" height="16" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="7" cy="7" r="4.5"/><path d="M13 13l-2.5-2.5"/></svg>;
-}
-function IcoHome() {
-  return <svg width="16" height="16" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 7L8 2l6 5v7a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7z"/><path d="M6 14V9h4v5"/></svg>;
-}
-function IcoCard() {
-  return <svg width="16" height="16" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="14" height="10" rx="1.5"/><path d="M1 7h14"/></svg>;
-}
+// ── Icons not in the shared set (same 24-grid, single weight) ──────────────
+const ico = {
+  className: "w-[18px] h-[18px]",
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.9,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+  "aria-hidden": true as const,
+};
 function IcoUser() {
-  return <svg width="16" height="16" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="5.5" r="3"/><path d="M2 14c0-3.31 2.69-6 6-6s6 2.69 6 6"/></svg>;
+  return <svg {...ico}><circle cx="12" cy="8" r="3.6" /><path d="M4.5 20c0-4 3.4-7 7.5-7s7.5 3 7.5 7" /></svg>;
 }
-function IcoBuilding() {
-  return <svg width="16" height="16" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="12" height="10" rx="1"/><path d="M5 14V9h6v5"/><path d="M5 7h2M9 7h2"/></svg>;
+function IcoBarn() {
+  return <svg {...ico}><path d="M4 10 12 4l8 6v10H4z" /><path d="M9 20v-6h6v6" /><path d="M4 10h16" /></svg>;
 }
 function IcoSignOut() {
-  return <svg width="16" height="16" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3h3a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-3M6 11l4-3-4-3M2 8h8"/></svg>;
+  return <svg {...ico}><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" /><path d="M10 17l5-5-5-5" /><path d="M15 12H3" /></svg>;
 }
 function IcoHelp() {
-  return <svg width="16" height="16" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="6"/><path d="M6 6a2 2 0 0 1 3.46 1C9.46 8.5 8 9 8 10"/><circle cx="8" cy="12" r=".5" fill="currentColor"/></svg>;
+  return <svg {...ico}><circle cx="12" cy="12" r="9" /><path d="M9.3 9.3a2.8 2.8 0 0 1 5.4 1c0 2-2.7 2.4-2.7 4.2" /><circle cx="12" cy="17.6" r=".6" fill="currentColor" /></svg>;
 }
-function IcoPickup() {
-  return <svg width="16" height="16" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2L2 5v6l6 3 6-3V5L8 2z"/><path d="M2 5l6 3 6-3M8 8v7"/></svg>;
-}
-function IcoGift() {
-  return <svg width="16" height="16" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="12" height="8" rx="1"/><path d="M2 9h12M8 6v8"/><path d="M8 6S6.5 2.5 4.5 3.5 6 6 8 6zM8 6s1.5-3.5 3.5-2.5S10 6 8 6z"/></svg>;
-}
-function IcoGame() {
-  return <svg width="16" height="16" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1.5" y="4.5" width="13" height="7" rx="3"/><path d="M4.5 8h2M5.5 7v2"/><circle cx="10.5" cy="7.5" r=".6" fill="currentColor"/><circle cx="11.8" cy="8.8" r=".6" fill="currentColor"/></svg>;
+function IcoClose() {
+  return <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" /></svg>;
 }
 
 // ── Section label ──────────────────────────────────────────────────────────────
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ padding: "12px 16px 4px", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#b3a085" }}>
+    <div className="px-4 pt-4 pb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#b3a085]">
       {children}
     </div>
   );
@@ -67,6 +60,7 @@ function NavLink({
   label,
   sublabel,
   onClick,
+  active,
   accent,
 }: {
   href: string;
@@ -74,38 +68,33 @@ function NavLink({
   label: string;
   sublabel?: string;
   onClick: () => void;
-  accent?: "brown" | "red";
+  active?: boolean;
+  accent?: boolean;
 }) {
-  const accentColor = accent === "red" ? "#dc2626" : accent === "brown" ? "#6c4d39" : undefined;
   return (
     <Link
       href={href}
       onClick={onClick}
-      style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", borderRadius: 12, transition: "background 0.15s", textDecoration: "none" }}
-      className="group hover:bg-[#efe3d0]"
+      aria-current={active ? "page" : undefined}
+      className="nb-drawer-link nb-focus group flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-[#efe3d0] no-underline"
     >
-      <span style={{ width: 20, display: "flex", alignItems: "center", justifyContent: "center", color: accentColor ?? "#8a7559", flexShrink: 0 }}
-        className="group-hover:text-[#4a3a2b]">
+      <span
+        className={`w-5 flex items-center justify-center shrink-0 transition-colors ${
+          accent || active ? "text-[#6c4d39]" : "text-[#a08b6e] group-hover:text-[#6c4d39]"
+        }`}
+      >
         {iconEl}
       </span>
-      <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: "block", fontSize: 14, color: accentColor ?? "#2c2317", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-          className="group-hover:text-[#241a12]">
+      <span className="flex-1 min-w-0">
+        <span className={`block text-[14px] leading-tight truncate ${active ? "text-[#241a12] font-semibold" : "text-[#2c2317] font-medium group-hover:text-[#241a12]"}`}>
           {label}
         </span>
         {sublabel && (
-          <span style={{ display: "block", fontSize: 11, color: "#b3a085", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 1 }}>
-            {sublabel}
-          </span>
+          <span className="block text-[11.5px] text-[#a08b6e] truncate mt-0.5">{sublabel}</span>
         )}
       </span>
     </Link>
   );
-}
-
-// ── Divider ────────────────────────────────────────────────────────────────────
-function Divider() {
-  return <div style={{ height: 1, background: "#e3d6bf", margin: "6px 0" }} />;
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
@@ -116,6 +105,7 @@ export default function UserMenu() {
   const [me, setMe] = useState<MeData | null>(null);
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -136,8 +126,16 @@ export default function UserMenu() {
     return () => { document.body.style.overflow = ""; };
   }, [open]);
 
+  // Escape closes the drawer.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   if (!isLoaded) {
-    return <div className="w-9 h-9 rounded-full bg-[#efe3d0] animate-pulse" />;
+    return <div className="w-9 h-9 rounded-full nb-skeleton" aria-hidden="true" />;
   }
 
   const initials = (
@@ -151,18 +149,18 @@ export default function UserMenu() {
 
   if (!isSignedIn) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2">
         <Link
           href="/sign-in"
-          className="text-[#6f5b46] hover:text-[#241a12] text-sm px-3 py-1.5 rounded-lg hover:bg-[#efe3d0] transition-colors whitespace-nowrap"
+          className="nb-focus text-[#6f5b46] hover:text-[#241a12] text-sm font-medium px-3 py-2 rounded-xl hover:bg-[#efe3d0] transition-colors whitespace-nowrap"
         >
-          Sign In
+          Sign in
         </Link>
         <Link
           href="/sign-up"
-          className="bg-[#6c4d39] hover:bg-[#563e2c] text-white text-sm px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors"
+          className="nb-focus bg-[#6c4d39] hover:bg-[#563e2c] active:scale-[0.98] text-white text-sm font-semibold px-3.5 py-2 rounded-xl whitespace-nowrap transition-[background-color,transform] shadow-[0_1px_0_rgba(0,0,0,0.12)]"
         >
-          Get Started
+          Join free
         </Link>
       </div>
     );
@@ -171,114 +169,104 @@ export default function UserMenu() {
   // Org portal label — never say "admin" for staff
   const roleLabel = me?.role?.toLowerCase();
   const isManager = roleLabel === "owner" || roleLabel === "admin" || !!me?.isSuperAdmin;
-  const orgPortalLabel = me?.orgName ?? "Admin Dashboard";
-  const orgPortalSublabel = isManager ? "Manage auctions & settings" : "Auction staff portal";
+  const orgPortalLabel = me?.orgName ?? "Auction house";
+  const orgPortalSublabel = isManager ? "Run auctions, lots and pickup" : "Staff tools";
 
   const close = () => setOpen(false);
+  const on = (...paths: string[]) => paths.some((p) => pathname === p || pathname?.startsWith(p + "/"));
 
   const drawer = (
     <>
       {/* Backdrop */}
       <div
-        style={{ position: "fixed", inset: 0, zIndex: 9998, background: "rgba(0,0,0,0.40)" }}
+        className="nb-fade-in fixed inset-0 z-[9998] bg-[#241a12]/45 backdrop-blur-[2px]"
         onClick={close}
+        aria-hidden="true"
       />
 
       {/* Drawer */}
       <div
-        style={{
-          position: "fixed",
-          top: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 9999,
-          width: 300,
-          maxWidth: "88vw",
-          display: "flex",
-          flexDirection: "column",
-          background: "#ffffff",
-          borderLeft: "1px solid #e3d6bf",
-          boxShadow: "-8px 0 32px rgba(0,0,0,0.12)",
-          overflowY: "hidden",
-        }}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Account menu"
+        className="nb-drawer-in fixed top-0 right-0 bottom-0 z-[9999] w-[300px] max-w-[88vw] flex flex-col bg-[#fbf4e6] border-l border-[#e3d6bf] shadow-[-12px_0_40px_rgba(36,26,18,0.22)]"
       >
         {/* User header */}
-        <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #e3d6bf", display: "flex", alignItems: "flex-start", gap: 12, justifyContent: "space-between", flexShrink: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-            <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: "rgba(108, 77, 57,0.10)", border: "1px solid rgba(108, 77, 57,0.20)", display: "flex", alignItems: "center", justifyContent: "center", color: "#6c4d39", fontWeight: 700, fontSize: 16, flexShrink: 0 }}>
-              {hasAvatar(me?.avatarKey) ? (
-                <Avatar avatarKey={me?.avatarKey} className="w-full h-full" />
-              ) : user?.imageUrl ? (
-                <img src={user.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              ) : initials}
+        <div className="pt-safe shrink-0 border-b border-[#e3d6bf] bg-white/60">
+          <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 rounded-full overflow-hidden bg-[#6c4d39]/10 border border-[#6c4d39]/20 flex items-center justify-center text-[#6c4d39] font-bold text-base shrink-0">
+                {hasAvatar(me?.avatarKey) ? (
+                  <Avatar avatarKey={me?.avatarKey} className="w-full h-full" />
+                ) : user?.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={user.imageUrl} alt="" className="w-full h-full object-cover" />
+                ) : initials}
+              </div>
+              <div className="min-w-0">
+                <p className="font-display text-[#241a12] font-bold text-[15px] leading-tight truncate">{displayName}</p>
+                <p className="text-[#8a7559] text-xs truncate mt-0.5">{email}</p>
+              </div>
             </div>
-            <div style={{ minWidth: 0 }}>
-              <p style={{ color: "#241a12", fontWeight: 700, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName}</p>
-              <p style={{ color: "#8a7559", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{email}</p>
-            </div>
+            <button
+              onClick={close}
+              aria-label="Close menu"
+              className="nb-focus text-[#a08b6e] hover:text-[#241a12] hover:bg-[#efe3d0] p-2 -mr-2 -mt-1 rounded-xl transition-colors shrink-0"
+            >
+              <IcoClose />
+            </button>
           </div>
-          <button
-            onClick={close}
-            style={{ color: "#b3a085", background: "none", border: "none", cursor: "pointer", padding: 4, flexShrink: 0, borderRadius: 8 }}
-            aria-label="Close menu"
-          >
-            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="3" y1="3" x2="13" y2="13" />
-              <line x1="13" y1="3" x2="3" y2="13" />
-            </svg>
-          </button>
         </div>
 
         {/* Navigation links */}
-        <nav style={{ flex: 1, padding: "4px 8px", overflowY: "auto", minHeight: 0 }}>
+        <nav className="flex-1 px-2 pb-2 overflow-y-auto min-h-0">
+          <SectionLabel>Bid</SectionLabel>
+          <NavLink href="/auctions" iconEl={<IcoGavel className="w-[18px] h-[18px]" />} label="Auctions" sublabel="Live now and on deck" onClick={close} active={on("/auctions")} />
+          <NavLink href="/search" iconEl={<IcoMagnifier className="w-[18px] h-[18px]" />} label="Search lots" onClick={close} active={on("/search")} />
 
-          <SectionLabel>Auctions</SectionLabel>
-          <NavLink href="/auctions" iconEl={<IcoHome />} label="Browse Auctions" onClick={close} />
-          <NavLink href="/search" iconEl={<IcoSearch />} label="Search Items" onClick={close} />
-
-          <SectionLabel>My Bids</SectionLabel>
-          <NavLink href="/dashboard" iconEl={<IcoGavel />} label="My Bids" sublabel="Active, past wins & invoices" onClick={close} accent="red" />
-          <NavLink href="/watchlist" iconEl={<IcoStar className="w-4 h-4" filled />} label="Watchlist" sublabel="Lots you're keeping an eye on" onClick={close} />
-          <NavLink href="/pickup" iconEl={<IcoPickup />} label="Pickup" sublabel="Schedule item collection" onClick={close} />
-          <NavLink href="/refer" iconEl={<IcoGift />} label="Bid Bucks" sublabel="Invite friends, get $5 off" onClick={close} accent="brown" />
+          <SectionLabel>Yours</SectionLabel>
+          <NavLink href="/dashboard" iconEl={<IcoTrophy className="w-[18px] h-[18px]" />} label="My Bids" sublabel="Standing, wins and invoices" onClick={close} active={on("/dashboard", "/my-bids", "/invoice")} accent />
+          <NavLink href="/watchlist" iconEl={<IcoStar className="w-[18px] h-[18px]" filled />} label="Watchlist" sublabel="Lots you have your eye on" onClick={close} active={on("/watchlist")} />
+          <NavLink href="/pickup" iconEl={<IcoTruck className="w-[18px] h-[18px]" />} label="Pickup" sublabel="Owosso or Gladwin, your call" onClick={close} active={on("/pickup")} />
+          <NavLink href="/refer" iconEl={<IcoGift className="w-[18px] h-[18px]" />} label="Bid Bucks" sublabel="Invite a friend, earn $5 tickets" onClick={close} active={on("/refer")} />
 
           <SectionLabel>Account</SectionLabel>
-          <NavLink href="/account" iconEl={<IcoUser />} label="My Profile" sublabel="Name, email, phone & payment cards" onClick={close} />
-          <NavLink href="/help" iconEl={<IcoHelp />} label="Info & Help" sublabel="Bidding tips, increments, FAQ" onClick={close} />
-          <NavLink href="/play" iconEl={<IcoGame />} label="Play the game" sublabel="Our auction mini-game — for fun" onClick={close} />
+          <NavLink href="/account" iconEl={<IcoUser />} label="Profile" sublabel="Name, phone, payment cards" onClick={close} active={on("/account")} />
+          <NavLink href="/help" iconEl={<IcoHelp />} label="Help" sublabel="How bidding, max bids and pickup work" onClick={close} active={on("/help")} />
+          <NavLink href="/play" iconEl={<IcoTicket className="w-[18px] h-[18px]" />} label="Auction Arcade" sublabel="Going once, going twice" onClick={close} active={on("/play")} />
 
           {(me?.orgId || me?.isSuperAdmin) && (
             <>
-              <Divider />
-              <SectionLabel>Business</SectionLabel>
+              <SectionLabel>Auction house</SectionLabel>
               <NavLink
                 href="/admin/dashboard"
-                iconEl={<IcoBuilding />}
+                iconEl={<IcoBarn />}
                 label={orgPortalLabel}
                 sublabel={orgPortalSublabel}
                 onClick={close}
-                accent="brown"
+                accent
               />
             </>
           )}
         </nav>
 
         {/* Sign out */}
-        <div style={{ padding: "8px 8px 20px", borderTop: "1px solid #e3d6bf", flexShrink: 0 }}>
+        <div className="pb-safe shrink-0 border-t border-[#e3d6bf] px-2 pt-2 pb-4">
           <button
             onClick={async () => {
               close();
               await signOut();
               router.push("/");
             }}
-            style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", borderRadius: 12, color: "#dc2626", background: "none", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 500 }}
-            className="hover:bg-red-50 transition-colors"
+            className="nb-focus w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[#6f5b46] hover:text-[#241a12] hover:bg-[#efe3d0] text-[14px] font-medium transition-colors"
           >
-            <span style={{ width: 20, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <IcoSignOut />
-            </span>
-            <span>Sign Out</span>
+            <span className="w-5 flex items-center justify-center shrink-0 text-[#a08b6e]"><IcoSignOut /></span>
+            <span>Sign out</span>
           </button>
+          <div className="flex items-center gap-1.5 px-4 pt-3 text-[11px] text-[#b3a085]">
+            <PineMark className="w-3.5 h-3.5" />
+            <span>Northwood Bids, mid-Michigan</span>
+          </div>
         </div>
       </div>
     </>
@@ -288,12 +276,15 @@ export default function UserMenu() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="w-9 h-9 rounded-full overflow-hidden bg-[#6c4d39]/10 border border-[#6c4d39]/20 flex items-center justify-center text-[#6c4d39] font-semibold text-sm hover:bg-[#563e2c]/20 transition-colors shrink-0"
+        className="nb-focus w-9 h-9 rounded-full overflow-hidden bg-[#6c4d39]/10 border border-[#6c4d39]/25 flex items-center justify-center text-[#6c4d39] font-semibold text-sm hover:bg-[#6c4d39]/20 hover:border-[#6c4d39]/45 active:scale-95 transition-[background-color,border-color,transform] shrink-0"
         aria-label="Open account menu"
+        aria-haspopup="dialog"
+        aria-expanded={open}
       >
         {hasAvatar(me?.avatarKey) ? (
           <Avatar avatarKey={me?.avatarKey} className="w-full h-full" />
         ) : user?.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img src={user.imageUrl} alt="" className="w-full h-full object-cover" />
         ) : initials}
       </button>

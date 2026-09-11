@@ -1,395 +1,251 @@
 import Link from "next/link";
+import { PineRidge, BranchDivider, PineMark } from "@/app/components/Illustrations";
+import {
+  IcoGavel, IcoBolt, IcoCoin, IcoTruck, IcoGift, IcoShield, IcoUsers, IcoMegaphone,
+} from "@/app/components/BidIcons";
 
-// ── Section wrapper ────────────────────────────────────────────────────────────
-function Section({ id, title, icon, children }: { id: string; title: string; icon: React.ReactNode; children: React.ReactNode }) {
+export const metadata = {
+  title: "Help & FAQ | Northwood Bids",
+  description:
+    "How bidding works at Northwood Bids: $2 starts, max bids, buyer's premium and tax, pickup in Owosso and Gladwin, free transfers, Bid Bucks and when your card is charged.",
+};
+
+/* ── Building blocks ──────────────────────────────────────────────────────── */
+
+type Icon = (p: { className?: string }) => React.ReactElement;
+
+/** One collapsible question. Native <details> so it works with no JS and the
+    browser handles keyboard + a11y. `open` pre-expands the essentials. */
+function Q({ q, children, open = false }: { q: string; children: React.ReactNode; open?: boolean }) {
   return (
-    <section id={id} className="scroll-mt-24">
-      <div className="flex items-center gap-3 mb-5">
-        <div className="w-9 h-9 rounded-xl bg-[#6c4d39]/10 border border-[#6c4d39]/20 flex items-center justify-center text-[#6c4d39] shrink-0">
-          {icon}
-        </div>
-        <h2 className="text-xl font-bold text-[#241a12]">{title}</h2>
+    <details open={open} className="group border-b border-[#efe3d0] last:border-0">
+      <summary className="flex items-center justify-between gap-4 py-3.5 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+        <span className="font-semibold text-[15px] text-[#241a12] leading-snug">{q}</span>
+        <span className="w-7 h-7 rounded-full border border-[#e3d6bf] bg-[#fbf4e6] text-[#6c4d39] grid place-items-center shrink-0 transition-transform duration-200 group-open:rotate-45 group-open:bg-[#6c4d39] group-open:text-white group-open:border-[#6c4d39]">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M6 1.5v9M1.5 6h9" /></svg>
+        </span>
+      </summary>
+      <div className="pb-4 pr-2 text-sm text-[#4a3a2b] leading-relaxed space-y-2.5 [&_strong]:text-[#241a12] [&_a]:text-[#6c4d39] [&_a]:font-semibold [&_a:hover]:underline">
+        {children}
       </div>
-      {children}
+    </details>
+  );
+}
+
+/** A topic card: icon, slab-serif title, and its stack of questions. */
+function Topic({ id, Icon, title, blurb, children }: { id: string; Icon: Icon; title: string; blurb: string; children: React.ReactNode }) {
+  return (
+    <section id={id} className="scroll-mt-24 bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden">
+      <div className="flex items-center gap-3 px-5 pt-5 pb-3.5 border-b border-[#efe3d0] bg-[#fbf4e6]/60">
+        <span className="w-10 h-10 rounded-xl bg-[#6c4d39] text-[#f6ecda] grid place-items-center shrink-0 shadow-[0_4px_0_#3f2c1f]">
+          <Icon className="w-5 h-5" />
+        </span>
+        <div className="min-w-0">
+          <h2 className="font-display text-lg font-bold text-[#241a12] leading-tight">{title}</h2>
+          <p className="text-xs text-[#8a7559] mt-0.5">{blurb}</p>
+        </div>
+      </div>
+      <div className="px-5">{children}</div>
     </section>
   );
 }
 
-// ── Callout box ────────────────────────────────────────────────────────────────
-function Tip({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="bg-[#6c4d39]/8 border border-[#6c4d39]/20 rounded-xl p-4 text-sm text-[#241a12] leading-relaxed my-4">
-      <span className="font-semibold text-[#6c4d39]">Tip: </span>{children}
-    </div>
-  );
-}
+const TOPICS: { id: string; label: string; Icon: Icon }[] = [
+  { id: "bidding", label: "Bidding", Icon: IcoGavel },
+  { id: "max-bid", label: "Max bids", Icon: IcoBolt },
+  { id: "money", label: "What you pay", Icon: IcoCoin },
+  { id: "pickup", label: "Pickup & transfers", Icon: IcoTruck },
+  { id: "bid-bucks", label: "Bid Bucks", Icon: IcoGift },
+  { id: "account", label: "Your account", Icon: IcoUsers },
+];
 
-function Warn({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-[#241a12] leading-relaxed my-4">
-      <span className="font-semibold text-amber-600">Note: </span>{children}
-    </div>
-  );
-}
+const INCREMENTS: [string, string][] = [
+  ["$0 – $11", "$1"],
+  ["$12 – $99", "$2"],
+  ["$100 – $499", "$5"],
+  ["$500 – $999", "$10"],
+  ["$1,000 – $4,999", "$25"],
+  ["$5,000 +", "$50"],
+];
 
-// ── FAQ item ───────────────────────────────────────────────────────────────────
-function Q({ q, children }: { q: string; children: React.ReactNode }) {
-  return (
-    <div className="border-b border-[#e3d6bf] pb-5 mb-5 last:border-0 last:mb-0 last:pb-0">
-      <p className="font-semibold text-[#241a12] mb-2">{q}</p>
-      <p className="text-sm text-[#6f5b46] leading-relaxed">{children}</p>
-    </div>
-  );
-}
-
-// ── TOC Link ───────────────────────────────────────────────────────────────────
-function TocLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <a href={href} className="block text-sm text-[#6c4d39] hover:text-[#563e2c] hover:underline py-0.5 transition-colors">
-      {children}
-    </a>
-  );
-}
+/* ── Page ─────────────────────────────────────────────────────────────────── */
 
 export default function HelpPage() {
   return (
-    <div className="min-h-screen bg-[#f1e7d5]">
-      <div className="max-w-4xl mx-auto px-6 sm:px-8 py-10">
-
-        {/* Hero */}
-        <div className="mb-10">
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-[#241a12] mb-3">Info & Help</h1>
-          <p className="text-[#6f5b46] text-lg leading-relaxed max-w-2xl">
-            Everything you need to bid with confidence — how bidding works, increment tables, Max Bid strategy, payments, and more.
+    <div className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
+      {/* Hero */}
+      <div className="relative overflow-hidden border-b border-[#e3d6bf]" style={{ background: "linear-gradient(160deg,#241a12 0%,#3a2a1b 60%,#4a3524 100%)" }}>
+        <PineRidge className="absolute inset-x-0 bottom-0 w-full h-28 opacity-25 pointer-events-none" />
+        <div className="relative max-w-4xl mx-auto px-6 sm:px-8 pt-12 pb-24 sm:pt-16 sm:pb-28 text-[#f6ecda]">
+          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#f0a35a] mb-2">Help &amp; FAQ</p>
+          <h1 className="font-display text-3xl sm:text-5xl font-black leading-[1.05] max-w-2xl">
+            Straight answers, no fine-print runaround.
+          </h1>
+          <p className="text-[#f6ecda]/80 text-base sm:text-lg mt-3 max-w-xl leading-relaxed">
+            How bidding works, what you actually pay, and how to get your winnings home to Owosso or Gladwin.
           </p>
+          <div className="mt-6 flex flex-wrap gap-2">
+            {TOPICS.map((t) => (
+              <a
+                key={t.id}
+                href={`#${t.id}`}
+                className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/20 border border-white/15 text-[#f6ecda] text-xs font-bold px-3 py-1.5 rounded-full transition-colors"
+              >
+                <t.Icon className="w-3.5 h-3.5 text-[#f0a35a]" /> {t.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-6 sm:px-8 py-10">
+        {/* The three things every new bidder asks first. */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10 -mt-24 sm:-mt-28 relative">
+          {[
+            { Icon: IcoGavel, k: "Every lot starts at $2", v: "Brand-name overstock, no reserves. Where it lands is up to the room." },
+            { Icon: IcoShield, k: "Charged only if you win", v: "A card on file is required to bid. It's untouched unless the hammer falls your way." },
+            { Icon: IcoTruck, k: "Pick up in Owosso or Gladwin", v: "Win anywhere, collect at your spot. Transfers between the two are free." },
+          ].map((c) => (
+            <div key={c.k} className="bg-white border border-[#e3d6bf] rounded-2xl p-4 shadow-[0_14px_30px_-20px_rgba(36,26,18,0.45)]">
+              <c.Icon className="w-5 h-5 text-[#c47b3e] mb-2" />
+              <div className="font-display font-bold text-[15px] leading-tight">{c.k}</div>
+              <p className="text-xs text-[#6f5b46] mt-1 leading-relaxed">{c.v}</p>
+            </div>
+          ))}
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8">
-
-          {/* Sticky TOC (desktop) */}
-          <aside className="hidden lg:block w-52 shrink-0">
-            <div className="sticky top-24 bg-white border border-[#e3d6bf] rounded-2xl p-5">
-              <p className="text-xs font-bold uppercase tracking-widest text-[#b3a085] mb-3">On This Page</p>
-              <nav className="space-y-0.5">
-                <TocLink href="#how-bidding-works">How Bidding Works</TocLink>
-                <TocLink href="#max-bid">Max Bid (Proxy)</TocLink>
-                <TocLink href="#bid-table">Bid Increment Table</TocLink>
-                <TocLink href="#winning">Winning an Item</TocLink>
-                <TocLink href="#payment">Payment</TocLink>
-                <TocLink href="#bid-bucks">Bid Bucks (Referrals)</TocLink>
-                <TocLink href="#account">Your Account</TocLink>
-                <TocLink href="#password">Password Reset</TocLink>
-                <TocLink href="#faq">FAQ</TocLink>
-              </nav>
-            </div>
-          </aside>
-
-          {/* Main content */}
-          <div className="flex-1 space-y-12">
-
-            {/* ── How Bidding Works ── */}
-            <Section id="how-bidding-works" title="How Bidding Works" icon={
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 3L10 7l5 5 4-4-5-5zM3 21l7-7"/>
-              </svg>
-            }>
-              <div className="bg-white border border-[#e3d6bf] rounded-2xl p-6 space-y-4 text-sm text-[#4a3a2b] leading-relaxed">
-                <p>
-                  Northwood Bids uses a <strong className="text-[#241a12]">live online auction</strong> format. Items are listed with a starting bid, and the highest bid when time runs out wins.
-                </p>
-                <ol className="space-y-3 list-none">
-                  <li className="flex gap-3">
-                    <span className="w-6 h-6 rounded-full bg-[#6c4d39] text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
-                    <span><strong className="text-[#241a12]">Find an item</strong> — Browse open auctions, click an item you want, and see the current bid.</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="w-6 h-6 rounded-full bg-[#6c4d39] text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
-                    <span><strong className="text-[#241a12]">Add a card</strong> — You'll be prompted to add a payment card before your first bid. This card is only charged if you win.</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="w-6 h-6 rounded-full bg-[#6c4d39] text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
-                    <span><strong className="text-[#241a12]">Place your bid</strong> — Enter an amount at or above the minimum and tap "Place Bid." You'll see a confirmation instantly.</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="w-6 h-6 rounded-full bg-[#6c4d39] text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">4</span>
-                    <span><strong className="text-[#241a12]">Watch for outbids</strong> — If someone tops your bid, you'll be notified. You can come back and bid again.</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="w-6 h-6 rounded-full bg-[#6c4d39] text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">5</span>
-                    <span><strong className="text-[#241a12]">Win & pay</strong> — When the auction ends, winners are charged automatically. You can also pay manually from your dashboard.</span>
-                  </li>
-                </ol>
-                <Tip>The item page updates in real time — you don't need to refresh to see new bids.</Tip>
+        <div className="space-y-6">
+          {/* ── Bidding ── */}
+          <Topic id="bidding" Icon={IcoGavel} title="Bidding" blurb="The basics: how a lot goes from $2 to sold.">
+            <Q q="How does an auction here work?" open>
+              <p>Every lot opens at <strong>$2</strong> and runs until its posted end time. The highest bid when the clock hits zero wins. The page updates live, so you never have to refresh to see where things stand.</p>
+              <p>Two ways to bid on any lot: tap <strong>Bid</strong> in the bar at the bottom of the screen to go one step above the current price (tap once to arm, tap again to confirm), or set a <strong>max bid</strong> and let us do the bidding for you.</p>
+            </Q>
+            <Q q="What is the minimum I can raise a bid by?">
+              <p>Increments scale with the price so small lots stay small and big lots move.</p>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-1 max-w-xs text-[13px] tabular-nums bg-[#fbf4e6] border border-[#efe3d0] rounded-xl px-4 py-3">
+                {INCREMENTS.map(([range, step]) => (
+                  <div key={range} className="contents">
+                    <span className="text-[#6f5b46]">{range}</span>
+                    <span className="font-bold text-[#241a12] text-right">+{step}</span>
+                  </div>
+                ))}
               </div>
-            </Section>
+            </Q>
+            <Q q="Why does the clock sometimes add time at the end?">
+              <p>A bid inside the last <strong>two minutes</strong> pushes that lot&apos;s end time out by two more, so nobody gets sniped at the buzzer. It keeps things fair for the person who was leading and the person who just bid. The new end time shows on the page the moment it changes.</p>
+            </Q>
+            <Q q="Can I take a bid back?">
+              <p>No. A bid is a handshake. Once it&apos;s placed it stands, so bid what you&apos;re comfortable paying. If you&apos;re unsure, set a max bid instead of tapping through increments.</p>
+            </Q>
+            <Q q="How will I know if I've been outbid?">
+              <p>We text you, and the lot page shows a red <strong>You&apos;ve been outbid</strong> banner until you&apos;re back in front. Your <Link href="/dashboard">dashboard</Link> lists everything you&apos;re winning and losing at a glance.</p>
+            </Q>
+            <Q q="Can other bidders see who I am?">
+              <p>No. On the lot page you appear as an anonymous bidder, and your max bid is never shown to anyone.</p>
+            </Q>
+          </Topic>
 
-            {/* ── Max Bid ── */}
-            <Section id="max-bid" title="Max Bid (Proxy Bidding)" icon={
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
-              </svg>
-            }>
-              <div className="bg-white border border-[#e3d6bf] rounded-2xl p-6 space-y-5 text-sm text-[#4a3a2b] leading-relaxed">
-                <p>
-                  <strong className="text-[#241a12]">Max Bid</strong> lets the system bid for you automatically — up to a limit you set. You don't have to watch the auction constantly.
-                </p>
+          {/* ── Max bids ── */}
+          <Topic id="max-bid" Icon={IcoBolt} title="Max bids" blurb="Set it once. We hold the line while you get on with your day.">
+            <Q q="What is a max bid?" open>
+              <p>The most you&apos;d pay for a lot. You enter it once; from then on we place the smallest bid needed to keep you in front, every time someone else bids, instantly, right up to your number and never past it.</p>
+              <p>If nobody pushes you, you win for less than your max. If someone sets a higher max than yours, you&apos;re outbid and we text you so you can decide whether to go higher.</p>
+            </Q>
+            <Q q="Show me an example.">
+              <p>The lot sits at $20. You set a max of <strong>$85</strong>. We bid $22 for you. Someone else bids $25; we answer with $27. Nobody else shows up, so the lot closes at <strong>$27</strong>. Your other $58 stays in your pocket.</p>
+            </Q>
+            <Q q="Is my max bid private?">
+              <p>Completely. Other bidders only ever see the current price. Your ceiling is between you and us.</p>
+            </Q>
+            <Q q="Can I change or cancel a max bid?">
+              <p>Yes, from the lot page. Raise it any time. Cancelling stops future auto-bids, but any bids already placed for you still stand.</p>
+            </Q>
+          </Topic>
 
-                <div>
-                  <p className="font-semibold text-[#241a12] mb-2">How it works:</p>
-                  <ul className="space-y-2">
-                    <li className="flex gap-2"><span className="text-[#6c4d39] font-bold mt-0.5">→</span><span>You set the <strong className="text-[#241a12]">most you're willing to pay</strong> — your Max Bid amount.</span></li>
-                    <li className="flex gap-2"><span className="text-[#6c4d39] font-bold mt-0.5">→</span><span>The system automatically places the <strong className="text-[#241a12]">smallest bid needed</strong> to keep you in the lead.</span></li>
-                    <li className="flex gap-2"><span className="text-[#6c4d39] font-bold mt-0.5">→</span><span>If someone outbids you, the system counter-bids <strong className="text-[#241a12]">instantly</strong> — up to your max.</span></li>
-                    <li className="flex gap-2"><span className="text-[#6c4d39] font-bold mt-0.5">→</span><span>If someone's max is higher than yours, you'll be outbid. The system will notify you so you can decide whether to raise your max.</span></li>
-                    <li className="flex gap-2"><span className="text-[#6c4d39] font-bold mt-0.5">→</span><span>You <strong className="text-[#241a12]">only pay what's needed to win</strong> — not necessarily your full max amount.</span></li>
-                  </ul>
-                </div>
+          {/* ── What you pay ── */}
+          <Topic id="money" Icon={IcoCoin} title="What you pay" blurb="No surprises at checkout. Here's the whole bill.">
+            <Q q="When is my card charged?" open>
+              <p>Only if you win, and only when the auction closes. Placing a bid does not charge you. Losing does not charge you. The lot page shows a <strong>Total if you win</strong> figure before you commit, so the number you see is the number you pay.</p>
+            </Q>
+            <Q q="Is there a buyer's premium or tax?">
+              <p>The lot page breaks it down for you: your winning bid, plus the buyer&apos;s premium and Michigan sales tax where they apply. Tap <strong>Total if you win</strong> on any lot to see the exact split for that item.</p>
+            </Q>
+            <Q q="Why do I need a card on file before I can bid?">
+              <p>It keeps the room honest. Everyone who bids can pay, so winners are real and lots don&apos;t get tied up. Cards are stored by Stripe; we never see or keep your card number.</p>
+            </Q>
+            <Q q="What if a charge fails?">
+              <p>You&apos;ll get a text, and your <Link href="/dashboard">dashboard</Link> shows a retry button so you can use the card on file or add a new one. Lots that go unpaid for too long may be offered to the next bidder.</p>
+            </Q>
+            <Q q="Are refunds a thing?">
+              <p>All sales are final. Lots are brand-name overstock sold as described and photographed. If something is genuinely not as listed, call us at <a href="tel:+18108181772">(810) 818-1772</a> and we&apos;ll make it right.</p>
+            </Q>
+          </Topic>
 
-                <div className="bg-[#efe3d0] rounded-xl p-4 space-y-3">
-                  <p className="font-semibold text-[#241a12] text-xs uppercase tracking-wider">Example</p>
-                  <p>Current bid is <strong>$50</strong>. You set a Max Bid of <strong>$200</strong>.</p>
-                  <p>The system immediately bids <strong>$52</strong> (the next valid increment) to put you in the lead. Another bidder comes in at $100 — the system auto-bids <strong>$105</strong> for you. Another bidder sets their max at $250 — they beat your $200 limit and you're notified to decide if you want to raise your max.</p>
-                  <p>If no one exceeds your max, <strong>you win at the lowest price needed</strong> to beat the competition.</p>
-                </div>
+          {/* ── Pickup ── */}
+          <Topic id="pickup" Icon={IcoTruck} title="Pickup & transfers" blurb="Two spots, one appointment, no waiting on a phone call.">
+            <Q q="Where do I pick up what I've won?" open>
+              <p>At either of our two locations: <strong>Owosso</strong> or <strong>Gladwin</strong>. Pick your usual spot on the <Link href="/pickup">Pickup</Link> page and book a time that suits you. Everything you win before that appointment rides along on it automatically.</p>
+            </Q>
+            <Q q="What if a lot is stored at the other location?">
+              <p>We move it to your spot for free. Transfers usually take about five to six days, and we text you the moment it lands so you can book your pickup. A lot marked <strong>Pickup here only</strong> stays where it is; plan to collect those in person.</p>
+            </Q>
+            <Q q="Can you ship it?">
+              <p>Not right now. Everything is local pickup, which is a big part of how the prices stay where they are.</p>
+            </Q>
+            <Q q="How long do I have to collect?">
+              <p>Book your pickup as soon as you can after the win; we&apos;ll remind you by text. If life gets in the way, call us at <a href="tel:+18108181772">(810) 818-1772</a> and we&apos;ll work something out.</p>
+            </Q>
+          </Topic>
 
-                <Tip>Set your Max Bid to the true most you'd pay for the item. The system won't go over it, and you'll often pay less than that amount.</Tip>
-                <Warn>Your Max Bid amount is private — other bidders can't see it. They only see the current displayed bid.</Warn>
-              </div>
-            </Section>
+          {/* ── Bid Bucks ── */}
+          <Topic id="bid-bucks" Icon={IcoGift} title="Bid Bucks" blurb="Bring a friend, knock $5 off your next bill.">
+            <Q q="How do Bid Bucks work?" open>
+              <p>Share your invite link from the <Link href="/refer">Bid Bucks</Link> page. When a friend signs up through it, wins a lot, and their payment goes through, you earn a <strong>$5</strong> coupon. It comes off your <strong>next</strong> winning bill automatically, nothing to type in.</p>
+            </Q>
+            <Q q="Is there a limit?">
+              <p>Up to five friends, so up to $25. One coupon per bill, on bills of $5 or more.</p>
+            </Q>
+            <Q q="What doesn't count?">
+              <p>Inviting yourself, or accounts that share your phone number or card. Bid Bucks have no cash value and can&apos;t be transferred.</p>
+            </Q>
+          </Topic>
 
-            {/* ── Bid Increment Table ── */}
-            <Section id="bid-table" title="Bid Increment Table" icon={
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2"/>
-                <path d="M3 9h18M9 21V9"/>
-              </svg>
-            }>
-              <div className="bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden text-sm">
-                <div className="px-6 py-4 border-b border-[#e3d6bf]">
-                  <p className="text-[#4a3a2b] leading-relaxed">
-                    Bid increments are the <strong className="text-[#241a12]">minimum amount</strong> each new bid must increase over the current bid. They scale with the item's value.
-                  </p>
-                </div>
-                <div className="overflow-x-auto">
-                <table className="w-full min-w-[440px]">
-                  <thead>
-                    <tr className="bg-[#efe3d0]">
-                      <th className="text-left px-6 py-3 text-xs font-bold uppercase tracking-wider text-[#8a7559]">Current Bid</th>
-                      <th className="text-left px-6 py-3 text-xs font-bold uppercase tracking-wider text-[#8a7559]">Min. Increment</th>
-                      <th className="text-left px-6 py-3 text-xs font-bold uppercase tracking-wider text-[#8a7559]">Example</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#e3d6bf]">
-                    <tr className="hover:bg-[#f6efe1] transition-colors">
-                      <td className="px-6 py-3.5 font-medium text-[#241a12]">$0 – $11</td>
-                      <td className="px-6 py-3.5"><span className="bg-[#6c4d39]/10 text-[#6c4d39] font-bold px-2 py-0.5 rounded-lg">$1</span></td>
-                      <td className="px-6 py-3.5 text-[#6f5b46]">$5 → next min. $6</td>
-                    </tr>
-                    <tr className="hover:bg-[#f6efe1] transition-colors">
-                      <td className="px-6 py-3.5 font-medium text-[#241a12]">$12 – $99</td>
-                      <td className="px-6 py-3.5"><span className="bg-[#6c4d39]/10 text-[#6c4d39] font-bold px-2 py-0.5 rounded-lg">$2</span></td>
-                      <td className="px-6 py-3.5 text-[#6f5b46]">$20 → next min. $22</td>
-                    </tr>
-                    <tr className="hover:bg-[#f6efe1] transition-colors">
-                      <td className="px-6 py-3.5 font-medium text-[#241a12]">$100 – $499</td>
-                      <td className="px-6 py-3.5"><span className="bg-[#6c4d39]/10 text-[#6c4d39] font-bold px-2 py-0.5 rounded-lg">$5</span></td>
-                      <td className="px-6 py-3.5 text-[#6f5b46]">$250 → next min. $255</td>
-                    </tr>
-                    <tr className="hover:bg-[#f6efe1] transition-colors">
-                      <td className="px-6 py-3.5 font-medium text-[#241a12]">$500 – $999</td>
-                      <td className="px-6 py-3.5"><span className="bg-[#6c4d39]/10 text-[#6c4d39] font-bold px-2 py-0.5 rounded-lg">$10</span></td>
-                      <td className="px-6 py-3.5 text-[#6f5b46]">$600 → next min. $610</td>
-                    </tr>
-                    <tr className="hover:bg-[#f6efe1] transition-colors">
-                      <td className="px-6 py-3.5 font-medium text-[#241a12]">$1,000 – $4,999</td>
-                      <td className="px-6 py-3.5"><span className="bg-[#6c4d39]/10 text-[#6c4d39] font-bold px-2 py-0.5 rounded-lg">$25</span></td>
-                      <td className="px-6 py-3.5 text-[#6f5b46]">$1,500 → next min. $1,525</td>
-                    </tr>
-                    <tr className="hover:bg-[#f6efe1] transition-colors">
-                      <td className="px-6 py-3.5 font-medium text-[#241a12]">$5,000+</td>
-                      <td className="px-6 py-3.5"><span className="bg-[#6c4d39]/10 text-[#6c4d39] font-bold px-2 py-0.5 rounded-lg">$50</span></td>
-                      <td className="px-6 py-3.5 text-[#6f5b46]">$6,000 → next min. $6,050</td>
-                    </tr>
-                  </tbody>
-                </table>
-                </div>
-                <div className="px-6 py-4 border-t border-[#e3d6bf] bg-[#f6efe1]">
-                  <Tip>When using Max Bid, the system always uses the <strong>minimum valid increment</strong> — so you never overbid by accident.</Tip>
-                </div>
-              </div>
-            </Section>
+          {/* ── Account ── */}
+          <Topic id="account" Icon={IcoUsers} title="Your account" blurb="Profile, notifications and the password reset you'll forget you needed.">
+            <Q q="How do I update my phone number or card?">
+              <p>Head to <Link href="/account">Account</Link>. Keep your phone number current: outbid alerts, transfer arrivals and pickup reminders all go by text.</p>
+            </Q>
+            <Q q="I forgot my password.">
+              <p>On the <Link href="/sign-in">sign-in</Link> page tap <strong>Forgot password?</strong>, enter your email, and follow the link we send. It expires after an hour, so check spam if it doesn&apos;t show up.</p>
+            </Q>
+            <Q q="Where is everything I've bid on?">
+              <p>Your <Link href="/dashboard">dashboard</Link>: active bids, wins, payment status and pickup details, all in one place. Lots you&apos;ve starred live on your <Link href="/watchlist">watchlist</Link>.</p>
+            </Q>
+            <Q q="Can I bid without an account?">
+              <p>No. An account and a card on file are what make every bid in the room real. Signing up takes about a minute.</p>
+            </Q>
+          </Topic>
+        </div>
 
-            {/* ── Winning ── */}
-            <Section id="winning" title="Winning an Item" icon={
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 15c4.41 0 8-1.79 8-4V7c0-2.21-3.59-4-8-4S4 4.79 4 7v4c0 2.21 3.59 4 8 4z"/>
-                <path d="M4 11c0 2.21 3.59 4 8 4s8-1.79 8-4"/>
-                <path d="M4 15c0 2.21 3.59 4 8 4s8-1.79 8-4"/>
-              </svg>
-            }>
-              <div className="bg-white border border-[#e3d6bf] rounded-2xl p-6 space-y-4 text-sm text-[#4a3a2b] leading-relaxed">
-                <p>When an auction closes, the highest bidder on each item wins. Here's what happens next:</p>
-                <ul className="space-y-3">
-                  <li className="flex gap-2"><span className="text-[#6c4d39] font-bold">→</span><span><strong className="text-[#241a12]">Automatic charge:</strong> Your saved card is charged for your winning amount automatically when the auction closes.</span></li>
-                  <li className="flex gap-2"><span className="text-[#6c4d39] font-bold">→</span><span><strong className="text-[#241a12]">Email notification:</strong> You'll receive an email confirming your win and the items you've won.</span></li>
-                  <li className="flex gap-2"><span className="text-[#6c4d39] font-bold">→</span><span><strong className="text-[#241a12]">My Bids dashboard:</strong> Head to your dashboard to see all your wins, payment status, and pickup details.</span></li>
-                  <li className="flex gap-2"><span className="text-[#6c4d39] font-bold">→</span><span><strong className="text-[#241a12]">Schedule your own pickup:</strong> Head to <Link href="/pickup" className="text-[#6c4d39] hover:underline font-medium">Pickup</Link> and choose the location where you'd like to collect — no waiting for a call. Anything you win at another location is transferred there for you automatically (usually about 5–6 days), and we'll text you the moment it arrives so you can pick a time.</span></li>
-                </ul>
-                <Warn>If your card payment fails, you'll receive a notification and can retry payment from your dashboard. Items may be released to the next bidder if payment isn't completed promptly.</Warn>
-              </div>
-            </Section>
+        <BranchDivider className="w-56 h-6 mx-auto my-10 opacity-80" />
 
-            {/* ── Payment ── */}
-            <Section id="payment" title="Payment" icon={
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="1" y="4" width="22" height="16" rx="2"/>
-                <line x1="1" y1="10" x2="23" y2="10"/>
-              </svg>
-            }>
-              <div className="bg-white border border-[#e3d6bf] rounded-2xl p-6 space-y-5 text-sm text-[#4a3a2b] leading-relaxed">
-                <div>
-                  <p className="font-semibold text-[#241a12] mb-2">Adding a card</p>
-                  <p>Before your first bid, you'll be asked to add a payment card. This is required to participate. Your card is stored securely via Stripe and is only charged if you win.</p>
-                </div>
-                <div>
-                  <p className="font-semibold text-[#241a12] mb-2">Managing your cards</p>
-                  <p>Go to <Link href="/account" className="text-[#6c4d39] hover:underline font-medium">Account → Payment Methods</Link> to see your saved cards. You can add a new card or update your card from there at any time.</p>
-                </div>
-                <div>
-                  <p className="font-semibold text-[#241a12] mb-2">When am I charged?</p>
-                  <p>You are only charged when you <strong className="text-[#241a12]">win an item</strong> and the auction closes. Placing a bid does not charge your card. Losing a bid does not charge your card.</p>
-                </div>
-                <Tip>If a charge doesn't go through, your <Link href="/dashboard" className="text-[#6c4d39] hover:underline font-medium">My Bids</Link> dashboard shows a &ldquo;payment failed&rdquo; note with a button to retry the card on file (or add a new card and try again).</Tip>
-              </div>
-            </Section>
-
-            {/* ── Bid Bucks ── */}
-            <Section id="bid-bucks" title="Bid Bucks (Referrals)" icon={
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="8" width="18" height="12" rx="2"/><path d="M3 12h18M12 8v12"/>
-                <path d="M12 8S9 2.5 6.5 4s2 4 5.5 4zM12 8s3-5.5 5.5-4-2 4-5.5 4z"/>
-              </svg>
-            }>
-              <div className="bg-white border border-[#e3d6bf] rounded-2xl p-6 space-y-5 text-sm text-[#4a3a2b] leading-relaxed">
-                <p>
-                  Invite friends and earn <strong className="text-[#241a12]">$5 in Bid Bucks</strong> toward your own bill. Grab your personal invite link on the <Link href="/refer" className="text-[#6c4d39] hover:underline font-medium">Bid Bucks</Link> page and share it.
-                </p>
-                <div>
-                  <p className="font-semibold text-[#241a12] mb-2">How you earn</p>
-                  <ul className="space-y-2">
-                    <li className="flex gap-2"><span className="text-[#6c4d39] font-bold mt-0.5">→</span><span>A friend signs up through <strong className="text-[#241a12]">your link</strong> (they need to be new to Northwood Bids).</span></li>
-                    <li className="flex gap-2"><span className="text-[#6c4d39] font-bold mt-0.5">→</span><span>They <strong className="text-[#241a12]">win an item and their payment goes through</strong> — that's when your $5 coupon unlocks. Signing up or just bidding doesn't count.</span></li>
-                    <li className="flex gap-2"><span className="text-[#6c4d39] font-bold mt-0.5">→</span><span>You can earn from up to <strong className="text-[#241a12]">5 friends</strong> — that's five $5 coupons ($25).</span></li>
-                  </ul>
-                </div>
-                <div>
-                  <p className="font-semibold text-[#241a12] mb-2">How it's used</p>
-                  <p>Your $5 coupon comes off your <strong className="text-[#241a12]">next</strong> winning bill <strong className="text-[#241a12]">automatically</strong> — not the auction it was earned in. One coupon per bill, on bills of $5 or more. No codes to enter.</p>
-                </div>
-                <Warn>Self-referrals don't qualify, and neither do accounts that share your phone number or payment card. Bid Bucks have no cash value.</Warn>
-              </div>
-            </Section>
-
-            {/* ── Account ── */}
-            <Section id="account" title="Your Account" icon={
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="8" r="4"/>
-                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-              </svg>
-            }>
-              <div className="bg-white border border-[#e3d6bf] rounded-2xl p-6 space-y-5 text-sm text-[#4a3a2b] leading-relaxed">
-                <div>
-                  <p className="font-semibold text-[#241a12] mb-2">Update your profile</p>
-                  <p>Visit <Link href="/account" className="text-[#6c4d39] hover:underline font-medium">Account</Link> to update your name, email address, and phone number. Keeping your phone number current ensures you receive text notifications about your bids.</p>
-                </div>
-                <div>
-                  <p className="font-semibold text-[#241a12] mb-2">Staying in the loop</p>
-                  <p>When you register, you're automatically linked to Northwood Bids. This means you'll receive notifications when auctions go live or are ending soon.</p>
-                </div>
-                <div>
-                  <p className="font-semibold text-[#241a12] mb-2">Bid history</p>
-                  <p>Your full bid history — active bids, past bids, wins, and payment status — is all available in your <Link href="/dashboard" className="text-[#6c4d39] hover:underline font-medium">Dashboard</Link>.</p>
-                </div>
-              </div>
-            </Section>
-
-            {/* ── Password Reset ── */}
-            <Section id="password" title="Password Reset" icon={
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-            }>
-              <div className="bg-white border border-[#e3d6bf] rounded-2xl p-6 space-y-4 text-sm text-[#4a3a2b] leading-relaxed">
-                <p>If you've forgotten your password or need to change it:</p>
-                <ol className="space-y-3 list-none">
-                  <li className="flex gap-3">
-                    <span className="w-6 h-6 rounded-full bg-[#6c4d39] text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
-                    <span>Go to the <Link href="/sign-in" className="text-[#6c4d39] hover:underline font-medium">Sign In</Link> page.</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="w-6 h-6 rounded-full bg-[#6c4d39] text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
-                    <span>Click <strong className="text-[#241a12]">"Forgot password?"</strong> below the sign-in form.</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="w-6 h-6 rounded-full bg-[#6c4d39] text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
-                    <span>Enter your email address. You'll receive a reset link within a minute or two.</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="w-6 h-6 rounded-full bg-[#6c4d39] text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">4</span>
-                    <span>Click the link in the email and choose a new password.</span>
-                  </li>
-                </ol>
-                <Warn>Check your spam/junk folder if you don't see the reset email within a few minutes. The reset link expires after 1 hour.</Warn>
-                <p>To change your password while already signed in, use your account settings via the user menu in the top-right corner.</p>
-              </div>
-            </Section>
-
-            {/* ── FAQ ── */}
-            <Section id="faq" title="FAQ" icon={
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-                <line x1="12" y1="17" x2="12.01" y2="17"/>
-              </svg>
-            }>
-              <div className="bg-white border border-[#e3d6bf] rounded-2xl p-6">
-                <Q q="Can I cancel or retract a bid?">
-                  No — bids are binding commitments. Once you place a bid, it cannot be cancelled. Make sure you're comfortable paying that amount before confirming.
-                </Q>
-                <Q q="What happens if there's a tie?">
-                  Ties don't happen in practice — bids must meet the minimum increment, so two bids can't land on exactly the same amount simultaneously. The system processes bids in order received.
-                </Q>
-                <Q q="Can I bid on multiple items in the same auction?">
-                  Yes. You can bid on as many items as you'd like across the same or different auctions. If you win multiple items, they may be bundled into a single payment.
-                </Q>
-                <Q q="Is my Max Bid visible to other bidders?">
-                  No. Your Max Bid amount is completely private. Other bidders only see the current displayed bid amount, not your maximum.
-                </Q>
-                <Q q="What if I'm outbid right before the auction ends?">
-                  Auctions close at a fixed time. If you're outbid in the final moments, you won't have time to rebid — which is why setting a Max Bid is a great strategy. The system will automatically defend your position up to your max, even in the final seconds.
-                </Q>
-                <Q q="Why do I need to add a card before bidding?">
-                  A card on file ensures that when you win, payment is instant and seamless — no chasing down winners after the fact. Your card is not charged unless you win.
-                </Q>
-                <Q q="How do I pick up an item I won?">
-                  You schedule it yourself. After payment is confirmed, go to the <Link href="/pickup" className="text-[#6c4d39] hover:underline font-medium">Pickup</Link> page, pick a location, and choose a date and time that works for you. Any items you win before that date are added to the same appointment automatically. If an item is stored at a different location, request a transfer to your pickup location first — transfers usually take about 5–6 days.
-                </Q>
-                <Q q="Can I bid without creating an account?">
-                  No — an account is required to bid. This protects all bidders by ensuring everyone is accountable for their bids and there's a verified way to contact winners.
-                </Q>
-              </div>
-            </Section>
-
-            {/* Footer CTA */}
-            <div className="bg-gradient-to-br from-[#6c4d39]/10 to-[#6c4d39]/5 border border-[#6c4d39]/20 rounded-2xl p-6 text-center">
-              <p className="font-semibold text-[#241a12] mb-1">Still have questions?</p>
-              <p className="text-sm text-[#6f5b46] mb-4">Reach out to the business running the auction you're participating in — they'll have the most specific answers about their event.</p>
-              <Link href="/auctions" className="inline-block bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors">
-                Browse Open Auctions
-              </Link>
-            </div>
-
+        {/* Still stuck */}
+        <div className="relative overflow-hidden bg-white border border-[#e3d6bf] rounded-2xl p-6 sm:p-8 text-center">
+          <PineMark className="absolute -left-4 -bottom-4 w-24 h-24 opacity-[0.06] pointer-events-none" />
+          <PineMark className="absolute -right-4 -top-4 w-24 h-24 opacity-[0.06] pointer-events-none" />
+          <IcoMegaphone className="w-6 h-6 text-[#c47b3e] mx-auto mb-2" />
+          <h2 className="font-display text-xl font-bold">Still stuck?</h2>
+          <p className="text-sm text-[#6f5b46] mt-1 max-w-md mx-auto leading-relaxed">
+            A real person picks up. Call or text <a href="tel:+18108181772" className="text-[#6c4d39] font-bold hover:underline">(810) 818-1772</a> and we&apos;ll sort it out.
+          </p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+            <Link href="/auctions" className="inline-flex items-center gap-2 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold text-sm px-5 py-2.5 rounded-xl transition-colors">
+              <IcoGavel className="w-4 h-4" /> See what&apos;s on the block
+            </Link>
+            <Link href="/terms" className="inline-flex items-center border border-[#cdbda3] hover:border-[#6c4d39] text-[#4a3a2b] font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors">
+              Terms of service
+            </Link>
           </div>
         </div>
       </div>

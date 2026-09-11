@@ -12,67 +12,50 @@ import BidTicker from "./components/BidTicker";
 import ScrollReveal from "./components/ScrollReveal";
 import JsonLd from "./components/JsonLd";
 import { localBusinessLd } from "@/lib/seo";
-import { WoodenCrate, BranchDivider } from "./components/Illustrations";
+import { WoodenCrate, BranchDivider, PineRidge, GavelEmblem } from "./components/Illustrations";
 import SectionHeader from "./components/SectionHeader";
+import {
+  IcoGavel,
+  IcoTrophy,
+  IcoTruck,
+  IcoNew,
+  IcoCheck,
+  IcoCoin,
+  IcoLock,
+  IcoGift,
+  IcoBolt,
+} from "./components/BidIcons";
 
-function IconSearch() {
-  return (
-    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
-      <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
-    </svg>
-  );
-}
-function IconBid() {
-  return (
-    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M13 7l4 4-8 8H5v-4l8-8z" /><path d="m18.5 2.5 3 3" /><path d="m16 5 3 3" />
-    </svg>
-  );
-}
-function IconTrophy() {
-  return (
-    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 9H4a2 2 0 0 1-2-2V5h4" /><path d="M18 9h2a2 2 0 0 0 2-2V5h-4" />
-      <path d="M8 21h8" /><path d="M12 17v4" /><path d="M6 3h12v8a6 6 0 0 1-12 0V3z" />
-    </svg>
-  );
-}
-function IconBot() {
-  return (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="11" width="18" height="10" rx="2" />
-      <circle cx="9" cy="16" r="1" fill="currentColor" stroke="none" />
-      <circle cx="15" cy="16" r="1" fill="currentColor" stroke="none" />
-      <path d="M8 11V7a4 4 0 0 1 8 0v4" /><path d="M12 3v2" />
-    </svg>
-  );
-}
-function IconBell() {
-  return (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-    </svg>
-  );
-}
-function IconClock() {
-  return (
-    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
-      <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" />
-    </svg>
-  );
-}
-function IconShield() {
-  return (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  );
-}
+// ── Below-the-fold copy: the three steps and the real reasons to bid here. ──
+const STEPS = [
+  {
+    n: "01",
+    Icon: IcoGavel,
+    title: "Bid",
+    desc: "Every lot opens at $2. Bid live or set a max and we'll bid for you, up to your number.",
+  },
+  {
+    n: "02",
+    Icon: IcoTrophy,
+    title: "Win",
+    desc: "Clock hits zero, high bid takes it. Your card on file is charged only then, never before.",
+  },
+  {
+    n: "03",
+    Icon: IcoTruck,
+    title: "Pick up",
+    desc: "Book a time in Owosso or Gladwin. Won it at the other barn? We move it for free.",
+  },
+];
 
-// (Urgency pill removed — AuctionCard now carries a live ticking AuctionCountdown
-//  that shows regardless of how far out the date is.)
+const WHY = [
+  { Icon: IcoNew, title: "99% brand new", desc: "Name-brand overstock, still in the box. Not a garage sale." },
+  { Icon: IcoCheck, title: "Straight conditions", desc: "We open the box and tell you what's in it. No mystery lots." },
+  { Icon: IcoCoin, title: "$2 starts", desc: "Every lot begins at two bucks. The crowd sets the price." },
+  { Icon: IcoTruck, title: "Free barn-to-barn", desc: "Pick up in Owosso or Gladwin. We transfer between them at no charge." },
+  { Icon: IcoLock, title: "Charged only if you win", desc: "Card on file, nothing taken until the gavel drops your way." },
+  { Icon: IcoGift, title: "Bid Bucks", desc: "Invite a friend, earn $5 in Bid Bucks toward your own bill." },
+];
 
 export default async function HomePage() {
   const { userId } = await auth();
@@ -270,7 +253,7 @@ export default async function HomePage() {
         {activeAuctions.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
             {activeAuctions.map((auction, idx) => (
-              <ScrollReveal key={auction.id} delay={Math.min(idx, 5) * 80} className="h-full [&>*]:h-full nb-lift rounded-2xl">
+              <ScrollReveal key={auction.id} delay={Math.min(idx, 5) * 80} className="h-full [&>*]:h-full">
                 <AuctionCard
                   mode="live"
                   auction={{
@@ -293,10 +276,19 @@ export default async function HomePage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-16 bg-white rounded-2xl border border-[#e3d6bf] shadow-sm">
-            <WoodenCrate className="w-32 h-28 mx-auto mb-4" />
-            <p className="text-lg font-bold mb-1 text-[#4a3a2b] font-display">No live auctions right now</p>
-            <p className="text-sm text-[#8a7559]">{upcomingAuctions.length > 0 ? "See what's coming up below." : "Check back soon — new lots are added often."}</p>
+          <div className="text-center py-14 px-6 bg-[#fbf4e6]/80 rounded-2xl border border-dashed border-[#cdbda3]">
+            <WoodenCrate className="nb-float w-32 h-28 mx-auto mb-4" />
+            <p className="font-display text-2xl font-black tracking-tight text-[#241a12] mb-1.5">The floor is quiet</p>
+            <p className="text-sm text-[#6f5b46] max-w-sm mx-auto leading-relaxed">
+              {upcomingAuctions.length > 0
+                ? "Nothing closing right now. The next auction is on deck below, so scope the lots and line up your max bids."
+                : "Nothing live at the moment. New lots hit the floor every week; check back soon."}
+            </p>
+            {upcomingAuctions.length > 0 && (
+              <a href="#upcoming" className="inline-flex items-center gap-2 mt-5 rounded-xl bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold text-sm px-5 py-2.5 transition-colors">
+                See what&apos;s on deck
+              </a>
+            )}
           </div>
         )}
       </section>
@@ -315,7 +307,7 @@ export default async function HomePage() {
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
             {upcomingAuctions.map((auction, idx) => (
-              <ScrollReveal key={auction.id} delay={Math.min(idx, 5) * 80} className="h-full [&>*]:h-full nb-lift rounded-2xl">
+              <ScrollReveal key={auction.id} delay={Math.min(idx, 5) * 80} className="h-full [&>*]:h-full">
                 <AuctionCard
                   mode="upcoming"
                   auction={{
@@ -340,56 +332,124 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* How it works */}
-      <section className="bg-gradient-to-b from-transparent via-[#ece0cb]/55 to-transparent px-6 sm:px-8 py-14 sm:py-16">
-        <div className="max-w-5xl mx-auto">
-          <BranchDivider className="w-44 h-5 mx-auto mb-5 opacity-80" />
-          <p className="text-center text-[#8a7559] text-xs font-bold uppercase tracking-[0.18em] mb-10">How it works</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-10">
-            {[
-              { icon: <IconSearch />, title: "Find an auction", desc: "Browse live auctions and watch the countdown. When the timer hits zero, the highest bid wins." },
-              { icon: <IconBid />, title: "Place your bid", desc: "Bid in real time or set a max bid — we auto-bid for you. Instant alerts when you are outbid." },
-              { icon: <IconTrophy />, title: "Win & pick up", desc: "Win and your card is charged automatically. Schedule your own pickup time online." },
-            ].map(({ icon, title, desc }, idx) => (
-              <ScrollReveal key={title} delay={idx * 110} variant="up">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-white border border-[#e3d6bf] rounded-2xl flex items-center justify-center text-[#6c4d39] shrink-0 shadow-sm">{icon}</div>
-                  <div>
-                    <h3 className="font-bold text-[#241a12] mb-1.5">{title}</h3>
-                    <p className="text-[#6f5b46] text-sm leading-relaxed">{desc}</p>
+      {/* ── How it works: Bid · Win · Pick up ── */}
+      <section className="px-6 sm:px-8 pt-4 pb-14 sm:pb-16 max-w-6xl mx-auto">
+        <BranchDivider className="w-56 h-6 mx-auto mb-8 opacity-80" />
+        <div className="text-center mb-8">
+          <p className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-[#6c4d39]">
+            <IcoBolt className="w-3.5 h-3.5" /> How it works
+          </p>
+          <h2 className="font-display text-3xl sm:text-4xl font-black leading-[0.95] tracking-tight text-[#241a12] mt-1.5">
+            Bid. Win. Pick up.
+          </h2>
+          <p className="text-sm text-[#6f5b46] mt-2">Three steps, no fine print.</p>
+        </div>
+        <ol className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          {STEPS.map(({ n, Icon, title, desc }, idx) => (
+            <li key={title} className="h-full">
+              <ScrollReveal delay={idx * 110} variant="up" className="h-full [&>*]:h-full">
+              <div className="relative flex sm:flex-col gap-4 rounded-2xl bg-white border border-[#e3d6bf] p-5 shadow-sm overflow-hidden">
+                <span
+                  aria-hidden
+                  className="absolute -right-2 -top-4 font-display text-7xl font-black text-[#f1e7d5] select-none leading-none"
+                >
+                  {n}
+                </span>
+                <span className="relative w-12 h-12 shrink-0 rounded-xl bg-[#6c4d39] text-[#f6ecda] flex items-center justify-center shadow-[0_6px_16px_-8px_rgba(108,77,57,0.9)]">
+                  <Icon className="w-6 h-6" />
+                </span>
+                <div className="relative min-w-0">
+                  <h3 className="font-display text-xl font-black tracking-tight text-[#241a12]">{title}</h3>
+                  <p className="text-sm text-[#6f5b46] leading-relaxed mt-1">{desc}</p>
+                </div>
+              </div>
+              </ScrollReveal>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      {/* ── Why Northwood: the real selling points, on a cream plank ── */}
+      <section className="nb-band px-6 sm:px-8 py-14 sm:py-16">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
+            <div>
+              <p className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-[#2f5d3a]">
+                <IcoCheck className="w-3.5 h-3.5" /> Why Northwood
+              </p>
+              <h2 className="font-display text-3xl sm:text-4xl font-black leading-[0.95] tracking-tight text-[#241a12] mt-1.5">
+                Real brands. Honest lots. Local pickup.
+              </h2>
+            </div>
+            <p className="text-sm text-[#6f5b46] sm:max-w-xs sm:text-right leading-snug">
+              A Michigan auction house that runs like a handshake.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            {WHY.map(({ Icon, title, desc }, idx) => (
+              <ScrollReveal key={title} delay={Math.min(idx, 5) * 70} variant="up" className="h-full [&>*]:h-full">
+                <div className="nb-lift flex items-start gap-3.5 rounded-2xl bg-white border border-[#e3d6bf] p-4 sm:p-5">
+                  <span className="w-10 h-10 shrink-0 rounded-xl bg-[#e4f2e4] text-[#2f5d3a] flex items-center justify-center">
+                    <Icon className="w-5 h-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="font-display text-base font-black tracking-tight text-[#241a12] leading-tight">{title}</h3>
+                    <p className="text-[13px] text-[#6f5b46] leading-relaxed mt-1">{desc}</p>
                   </div>
                 </div>
               </ScrollReveal>
             ))}
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-[#8a7559]">
-            <span className="flex items-center gap-2"><span className="text-[#6c4d39]"><IconBot /></span> Max bidding</span>
-            <span className="flex items-center gap-2"><span className="text-[#6c4d39]"><IconBell /></span> Outbid alerts</span>
-            <span className="flex items-center gap-2"><span className="text-[#6c4d39]"><IconClock /></span> Anti-sniping timer</span>
-            <span className="flex items-center gap-2"><span className="text-[#6c4d39]"><IconShield /></span> Secure Stripe checkout</span>
-          </div>
         </div>
       </section>
 
-      {/* Game CTA */}
-      <section className="px-6 sm:px-8 pb-14 sm:pb-16 max-w-6xl mx-auto">
+      {/* ── Closing CTA band ── */}
+      <section className="px-6 sm:px-8 py-14 sm:py-16 max-w-6xl mx-auto">
         <ScrollReveal variant="zoom">
-        <Link href="/play"
-          className="group relative block overflow-hidden rounded-2xl border border-[#6c4d39]/30 bg-gradient-to-br from-[#6c4d39] to-[#4a3a2b] text-[#f1e7d5] px-6 sm:px-10 py-8 shadow-sm hover:shadow-[0_8px_30px_rgba(74,58,43,0.35)] transition-shadow">
-          <div className="relative flex flex-col sm:flex-row items-center justify-between gap-5">
-            <div className="text-center sm:text-left">
-              <div className="text-xs font-bold uppercase tracking-widest text-[#e7dcc6]/70 mb-1">Auction Arcade</div>
-              <h2 className="font-display text-2xl sm:text-3xl font-black text-white">Going Once, Going Twice!</h2>
-              <p className="text-[#e7dcc6] text-sm sm:text-base mt-1">Slam the gavel, win the lots, and climb the high-score board.</p>
+          <div className="relative overflow-hidden rounded-2xl bg-[#241a12] text-[#f1e7d5] shadow-[0_18px_40px_-20px_rgba(36,26,18,0.7)]">
+            <div aria-hidden className="pointer-events-none absolute inset-0">
+              <div
+                className="absolute -top-24 left-1/2 -translate-x-1/2 w-[520px] h-[300px] rounded-full blur-3xl"
+                style={{ background: "radial-gradient(circle, rgba(240,163,90,0.28) 0%, rgba(240,163,90,0) 70%)" }}
+              />
+              <PineRidge className="nb-feather-x absolute bottom-0 left-0 w-full h-24 opacity-30" />
             </div>
-            <span className="shrink-0 inline-flex items-center gap-2 bg-[#f1e7d5] text-[#4a3a2b] font-extrabold text-base px-7 py-3.5 rounded-xl group-hover:bg-white transition-colors">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 4l6 6-3 3M14 4l-3 3M14 4l-9 9 5 5 9-9M5 13l-3 9 9-3" />
-              </svg>
-              Play now
-            </span>
+            <div className="relative px-6 sm:px-10 pt-9 pb-24 sm:pb-28 text-center">
+              <GavelEmblem className="w-14 h-14 mx-auto mb-4" />
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#f0a35a]">Two barns. One floor. Every week.</p>
+              <h2 className="font-display text-3xl sm:text-5xl font-black leading-[0.95] tracking-tight text-white mt-2">
+                Every lot starts at $2.
+                <br />
+                <span className="text-[#f0a35a]">Where it lands is up to you.</span>
+              </h2>
+              <div className="mt-7 flex flex-col sm:flex-row items-center justify-center gap-2.5">
+                <a
+                  href="#live-auctions"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#f0a35a] hover:bg-[#f3b273] text-[#241a12] font-black px-8 py-3.5 text-base transition-colors shadow-[0_8px_24px_-8px_rgba(240,163,90,0.8)]"
+                >
+                  <IcoGavel className="w-5 h-5" />
+                  {activeAuctions.length > 0 ? "Start bidding" : "See what's coming"}
+                </a>
+                {!userId && (
+                  <Link
+                    href="/sign-up"
+                    className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl border-2 border-[#f1e7d5]/25 hover:border-[#f1e7d5]/50 hover:bg-white/5 text-[#f1e7d5] font-bold px-8 py-3.5 text-base transition-colors"
+                  >
+                    Create free account
+                  </Link>
+                )}
+              </div>
+              <Link
+                href="/play"
+                className="inline-flex items-center gap-1.5 mt-6 text-[13px] font-semibold text-[#cdbda3] hover:text-[#f0a35a] transition-colors"
+              >
+                Warm up in the Auction Arcade
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              </Link>
+            </div>
           </div>
-        </Link>
         </ScrollReveal>
       </section>
 

@@ -8,7 +8,8 @@ import LocalDate from "@/app/components/LocalDate";
 import PusherRefresh from "@/app/components/PusherRefresh";
 import NotFoundCard from "@/app/components/NotFoundCard";
 import AuctionItemsView, { type ViewItem } from "@/app/components/AuctionItemsView";
-import { PineMark, WoodenCrate } from "@/app/components/Illustrations";
+import { PineMark, WoodenCrate, PineRidge, BranchDivider } from "@/app/components/Illustrations";
+import { IcoLock, IcoBolt, IcoMagnifier, BidCritter } from "@/app/components/BidIcons";
 
 interface Props {
   params: Promise<{ orgSlug: string; auctionSlug: string }>;
@@ -63,20 +64,38 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-function IcoLock() {
+function IcoClock({ className = "w-4 h-4" }: { className?: string }) {
   return (
-    <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="7" width="10" height="7" rx="2" />
-      <path d="M5 7V5a3 3 0 0 1 6 0v2" />
+    <svg className={`${className} shrink-0`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5v4.5l3 2" />
     </svg>
   );
 }
-function IcoClock() {
+
+// Slim, full-width notice under the header — one line, one icon, one colour per state.
+function StatusBanner({
+  tone,
+  icon,
+  children,
+}: {
+  tone: "closed" | "closing" | "upcoming";
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const t =
+    tone === "closing"
+      ? "bg-[#f7e4c9] border-[#e3c9a3] text-[#8a5a2b]"
+      : tone === "upcoming"
+      ? "bg-[#e9dcc6] border-[#d9c7a8] text-[#6c4d39]"
+      : "bg-[#f4efe4] border-[#e3d6bf] text-[#8a7559]";
   return (
-    <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
-      <circle cx="8" cy="8" r="6" />
-      <path d="M8 5v3l2 1.5" />
-    </svg>
+    <div className={`border-b px-4 sm:px-8 py-2.5 ${t}`}>
+      <div className="max-w-6xl mx-auto flex items-center gap-2.5 text-sm font-semibold">
+        {icon}
+        <span className="min-w-0">{children}</span>
+      </div>
+    </div>
   );
 }
 
@@ -86,15 +105,15 @@ function NextAuctionLink({ href, title, position }: { href: string; title: strin
   return (
     <Link
       href={href}
-      className={`group inline-flex items-center gap-2 rounded-xl bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold transition-colors shrink-0 ${
+      className={`group inline-flex items-center gap-3 rounded-xl bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold transition-colors shrink-0 shadow-[0_8px_20px_-10px_rgba(108,77,57,0.9)] ${
         position === "top" ? "px-4 py-2.5" : "px-6 py-3.5"
       }`}
     >
       <span className="flex flex-col items-start leading-tight min-w-0">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-[#e7d8c4]">Next auction</span>
+        <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f0a35a]">Next auction</span>
         <span className={`truncate max-w-[8rem] sm:max-w-[14rem] ${position === "top" ? "text-sm" : "text-base"}`}>{title}</span>
       </span>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 group-hover:translate-x-0.5 transition-transform">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 group-hover:translate-x-0.5 transition-transform" aria-hidden>
         <path d="M5 12h14M13 6l6 6-6 6" />
       </svg>
     </Link>
@@ -307,46 +326,77 @@ export default async function AuctionPage({ params }: Props) {
 
       {/* Status banners */}
       {isClosed && (
-        <div className="bg-[#efe3d0]/40 border-b border-[#cdbda3]/50 px-6 sm:px-8 py-3 flex items-center gap-2.5">
-          <IcoLock />
-          <span className="text-[#6f5b46] text-sm font-medium">This auction has closed — bidding is no longer available.</span>
-        </div>
+        <StatusBanner tone="closed" icon={<IcoLock className="w-4 h-4 shrink-0" />}>
+          This auction has closed. Bidding is over; results are final.
+        </StatusBanner>
       )}
       {isClosing && !isClosed && (
-        <div className="bg-[#efe0c9] border-b border-[#e3c9a3] px-6 sm:px-8 py-3 flex items-center gap-2.5">
-          <span className="text-[#8a5a2b]"><IcoClock /></span>
-          <span className="text-[#8a5a2b] text-sm font-semibold">This auction is closing soon — place your final bids now.</span>
-        </div>
+        <StatusBanner tone="closing" icon={<IcoBolt className="w-4 h-4 shrink-0" />}>
+          Closing now. Lots with late bids stay open a little longer, so get your final bids in.
+        </StatusBanner>
       )}
       {isUpcoming && (
-        <div className="bg-[#6c4d39]/8 border-b border-[#6c4d39]/20 px-6 sm:px-8 py-3 flex items-center gap-2.5">
-          <span className="text-[#6c4d39]"><IcoClock /></span>
-          <span className="text-[#6c4d39] text-sm font-semibold">
-            This auction hasn&apos;t opened yet — preview the lots now. Bidding starts <LocalDate iso={auction.startAt.toISOString()} />.
-          </span>
-        </div>
+        <StatusBanner tone="upcoming" icon={<IcoMagnifier className="w-4 h-4 shrink-0" />}>
+          Preview only for now. Bidding opens <LocalDate iso={auction.startAt.toISOString()} />.
+        </StatusBanner>
       )}
 
-      {/* Auction hero */}
-      <div className="relative overflow-hidden bg-[#efe5d3]/80 border-b border-[#e3d6bf]/60 px-6 sm:px-8 py-6 sm:py-8">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] bg-[#6c4d39]/4 rounded-full blur-[60px]" />
+      {/* Auction header */}
+      <div className="relative overflow-hidden bg-[#efe5d3]/80 border-b border-[#e3d6bf]/60 px-4 sm:px-8 pt-6 sm:pt-8 pb-14 sm:pb-16">
+        <div aria-hidden className="absolute inset-0 pointer-events-none">
+          <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-[640px] h-[220px] bg-[#f0a35a]/10 rounded-full blur-[70px]" />
+          <PineRidge className="nb-feather-x absolute bottom-0 left-0 w-full h-16 sm:h-20 opacity-25" />
         </div>
         <div className="relative max-w-6xl mx-auto flex items-start sm:items-center justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1.5 flex items-center gap-2">
-              <PineMark className="w-5 h-5 shrink-0" />
+            <div className="flex items-center gap-2 mb-2">
+              <span
+                className={`inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.14em] px-2.5 py-1 rounded-full border ${
+                  isClosed
+                    ? "bg-[#f4efe4] text-[#8a7559] border-[#e3d6bf]"
+                    : isClosing
+                    ? "bg-[#f7e4c9] text-[#a85f28] border-[#c47b3e]/30"
+                    : isUpcoming
+                    ? "bg-[#efe3d0] text-[#6c4d39] border-[#6c4d39]/20"
+                    : "bg-[#e4f2e4] text-[#2f5d3a] border-[#4a7c59]/30"
+                }`}
+              >
+                {isLive ? (
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className={`absolute inline-flex h-full w-full rounded-full opacity-70 animate-ping ${isClosing ? "bg-[#c47b3e]" : "bg-[#4a7c59]"}`} />
+                    <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${isClosing ? "bg-[#c47b3e]" : "bg-[#4a7c59]"}`} />
+                  </span>
+                ) : (
+                  <PineMark className="w-3 h-3" />
+                )}
+                {isClosed ? "Closed" : isClosing ? "Closing" : isUpcoming ? "On deck" : "Live"}
+              </span>
+            </div>
+            <h1 className="font-display text-3xl sm:text-4xl font-black tracking-tight leading-[0.95] text-[#241a12] break-words">
               {auction.title}
             </h1>
-            <p className="text-[#6f5b46] text-sm">
-              {isLive
-                ? `${visibleItems.length} live item${visibleItems.length !== 1 ? "s" : ""}${endedCount > 0 ? ` · ${endedCount} ended` : ""}`
-                : `${visibleItems.length} item${visibleItems.length !== 1 ? "s" : ""}`} ·{" "}
-              {isUpcoming ? (
-                <>Opens <LocalDate iso={auction.startAt.toISOString()} /></>
-              ) : (
-                <>{isClosed ? "Closed" : isClosing ? "Closing" : "Closes"}{" "}<LocalDate iso={auction.endAt.toISOString()} /></>
+            <p className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-[#6f5b46] font-medium tabular-nums">
+              <span className="inline-flex items-center gap-1.5">
+                <PineMark className="w-3.5 h-3.5" />
+                {isLive
+                  ? `${visibleItems.length} live lot${visibleItems.length !== 1 ? "s" : ""}`
+                  : `${visibleItems.length} lot${visibleItems.length !== 1 ? "s" : ""}`}
+              </span>
+              {isLive && endedCount > 0 && (
+                <>
+                  <span className="text-[#cdbda3]">&middot;</span>
+                  <span>{endedCount} ended</span>
+                </>
               )}
+              <span className="text-[#cdbda3]">&middot;</span>
+              <span className="inline-flex items-center gap-1.5">
+                <IcoClock className="w-3.5 h-3.5 text-[#8a7559]" />
+                {isUpcoming ? (
+                  <>Opens <LocalDate iso={auction.startAt.toISOString()} /></>
+                ) : (
+                  <>{isClosed ? "Closed" : isClosing ? "Closing" : "Closes"}{" "}<LocalDate iso={auction.endAt.toISOString()} /></>
+                )}
+              </span>
             </p>
           </div>
           {nextAuction && (
@@ -358,18 +408,26 @@ export default async function AuctionPage({ params }: Props) {
       {/* Item grid */}
       <section className="px-3 sm:px-8 py-4 sm:py-8 max-w-6xl mx-auto">
         {visibleItems.length === 0 ? (
-          <div className="text-center py-20 text-[#8a7559] px-5">
-            <div className="flex justify-center mb-4">
-              <WoodenCrate className="w-28 h-24" />
+          <div className="text-center py-16 px-6 rounded-2xl border border-dashed border-[#cdbda3] bg-[#fbf4e6]/70">
+            <div className="nb-float flex justify-center mb-4">
+              {isLive && endedCount > 0 ? <BidCritter className="w-20 h-20" /> : <WoodenCrate className="w-28 h-24" />}
             </div>
-            <p className="font-display text-lg font-medium mb-5">
-              {isLive && endedCount > 0
-                ? "All items have ended — final results are being processed."
-                : "No items in this auction yet"}
+            <p className="font-display text-2xl font-black tracking-tight text-[#241a12]">
+              {isLive && endedCount > 0 ? "That's the last gavel" : "The crate's still packed"}
             </p>
-            <div className="flex justify-center">
-              <Link href="/auctions" className="bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold py-3.5 px-7 rounded-xl transition-colors text-base">
-                Browse Auctions
+            <p className="text-sm text-[#6f5b46] mt-1.5 max-w-sm mx-auto leading-relaxed">
+              {isLive && endedCount > 0
+                ? "Every lot in this auction has closed. Winners are being sorted now; check your dashboard for results."
+                : "Lots for this auction haven't been listed yet. Check back soon."}
+            </p>
+            <div className="flex flex-wrap justify-center gap-2.5 mt-6">
+              {isLive && endedCount > 0 && (
+                <Link href="/dashboard" className="rounded-xl border-2 border-[#6c4d39]/25 hover:border-[#6c4d39]/50 bg-white text-[#6c4d39] font-bold py-3 px-6 transition-colors text-sm">
+                  My results
+                </Link>
+              )}
+              <Link href="/auctions" className="rounded-xl bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold py-3 px-6 transition-colors text-sm">
+                Browse live auctions
               </Link>
             </div>
           </div>
@@ -380,7 +438,9 @@ export default async function AuctionPage({ params }: Props) {
 
       {/* Cycle to the next live auction — keep browsing without backing out. */}
       {nextAuction && (
-        <div className="px-3 sm:px-8 pb-12 max-w-6xl mx-auto flex justify-center">
+        <div className="px-3 sm:px-8 pb-14 max-w-6xl mx-auto flex flex-col items-center gap-4">
+          <BranchDivider className="w-56 h-6 opacity-80" />
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#8a7559]">Keep the streak going</p>
           <NextAuctionLink href={`/${orgSlug}/${nextAuction.slug}`} title={nextAuction.title} position="bottom" />
         </div>
       )}

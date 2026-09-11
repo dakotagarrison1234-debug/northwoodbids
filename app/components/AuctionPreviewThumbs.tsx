@@ -1,5 +1,5 @@
-// 8-item photo preview for an auction card — just the photos, in a clean grid.
-// The "+N more" tile on the last square honestly signals the auction has depth
+// 8-lot photo preview for an auction card — just the photos, on a clean cream
+// grid. The "+N" tile on the last square honestly signals the auction has depth
 // beyond the 8 shown. Server-safe.
 import Image from "next/image";
 
@@ -24,15 +24,15 @@ export default function AuctionPreviewThumbs({
   const lastIdx = shown.length - 1;
 
   return (
-    <div className="grid grid-cols-4 gap-1.5">
+    <div className="grid grid-cols-4 gap-1.5 rounded-xl bg-[#faf5ea] p-1.5 border border-[#efe3d0]">
       {shown.map((it, idx) => {
         const isMoreTile = idx === lastIdx && remaining > 0;
         return (
           <div
             key={it.id}
-            className="relative aspect-square rounded-lg overflow-hidden bg-white border border-[#e3d6bf]"
+            className="relative aspect-square rounded-lg overflow-hidden bg-white ring-1 ring-[#e9dcc6]"
           >
-            {/* contain, not cover — these small thumbs cropped product shots hardest.
+            {/* contain, not cover — small thumbs crop product shots the hardest.
                 White tile + a little padding letterboxes cleanly. */}
             <Image
               src={it.photos[0].url}
@@ -42,8 +42,9 @@ export default function AuctionPreviewThumbs({
               className="object-contain p-1"
             />
             {isMoreTile && (
-              <div className="absolute inset-0 bg-[#241a12]/62 flex items-center justify-center">
-                <span className="text-white font-extrabold text-sm leading-none">+{remaining}</span>
+              <div className="absolute inset-0 bg-[#241a12]/70 flex flex-col items-center justify-center leading-none">
+                <span className="text-[#f6ecda] font-display font-black text-base">+{remaining}</span>
+                <span className="text-[#e3d6bf] text-[9px] font-bold uppercase tracking-wider mt-0.5">more</span>
               </div>
             )}
           </div>

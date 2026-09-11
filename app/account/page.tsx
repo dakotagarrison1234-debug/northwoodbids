@@ -5,6 +5,8 @@ import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import CardSetupModal from "@/app/components/CardSetupModal";
 import { AVATARS, Avatar } from "@/app/components/Avatars";
+import { IcoUsers, IcoLock, IcoTruck, IcoSpark, IcoCheck, IcoGavel } from "@/app/components/BidIcons";
+import { PineMark } from "@/app/components/Illustrations";
 
 interface Profile { name: string | null; email: string | null; phone: string | null; }
 interface PaymentMethod {
@@ -25,20 +27,45 @@ function IcoArrowLeft() {
     </svg>
   );
 }
-function IcoCard() {
+function IcoArrow() {
   return (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+      <path d="M3 8h10M9 4l4 4-4 4" />
+    </svg>
+  );
+}
+function IcoCard({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
       <rect x="1" y="4" width="22" height="16" rx="2" />
       <line x1="1" y1="10" x2="23" y2="10" />
     </svg>
   );
 }
-function IcoUser() {
+
+/** One grouped card: leather icon tile, display title, one-line hint. */
+function Section({
+  icon,
+  title,
+  hint,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-    </svg>
+    <section className="bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-[#e3d6bf] bg-[#fbf4e6]/70">
+        <span className="w-9 h-9 rounded-xl bg-[#6c4d39] text-white flex items-center justify-center shrink-0">{icon}</span>
+        <div className="min-w-0">
+          <h2 className="font-display font-bold text-[#241a12] leading-tight">{title}</h2>
+          {hint && <p className="text-xs text-[#8a7559] mt-0.5">{hint}</p>}
+        </div>
+      </div>
+      <div className="px-5 py-5">{children}</div>
+    </section>
   );
 }
 
@@ -118,11 +145,11 @@ export default function AccountPage() {
       });
       const d = await res.json();
       setProfileMsg(d.success
-        ? { text: "Profile saved.", ok: true }
-        : { text: d.error || "Failed to save.", ok: false }
+        ? { text: "Saved.", ok: true }
+        : { text: d.error || "Couldn't save that. Try again.", ok: false }
       );
     } catch {
-      setProfileMsg({ text: "Something went wrong.", ok: false });
+      setProfileMsg({ text: "Something went wrong. Try again.", ok: false });
     } finally {
       setSavingProfile(false);
     }
@@ -142,201 +169,226 @@ export default function AccountPage() {
     "?"
   ).toUpperCase();
 
+  const avatarLabel = AVATARS.find((a) => a.key === avatarKey)?.label ?? "Your critter";
+
   return (
     <div className="min-h-screen bg-[#f1e7d5] text-[#241a12]">
-      <main className="max-w-2xl mx-auto px-6 sm:px-8 py-8 sm:py-12 space-y-8">
+      <main className="max-w-2xl mx-auto px-5 sm:px-8 py-6 sm:py-10 space-y-6">
 
-        {/* Back link */}
+        {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm">
-          <Link href="/dashboard" className="text-[#8a7559] hover:text-[#241a12] transition-colors flex items-center gap-1.5">
+          <Link href="/dashboard" className="text-[#8a7559] hover:text-[#241a12] transition-colors flex items-center gap-1.5 font-semibold">
             <IcoArrowLeft />
-            <span>My Bids</span>
+            <span>Your bids</span>
           </Link>
           <span className="text-[#cdbda3]">/</span>
-          <span className="font-medium text-[#241a12]">Account</span>
+          <span className="font-semibold text-[#241a12]">Account</span>
         </div>
 
-        {/* Page title */}
+        {/* Page header */}
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full overflow-hidden bg-[#6c4d39]/10 border border-[#6c4d39]/20 flex items-center justify-center text-[#6c4d39] font-bold text-xl shrink-0">
+          <div className="w-16 h-16 rounded-full overflow-hidden bg-white border-2 border-[#6c4d39]/30 flex items-center justify-center text-[#6c4d39] font-display font-black text-2xl shrink-0 shadow-sm">
             {avatarKey ? (
               <Avatar avatarKey={avatarKey} className="w-full h-full" />
             ) : user?.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img src={user.imageUrl} alt="" className="w-full h-full rounded-full object-cover" />
             ) : initials}
           </div>
-          <div>
-            <h1 className="text-2xl font-bold">Account Settings</h1>
-            <p className="text-[#8a7559] text-sm">{user?.primaryEmailAddress?.emailAddress}</p>
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-[#6c4d39]">
+              <PineMark className="w-3.5 h-3.5" /> Your account
+            </div>
+            <h1 className="font-display text-3xl sm:text-4xl font-black leading-[0.95] tracking-tight mt-1 truncate">
+              {user?.firstName || editName || "Bidder"}
+            </h1>
+            <p className="text-[#8a7559] text-sm mt-1 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
           </div>
         </div>
 
-        {/* Avatar picker */}
-        <section className="bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden">
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-[#e3d6bf]">
-            <h2 className="font-semibold text-lg text-[#241a12]">Choose Your Avatar</h2>
-          </div>
-          <div className="px-5 py-5">
-            {avatarKey && !switchingAvatar ? (
-              /* ── Locked in: show only the chosen critter ── */
-              <div className="flex items-center gap-5">
-                <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-[#6c4d39] shrink-0">
-                  <Avatar avatarKey={avatarKey} className="w-full h-full" />
-                </div>
-                <div>
-                  <p className="text-lg font-bold text-[#241a12] mb-1">
-                    {AVATARS.find((a) => a.key === avatarKey)?.label ?? "Your avatar"} selected
-                  </p>
-                  <p className="text-base text-[#6f5b46] mb-2">This shows next to your name around the site.</p>
-                  <button
-                    type="button"
-                    onClick={() => setSwitchingAvatar(true)}
-                    className="text-sm text-[#8a7559] hover:text-[#241a12] font-medium underline underline-offset-2 transition-colors"
-                  >
-                    Switch avatar
-                  </button>
-                </div>
+        {/* Avatar */}
+        <Section
+          icon={<IcoSpark className="w-[18px] h-[18px]" />}
+          title="Your critter"
+          hint="Shows next to your name on the leaderboard and item pages."
+        >
+          {avatarKey && !switchingAvatar ? (
+            <div className="flex items-center gap-5">
+              <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-[#6c4d39] shrink-0 bg-[#faf5ea]">
+                <Avatar avatarKey={avatarKey} className="w-full h-full" />
               </div>
-            ) : (
-              /* ── Choosing: show the full grid ── */
-              <>
-                <p className="text-base text-[#6f5b46] mb-4">Pick a critter — it shows next to your name around the site.</p>
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
-                  {AVATARS.map((a) => (
-                    <button
-                      key={a.key}
-                      type="button"
-                      onClick={() => selectAvatar(a.key)}
-                      title={a.label}
-                      aria-label={a.label}
-                      className="aspect-square rounded-2xl p-1.5 border-2 border-[#e3d6bf] hover:border-[#6c4d39] bg-white transition-colors"
-                    >
-                      <Avatar avatarKey={a.key} className="w-full h-full" />
-                    </button>
-                  ))}
-                </div>
-                {avatarKey && (
+              <div className="min-w-0">
+                <p className="font-display text-lg font-bold text-[#241a12]">{avatarLabel}</p>
+                <p className="text-sm text-[#6f5b46] mt-0.5">Locked in and riding along on your bids.</p>
+                <button
+                  type="button"
+                  onClick={() => setSwitchingAvatar(true)}
+                  className="mt-2 text-sm text-[#6c4d39] hover:text-[#563e2c] font-semibold underline underline-offset-2 transition-colors"
+                >
+                  Swap critter
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-[#6f5b46] mb-4">Tap one to make it yours.</p>
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2.5">
+                {AVATARS.map((a) => (
                   <button
+                    key={a.key}
                     type="button"
-                    onClick={() => setSwitchingAvatar(false)}
-                    className="mt-4 text-base text-[#6f5b46] hover:text-[#241a12] font-medium transition-colors"
+                    onClick={() => selectAvatar(a.key)}
+                    title={a.label}
+                    aria-label={a.label}
+                    className="aspect-square rounded-2xl p-1.5 border-2 border-[#e3d6bf] hover:border-[#6c4d39] hover:bg-[#faf5ea] bg-white transition-colors nb-focus"
                   >
-                    ← Cancel
+                    <Avatar avatarKey={a.key} className="w-full h-full" />
                   </button>
-                )}
-              </>
-            )}
-          </div>
-        </section>
+                ))}
+              </div>
+              {avatarKey && (
+                <button
+                  type="button"
+                  onClick={() => setSwitchingAvatar(false)}
+                  className="mt-4 text-sm text-[#6f5b46] hover:text-[#241a12] font-semibold transition-colors"
+                >
+                  Keep {avatarLabel}
+                </button>
+              )}
+            </>
+          )}
+        </Section>
 
-        {/* Profile section */}
-        <section className="bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden">
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-[#e3d6bf]">
-            <span className="text-[#6c4d39]"><IcoUser /></span>
-            <h2 className="font-semibold text-[#241a12]">Profile</h2>
-          </div>
-          <div className="px-5 py-5 space-y-4">
+        {/* Profile */}
+        <Section
+          icon={<IcoUsers className="w-[18px] h-[18px]" />}
+          title="Profile"
+          hint="How we reach you about outbids, wins and pickups."
+        >
+          <div className="space-y-4">
             {[
-              { label: "Full Name", type: "text", value: editName, set: setEditName, placeholder: "Your name" },
-              { label: "Email Address", type: "email", value: editEmail, set: setEditEmail, placeholder: "you@example.com", hint: "Used for outbid alerts and receipts." },
-              { label: "Phone Number", type: "tel", value: editPhone, set: setEditPhone, placeholder: "+1 (555) 000-0000", hint: "Used for SMS notifications." },
+              { label: "Name", type: "text", value: editName, set: setEditName, placeholder: "Your name", auto: "name" },
+              { label: "Email", type: "email", value: editEmail, set: setEditEmail, placeholder: "you@example.com", hint: "Receipts and outbid alerts land here.", auto: "email" },
+              { label: "Mobile", type: "tel", value: editPhone, set: setEditPhone, placeholder: "(989) 555-0123", hint: "Text alerts when you're outbid, win, or your pickup is ready.", auto: "tel" },
             ].map((f) => (
               <div key={f.label}>
-                <label className="text-sm text-[#6f5b46] mb-1.5 block font-medium">{f.label}</label>
+                <label className="text-sm text-[#6f5b46] mb-1.5 block font-semibold">{f.label}</label>
                 <input
                   type={f.type}
+                  autoComplete={f.auto}
                   value={f.value}
                   onChange={(e) => f.set(e.target.value)}
                   placeholder={f.placeholder}
-                  className="w-full bg-[#f1e7d5] border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]/60 transition-colors text-sm"
+                  className="w-full bg-[#faf5ea] border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] transition-colors text-sm"
                 />
                 {f.hint && <p className="text-[#8a7559] text-xs mt-1.5">{f.hint}</p>}
               </div>
             ))}
             {profileMsg && (
-              <p className={`text-sm px-4 py-3 rounded-xl font-medium ${
+              <p className={`text-sm px-4 py-3 rounded-xl font-semibold flex items-center gap-2 ${
                 profileMsg.ok
-                  ? "bg-[#6c4d39]/10 text-[#6c4d39] border border-[#6c4d39]/20"
-                  : "bg-red-50 text-red-600 border border-red-500/20"
+                  ? "bg-[#4a7c59]/10 text-[#2f5d3a] border border-[#4a7c59]/25"
+                  : "bg-red-50 text-red-700 border border-red-500/20"
               }`}>
+                {profileMsg.ok && <IcoCheck className="w-4 h-4" />}
                 {profileMsg.text}
               </p>
             )}
             <button
               onClick={saveProfile}
               disabled={savingProfile}
-              className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white font-bold px-6 py-3 rounded-xl w-full sm:w-auto transition-all text-sm"
+              className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white font-bold px-6 py-3 rounded-xl w-full sm:w-auto transition-colors text-sm"
             >
-              {savingProfile ? "Saving…" : "Save Profile"}
+              {savingProfile ? "Saving" : "Save changes"}
             </button>
           </div>
-        </section>
+        </Section>
 
-        {/* Payment Methods section */}
-        <section className="bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden">
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-[#e3d6bf]">
-            <span className="text-[#6c4d39]"><IcoCard /></span>
-            <div className="flex-1">
-              <h2 className="font-semibold text-[#241a12]">Payment Methods</h2>
-              <p className="text-xs text-[#8a7559] mt-0.5">Cards on file</p>
+        {/* Card on file */}
+        <Section
+          icon={<IcoCard className="w-[18px] h-[18px]" />}
+          title="Card on file"
+          hint="Charged only when you win. Nothing up front."
+        >
+          {loadingPMs ? (
+            <div className="flex items-center gap-2 text-[#8a7559] text-sm py-2">
+              <div className="w-4 h-4 rounded-full border-2 border-[#6c4d39]/30 border-t-[#6c4d39] animate-spin" />
+              Checking your card
             </div>
-          </div>
-
-          <div className="px-5 py-5">
-            {loadingPMs ? (
-              <div className="text-[#8a7559] text-sm py-2">Loading…</div>
-            ) : paymentMethods.length === 0 ? (
-              <div className="bg-[#f1e7d5] border border-[#e3d6bf] rounded-xl px-4 py-4 text-sm text-[#6f5b46]">
-                No payment methods saved yet. A card will be requested when you place your first bid.
+          ) : paymentMethods.length === 0 ? (
+            <div className="flex items-start gap-3 bg-[#faf5ea] border border-dashed border-[#cdbda3] rounded-xl px-4 py-4">
+              <IcoLock className="w-5 h-5 text-[#6c4d39] shrink-0 mt-0.5" />
+              <div className="text-sm text-[#6f5b46]">
+                <p className="font-semibold text-[#241a12]">No card yet</p>
+                <p className="mt-0.5">We ask for one the first time you bid. It stays with Stripe, never with us.</p>
               </div>
-            ) : (
-              <div className="space-y-2.5">
-                {pmMsg && (
-                  <p className="text-sm px-4 py-3 rounded-xl font-medium bg-[#6c4d39]/10 text-[#6c4d39] border border-[#6c4d39]/20 mb-3">
-                    {pmMsg}
-                  </p>
-                )}
-                {paymentMethods.map((pm) => (
-                  <div key={pm.orgId} className="border border-[#e3d6bf] rounded-xl px-4 py-3.5 flex items-center justify-between gap-3 bg-[#f1e7d5]">
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {pmMsg && (
+                <p className="text-sm px-4 py-3 rounded-xl font-semibold bg-[#4a7c59]/10 text-[#2f5d3a] border border-[#4a7c59]/25 flex items-center gap-2">
+                  <IcoCheck className="w-4 h-4" /> {pmMsg}
+                </p>
+              )}
+              {paymentMethods.map((pm) => (
+                <div key={pm.orgId} className="border border-[#e3d6bf] rounded-xl px-4 py-3.5 flex items-center justify-between gap-3 bg-[#faf5ea]">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className={`w-10 h-7 rounded-md flex items-center justify-center shrink-0 ${pm.hasCard ? "bg-[#6c4d39] text-white" : "bg-[#e3d6bf] text-[#8a7559]"}`}>
+                      <IcoCard className="w-4 h-4" />
+                    </span>
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold text-[#241a12] truncate">{pm.orgName}</div>
-                      {pm.hasCard ? (
-                        <div className="text-xs text-[#6f5b46] mt-0.5 flex items-center gap-1.5">
-                          <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
-                            <rect x="1" y="3" width="14" height="10" rx="1.5" />
-                            <path d="M1 7h14" />
-                          </svg>
-                          {pm.brand
-                            ? <span className="capitalize">{pm.brand} ···· {pm.last4}</span>
-                            : <span>Card on file</span>
-                          }
-                        </div>
-                      ) : (
-                        <div className="text-xs text-[#8a4f1c] mt-0.5 font-medium">No card saved</div>
-                      )}
+                      <div className="text-sm font-semibold text-[#241a12] truncate">
+                        {pm.hasCard
+                          ? pm.brand
+                            ? <span className="capitalize">{pm.brand} ending in {pm.last4}</span>
+                            : "Card on file"
+                          : "No card saved"}
+                      </div>
+                      <div className="text-xs text-[#8a7559] mt-0.5 truncate">{pm.orgName}</div>
                     </div>
-                    {pm.stripeChargesEnabled && (
-                      <button
-                        onClick={() => setCardModal({ orgId: pm.orgId, stripeAccountId: pm.stripeAccountId ?? "" })}
-                        className="text-xs text-[#6c4d39] hover:text-[#c47b3e] font-semibold shrink-0 transition-colors border border-[#6c4d39]/30 hover:border-[#6c4d39]/60 px-3 py-1.5 rounded-lg"
-                      >
-                        {pm.hasCard ? "Update card" : "Add card"}
-                      </button>
-                    )}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
+                  {pm.stripeChargesEnabled && (
+                    <button
+                      onClick={() => setCardModal({ orgId: pm.orgId, stripeAccountId: pm.stripeAccountId ?? "" })}
+                      className="text-xs text-[#6c4d39] hover:text-white hover:bg-[#6c4d39] font-bold shrink-0 transition-colors border border-[#6c4d39]/40 px-3 py-1.5 rounded-lg"
+                    >
+                      {pm.hasCard ? "Update" : "Add card"}
+                    </button>
+                  )}
+                </div>
+              ))}
+              <p className="text-xs text-[#8a7559] flex items-center gap-1.5 pt-1">
+                <IcoLock className="w-3.5 h-3.5" /> Stored securely by Stripe.
+              </p>
+            </div>
+          )}
+        </Section>
+
+        {/* Pickup location */}
+        <Section
+          icon={<IcoTruck className="w-[18px] h-[18px]" />}
+          title="Pickup location"
+          hint="Owosso or Gladwin. Wins from the other warehouse ride over for free."
+        >
+          <Link
+            href="/pickup"
+            className="flex items-center justify-between gap-3 rounded-xl border border-[#e3d6bf] bg-[#faf5ea] hover:bg-[#f1e7d5] px-4 py-3.5 transition-colors group"
+          >
+            <div className="text-sm">
+              <p className="font-semibold text-[#241a12]">Choose or switch your warehouse</p>
+              <p className="text-[#8a7559] text-xs mt-0.5">Also where you book a pickup time once something&apos;s ready.</p>
+            </div>
+            <span className="text-[#6c4d39] group-hover:translate-x-0.5 transition-transform shrink-0"><IcoArrow /></span>
+          </Link>
+        </Section>
 
         {/* Quick links */}
-        <div className="flex flex-wrap gap-3 pb-8">
-          <Link href="/dashboard" className="text-sm text-[#8a7559] hover:text-[#241a12] border border-[#cdbda3] hover:border-[#b3a085] px-4 py-2 rounded-xl transition-colors">
-            ← My Bids
+        <div className="flex flex-wrap gap-2.5 pb-8">
+          <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#6f5b46] hover:text-[#241a12] bg-white border border-[#e3d6bf] hover:border-[#cdbda3] px-4 py-2 rounded-xl transition-colors">
+            <IcoArrowLeft /> Your bids
           </Link>
-          <Link href="/auctions" className="text-sm text-[#8a7559] hover:text-[#241a12] border border-[#cdbda3] hover:border-[#b3a085] px-4 py-2 rounded-xl transition-colors">
-            Browse Auctions
+          <Link href="/auctions" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#6f5b46] hover:text-[#241a12] bg-white border border-[#e3d6bf] hover:border-[#cdbda3] px-4 py-2 rounded-xl transition-colors">
+            <IcoGavel className="w-4 h-4" /> Live auctions
           </Link>
         </div>
       </main>
@@ -348,7 +400,7 @@ export default function AccountPage() {
           stripeAccountId={cardModal.stripeAccountId}
           onSuccess={() => {
             setCardModal(null);
-            setPmMsg("Card updated successfully.");
+            setPmMsg("Card updated.");
             loadPaymentMethods();
             setTimeout(() => setPmMsg(null), 5000);
           }}
