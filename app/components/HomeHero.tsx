@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import CountUp from "./CountUp";
 import { PineMark } from "./Illustrations";
+import type { HeroSeason } from "@/lib/heroSeason";
 
 /**
  * The home hero — brand energy with depth and motion, auctions front and centre.
@@ -39,18 +40,22 @@ export default function HomeHero({
   bidsToday,
   bestDeal,
   signedIn,
+  season = "summer",
 }: {
   liveAuctions: number;
   liveLots: number;
   bidsToday: number;
   bestDeal: number;
   signedIn: boolean;
+  season?: HeroSeason;
 }) {
   // Only mount the looping video when the visitor hasn't asked for reduced
   // motion — they get the still poster frame instead (and no video download).
   const motionOk = useSyncExternalStore(subscribeMotion, getMotionOk, () => false);
   const isPhone = useSyncExternalStore(subscribePhone, getIsPhone, () => false);
-  const heroSuffix = isPhone ? "-mobile" : "";
+  // Asset names: northwoods-{loop|poster}[-winter][-mobile].{mp4|webp}
+  const seasonTag = season === "winter" ? "-winter" : "";
+  const heroSuffix = `${seasonTag}${isPhone ? "-mobile" : ""}`;
 
   const hasLive = liveAuctions > 0;
 
@@ -58,16 +63,16 @@ export default function HomeHero({
     <div className="relative">
       {/* ── Living backdrop ──
           A slow, seamless northern-Michigan lake loop (mist, water shimmer,
-          swaying pines). The poster frame paints instantly; the video fades in
+          swaying pines) — a snowy winter cut runs Dec 1 – Jan 31. The poster frame paints instantly; the video fades in
           over it once playing. Cream washes keep the headline readable and
           blend the bottom edge into the page. The art is anchored to its bottom
           edge (sky crops first) and the deer sits right of the CTA column, so
           no copy lands on it at phone or desktop widths. */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
         <picture>
-          <source media="(max-width: 640px)" srcSet="/hero/northwoods-poster-mobile.webp" />
+          <source media="(max-width: 640px)" srcSet={`/hero/northwoods-poster${seasonTag}-mobile.webp`} />
           <img
-            src="/hero/northwoods-poster.webp"
+            src={`/hero/northwoods-poster${seasonTag}.webp`}
             alt=""
             className="absolute inset-0 w-full h-full object-cover object-[50%_100%]"
             fetchPriority="high"

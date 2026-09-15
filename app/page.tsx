@@ -7,6 +7,7 @@ import SiteFooter from "./components/SiteFooter";
 import PusherRefresh from "./components/PusherRefresh";
 import TopItemsCarousel from "./components/TopItemsCarousel";
 import HomeHero from "./components/HomeHero";
+import { heroSeason } from "@/lib/heroSeason";
 import GiveawayCard from "./components/GiveawayCard";
 import BidTicker from "./components/BidTicker";
 import ScrollReveal from "./components/ScrollReveal";
@@ -219,6 +220,7 @@ export default async function HomePage() {
           bidsToday={bidsToday}
           bestDeal={bestDeal}
           signedIn={!!userId}
+          season={heroSeason(now)}
         />
       </section>
 
