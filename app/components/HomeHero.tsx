@@ -1,18 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import CountUp from "./CountUp";
-import { MountainRange, PineRidge, PineMark } from "./Illustrations";
+import { PineMark } from "./Illustrations";
 
 /**
  * The home hero — brand energy with depth and motion, auctions front and centre.
- * Layered parallax backdrop (mountains drift slow, pines drift faster) gives the
- * scene real depth as you scroll; the foreground rises in on load; a stat trio
- * tallies up live numbers so the page feels ALIVE the moment it opens. Built
- * mobile-first — the parallax is transform-only (cheap on phones) and everything
- * collapses gracefully under prefers-reduced-motion.
+ * A slow looping northwoods lake video sits behind the copy; the foreground rises
+ * in on load; a stat trio tallies up live numbers so the page feels ALIVE the
+ * moment it opens. Under prefers-reduced-motion the video never mounts and the
+ * still poster frame is shown instead.
  */
+const REDUCE_MOTION = "(prefers-reduced-motion: reduce)";
+function subscribeMotion(cb: () => void) {
+  const mq = window.matchMedia(REDUCE_MOTION);
+  mq.addEventListener("change", cb);
+  return () => mq.removeEventListener("change", cb);
+}
+function getMotionOk() {
+  return !window.matchMedia(REDUCE_MOTION).matches;
+}
+
+// Phones get a lighter 960px encode + poster; tablets/desktops get 1080p.
+const PHONE = "(max-width: 640px)";
+function subscribePhone(cb: () => void) {
+  const mq = window.matchMedia(PHONE);
+  mq.addEventListener("change", cb);
+  return () => mq.removeEventListener("change", cb);
+}
+function getIsPhone() {
+  return window.matchMedia(PHONE).matches;
+}
+
 export default function HomeHero({
   liveAuctions,
   liveLots,
@@ -26,69 +46,63 @@ export default function HomeHero({
   bestDeal: number;
   signedIn: boolean;
 }) {
-  const [y, setY] = useState(0);
-
-  // Parallax: track scroll and offset the two backdrop layers by different amounts.
-  useEffect(() => {
-    const reduce =
-      window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) return;
-    let raf = 0;
-    const onScroll = () => {
-      if (raf) return;
-      raf = requestAnimationFrame(() => {
-        setY(window.scrollY);
-        raf = 0;
-      });
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      if (raf) cancelAnimationFrame(raf);
-    };
-  }, []);
+  // Only mount the looping video when the visitor hasn't asked for reduced
+  // motion — they get the still poster frame instead (and no video download).
+  const motionOk = useSyncExternalStore(subscribeMotion, getMotionOk, () => false);
+  const isPhone = useSyncExternalStore(subscribePhone, getIsPhone, () => false);
+  const heroSuffix = isPhone ? "-mobile" : "";
 
   const hasLive = liveAuctions > 0;
 
   return (
     <div className="relative">
-      {/* ── Layered backdrop ──
-          A composed scene, not floating art: a faint sun-glow, distant mountains
-          seated right on the treeline, then a full-width pine ridge planted flush
-          on the bottom edge (on its own ground haze so the trees never look cut).
-          Only the far layers get a gentle parallax drift; the trees stay put so
-          they can't clip or slide as you scroll. */}
+      {/* ── Living backdrop ──
+          A slow, seamless northern-Michigan lake loop (mist, water shimmer,
+          swaying pines). The poster frame paints instantly; the video fades in
+          over it once playing. Cream washes keep the headline readable and
+          blend the bottom edge into the page. The art is anchored to its bottom
+          edge (sky crops first) and the deer sits right of the CTA column, so
+          no copy lands on it at phone or desktop widths. */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        {/* warm sun/glow (gentle drift) */}
+        <picture>
+          <source media="(max-width: 640px)" srcSet="/hero/northwoods-poster-mobile.webp" />
+          <img
+            src="/hero/northwoods-poster.webp"
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover object-[50%_100%]"
+            fetchPriority="high"
+            decoding="async"
+          />
+        </picture>
+        {motionOk && (
+          <video
+            key={heroSuffix}
+            className="nb-hero-video absolute inset-0 w-full h-full object-cover object-[50%_100%]"
+            src={`/hero/northwoods-loop${heroSuffix}.mp4`}
+            poster={`/hero/northwoods-poster${heroSuffix}.webp`}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            onPlaying={(e) => e.currentTarget.classList.add("is-playing")}
+          />
+        )}
+        {/* readability wash: soft cream glow behind the copy */}
         <div
-          className="nb-glow absolute left-1/2 top-4 w-[min(620px,96vw)] h-[380px] rounded-full blur-3xl"
+          className="absolute inset-0"
           style={{
             background:
-              "radial-gradient(circle, rgba(212,160,90,0.38) 0%, rgba(212,160,90,0) 68%)",
-            transform: `translate(-50%, ${y * 0.1}px)`,
+              "radial-gradient(ellipse 44% 40% at 50% 40%, rgba(241,231,213,0.72) 0%, rgba(241,231,213,0.4) 60%, rgba(241,231,213,0) 100%)",
           }}
         />
-
-        {/* distant mountains — small, faint, resting on the treeline; side edges
-            feathered so they dissolve into the page instead of cropping */}
-        <div
-          className="nb-feather-x absolute left-0 w-full"
-          style={{ bottom: "5.5rem", transform: `translateY(${y * 0.05}px)` }}
-        >
-          <MountainRange className="w-full h-[150px] opacity-[0.18]" />
-        </div>
-
-        {/* ground haze + full-width pine ridge, planted on the bottom edge, with
-            its left/right edges feathered so no tree looks chopped at the sides */}
-        <div className="absolute bottom-0 left-0 w-full">
-          <div className="h-16 -mb-3 bg-gradient-to-t from-[#e6d7ba] via-[#ecdfc6]/60 to-transparent" />
-          <PineRidge className="nb-feather-x block w-full h-36" />
-        </div>
+        {/* top + bottom fades into the page background */}
+        <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-[#f1e7d5] to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[#f1e7d5] to-transparent" />
       </div>
 
       {/* ── Foreground ── */}
-      <div className="relative max-w-3xl mx-auto px-1 pt-6 sm:pt-10 pb-24 sm:pb-28 text-center">
+      <div className="relative max-w-3xl mx-auto px-5 sm:px-8 pt-10 sm:pt-16 pb-28 sm:pb-36 text-center">
         {/* live pill */}
         {hasLive && (
           <a

@@ -212,7 +212,7 @@ export default async function HomePage() {
       {seoLocations.length > 0 && <JsonLd data={localBusinessLd(seoLocations)} />}
       <PusherRefresh channel="auctions" event="auction-updated" />
       {/* Hero */}
-      <section className="relative px-5 sm:px-8 pt-4 pb-0 sm:pt-6 overflow-hidden">
+      <section className="relative overflow-hidden">
         <HomeHero
           liveAuctions={activeAuctions.length}
           liveLots={liveLots}

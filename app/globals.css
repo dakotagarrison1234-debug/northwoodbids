@@ -452,3 +452,7 @@ input[type="search"]::-webkit-search-decoration {
   padding-top: calc(env(safe-area-inset-top) + 0.625rem);
   padding-bottom: 0.625rem;
 }
+
+/* Home hero background loop: fade in over the poster once it starts playing */
+.nb-hero-video { opacity: 0; transition: opacity 900ms ease; }
+.nb-hero-video.is-playing { opacity: 1; }

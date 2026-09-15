@@ -30,7 +30,6 @@ export function Avatar({ avatarKey, className }: { avatarKey?: string | null; cl
       aria-hidden="true"
       width={256}
       height={256}
-      loading="lazy"
       decoding="async"
       draggable={false}
       className={`block rounded-full object-cover select-none ${className ?? ""}`}
