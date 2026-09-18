@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-import { getAvailableSlots } from "@/lib/pickup";
+import { consolidatePickup, getAvailableSlots } from "@/lib/pickup";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -58,6 +58,13 @@ export async function PATCH(request: NextRequest, { params }: Props) {
         where: { pickupAppointmentId: id, NOT: { locationId: newLocationId } },
         data: { pickupAppointmentId: null },
       });
+      // ...and the magnet immediately puts them on a transfer to the new warehouse,
+      // attaches whatever is already there, and makes it home.
+      try {
+        await consolidatePickup(userId, appt.organizationId, { appointmentId: id, force: true });
+      } catch (e) {
+        console.error("consolidatePickup (reschedule) failed:", e);
+      }
     }
 
     return NextResponse.json({ success: true, appointment: updated });

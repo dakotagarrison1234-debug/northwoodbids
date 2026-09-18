@@ -35,6 +35,8 @@ interface ApptItem {
   storageLocation: string | null;
   /** Ticked off the gather list. Persisted, so it survives refresh. */
   grabbed: boolean;
+  /** Just landed via transfer — auto-joined this appointment, but nobody has shelved it yet. */
+  needsPlacement?: boolean;
   photo: string | null;
 }
 interface Bidder {
@@ -1010,6 +1012,12 @@ export default function AdminPickupPage() {
                       {it.storageLocation && !it.grabbed && !a.stagedSpot && (
                         <span className="text-sm font-bold text-[#8a5a2b] bg-[#f6ecda] border border-[#e3c9a3] rounded px-1.5 py-0.5">
                           {it.storageLocation}
+                        </span>
+                      )}
+                      {/* Rode in on a transfer and auto-joined this pickup — still needs a shelf. */}
+                      {it.needsPlacement && !it.grabbed && !a.stagedSpot && (
+                        <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300 whitespace-nowrap">
+                          Just arrived · place it
                         </span>
                       )}
                     </span>

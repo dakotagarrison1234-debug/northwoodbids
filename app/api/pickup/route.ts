@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import {
+  consolidatePickup,
   getAvailableSlots,
   getSlotCapacity,
   getUnscheduledPickupItemIds,
@@ -204,10 +205,22 @@ export async function POST(request: NextRequest) {
             id: { in: unscheduledIds },
             OR: [{ locationId }, { locationId: null }],
           },
-          select: { id: true },
+          select: { id: true, transferable: true },
         })
       : [];
     const readyIds = readyRows.map((r) => r.id);
+
+    // Is this their HOME pickup, or a side trip? Booking at a warehouse other than
+    // their preferred one purely to collect non-transferable items (which can't
+    // ride over) is a side trip — we must not drag everything else there. Any other
+    // booking makes this warehouse home: everything they own gets pulled to it.
+    const profile = await prisma.bidderProfile.findUnique({
+      where: { clerkUserId: userId },
+      select: { preferredPickupLocationId: true },
+    });
+    const preferredId = profile?.preferredPickupLocationId ?? null;
+    const sideTrip =
+      !!preferredId && preferredId !== locationId && readyRows.length > 0 && readyRows.every((r) => !r.transferable);
 
     if (readyIds.length === 0) {
       return NextResponse.json(
@@ -253,10 +266,23 @@ export async function POST(request: NextRequest) {
       throw e;
     }
 
+    // The magnet: everything else they've paid for comes to this appointment —
+    // items here attach, items at the other warehouse ride over on one transfer,
+    // and this warehouse becomes home for future wins. No button.
+    let transferred = 0;
+    if (!sideTrip) {
+      try {
+        const r = await consolidatePickup(userId, org.id, { appointmentId, force: true });
+        transferred = r.transferred;
+      } catch (e) {
+        console.error("consolidatePickup (booking) failed:", e);
+      }
+    }
+
     // Team heads-up (fire-and-forget): text the owner that a pickup was booked.
     notifyAppointmentBooked(appointmentId).catch(() => {});
 
-    return NextResponse.json({ success: true, appointmentId });
+    return NextResponse.json({ success: true, appointmentId, transferred });
   } catch (err) {
     console.error("[pickup POST]:", err);
     return NextResponse.json(

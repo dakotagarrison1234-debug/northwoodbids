@@ -489,7 +489,13 @@ export default function PickupPage() {
       });
       const d = await res.json();
       if (d.success) {
-        setMsg({ text: "Booked. We'll text you when your order is staged.", ok: true });
+        const n = Number(d.transferred ?? 0);
+        setMsg({
+          text: n > 0
+            ? `Booked. ${n} item${n !== 1 ? "s" : ""} from the other warehouse will ride over and join this pickup (usually 5 to 6 days). We'll text you when your order is staged.`
+            : "Booked. We'll text you when your order is staged.",
+          ok: true,
+        });
         load();
       } else {
         setMsg({ text: d.error || "Could not schedule. Please try again.", ok: false });
@@ -944,7 +950,7 @@ export default function PickupPage() {
                     {transferCount > 0
                       ? `${transferCount} more item${transferCount !== 1 ? "s are" : " is"} riding over (see below) and will join this pickup on arrival. `
                       : ""}
-                    Anything new you win at {preferredName} joins this pickup automatically.
+                    Anything new you win joins this pickup automatically — wins at the other warehouse ride over to {preferredName} first.
                   </span>
                 </p>
 

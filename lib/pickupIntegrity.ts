@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { consolidateAllPickups } from "@/lib/pickup";
 
 /**
  * Pickup integrity — an item can only ever be in ONE of these states:
@@ -55,6 +56,16 @@ export async function healPickupLinks(organizationId: string): Promise<{ healed:
   }
 
   if (healed > 0) console.warn(`[pickup integrity] re-surfaced ${healed} dangling item(s) for org ${organizationId}`);
+
+  // 3. The magnet: anyone with an upcoming appointment and a paid item not on it
+  //    gets consolidated (attach here / transfer from the other warehouse). This is
+  //    what makes "old and new orders end up together" true without a button.
+  try {
+    await consolidateAllPickups(organizationId);
+  } catch (e) {
+    console.error("[pickup integrity] consolidate sweep failed:", e);
+  }
+
   return { healed };
 }
 

@@ -23,7 +23,7 @@ export async function GET() {
         location: { select: { id: true, name: true } },
         items: {
           select: {
-            id: true, title: true, itemCode: true, storageLocation: true, grabbedAt: true,
+            id: true, title: true, itemCode: true, storageLocation: true, grabbedAt: true, needsPlacement: true,
             // One thumbnail per item — staff match the picture to the shelf far
             // faster than they read a title.
             photos: { select: { url: true }, orderBy: { isPrimary: "desc" }, take: 1 },
@@ -58,6 +58,7 @@ export async function GET() {
         itemCode: it.itemCode,
         storageLocation: it.storageLocation,
         grabbed: it.grabbedAt != null,
+        needsPlacement: it.needsPlacement,
         photo: it.photos[0]?.url ?? null,
       })),
       bidder: profileMap.get(a.clerkUserId) ?? { name: null, email: null, phone: null },

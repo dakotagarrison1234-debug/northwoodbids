@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { getUserOrg } from "@/lib/auth";
 import { notifyTransferArrived } from "@/lib/transferNotify";
+import { consolidatePickup } from "@/lib/pickup";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -137,8 +138,13 @@ export async function PATCH(request: NextRequest, { params }: Props) {
         where: { id },
         data: { revertSnapshot: snapshot, stagedSpot: null, stagedAt: null },
       });
-      // (Removed the auto-attach-to-appointment on arrival.) Arrived items wait in the
-      // Decide inbox (the "not booked yet" list) for staff to place + assign manually.
+      // Arrived items join the customer's upcoming appointment here automatically
+      // (they keep the "place it" flag so staff still shelve them). No button.
+      try {
+        await consolidatePickup(transfer.clerkUserId, transfer.organizationId, { notifyTeam: false });
+      } catch (e) {
+        console.error("consolidatePickup (arrival) failed:", e);
+      }
     } else {
       // Cancelled: detach items, leaving their home location unchanged.
       const claim = await prisma.transferRequest.updateMany({
