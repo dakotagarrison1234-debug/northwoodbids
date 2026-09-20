@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import ItemCardTimer from "@/app/components/ItemCardTimer";
+import QuickBidModal from "@/app/components/QuickBidModal";
 import { WoodenCrate, PineMark } from "@/app/components/Illustrations";
 
 /**
@@ -80,6 +81,16 @@ export default function AuctionItemsView({
     } catch {}
   };
 
+  // Quick bid: tapping the Bid bar on a live lot opens the pop-up instead of leaving
+  // the page. The rest of the card still goes to the full listing.
+  const [quick, setQuick] = useState<{ id: string; href: string } | null>(null);
+  const openQuick = (e: React.MouseEvent, item: ViewItem) => {
+    if (!item.isItemLive) return; // ended/unsold lots: let the link through to the result page
+    e.preventDefault();
+    e.stopPropagation();
+    setQuick({ id: item.id, href: item.href });
+  };
+
   // Bid-activity filter/sort. "featured" keeps the server order (premium first).
   const [sort, setSort] = useState<"featured" | "nobids" | "high" | "low">("featured");
   const shownItems = (() => {
@@ -91,6 +102,8 @@ export default function AuctionItemsView({
 
   return (
     <>
+      {quick && <QuickBidModal itemId={quick.id} href={quick.href} onClose={() => setQuick(null)} />}
+
       {/* Toolbar: lot count + bid filter on the left, grid/list toggle on the right */}
       <div className="flex items-center justify-between gap-3 mb-4 sm:mb-5 flex-wrap rounded-2xl bg-[#fbf4e6] border border-[#e3d6bf] px-3 py-2">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -234,7 +247,13 @@ export default function AuctionItemsView({
                       </div>
                     )}
                   </div>
-                  <div className={`${item.bidClass} mt-2`}>{item.bidLabel}</div>
+                  <div
+                    role={item.isItemLive ? "button" : undefined}
+                    onClick={(e) => openQuick(e, item)}
+                    className={`${item.bidClass} mt-2`}
+                  >
+                    {item.bidLabel}
+                  </div>
                 </div>
               </Link>
 
@@ -332,7 +351,13 @@ export default function AuctionItemsView({
                         )}
                       </div>
                     </div>
-                    <span className={`${item.bidClass} !w-auto shrink-0 px-4 py-2.5 self-end`}>{item.bidLabel}</span>
+                    <span
+                      role={item.isItemLive ? "button" : undefined}
+                      onClick={(e) => openQuick(e, item)}
+                      className={`${item.bidClass} !w-auto shrink-0 px-4 py-2.5 self-end`}
+                    >
+                      {item.bidLabel}
+                    </span>
                   </div>
                 </div>
               </Link>

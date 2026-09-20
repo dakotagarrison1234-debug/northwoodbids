@@ -456,3 +456,8 @@ input[type="search"]::-webkit-search-decoration {
 /* Home hero background loop: fade in over the poster once it starts playing */
 .nb-hero-video { opacity: 0; transition: opacity 900ms ease; }
 .nb-hero-video.is-playing { opacity: 1; }
+
+/* Quick-bid sheet: slides up on phones, scales in on desktop. */
+@keyframes nb-sheet-up { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.nb-sheet-in { animation: nb-sheet-up 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@media (prefers-reduced-motion: reduce) { .nb-sheet-in { animation: none; } }

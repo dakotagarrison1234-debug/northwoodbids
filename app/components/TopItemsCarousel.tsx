@@ -1,8 +1,9 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import ItemCardTimer from "@/app/components/ItemCardTimer";
 import SectionHeader from "@/app/components/SectionHeader";
+import QuickBidModal from "@/app/components/QuickBidModal";
 
 export type TopItem = {
   id: string;
@@ -52,9 +53,11 @@ export default function TopItemsCarousel({ items }: { items: TopItem[] }) {
   const resumeSoon = () => { setTimeout(() => { paused.current = false; }, 1800); };
 
   const loop = [...items, ...items];
+  const [quick, setQuick] = useState<TopItem | null>(null);
 
   return (
     <section className="max-w-6xl mx-auto px-6 sm:px-8 pt-8">
+      {quick && <QuickBidModal itemId={quick.id} href={quick.href} onClose={() => setQuick(null)} />}
       <SectionHeader
         variant="hot"
         eyebrow="Most bid-on right now"
@@ -110,6 +113,14 @@ export default function TopItemsCarousel({ items }: { items: TopItem[] }) {
                     Retail <span className="line-through">{money(it.retailValue)}</span>
                   </div>
                 )}
+                {/* Quick bid: opens the pop-up right here; the rest of the card still links out. */}
+                <div
+                  role="button"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setQuick(it); }}
+                  className="mt-2 block w-full text-center rounded-xl py-1.5 text-xs font-bold bg-[#6c4d39] text-white hover:bg-[#563e2c] transition-colors"
+                >
+                  Bid now
+                </div>
               </div>
             </Link>
           );
