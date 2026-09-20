@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -63,14 +64,28 @@ export default function QuickBidModal({ itemId, href, onClose }: { itemId: strin
 
   const buzz = (p: number | number[]) => { try { navigator.vibrate?.(p); } catch { /* no haptics */ } };
 
-  // ── Scroll lock: the page underneath stays exactly where it was ──────────
+  // ── Scroll lock: the page underneath can't move (iOS included) and lands back on
+  // the exact pixel when the sheet closes. Also hides the chat bubble while open.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
   useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const scrollY = window.scrollY;
+    const b = document.body.style;
+    const prev = { position: b.position, top: b.top, left: b.left, right: b.right, width: b.width, overflow: b.overflow };
+    b.position = "fixed"; b.top = `-${scrollY}px`; b.left = "0"; b.right = "0"; b.width = "100%"; b.overflow = "hidden";
+    const hadWoodyHidden = document.body.classList.contains("woody-hidden");
+    document.body.classList.add("woody-hidden");
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onCloseRef.current(); };
     window.addEventListener("keydown", onKey);
-    return () => { document.body.style.overflow = prev; window.removeEventListener("keydown", onKey); };
-  }, [onClose]);
+    return () => {
+      b.position = prev.position; b.top = prev.top; b.left = prev.left; b.right = prev.right; b.width = prev.width; b.overflow = prev.overflow;
+      window.scrollTo(0, scrollY);
+      if (!hadWoodyHidden) document.body.classList.remove("woody-hidden");
+      window.removeEventListener("keydown", onKey);
+    };
+    // Runs exactly once per open: inline onClose props change every render and must
+    // not re-lock (which would lose the saved scroll position).
+  }, []);
 
   // ── Data ─────────────────────────────────────────────────────────────────
   const load = useCallback(() => {
@@ -104,13 +119,14 @@ export default function QuickBidModal({ itemId, href, onClose }: { itemId: strin
   }, [itemId, isSignedIn]);
   useEffect(() => { refreshStanding(); }, [refreshStanding]);
 
+  const orgId = item?.org?.id ?? null;
   const refreshCard = useCallback(() => {
-    if (!isSignedIn || !item?.org?.id) return;
-    fetch(`/api/orgs/${item.org.id}/stripe/payment-method`)
+    if (!isSignedIn || !orgId) return;
+    fetch(`/api/orgs/${orgId}/stripe/payment-method`)
       .then((r) => r.json())
       .then((d) => setHasCard(d.hasCard === true))
       .catch(() => setHasCard(null));
-  }, [isSignedIn, item?.org?.id]);
+  }, [isSignedIn, orgId]);
   useEffect(() => { refreshCard(); }, [refreshCard]);
 
   // ── Live updates ─────────────────────────────────────────────────────────
@@ -208,12 +224,25 @@ export default function QuickBidModal({ itemId, href, onClose }: { itemId: strin
 
   const photos = item?.photos ?? [];
   const photo = photos[photoIdx]?.url ?? photos[0]?.url ?? null;
+  const stepPhoto = (dir: 1 | -1) => {
+    if (photos.length < 2) return;
+    setPhotoIdx((i) => (i + dir + photos.length) % photos.length);
+  };
+  const touchX = useRef<number | null>(null);
   const standing = !isSignedIn ? null : isWinning ? "lead" : participated ? "outbid" : null;
 
-  return (
-    <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label={item?.title ?? "Quick bid"}>
-      {/* Backdrop — tap to close */}
-      <button aria-label="Close" onClick={onClose} className="absolute inset-0 bg-[#241a12]/55 backdrop-blur-[2px]" />
+  // Portal to <body>: a card inside a transformed/animated section (hero parallax,
+  // scroll-reveal) would otherwise trap position:fixed and let the page bleed through.
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9000] flex items-end sm:items-center justify-center"
+      role="dialog"
+      aria-modal="true"
+      aria-label={item?.title ?? "Quick bid"}
+      style={{ touchAction: "none" }}
+    >
+      {/* Backdrop — dark enough that nothing underneath reads; tap to close */}
+      <button aria-label="Close" onClick={onClose} className="absolute inset-0 bg-[#241a12]/85 backdrop-blur-sm" />
 
       {/* Sheet: bottom sheet on phones, centered card on larger screens */}
       <div className="relative w-full sm:w-[min(92vw,480px)] max-h-[92vh] sm:max-h-[88vh] bg-[#fbf4e6] rounded-t-3xl sm:rounded-3xl shadow-[0_30px_80px_-20px_rgba(0,0,0,.6)] border border-[#e3d6bf] overflow-hidden flex flex-col nb-sheet-in">
@@ -227,7 +256,7 @@ export default function QuickBidModal({ itemId, href, onClose }: { itemId: strin
           </button>
         </div>
 
-        <div className="overflow-y-auto flex-1 min-h-0 px-4 pb-4">
+        <div className="overflow-y-auto overscroll-contain flex-1 min-h-0 px-4 pb-4" style={{ touchAction: "pan-y" }}>
           {loading || !item ? (
             <div className="py-10 flex flex-col items-center gap-3 text-[#8a7559]">
               <div className="w-7 h-7 rounded-full border-2 border-[#6c4d39]/30 border-t-[#6c4d39] animate-spin" />
@@ -236,11 +265,43 @@ export default function QuickBidModal({ itemId, href, onClose }: { itemId: strin
           ) : (
             <>
               {/* Photo */}
-              <div className="relative w-full aspect-[4/3] rounded-2xl bg-white ring-1 ring-[#efe0c9] overflow-hidden">
+              <div
+                className="relative w-full aspect-[4/3] rounded-2xl bg-white ring-1 ring-[#efe0c9] overflow-hidden select-none"
+                onTouchStart={(e) => { touchX.current = e.touches[0]?.clientX ?? null; }}
+                onTouchEnd={(e) => {
+                  const x0 = touchX.current; touchX.current = null;
+                  const x1 = e.changedTouches[0]?.clientX;
+                  if (x0 == null || x1 == null) return;
+                  if (x1 - x0 > 40) stepPhoto(-1); else if (x0 - x1 > 40) stepPhoto(1);
+                }}
+              >
                 {photo ? (
                   <Image src={photo} alt={item.title} fill sizes="480px" className="object-contain p-2" priority />
                 ) : (
                   <div className="absolute inset-0 grid place-items-center text-[#b3a085]"><WoodenCrate className="w-16 h-14 opacity-70" /></div>
+                )}
+                {photos.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Previous photo"
+                      onClick={() => stepPhoto(-1)}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-[#241a12]/70 hover:bg-[#241a12]/90 text-[#fbf4e6] grid place-items-center shadow"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3L5 8l5 5" /></svg>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Next photo"
+                      onClick={() => stepPhoto(1)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-[#241a12]/70 hover:bg-[#241a12]/90 text-[#fbf4e6] grid place-items-center shadow"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3l5 5-5 5" /></svg>
+                    </button>
+                    <span className="absolute bottom-2 right-2 rounded-full bg-[#241a12]/70 text-[#fbf4e6] text-[10px] font-bold px-2 py-0.5 tabular-nums">
+                      {photoIdx + 1} / {photos.length}
+                    </span>
+                  </>
                 )}
                 {off >= 20 && (
                   <span className="absolute top-2 left-2 rounded-md bg-[#c47b3e] text-white text-[11px] font-black px-2 py-0.5 shadow-sm tabular-nums">{off}% off</span>
@@ -347,6 +408,7 @@ export default function QuickBidModal({ itemId, href, onClose }: { itemId: strin
           onClose={() => setShowCardModal(false)}
         />
       )}
-    </div>
+    </div>,
+    document.body
   );
 }
