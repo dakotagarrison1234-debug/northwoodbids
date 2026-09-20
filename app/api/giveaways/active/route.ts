@@ -12,12 +12,22 @@ import { eligibility, getEligibleEntrants, phaseOf, publicName, sweepEndedGiveaw
  * /giveaways portal passes all=1 and also gets recently completed ones with winners.
  * Includes the signed-in viewer's ticket count per giveaway.
  */
+// The public part of the payload (pools, totals, prizes) is identical for every
+// visitor, so it's memoised for a few seconds per instance. The signed-in viewer's
+// own standing is layered on top per request from the cached pool — never stale
+// for them, and the home page stops running full profile scans per visitor.
+const CACHE_MS = 10_000;
+type Cached = { at: number; rows: unknown; pools: unknown; eligs: unknown; nameById: unknown };
+const cacheByView = new Map<string, Cached>(); // "home" | "all"
+
 export async function GET(request: NextRequest) {
-  await sweepEndedGiveaways();
   const all = request.nextUrl.searchParams.get("all") === "1";
   const now = new Date();
 
-  const rows = await prisma.giveaway.findMany({
+  type Rows = Awaited<ReturnType<typeof loadRows>>;
+  async function loadRows() {
+    await sweepEndedGiveaways();
+    return prisma.giveaway.findMany({
     where: {
       archived: false,
       OR: [
@@ -40,6 +50,21 @@ export async function GET(request: NextRequest) {
       entries: { where: { won: true }, select: { clerkUserId: true, wonItemId: true } },
     },
   });
+  }
+
+  let rows: Rows;
+  let pools: Map<string, Awaited<ReturnType<typeof getEligibleEntrants>>>;
+  let eligs: Map<string, Awaited<ReturnType<typeof eligibility>>>;
+  let nameById: Map<string, string>;
+  const cache = cacheByView.get(all ? "all" : "home") ?? null;
+  const fresh = cache && now.getTime() - cache.at < CACHE_MS;
+  if (fresh && cache) {
+    rows = cache.rows as Rows;
+    pools = cache.pools as typeof pools;
+    eligs = cache.eligs as typeof eligs;
+    nameById = cache.nameById as typeof nameById;
+  } else {
+  rows = await loadRows();
 
   // Ticket totals from the SAME pool the draw uses — never an approximation, so the
   // number on the card is exactly what's in the drum.
@@ -51,8 +76,8 @@ export async function GET(request: NextRequest) {
     if (!e) { e = await eligibility(g.organizationId, { requireCard: g.requireCard }); eligByRule.set(key, e); }
     return e;
   };
-  const pools = new Map<string, Awaited<ReturnType<typeof getEligibleEntrants>>>();
-  const eligs = new Map<string, Awaited<ReturnType<typeof eligibility>>>();
+  pools = new Map();
+  eligs = new Map();
   for (const g of rows) {
     const e = await eligFor(g);
     eligs.set(g.id, e);
@@ -64,13 +89,22 @@ export async function GET(request: NextRequest) {
   const profiles = winnerIds.length
     ? await prisma.bidderProfile.findMany({ where: { clerkUserId: { in: winnerIds } }, select: { clerkUserId: true, name: true } })
     : [];
-  const nameById = new Map(profiles.map((p) => [p.clerkUserId, publicName(p.name)]));
+  nameById = new Map(profiles.map((p) => [p.clerkUserId, publicName(p.name)]));
+  cacheByView.set(all ? "all" : "home", { at: now.getTime(), rows, pools, eligs, nameById });
+  }
 
   const { userId } = await auth();
   const signedIn = !!userId;
-  const myWon = userId && rows.length
-    ? new Set((await prisma.giveawayEntry.findMany({ where: { clerkUserId: userId, won: true, giveawayId: { in: rows.map((r) => r.id) } }, select: { giveawayId: true } })).map((e) => e.giveawayId))
-    : new Set<string>();
+  // The viewer's own entry rows are read fresh (cheap, indexed) so a tap they just
+  // made shows as "You're in" even while the shared pool is still cached.
+  const myEntries = userId && rows.length
+    ? await prisma.giveawayEntry.findMany({
+        where: { clerkUserId: userId, giveawayId: { in: rows.map((r) => r.id) } },
+        select: { giveawayId: true, won: true, removed: true, bonusTickets: true },
+      })
+    : [];
+  const myWon = new Set(myEntries.filter((e) => e.won).map((e) => e.giveawayId));
+  const myTapped = new Set(myEntries.filter((e) => !e.removed && !e.won).map((e) => e.giveawayId));
 
   const giveaways = [];
   for (const g of rows) {
@@ -84,9 +118,12 @@ export async function GET(request: NextRequest) {
     const pool = pools.get(g.id) ?? [];
     const elig = eligs.get(g.id) ?? null;
     const meRow = userId ? pool.find((e) => e.clerkUserId === userId) : undefined;
+    const tappedSinceCache = !!userId && !meRow && g.entryMode === "CLICK" && myTapped.has(g.id) && !!elig?.ok.has(userId);
     const mine = meRow
       ? { tickets: meRow.tickets, entered: true, eligible: true, reason: null as string | null }
-      : {
+      : tappedSinceCache
+        ? { tickets: 1, entered: true, eligible: true, reason: null as string | null }
+        : {
           tickets: 0,
           entered: !!userId && myWon.has(g.id),
           eligible: !!userId && !!elig?.ok.has(userId),

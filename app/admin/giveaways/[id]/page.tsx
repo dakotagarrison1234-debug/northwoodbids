@@ -39,6 +39,7 @@ type Detail = {
     minBidAmount: number | null;
     maxTicketsPerUser: number | null;
     requireCard: boolean;
+    announcedAt: string | null;
   };
   prizes: Prize[];
   pool: Entrant[];
@@ -195,6 +196,22 @@ export default function ManageGiveaway() {
   // ── Edit window / draw style (while published) ────────────────────────────
   const [editEnd, setEditEnd] = useState<string | null>(null);
 
+  // ── Announce (one text blast to every engaged bidder) ─────────────────────
+  const [announcing, setAnnouncing] = useState(false);
+  const [confirmAnnounce, setConfirmAnnounce] = useState(false);
+  const announce = async () => {
+    setAnnouncing(true);
+    try {
+      const res = await fetch(`/api/admin/giveaways/${id}/announce`, { method: "POST" });
+      const r = await res.json();
+      if (!res.ok) setMsg(r.error || "Couldn't send.");
+      else setMsg(`Texted ${r.sent} bidder${r.sent === 1 ? "" : "s"}.`);
+    } catch { setMsg("Something went wrong."); }
+    setAnnouncing(false);
+    setConfirmAnnounce(false);
+    load();
+  };
+
   const draw = useCallback(async (): Promise<DrawResult | { error: string }> => {
     const res = await fetch(`/api/admin/giveaways/${id}/draw`, { method: "POST" });
     const r = await res.json();
@@ -264,6 +281,20 @@ export default function ManageGiveaway() {
         )}
         {isActive && (
           <>
+            {g.phase === "live" && !g.announcedAt && (
+              confirmAnnounce ? (
+                <span className="inline-flex items-center gap-2 bg-[#fbe6c8] border border-[#e3c9a3] rounded-xl px-3 py-2 text-sm">
+                  <span className="text-[#a85f28] font-semibold">Text every bidder that it&apos;s live?</span>
+                  <button onClick={announce} disabled={announcing} className="bg-[#241a12] text-[#f6ecda] font-bold px-3 py-1 rounded-lg text-xs disabled:opacity-50">{announcing ? "Sending…" : "Yes, send"}</button>
+                  <button onClick={() => setConfirmAnnounce(false)} className="text-xs text-[#8a7559]">cancel</button>
+                </span>
+              ) : (
+                <button onClick={() => setConfirmAnnounce(true)} className="bg-[#241a12] hover:bg-black text-[#f6ecda] font-bold px-5 py-2.5 rounded-xl text-sm">
+                  Announce (text everyone)
+                </button>
+              )
+            )}
+            {g.announcedAt && <span className="self-center text-xs text-[#8a7559]">Announced {fmt(g.announcedAt)}</span>}
             <button onClick={() => patch({ status: "ENDED" })} className="bg-[#c47b3e] hover:bg-[#a85f28] text-white font-bold px-5 py-2.5 rounded-xl text-sm">
               End now (close entries)
             </button>

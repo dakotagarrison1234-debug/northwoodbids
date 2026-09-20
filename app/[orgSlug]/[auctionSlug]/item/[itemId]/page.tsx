@@ -467,10 +467,18 @@ export default function ItemPage() {
       const data = await res.json();
       if (data.success) {
         if (data.proxyFired) {
-          setMessage({ text: `Bid of $${amount.toLocaleString()} placed — instantly outbid by an active max bid.`, type: "error" });
+          setMessage({
+            text: `Bid of $${amount.toLocaleString()} placed — instantly outbid by an active max bid.${data.giveawayTicket ? " Still counts: +1 giveaway ticket." : ""}`,
+            type: "error",
+          });
           buzz([10, 60, 10]); // stutter = "you're already behind again"
         } else {
-          setMessage({ text: `You're the top bid at $${amount.toLocaleString()}!`, type: "success" });
+          setMessage({
+            text: data.giveawayTicket
+              ? `You're the top bid at $${amount.toLocaleString()}! +1 giveaway ticket (${data.giveawayTicket}).`
+              : `You're the top bid at $${amount.toLocaleString()}!`,
+            type: "success",
+          });
           // Success moment: light sweep across the button + a confident buzz.
           setBidFlash(true);
           setTimeout(() => setBidFlash(false), 650);

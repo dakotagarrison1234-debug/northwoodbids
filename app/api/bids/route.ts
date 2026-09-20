@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { liveBidGiveawayTitle } from "@/lib/giveaway";
 import { Prisma } from "@prisma/client";
 import { getNextValidBid } from "@/lib/bidIncrements";
 import { resolveProxiesAfterBid } from "@/lib/proxyBidResolver";
@@ -182,6 +183,9 @@ export async function POST(request: NextRequest) {
       proxyFired: proxyResult.proxyFired,
       newEndAt: finalEndAt,
       currentBid: finalAmount,
+      // A live bid-to-enter giveaway makes this bid a ticket — tell the page so it
+      // can say "+1 ticket" right on the confirmation.
+      giveawayTicket: await liveBidGiveawayTitle(item.organizationId, amount),
     });
   } catch (error) {
     if ((error as Error).message === "STALE_BID") {

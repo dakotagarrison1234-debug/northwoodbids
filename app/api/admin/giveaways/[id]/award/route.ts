@@ -4,6 +4,8 @@ import { type OrgRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg, requireRole } from "@/lib/auth";
 import { awardGiveawayItem, getEligibleEntrants, verifyDraw } from "@/lib/giveaway";
+import { notifyGiveawayWon } from "@/lib/giveawayNotify";
+import { after } from "next/server";
 
 /**
  * POST /api/admin/giveaways/[id]/award   Body: { clerkUserId, itemId }
@@ -21,7 +23,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
   const { id } = await params;
 
-  const g = await prisma.giveaway.findUnique({ where: { id }, select: { organizationId: true, status: true, requirement: true, entryMode: true } });
+  const g = await prisma.giveaway.findUnique({ where: { id }, select: { organizationId: true, status: true, requirement: true, entryMode: true, title: true } });
   if (!g || g.organizationId !== orgId) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (g.status !== "ACTIVE" && g.status !== "ENDED") return NextResponse.json({ error: "This giveaway isn't open." }, { status: 409 });
 
@@ -66,6 +68,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const remaining = await prisma.item.count({ where: { giveawayId: id, bids: { none: { status: "WON" } } } });
   if (remaining === 0) await prisma.giveaway.update({ where: { id }, data: { status: "DRAWN" } });
+
+  // Tell them. After the response so the Done tap never waits on GHL.
+  const prizeTitle = (await prisma.item.findUnique({ where: { id: itemId }, select: { title: true } }))?.title ?? "your prize";
+  after(() => notifyGiveawayWon(clerkUserId, g.title, prizeTitle));
 
   return NextResponse.json({ success: true, remaining });
 }

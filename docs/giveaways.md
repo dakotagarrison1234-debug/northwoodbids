@@ -37,3 +37,10 @@ Save the machine clip to `public/giveaway/ticket-machine.mp4` (download from the
 - Tap-to-enter: one row per person (unique), re-taps don't stack, removed people can't sneak back, wrong-answer guessing is rate-limited.
 - Draw: server-side, crypto-grade weighted random. The draw returns a signed receipt; Done can only award exactly the person + prize that was pulled. One prize per person per giveaway. Every draw is logged.
 - On camera: the winner screen shows the card, a quiet X (silently pulls again) and Done. No redo wording anywhere.
+
+## Growth loop (added)
+- **Announce (text everyone)** on a live giveaway's manage page — one text blast to every engaged bidder, once per giveaway (goes through `GHL_AUCTION_STARTED_WEBHOOK`, event `giveaway_live`, message in `smsMessage`).
+- **Winner text** fires automatically after Done (`GHL_AUCTION_WON_WEBHOOK`, event `giveaway_won`) with a link to book pickup. Make sure the GHL workflow sends `{{smsMessage}}` rather than a fixed "you won an auction" template.
+- **+1 ticket nudge**: while a bid-to-enter giveaway is live, every bid confirmation on the item page says "+1 giveaway ticket (title)".
+- **Share** on every giveaway card — signed-in bidders share their referral link pointed at /giveaways, so a friend who signs up credits their Bid Bucks.
+- Public giveaway data is cached ~10s per server so the home page doesn't rescan bidders per visitor; the viewer's own standing is always read fresh.

@@ -9,6 +9,7 @@ import {
   EntryBlock,
   PhaseChip,
   PrizeArt,
+  ShareGiveaway,
   TicketLine,
   markEntered,
   money,
@@ -95,7 +96,10 @@ function HomeTile({
           {g.prizes.length > 1 && g.winners > 0 && <span className="text-[#8a7559]"> · {g.winners} winners</span>}
         </p>
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <TicketLine g={g} signedIn={signedIn} />
+          <span className="inline-flex items-center gap-3">
+            <TicketLine g={g} signedIn={signedIn} />
+            <ShareGiveaway g={g} />
+          </span>
           {dimmed ? (
             <Link href="/giveaways" className="text-xs font-semibold text-[#6c4d39] hover:text-[#563e2c] underline underline-offset-2">
               Details

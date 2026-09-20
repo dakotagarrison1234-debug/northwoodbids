@@ -25,7 +25,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
  * invisible; at thousands it's a real per-message bill for people who never bid.
  * Real customers (anyone who's ever placed a bid) still get every text.
  */
-async function engagedBidderProfiles(
+export async function engagedBidderProfiles(
   orgId: string
 ): Promise<{ clerkUserId: string; email: string | null; phone: string | null; name: string | null }[]> {
   const bidders = await prisma.bid.findMany({ select: { clerkUserId: true }, distinct: ["clerkUserId"] });
@@ -87,7 +87,7 @@ type OrgForCharging = {
  * dependency-free Promise pool — process in chunks so a large auction doesn't
  * fan out unbounded fetches/charges, but still parallelizes within each chunk.
  */
-async function runPooled<T>(
+export async function runPooled<T>(
   items: T[],
   worker: (item: T) => Promise<void>,
   concurrency = 5

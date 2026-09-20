@@ -86,6 +86,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       minBidAmount: g.minBidAmount != null ? Number(g.minBidAmount) : null,
       maxTicketsPerUser: g.maxTicketsPerUser,
       requireCard: g.requireCard,
+      announcedAt: g.announcedAt,
     },
     prizes: prizes.map((p) => {
       const winner = winnerRows.find((w) => w.wonItemId === p.id);

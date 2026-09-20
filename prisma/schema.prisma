@@ -662,6 +662,8 @@ model Giveaway {
   // Stipulation: only bidders with a payment card on file can hold a ticket
   // (the bidding bar). Off = any registered bidder (phone + email, not blocked).
   requireCard       Boolean                 @default(false)
+  // When the "it's live" text blast went out (once per giveaway; null = never).
+  announcedAt       DateTime?
   archived          Boolean                 @default(false)
   createdAt         DateTime                @default(now())
   updatedAt         DateTime                @default(now()) @updatedAt

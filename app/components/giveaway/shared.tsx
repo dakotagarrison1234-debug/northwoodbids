@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BidCritter, IcoCheck, IcoGift, IcoTicket, IcoTrophy } from "@/app/components/BidIcons";
+import { BidCritter, IcoCheck, IcoGift, IcoTicket, IcoTrophy, IcoShare } from "@/app/components/BidIcons";
 
 /* ───────────────────────────────────────────────────────────
    Northwood Bids — giveaway building blocks shared by the home
@@ -432,5 +432,33 @@ export function markEntered(list: Giveaway[], id: string, tickets: number): Give
           totalTickets: g.me.entered ? g.totalTickets : g.totalTickets + 1,
         }
       : g
+  );
+}
+
+
+/**
+ * Share a giveaway. Signed-in bidders share through their referral link so a friend
+ * who signs up lands on /giveaways AND credits the sharer's Bid Bucks — giveaways
+ * are the growth engine, this is the handle on it.
+ */
+export function ShareGiveaway({ g, className = "" }: { g: Giveaway; className?: string }) {
+  const [note, setNote] = useState<string | null>(null);
+  const [code, setCode] = useState<string | null>(null);
+  useEffect(() => {
+    fetch("/api/referral/summary").then((r) => (r.ok ? r.json() : null)).then((d) => { if (d?.code) setCode(String(d.code)); }).catch(() => {});
+  }, []);
+  const share = async () => {
+    if (typeof window === "undefined") return;
+    const url = code
+      ? `${window.location.origin}/r/${code}?to=${encodeURIComponent("/giveaways")}`
+      : `${window.location.origin}/giveaways`;
+    const data = { title: g.title, text: `Free giveaway on Northwood Bids: ${g.title}. ${howToEnter(g)}`, url };
+    if (navigator.share) { try { await navigator.share(data); } catch { /* cancelled */ } return; }
+    try { await navigator.clipboard.writeText(url); setNote("Link copied"); setTimeout(() => setNote(null), 1800); } catch { /* ignore */ }
+  };
+  return (
+    <button type="button" onClick={share} className={`inline-flex items-center gap-1 text-xs font-semibold text-[#6c4d39] hover:text-[#563e2c] ${className}`} aria-label="Share this giveaway">
+      <IcoShare className="w-3.5 h-3.5" /> {note ?? "Share"}
+    </button>
   );
 }

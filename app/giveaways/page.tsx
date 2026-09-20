@@ -20,6 +20,7 @@ import {
   money,
   plural,
   relativeDay,
+  ShareGiveaway,
 } from "@/app/components/giveaway/shared";
 
 /**
@@ -262,7 +263,10 @@ function FullCard({
           </Row>
         </dl>
 
-        <TicketLine g={g} signedIn={signedIn} />
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <TicketLine g={g} signedIn={signedIn} />
+          <ShareGiveaway g={g} />
+        </div>
 
         <EntryBlock g={g} signedIn={signedIn} onEntered={onEntered} className="mt-auto pt-1" />
 

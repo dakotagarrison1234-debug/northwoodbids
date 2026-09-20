@@ -53,6 +53,26 @@ export async function sweepEndedGiveaways(organizationId?: string): Promise<numb
   return r.count;
 }
 
+/**
+ * Title of a live bid-to-enter giveaway this bid just earned a ticket in (or null).
+ * Cheap: one indexed query; used on the bid response for the "+1 ticket" nudge.
+ */
+export async function liveBidGiveawayTitle(organizationId: string, amount: number): Promise<string | null> {
+  const now = new Date();
+  const g = await prisma.giveaway.findFirst({
+    where: {
+      organizationId, status: "ACTIVE", archived: false, entryMode: "BID",
+      OR: [{ startsAt: null }, { startsAt: { lte: now } }],
+      AND: [{ OR: [{ endsAt: null }, { endsAt: { gt: now } }] }],
+    },
+    orderBy: { createdAt: "desc" },
+    select: { title: true, minBidAmount: true },
+  });
+  if (!g) return null;
+  if (g.minBidAmount != null && amount < Number(g.minBidAmount)) return null;
+  return g.title;
+}
+
 /** Explicit "End now" — closes the window immediately. */
 export async function endGiveawayNow(id: string): Promise<void> {
   await prisma.giveaway.updateMany({
