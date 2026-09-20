@@ -8,6 +8,20 @@ import PusherRefresh from "./components/PusherRefresh";
 import TopItemsCarousel from "./components/TopItemsCarousel";
 import HomeHero from "./components/HomeHero";
 import { heroSeason } from "@/lib/heroSeason";
+
+/** Midnight of the current calendar day in Michigan, as a UTC instant. */
+function startOfDetroitDay(now: Date): Date {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Detroit", hour12: false,
+    year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit",
+  }).formatToParts(now);
+  const m: Record<string, number> = {};
+  for (const p of parts) if (p.type !== "literal") m[p.type] = Number(p.value);
+  const hour = m.hour === 24 ? 0 : m.hour;
+  // Seconds since local midnight; subtracting them from "now" lands on local midnight.
+  const sinceMidnightMs = ((hour * 60 + m.minute) * 60 + m.second) * 1000 + now.getMilliseconds();
+  return new Date(now.getTime() - sinceMidnightMs);
+}
 import GiveawayCard from "./components/GiveawayCard";
 import BidTicker from "./components/BidTicker";
 import ScrollReveal from "./components/ScrollReveal";
@@ -154,8 +168,10 @@ export default async function HomePage() {
   // the last 24h (the "it's happening" number), and the best MSRP discount on the
   // board — a headline "up to X% off retail". All cheap: one count + in-JS maxes.
   const liveLots = Array.from(activeItemsMap.values()).reduce((a, b) => a + b, 0);
-  const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const bidsToday = await prisma.bid.count({ where: { placedAt: { gte: dayAgo } } });
+  // "Bids today" = since midnight in Michigan, so it only ever climbs during the day
+  // and resets at 12:00am. (A rolling 24h window ticks DOWN as yesterday's bids age
+  // out, which reads like the counter is broken.)
+  const bidsToday = await prisma.bid.count({ where: { placedAt: { gte: startOfDetroitDay(now) } } });
   const bestDeal = Math.min(
     95,
     topItems.reduce((best, it) => {
