@@ -52,7 +52,10 @@ export function toViewItem(
     isLive && !isItemClosed && !!ctx.userId && item.bids.length > 0 && item.bids[0].clerkUserId === ctx.userId;
   const outbid = isLive && !isItemClosed && !winning && ctx.userBidItemIds.has(item.id);
 
-  const bidLabel = isUpcoming ? "Preview" : isItemUnsold ? "Ended" : isItemSold ? "Sold" : isClosed ? "Closed" : winning ? "You're winning" : outbid ? "You're outbid" : "Bid now";
+  // Outbid is called out by the red "Outbid" badge on the photo (and the red card
+  // border); the bar itself stays a plain "Bid now" so it reads as the action, not
+  // a second warning.
+  const bidLabel = isUpcoming ? "Preview" : isItemUnsold ? "Ended" : isItemSold ? "Sold" : isClosed ? "Closed" : winning ? "You're winning" : "Bid now";
   const bidClass = `block w-full text-center rounded-xl py-2 text-xs font-bold transition-colors ${
     isUpcoming
       ? "bg-[#efe3d0] text-[#6c4d39] border border-[#6c4d39]/20"
@@ -60,8 +63,6 @@ export function toViewItem(
       ? "bg-[#f4efe4] text-[#a3927b]"
       : winning
       ? "bg-[#e4f2e4] text-[#2f5d3a] border border-[#5f7a45]/45"
-      : outbid
-      ? "bg-red-600 group-hover:bg-red-700 text-white"
       : "bg-[#6c4d39] group-hover:bg-[#563e2c] text-white"
   }`;
   const cardClass = `cv-card flex flex-col h-full bg-white border rounded-2xl overflow-hidden transition-all group ${
