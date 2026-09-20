@@ -14,6 +14,7 @@ export function parseGiveawayFields(body: Record<string, unknown>, partial = fal
     endsAt?: Date | null;
     minBidAmount?: number | null;
     maxTicketsPerUser?: number | null;
+    requireCard?: boolean;
   } = {};
 
   if (typeof body.title === "string") {
@@ -65,6 +66,7 @@ export function parseGiveawayFields(body: Record<string, unknown>, partial = fal
     if (n != null && (isNaN(n) || n < 0)) return { error: "Minimum bid must be a number." };
     out.minBidAmount = n;
   }
+  if (body.requireCard !== undefined) out.requireCard = body.requireCard === true || body.requireCard === "true";
   if (body.maxTicketsPerUser !== undefined) {
     const n = body.maxTicketsPerUser === "" || body.maxTicketsPerUser == null ? null : Math.floor(Number(body.maxTicketsPerUser));
     if (n != null && (isNaN(n) || n < 1)) return { error: "Ticket cap must be at least 1." };

@@ -17,14 +17,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (!membership) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const orgId = membership.organizationId;
   const { id } = await params;
-  const g = await prisma.giveaway.findUnique({ where: { id }, select: { organizationId: true } });
+  const g = await prisma.giveaway.findUnique({ where: { id }, select: { organizationId: true, requireCard: true } });
   if (!g || g.organizationId !== orgId) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const q = (request.nextUrl.searchParams.get("q") || "").trim();
   if (!q) return NextResponse.json({ bidders: [] });
 
   // Live ticket counts — the one source of truth for "is this person in the drum".
-  const [pool, elig] = await Promise.all([getEligibleEntrants(id), eligibility(orgId)]);
+  const [pool, elig] = await Promise.all([getEligibleEntrants(id), eligibility(orgId, { requireCard: g.requireCard })]);
   const ticketsBy = new Map(pool.map((e) => [e.clerkUserId, e.tickets]));
 
   const matches = await prisma.bidderProfile.findMany({

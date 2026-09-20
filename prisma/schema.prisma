@@ -659,6 +659,9 @@ model Giveaway {
   // BID mode stipulations: only bids of at least this much count; cap tickets per person.
   minBidAmount      Decimal?                @db.Decimal(10, 2)
   maxTicketsPerUser Int?
+  // Stipulation: only bidders with a payment card on file can hold a ticket
+  // (the bidding bar). Off = any registered bidder (phone + email, not blocked).
+  requireCard       Boolean                 @default(false)
   archived          Boolean                 @default(false)
   createdAt         DateTime                @default(now())
   updatedAt         DateTime                @default(now()) @updatedAt

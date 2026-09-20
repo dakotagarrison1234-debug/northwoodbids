@@ -239,17 +239,54 @@ export function EntryBlock({
   signedIn,
   onEntered,
   className = "",
+  compact = false,
 }: {
   g: Giveaway;
   signedIn: boolean;
   onEntered: (id: string, tickets: number) => void;
   className?: string;
+  /** Slim inline version for the home strip: small buttons, no explanatory paragraphs. */
+  compact?: boolean;
 }) {
   const [answer, setAnswer] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
   if (g.phase !== "live") return null;
+
+  if (compact) {
+    const sm = "inline-flex items-center justify-center font-bold text-xs px-3.5 py-2 rounded-lg transition-colors disabled:opacity-50";
+    if (!signedIn) return <Link href="/sign-up" className={`${sm} bg-[#6c4d39] hover:bg-[#563e2c] text-white`}>Sign up to enter</Link>;
+    if (g.me.eligible === false && !g.me.won) {
+      const r = g.me.reason;
+      if (r === "no_card") return <Link href="/account" className={`${sm} bg-[#6c4d39] hover:bg-[#563e2c] text-white`}>Add a card to enter</Link>;
+      if (r === "incomplete") return <Link href="/register" className={`${sm} bg-[#6c4d39] hover:bg-[#563e2c] text-white`}>Finish setup to enter</Link>;
+      return <span className="text-xs text-[#8a7559]">Not eligible</span>;
+    }
+    if (g.me.won) return <span className="inline-flex items-center gap-1 text-xs font-bold text-[#2f5d3a]"><IcoCheck className="w-3.5 h-3.5" /> You won here</span>;
+    if (g.entryMode === "AUTO") return <span className="inline-flex items-center gap-1 text-xs font-bold text-[#2f5d3a]"><IcoCheck className="w-3.5 h-3.5" /> You&apos;re in</span>;
+    if (g.entryMode === "BID") return <Link href="/auctions" className={`${sm} bg-[#4a7c59] hover:bg-[#3d6749] text-white`}>Bid = ticket · Go bid</Link>;
+    if (g.me.entered) return <span className="inline-flex items-center gap-1 text-xs font-bold text-[#2f5d3a]"><IcoCheck className="w-3.5 h-3.5" /> You&apos;re in</span>;
+    // CLICK: with a question, hand off to the portal (the strip is too small for a form).
+    if (g.requirement !== "NONE") return <Link href="/giveaways" className={`${sm} bg-[#4a7c59] hover:bg-[#3d6749] text-white`}>Answer to enter</Link>;
+    const tap = async () => {
+      setErr(""); setBusy(true);
+      try {
+        const res = await fetch(`/api/giveaways/${g.id}/join`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) { setErr(d.error || "Couldn't take a ticket."); return; }
+        onEntered(g.id, Number(d.tickets ?? 1));
+      } catch { setErr("Something went wrong."); } finally { setBusy(false); }
+    };
+    return (
+      <span className="inline-flex flex-col items-end gap-1">
+        <button type="button" onClick={tap} disabled={busy} className={`${sm} bg-[#4a7c59] hover:bg-[#3d6749] text-white`}>
+          <IcoTicket className="w-3.5 h-3.5 mr-1" /> {busy ? "One sec" : "Take a ticket"}
+        </button>
+        {err && <span className="text-[11px] text-red-600 font-semibold">{err}</span>}
+      </span>
+    );
+  }
 
   if (!signedIn) {
     return (
@@ -266,7 +303,7 @@ export function EntryBlock({
     if (r === "no_card") {
       return (
         <div className={`flex flex-col sm:flex-row sm:items-center gap-3 ${className}`}>
-          <p className="text-sm text-[#6f5b46] flex-1 min-w-0">Add a payment card to your account to be in the drum — same rule as bidding, nothing is charged.</p>
+          <p className="text-sm text-[#6f5b46] flex-1 min-w-0">This one&apos;s for bidders with a card on file. Add one to your account to be in the drum — nothing is charged.</p>
           <Link href="/account" className={`${BTN_LEATHER} shrink-0`}>Add a card</Link>
         </div>
       );

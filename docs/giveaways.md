@@ -32,7 +32,7 @@ Save the machine clip to `public/giveaway/ticket-machine.mp4` (download from the
 `npx prisma db push` (new enum values + columns, all additive) → commit → push.
 
 ## Fair-play guarantees (what's enforced in code)
-- Ticket bar = bidding bar: phone + email, card on file, not blocked. One account per phone number (the oldest one holds the tickets; a re-registered number is flagged "duplicate"). Same filter feeds the draw, the customer's "You hold N tickets", the card's total, and the admin counts — one function, no drift.
+- Ticket bar: registered bidder = phone + email on the account, not blocked. Per giveaway you can tighten it to "card on file only" (the bidding bar). One account per phone number (the oldest one holds the tickets; a re-registered number is flagged "duplicate"). Same filter feeds the draw, the customer's "You hold N tickets", the card's total, and the admin counts — one function, no drift.
 - Bid tickets = bids the person placed (hand bids + setting a max bid), inside the window only, cancelled bids excluded; auto-bids fired for them don't stack. Tickets freeze at the close time even if the close is processed later.
 - Tap-to-enter: one row per person (unique), re-taps don't stack, removed people can't sneak back, wrong-answer guessing is rate-limited.
 - Draw: server-side, crypto-grade weighted random. The draw returns a signed receipt; Done can only award exactly the person + prize that was pulled. One prize per person per giveaway. Every draw is logged.

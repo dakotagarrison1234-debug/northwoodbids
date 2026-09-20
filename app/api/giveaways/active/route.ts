@@ -43,9 +43,21 @@ export async function GET(request: NextRequest) {
 
   // Ticket totals from the SAME pool the draw uses — never an approximation, so the
   // number on the card is exactly what's in the drum.
-  const elig = rows.length ? await eligibility(rows[0].organizationId) : null;
+  // One eligibility pass per rule (card required or not), shared across giveaways.
+  const eligByRule = new Map<string, Awaited<ReturnType<typeof eligibility>>>();
+  const eligFor = async (g: (typeof rows)[number]) => {
+    const key = g.requireCard ? "card" : "open";
+    let e = eligByRule.get(key);
+    if (!e) { e = await eligibility(g.organizationId, { requireCard: g.requireCard }); eligByRule.set(key, e); }
+    return e;
+  };
   const pools = new Map<string, Awaited<ReturnType<typeof getEligibleEntrants>>>();
-  for (const g of rows) pools.set(g.id, await getEligibleEntrants(g.id, elig ?? undefined));
+  const eligs = new Map<string, Awaited<ReturnType<typeof eligibility>>>();
+  for (const g of rows) {
+    const e = await eligFor(g);
+    eligs.set(g.id, e);
+    pools.set(g.id, await getEligibleEntrants(g.id, e));
+  }
 
   // Winner names for completed giveaways.
   const winnerIds = [...new Set(rows.flatMap((g) => g.entries.map((e) => e.clerkUserId)))];
@@ -70,6 +82,7 @@ export async function GET(request: NextRequest) {
     }));
     const totalValue = prizes.reduce((s, p) => s + (p.retailValue ?? 0), 0);
     const pool = pools.get(g.id) ?? [];
+    const elig = eligs.get(g.id) ?? null;
     const meRow = userId ? pool.find((e) => e.clerkUserId === userId) : undefined;
     const mine = meRow
       ? { tickets: meRow.tickets, entered: true, eligible: true, reason: null as string | null }
@@ -93,6 +106,7 @@ export async function GET(request: NextRequest) {
       endsAt: g.endsAt,
       minBidAmount: g.minBidAmount != null ? Number(g.minBidAmount) : null,
       maxTicketsPerUser: g.maxTicketsPerUser,
+      requireCard: g.requireCard,
       winners: prizes.length,
       totalValue,
       totalTickets: pool.reduce((s, e) => s + e.tickets, 0),

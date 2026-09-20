@@ -40,6 +40,12 @@ export function windowOpen(g: Pick<Giveaway, "status" | "startsAt" | "endsAt">, 
  */
 export async function sweepEndedGiveaways(organizationId?: string): Promise<number> {
   const now = new Date();
+  // One-time migration for giveaways created before entry modes existed: anything
+  // that asked a question was tap-to-enter, not "everyone's in". Cheap no-op after.
+  await prisma.giveaway.updateMany({
+    where: { ...(organizationId ? { organizationId } : {}), entryMode: "AUTO", requirement: { not: "NONE" } },
+    data: { entryMode: "CLICK" },
+  });
   const r = await prisma.giveaway.updateMany({
     where: { ...(organizationId ? { organizationId } : {}), status: "ACTIVE", endsAt: { lte: now } },
     data: { status: "ENDED", endedAt: now },
@@ -56,10 +62,9 @@ export async function endGiveawayNow(id: string): Promise<void> {
 }
 
 /**
- * Who is allowed to hold a ticket at all — the same bar as placing a bid: a real
- * profile (phone + email), not blocked, and a payment card on file with this
- * business. Throwaway sign-ups never make the drum. On top of that, accounts that
- * share a phone number are collapsed to ONE (the oldest) so nobody can stack
+ * Who is allowed to hold a ticket at all: a registered bidder (phone + email), not
+ * blocked, and — only when the giveaway says so — a payment card on file. Accounts
+ * that share a phone number are collapsed to ONE (the oldest) so nobody can stack
  * tickets with duplicate accounts.
  */
 export type Eligibility = {
@@ -72,7 +77,7 @@ export type IneligibleReason = "blocked" | "incomplete" | "no_card" | "duplicate
 
 const digits = (s: string | null | undefined) => (s ?? "").replace(/\D+/g, "");
 
-export async function eligibility(organizationId: string): Promise<Eligibility> {
+export async function eligibility(organizationId: string, opts: { requireCard?: boolean } = {}): Promise<Eligibility> {
   const [profiles, cards] = await Promise.all([
     prisma.bidderProfile.findMany({
       select: { clerkUserId: true, name: true, phone: true, email: true, blocked: true, createdAt: true },
@@ -104,7 +109,7 @@ export async function eligibility(organizationId: string): Promise<Eligibility> 
     if (p.blocked) { ineligible.set(p.clerkUserId, "blocked"); continue; }
     if (dupeOf) { duplicateOf.set(p.clerkUserId, dupeOf); ineligible.set(p.clerkUserId, "duplicate"); continue; }
     if (!p.phone || !p.email) { ineligible.set(p.clerkUserId, "incomplete"); continue; }
-    if (!hasCard.has(p.clerkUserId)) { ineligible.set(p.clerkUserId, "no_card"); continue; }
+    if (opts.requireCard && !hasCard.has(p.clerkUserId)) { ineligible.set(p.clerkUserId, "no_card"); continue; }
     ok.add(p.clerkUserId);
   }
   return { ok, name, duplicateOf, ineligible };
@@ -177,7 +182,7 @@ export async function getEligibleEntrants(giveawayId: string, preloaded?: Eligib
       where: { giveawayId },
       select: { clerkUserId: true, removed: true, won: true, manual: true, bonusTickets: true },
     }),
-    preloaded ?? eligibility(g.organizationId),
+    preloaded ?? eligibility(g.organizationId, { requireCard: g.requireCard }),
   ]);
   const byUser = new Map(entries.map((e) => [e.clerkUserId, e]));
   const blocked = (id: string) => {

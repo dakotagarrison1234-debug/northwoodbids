@@ -40,11 +40,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   // Same bar as bidding: real profile, not blocked, card on file, not a duplicate
   // account. Tickets for ineligible accounts would never be drawable anyway.
-  const elig = await eligibility(g.organizationId);
+  const elig = await eligibility(g.organizationId, { requireCard: g.requireCard });
   if (!elig.ok.has(userId)) {
     const why = elig.ineligible.get(userId) ?? (elig.name.has(userId) ? undefined : "incomplete");
     const msg =
-      why === "no_card" ? "Add a payment card to your account to enter — same as bidding."
+      why === "no_card" ? "This one's for bidders with a card on file — add one to your account to enter."
       : why === "incomplete" ? "Finish setting up your account (phone + email) to enter."
       : why === "duplicate" ? "Looks like you already have an account with this phone number — use that one."
       : "This account can't enter giveaways.";

@@ -37,7 +37,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     }),
     prisma.giveawayEntry.findMany({ where: { giveawayId: id }, orderBy: { updatedAt: "desc" } }),
     getEligibleEntrants(id),
-    eligibility(orgId),
+    eligibility(orgId, { requireCard: g.requireCard }),
   ]);
   // Fairness summary: who's been filtered out and why (so the owner can see the
   // guardrails working, and spot duplicate-account attempts).
@@ -85,6 +85,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       endedAt: g.endedAt,
       minBidAmount: g.minBidAmount != null ? Number(g.minBidAmount) : null,
       maxTicketsPerUser: g.maxTicketsPerUser,
+      requireCard: g.requireCard,
     },
     prizes: prizes.map((p) => {
       const winner = winnerRows.find((w) => w.wonItemId === p.id);
@@ -143,6 +144,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   } else if (g.status === "ACTIVE") {
     if (d.title !== undefined) data.title = d.title;
     if (d.description !== undefined) data.description = d.description;
+    if (d.requireCard !== undefined) data.requireCard = d.requireCard; // loosen/tighten who counts, even mid-run
     if (d.endsAt !== undefined) data.endsAt = d.endsAt;
     if (d.drawStyle !== undefined) data.drawStyle = d.drawStyle;
   } else if (g.status === "ENDED") {

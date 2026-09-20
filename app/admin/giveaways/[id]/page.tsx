@@ -38,6 +38,7 @@ type Detail = {
     endedAt: string | null;
     minBidAmount: number | null;
     maxTicketsPerUser: number | null;
+    requireCard: boolean;
   };
   prizes: Prize[];
   pool: Entrant[];
@@ -63,7 +64,7 @@ function toLocalInput(iso: string | null) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 function ruleLine(g: Detail["giveaway"]) {
-  if (g.entryMode === "AUTO") return "Every registered bidder holds one ticket automatically.";
+  if (g.entryMode === "AUTO") return g.requireCard ? "Every bidder with a card on file holds one ticket automatically." : "Every registered bidder holds one ticket automatically.";
   if (g.entryMode === "BID") {
     const bits = ["Every bid placed while it's open is one ticket (win or lose)"];
     if (g.minBidAmount != null) bits.push(`bids of $${g.minBidAmount} and up`);
@@ -448,8 +449,13 @@ export default function ManageGiveaway() {
 
         <div className="mb-3 rounded-xl border border-[#e3d6bf] bg-white/70 p-3 text-xs text-[#6f5b46]">
           <div className="text-[11px] font-bold uppercase tracking-wide text-[#8a7559] mb-1">Fair-play filter</div>
-          Same bar as bidding: card on file, phone + email, not blocked, one account per phone number. Kept out right now:{" "}
-          <b className="text-[#241a12]">{d.fairness.filtered.noCard}</b> no card · <b className="text-[#241a12]">{d.fairness.filtered.incomplete}</b> incomplete · <b className="text-[#241a12]">{d.fairness.filtered.blocked}</b> blocked · <b className="text-[#241a12]">{d.fairness.filtered.duplicate}</b> duplicate phone.
+          {g.requireCard ? "Card on file, " : ""}phone + email, not blocked, one account per phone number. Kept out right now:{" "}
+          {g.requireCard && <><b className="text-[#241a12]">{d.fairness.filtered.noCard}</b> no card · </>}<b className="text-[#241a12]">{d.fairness.filtered.incomplete}</b> incomplete · <b className="text-[#241a12]">{d.fairness.filtered.blocked}</b> blocked · <b className="text-[#241a12]">{d.fairness.filtered.duplicate}</b> duplicate phone.
+          {(isDraft || isActive) && (
+            <button onClick={() => patch({ requireCard: !g.requireCard })} className="ml-2 underline font-semibold text-[#6c4d39]">
+              {g.requireCard ? "Switch to any registered bidder" : "Require a card on file"}
+            </button>
+          )}
           {d.fairness.duplicates.length > 0 && (
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {d.fairness.duplicates.map((x, i) => (

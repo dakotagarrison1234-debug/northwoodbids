@@ -60,6 +60,7 @@ export default function GiveawaysPage() {
   const [endsAt, setEndsAt] = useState(() => toLocalInput(new Date(Date.now() + 7 * 86_400_000)));
   const [minBid, setMinBid] = useState("");
   const [maxTickets, setMaxTickets] = useState("");
+  const [requireCard, setRequireCard] = useState(false);
 
   const load = () => {
     fetch("/api/admin/giveaways")
@@ -91,6 +92,7 @@ export default function GiveawaysPage() {
           endsAt: endsAt ? new Date(endsAt).toISOString() : null,
           minBidAmount: entryMode === "BID" ? minBid : null,
           maxTicketsPerUser: entryMode === "BID" ? maxTickets : null,
+          requireCard,
         }),
       });
       const d = await res.json();
@@ -168,6 +170,14 @@ export default function GiveawaysPage() {
               <div className="col-span-2 text-[11px] text-[#8a7559]">Bids on every auction count from the moment it opens until it ends. Leave both blank for the pure “every bid is a ticket.”</div>
             </div>
           )}
+
+          {/* Stipulations */}
+          <label className="block text-sm font-semibold text-[#6f5b46] mb-1">Who counts as registered</label>
+          <div className="grid grid-cols-2 gap-2 mb-1">
+            <Card on={!requireCard} onClick={() => setRequireCard(false)} title="Any registered bidder" sub="Phone + email on the account, not blocked" />
+            <Card on={requireCard} onClick={() => setRequireCard(true)} title="Card on file only" sub="Same bar as bidding — keeps it to real buyers" />
+          </div>
+          <div className="text-[11px] text-[#8a7559] mb-4">Either way it's one account per phone number — duplicate sign-ups never get a second ticket.</div>
 
           {/* 2. When? */}
           <label className="block text-sm font-semibold text-[#6f5b46] mb-1">Entry window</label>

@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
       drawStyle: d.drawStyle ?? (entryMode === "BID" ? "MACHINE" : "WHEEL"),
       minBidAmount: entryMode === "BID" ? d.minBidAmount ?? null : null,
       maxTicketsPerUser: entryMode === "BID" ? d.maxTicketsPerUser ?? null : null,
+      requireCard: d.requireCard ?? false,
       ...fields,
       status: "DRAFT",
     },
