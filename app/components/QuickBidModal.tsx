@@ -156,7 +156,16 @@ export default function QuickBidModal({ itemId, href, onClose }: { itemId: strin
   const retail = item?.retailValue ?? 0;
   const off = retail > 0 && current < retail ? Math.round((1 - current / retail) * 100) : 0;
 
-  const goSignIn = () => router.push(`/sign-in?redirect_url=${encodeURIComponent(window.location.pathname)}`);
+  /**
+   * Leave the pop-up for another page. The body is pinned while the sheet is open,
+   * so we must CLOSE first (unpin + put the scroll back) and only then navigate —
+   * otherwise the restore fires on the new page and drops it at the old scroll spot.
+   */
+  const navigate = (url: string) => {
+    onCloseRef.current();
+    setTimeout(() => router.push(url), 0);
+  };
+  const goSignIn = () => navigate(`/sign-in?redirect_url=${encodeURIComponent(window.location.pathname)}`);
 
   const placeBid = async (amount: number) => {
     if (hasCard === false) { setShowCardModal(true); return; }
@@ -175,7 +184,7 @@ export default function QuickBidModal({ itemId, href, onClose }: { itemId: strin
         if (d.newEndAt) { setEndAt(d.newEndAt); setEnded(false); }
         refreshStanding();
       } else if (d.requiresRegistration) {
-        router.push(`/register?redirect_url=${encodeURIComponent(window.location.pathname)}`);
+        navigate(`/register?redirect_url=${encodeURIComponent(window.location.pathname)}`);
       } else if (d.requiresPaymentMethod) {
         setShowCardModal(true);
       } else {
@@ -215,7 +224,7 @@ export default function QuickBidModal({ itemId, href, onClose }: { itemId: strin
         setMessage({ text: d.proxyFired ? `Max bid set at $${amt.toLocaleString()} — auto-bid placed.` : `Max bid set at $${amt.toLocaleString()}. We'll bid for you up to that.`, type: "success" });
         if (d.newEndAt) { setEndAt(d.newEndAt); setEnded(false); }
         refreshStanding();
-      } else if (d.requiresRegistration) router.push(`/register?redirect_url=${encodeURIComponent(window.location.pathname)}`);
+      } else if (d.requiresRegistration) navigate(`/register?redirect_url=${encodeURIComponent(window.location.pathname)}`);
       else if (d.requiresPaymentMethod) setShowCardModal(true);
       else setMessage({ text: d.error || "Couldn't set that max bid.", type: "error" });
     } catch { setMessage({ text: "Something went wrong", type: "error" }); }
@@ -372,7 +381,7 @@ export default function QuickBidModal({ itemId, href, onClose }: { itemId: strin
                     <button onClick={() => setMaxOpen((o) => !o)} className="text-sm font-bold text-[#6c4d39] underline underline-offset-2">
                       {userProxy ? `Max bid: $${userProxy.maxAmount.toLocaleString()} · change` : "Set a max bid"}
                     </button>
-                    <Link href={href} className="text-sm font-bold text-[#6f5b46] hover:text-[#241a12] underline underline-offset-2">Full details</Link>
+                    <Link href={href} onClick={(e) => { e.preventDefault(); navigate(href); }} className="text-sm font-bold text-[#6f5b46] hover:text-[#241a12] underline underline-offset-2">Full details</Link>
                   </div>
                   {maxOpen && (
                     <div className="mt-2 rounded-2xl border border-[#e3d6bf] bg-white p-3">
@@ -394,7 +403,7 @@ export default function QuickBidModal({ itemId, href, onClose }: { itemId: strin
                 </div>
               )}
               {ended && (
-                <Link href={href} className="mt-3 block text-center rounded-2xl bg-[#241a12] text-[#f6ecda] font-bold py-3">See the result</Link>
+                <Link href={href} onClick={(e) => { e.preventDefault(); navigate(href); }} className="mt-3 block text-center rounded-2xl bg-[#241a12] text-[#f6ecda] font-bold py-3">See the result</Link>
               )}
             </>
           )}
