@@ -229,6 +229,7 @@ export default function UserMenu() {
           <NavLink href="/watchlist" iconEl={<IcoStar className="w-[18px] h-[18px]" filled />} label="Watchlist" sublabel="Lots you have your eye on" onClick={close} active={on("/watchlist")} />
           <NavLink href="/pickup" iconEl={<IcoTruck className="w-[18px] h-[18px]" />} label="Pickup" sublabel="Owosso or Gladwin, your call" onClick={close} active={on("/pickup")} />
           <NavLink href="/refer" iconEl={<IcoGift className="w-[18px] h-[18px]" />} label="Bid Bucks" sublabel="Invite a friend, earn $5 tickets" onClick={close} active={on("/refer")} />
+          <NavLink href="/giveaways" iconEl={<IcoTicket className="w-[18px] h-[18px]" />} label="Giveaways" sublabel="Free prizes, every bid's a ticket" onClick={close} active={on("/giveaways")} />
 
           <SectionLabel>Account</SectionLabel>
           <NavLink href="/account" iconEl={<IcoUser />} label="Profile" sublabel="Name, phone, payment cards" onClick={close} active={on("/account")} />

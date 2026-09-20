@@ -4,9 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import SpinWheel, { type DrawResult } from "./SpinWheel";
+import TicketMachine from "./TicketMachine";
 import { IcoTrophy, IcoCheck } from "@/app/components/BidIcons";
 
 type Requirement = "NONE" | "INFO" | "ANSWER";
+type EntryMode = "AUTO" | "CLICK" | "BID";
+type DrawStyle = "WHEEL" | "MACHINE";
+type Phase = "draft" | "scheduled" | "live" | "ended" | "complete";
 type Prize = {
   id: string;
   title: string;
@@ -15,31 +19,61 @@ type Prize = {
   status: string;
   wonBy: { clerkUserId: string; name: string } | null;
 };
-type Entrant = { clerkUserId: string; name: string };
+type Entrant = { clerkUserId: string; name: string; tickets: number };
 type Winner = { clerkUserId: string; name: string; itemId: string | null; itemTitle: string };
 type Detail = {
   giveaway: {
     id: string;
     title: string;
     description: string | null;
-    status: "DRAFT" | "ACTIVE" | "DRAWN";
+    status: "DRAFT" | "ACTIVE" | "ENDED" | "DRAWN";
+    phase: Phase;
+    entryMode: EntryMode;
+    drawStyle: DrawStyle;
     requirement: Requirement;
     requirementPrompt: string | null;
     requirementAnswer: string | null;
+    startsAt: string | null;
     endsAt: string | null;
+    endedAt: string | null;
+    minBidAmount: number | null;
+    maxTicketsPerUser: number | null;
   };
   prizes: Prize[];
   pool: Entrant[];
   winners: Winner[];
-  removed: Entrant[];
-  counts: { prizes: number; drawn: number; eligible: number };
+  removed: { clerkUserId: string; name: string }[];
+  counts: { prizes: number; drawn: number; eligible: number; tickets: number };
+  fairness: { filtered: { noCard: number; incomplete: number; blocked: number; duplicate: number }; duplicates: { name: string; sameAs: string }[] };
 };
 
-const REQ_LABEL: Record<Requirement, string> = {
-  NONE: "Everyone auto-entered",
-  INFO: "Must submit info to enter",
-  ANSWER: "Must answer correctly to enter",
+const PHASE: Record<Phase, { label: string; cls: string }> = {
+  draft: { label: "Draft", cls: "bg-[#efe6d4] text-[#8a7559]" },
+  scheduled: { label: "Scheduled", cls: "bg-[#e9dcc6] text-[#6c4d39]" },
+  live: { label: "Live", cls: "bg-[#dff0e4] text-[#2f7a48]" },
+  ended: { label: "Ended · pull winners", cls: "bg-[#fbe6c8] text-[#a85f28]" },
+  complete: { label: "Complete", cls: "bg-[#e6dcff] text-[#5b46a8]" },
 };
+const fmt = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleString("en-US", { timeZone: "America/Detroit", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+function toLocalInput(iso: string | null) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function ruleLine(g: Detail["giveaway"]) {
+  if (g.entryMode === "AUTO") return "Every registered bidder holds one ticket automatically.";
+  if (g.entryMode === "BID") {
+    const bits = ["Every bid placed while it's open is one ticket (win or lose)"];
+    if (g.minBidAmount != null) bits.push(`bids of $${g.minBidAmount} and up`);
+    if (g.maxTicketsPerUser != null) bits.push(`max ${g.maxTicketsPerUser} per person`);
+    return bits.join(" · ") + ".";
+  }
+  if (g.requirement === "NONE") return "Tap to enter — one ticket each.";
+  if (g.requirement === "INFO") return `Tap + answer “${g.requirementPrompt}” (any answer) — one ticket each.`;
+  return `Tap + answer “${g.requirementPrompt}” correctly — one ticket each.`;
+}
 
 export default function ManageGiveaway() {
   const { id } = useParams<{ id: string }>();
@@ -125,7 +159,7 @@ export default function ManageGiveaway() {
   };
 
   // ── Entrants ──────────────────────────────────────────────────────────────
-  type Match = { clerkUserId: string; name: string; email: string; inWheel: boolean; removed: boolean; won: boolean };
+  type Match = { clerkUserId: string; name: string; email: string; inWheel: boolean; tickets: number; bonusTickets: number; removed: boolean; won: boolean; ineligible: "blocked" | "incomplete" | "no_card" | "duplicate" | null; duplicateOf: string | null };
   const [q, setQ] = useState("");
   const [results, setResults] = useState<Match[]>([]);
 
@@ -150,6 +184,15 @@ export default function ManageGiveaway() {
     await fetch(`/api/admin/giveaways/${id}/entries`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clerkUserId, removed }) });
     runSearch(q); load();
   };
+  const setBonus = async (clerkUserId: string, current: number) => {
+    const v = window.prompt("Bonus tickets for this person (0 to clear):", String(current));
+    if (v == null) return;
+    await fetch(`/api/admin/giveaways/${id}/entries`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clerkUserId, bonusTickets: Number(v) || 0 }) });
+    runSearch(q); load();
+  };
+
+  // ── Edit window / draw style (while published) ────────────────────────────
+  const [editEnd, setEditEnd] = useState<string | null>(null);
 
   const draw = useCallback(async (): Promise<DrawResult | { error: string }> => {
     const res = await fetch(`/api/admin/giveaways/${id}/draw`, { method: "POST" });
@@ -163,7 +206,7 @@ export default function ManageGiveaway() {
     const res = await fetch(`/api/admin/giveaways/${id}/award`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ clerkUserId: r.winner.clerkUserId, itemId: r.prize.id }),
+      body: JSON.stringify({ clerkUserId: r.winner.clerkUserId, itemId: r.prize.id, token: r.token }),
     });
     if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "award failed"); }
     load();
@@ -188,8 +231,10 @@ export default function ManageGiveaway() {
   const g = d.giveaway;
   const isDraft = g.status === "DRAFT";
   const isActive = g.status === "ACTIVE";
+  const isEnded = g.status === "ENDED";
   const unclaimed = d.prizes.filter((p) => !p.wonBy).length;
-  const canSpin = isActive && unclaimed > 0 && d.counts.eligible > 0;
+  const canSpin = (isActive || isEnded) && unclaimed > 0 && d.counts.eligible > 0;
+  const phase = PHASE[g.phase];
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
@@ -197,13 +242,14 @@ export default function ManageGiveaway() {
 
       <div className="flex items-start justify-between gap-3 mt-2 mb-1">
         <h1 className="text-2xl sm:text-3xl font-semibold text-[#241a12]">{g.title}</h1>
-        <span className={`shrink-0 text-[11px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full ${isActive ? "bg-[#dff0e4] text-[#2f7a48]" : g.status === "DRAWN" ? "bg-[#e6dcff] text-[#5b46a8]" : "bg-[#efe6d4] text-[#8a7559]"}`}>
-          {g.status === "DRAWN" ? "Complete" : g.status}
-        </span>
+        <span className={`shrink-0 text-[11px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full ${phase.cls}`}>{phase.label}</span>
       </div>
-      <div className="text-sm text-[#8a7559] mb-4">
-        {REQ_LABEL[g.requirement]}
-        {g.requirement !== "NONE" && g.requirementPrompt ? ` — “${g.requirementPrompt}”` : ""}
+      <div className="text-sm text-[#8a7559] mb-1">{ruleLine(g)}</div>
+      <div className="text-xs text-[#8a7559] mb-4 flex flex-wrap gap-x-3">
+        <span>{g.drawStyle === "MACHINE" ? "Ticket machine" : "Prize wheel"}</span>
+        {g.startsAt && <span>· opens {fmt(g.startsAt)}</span>}
+        {g.endsAt && <span>· {g.phase === "ended" || g.phase === "complete" ? "closed" : "closes"} {fmt(g.endedAt ?? g.endsAt)}</span>}
+        {!g.endsAt && !isDraft && g.phase !== "complete" && <span>· closes when you end it</span>}
       </div>
 
       {msg && <div className="mb-4 rounded-xl bg-[#fbe9e5] text-red-700 px-4 py-2.5 text-sm font-semibold">{msg}</div>}
@@ -216,8 +262,28 @@ export default function ManageGiveaway() {
           </button>
         )}
         {isActive && (
-          <button onClick={() => patch({ status: "DRAFT" })} className="bg-white border border-[#cdbda3] text-[#6f5b46] font-semibold px-4 py-2.5 rounded-xl text-sm">
-            Pause (hide from home)
+          <>
+            <button onClick={() => patch({ status: "ENDED" })} className="bg-[#c47b3e] hover:bg-[#a85f28] text-white font-bold px-5 py-2.5 rounded-xl text-sm">
+              End now (close entries)
+            </button>
+            <button onClick={() => setEditEnd(editEnd == null ? toLocalInput(g.endsAt) : null)} className="bg-white border border-[#cdbda3] text-[#6f5b46] font-semibold px-4 py-2.5 rounded-xl text-sm">
+              Change close time
+            </button>
+            {d.counts.drawn === 0 && (
+              <button onClick={() => patch({ status: "DRAFT" })} className="bg-white border border-[#cdbda3] text-[#6f5b46] font-semibold px-4 py-2.5 rounded-xl text-sm">
+                Unpublish
+              </button>
+            )}
+          </>
+        )}
+        {isEnded && d.counts.drawn === 0 && (
+          <button onClick={() => setEditEnd(editEnd == null ? toLocalInput(g.endsAt) : null)} className="bg-white border border-[#cdbda3] text-[#6f5b46] font-semibold px-4 py-2.5 rounded-xl text-sm">
+            Reopen with a new close time
+          </button>
+        )}
+        {(isActive || isEnded) && (
+          <button onClick={() => patch({ drawStyle: g.drawStyle === "MACHINE" ? "WHEEL" : "MACHINE" })} className="bg-white border border-[#cdbda3] text-[#6f5b46] font-semibold px-4 py-2.5 rounded-xl text-sm">
+            Switch to {g.drawStyle === "MACHINE" ? "wheel" : "ticket machine"}
           </button>
         )}
         {g.status === "DRAWN" && (
@@ -227,22 +293,46 @@ export default function ManageGiveaway() {
         )}
       </div>
 
-      {/* ── Spin wheel (when live) ─────────────────────────────────────────── */}
-      {(isActive || g.status === "DRAWN") && (
+      {editEnd != null && (
+        <div className="mb-6 rounded-2xl border border-[#e3d6bf] bg-[#fbf4e6] p-4 flex flex-wrap items-end gap-2">
+          <div>
+            <div className="text-xs font-bold uppercase tracking-wide text-[#8a7559] mb-1">{isEnded ? "New close time" : "Closes"}</div>
+            <input type="datetime-local" value={editEnd} onChange={(e) => setEditEnd(e.target.value)} className="bg-white border border-[#cdbda3] rounded-xl px-3 py-2.5 text-[#241a12]" />
+          </div>
+          <button
+            onClick={async () => {
+              await patch({ endsAt: editEnd ? new Date(editEnd).toISOString() : null, ...(isEnded ? { status: "ACTIVE" } : {}) });
+              setEditEnd(null);
+            }}
+            className="bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold px-4 py-2.5 rounded-xl text-sm"
+          >
+            {isEnded ? "Reopen" : "Save"}
+          </button>
+          <button onClick={() => setEditEnd(null)} className="text-[#6f5b46] font-semibold px-3 py-2.5 text-sm">Cancel</button>
+        </div>
+      )}
+
+      {/* ── Draw (live, ended, or complete) ────────────────────────────────── */}
+      {(isActive || isEnded || g.status === "DRAWN") && (
         <section className="mb-8 rounded-2xl border border-[#e3d6bf] bg-[#fbf4e6] p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-bold text-lg text-[#241a12]">Draw winners</h2>
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="font-bold text-lg text-[#241a12]">Pull winners</h2>
             <div className="text-sm text-[#8a7559]">
-              {d.counts.eligible} in the wheel · {unclaimed} prize{unclaimed !== 1 ? "s" : ""} left
+              {d.counts.tickets.toLocaleString()} tickets · {d.counts.eligible.toLocaleString()} people · {unclaimed} prize{unclaimed !== 1 ? "s" : ""} left
             </div>
           </div>
+          {isActive && unclaimed > 0 && (
+            <div className="text-xs text-[#a85f28] font-semibold mb-3">
+              Entries are still open — tickets keep stacking until it closes. You can pull now, but most people wait for “Ended”.
+            </div>
+          )}
           {unclaimed === 0 ? (
             <div className="flex items-center justify-center gap-2 py-6 text-[#4a7c59] font-bold"><IcoTrophy className="w-5 h-5" /> All prizes drawn!</div>
           ) : d.counts.eligible === 0 ? (
-            <div className="text-center py-6 text-[#8a7559]">No eligible entrants yet.</div>
+            <div className="text-center py-6 text-[#8a7559]">No tickets in the drum yet.</div>
           ) : (
             <>
-              <div className="flex justify-center mb-3">
+              <div className="flex justify-center mb-3 mt-2">
                 <button
                   onClick={() => setPresenting(true)}
                   className="inline-flex items-center gap-2 bg-[#241a12] hover:bg-black text-[#f6ecda] font-bold px-5 py-2.5 rounded-xl text-sm"
@@ -250,14 +340,27 @@ export default function ManageGiveaway() {
                   Full-screen draw (for the camera)
                 </button>
               </div>
-              <SpinWheel
-                entrants={d.pool}
-                canSpin={canSpin}
-                brand="Northwood Bids"
-                giveawayTitle={g.title}
-                onDraw={draw}
-                onAward={award}
-              />
+              {g.drawStyle === "MACHINE" ? (
+                <TicketMachine
+                  entrants={d.pool}
+                  totalTickets={d.counts.tickets}
+                  canSpin={canSpin}
+                  brand="Northwood Bids"
+                  giveawayTitle={g.title}
+                  size={640}
+                  onDraw={draw}
+                  onAward={award}
+                />
+              ) : (
+                <SpinWheel
+                  entrants={d.pool}
+                  canSpin={canSpin}
+                  brand="Northwood Bids"
+                  giveawayTitle={g.title}
+                  onDraw={draw}
+                  onAward={award}
+                />
+              )}
             </>
           )}
         </section>
@@ -292,7 +395,7 @@ export default function ManageGiveaway() {
           {d.prizes.length === 0 && <div className="text-sm text-[#8a7559]">No prizes yet — add one below.</div>}
         </div>
 
-        {(isDraft || isActive) && (
+        {(isDraft || isActive || isEnded) && (
           <div className="rounded-2xl border border-[#e3d6bf] bg-[#fbf4e6] p-4">
             <div className="font-semibold text-[#6f5b46] text-sm mb-2">Add a prize</div>
             <input value={pTitle} onChange={(e) => setPTitle(e.target.value)} placeholder="Prize name" className="w-full bg-white border border-[#cdbda3] rounded-xl px-3 py-2.5 mb-2 text-[#241a12]" />
@@ -306,7 +409,7 @@ export default function ManageGiveaway() {
             <div className="flex items-center gap-2 mb-3">
               <input ref={fileRef} type="file" accept="image/*" onChange={uploadPhoto} className="hidden" id="prize-photo" />
               <label htmlFor="prize-photo" className="cursor-pointer bg-white border border-[#cdbda3] rounded-xl px-3 py-2 text-sm text-[#6f5b46] font-semibold">
-                {uploading ? "Uploading…" : pPhoto ? "Photo added ✓" : "Add photo"}
+                {uploading ? "Uploading…" : pPhoto ? "Photo added" : "Add photo"}
               </label>
               {pPhoto && (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -322,12 +425,39 @@ export default function ManageGiveaway() {
 
       {/* ── Entrants ───────────────────────────────────────────────────────── */}
       <section className="mb-8">
-        <h2 className="font-bold text-lg text-[#241a12] mb-1">Entrants ({d.counts.eligible} in the wheel)</h2>
+        <h2 className="font-bold text-lg text-[#241a12] mb-1">Tickets ({d.counts.tickets.toLocaleString()} across {d.counts.eligible.toLocaleString()} people)</h2>
         <p className="text-xs text-[#8a7559] mb-3">
-          {g.requirement === "NONE"
-            ? "Every registered bidder is in automatically. Remove anyone you want to exclude."
-            : "Bidders who submitted a valid entry are in. You can hand-add or remove anyone."}
+          {g.entryMode === "AUTO"
+            ? "Every registered bidder is in automatically. Remove anyone you want to exclude, or hand out bonus tickets."
+            : g.entryMode === "BID"
+              ? "Tickets are counted live from bids placed in the window. Remove anyone, hand-add someone, or give bonus tickets."
+              : "Bidders who tapped in (and answered, if asked) hold a ticket. You can hand-add, remove, or give bonus tickets."}
         </p>
+        {g.entryMode === "BID" && d.pool.length > 0 && (
+          <div className="mb-3 rounded-xl border border-[#e3d6bf] bg-white/70 p-3">
+            <div className="text-[11px] font-bold uppercase tracking-wide text-[#8a7559] mb-1.5">Top ticket holders</div>
+            <div className="flex flex-wrap gap-1.5">
+              {d.pool.slice(0, 12).map((e) => (
+                <span key={e.clerkUserId} className="text-xs bg-[#f6ecda] border border-[#e3d6bf] rounded-full px-2.5 py-1 text-[#6f5b46]">
+                  {e.name} · <b className="text-[#241a12]">{e.tickets}</b>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="mb-3 rounded-xl border border-[#e3d6bf] bg-white/70 p-3 text-xs text-[#6f5b46]">
+          <div className="text-[11px] font-bold uppercase tracking-wide text-[#8a7559] mb-1">Fair-play filter</div>
+          Same bar as bidding: card on file, phone + email, not blocked, one account per phone number. Kept out right now:{" "}
+          <b className="text-[#241a12]">{d.fairness.filtered.noCard}</b> no card · <b className="text-[#241a12]">{d.fairness.filtered.incomplete}</b> incomplete · <b className="text-[#241a12]">{d.fairness.filtered.blocked}</b> blocked · <b className="text-[#241a12]">{d.fairness.filtered.duplicate}</b> duplicate phone.
+          {d.fairness.duplicates.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {d.fairness.duplicates.map((x, i) => (
+                <span key={i} className="bg-[#fbe6c8] text-[#a85f28] rounded-full px-2 py-0.5 font-semibold">{x.name} = {x.sameAs}</span>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div className="mb-3">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a bidder to add or remove…" className="w-full bg-white border border-[#cdbda3] rounded-xl px-3 py-2.5 text-[#241a12]" />
@@ -339,9 +469,22 @@ export default function ManageGiveaway() {
                 results.map((r) => (
                   <div key={r.clerkUserId} className="flex items-center justify-between gap-2 px-3 py-2">
                     <div className="min-w-0">
-                      <div className="font-semibold text-[#241a12] text-sm truncate">{r.name}</div>
+                      <div className="font-semibold text-[#241a12] text-sm truncate">
+                        {r.name}
+                        {r.inWheel && !r.won && <span className="ml-2 text-[11px] font-bold text-[#a85f28]">{r.tickets} ticket{r.tickets !== 1 ? "s" : ""}{r.bonusTickets > 0 ? ` (+${r.bonusTickets} bonus)` : ""}</span>}
+                      </div>
                       {r.email && <div className="text-xs text-[#8a7559] truncate">{r.email}</div>}
+                      {r.ineligible && (
+                        <div className="text-[11px] font-bold text-[#a85f28]">
+                          {r.ineligible === "no_card" ? "No card on file — can't hold a ticket" : r.ineligible === "incomplete" ? "Account incomplete — can't hold a ticket" : r.ineligible === "blocked" ? "Blocked" : `Duplicate phone — same as ${r.duplicateOf ?? "another account"}`}
+                        </div>
+                      )}
                     </div>
+                    {!r.won && !r.removed && !r.ineligible && (
+                      <button onClick={() => setBonus(r.clerkUserId, r.bonusTickets)} className="shrink-0 text-xs font-bold text-[#6c4d39] border border-[#cdbda3] rounded-full px-3 py-1 hover:bg-[#f6ecda]">
+                        Bonus
+                      </button>
+                    )}
                     {r.won ? (
                       <span className="shrink-0 inline-flex items-center gap-1 text-xs font-bold text-[#4a7c59]"><IcoCheck className="w-3.5 h-3.5" /> Won</span>
                     ) : r.inWheel ? (
@@ -352,7 +495,7 @@ export default function ManageGiveaway() {
                       <button onClick={() => setRemoved(r.clerkUserId, false)} className="shrink-0 text-xs font-bold text-[#4a7c59] border border-[#cdecd4] rounded-full px-3 py-1 hover:bg-[#f2f9f4]">
                         Restore
                       </button>
-                    ) : (
+                    ) : r.ineligible ? null : (
                       <button onClick={() => addName(r.clerkUserId)} className="shrink-0 text-xs font-bold text-[#6c4d39] border border-[#cdbda3] rounded-full px-3 py-1 hover:bg-[#f6ecda]">
                         Add
                       </button>
@@ -385,16 +528,27 @@ export default function ManageGiveaway() {
             onClick={() => setPresenting(false)}
             className="absolute top-4 right-4 text-[#f1e7d5]/70 hover:text-[#f1e7d5] font-bold text-sm bg-white/10 rounded-full px-4 py-2"
           >
-            Exit ✕
+            Exit
           </button>
           <div className="text-center mb-3">
             <div className="text-[#f0a35a] font-black uppercase tracking-[0.24em] text-xs">Northwood Bids Giveaway</div>
             <div className="text-[#fbf4e6] font-display text-2xl sm:text-3xl font-black mt-1">{g.title}</div>
             <div className="text-[#c9b79a] text-sm mt-1">
-              {d.counts.eligible.toLocaleString()} entered · {unclaimed} prize{unclaimed !== 1 ? "s" : ""} left
+              {d.counts.tickets.toLocaleString()} tickets · {d.counts.eligible.toLocaleString()} people · {unclaimed} prize{unclaimed !== 1 ? "s" : ""} left
             </div>
           </div>
-          {canSpin ? (
+          {canSpin && g.drawStyle === "MACHINE" ? (
+            <TicketMachine
+              entrants={d.pool}
+              totalTickets={d.counts.tickets}
+              canSpin={canSpin}
+              brand="Northwood Bids"
+              giveawayTitle={g.title}
+              size={Math.min(1100, typeof window !== "undefined" ? window.innerWidth - 32 : 900)}
+              onDraw={draw}
+              onAward={award}
+            />
+          ) : canSpin ? (
             <SpinWheel
               entrants={d.pool}
               canSpin={canSpin}
@@ -405,7 +559,7 @@ export default function ManageGiveaway() {
               onAward={award}
             />
           ) : (
-            <div className="text-[#fbf4e6] text-lg font-bold">All prizes drawn!</div>
+            <div className="text-[#fbf4e6] text-lg font-bold">{unclaimed === 0 ? "All prizes drawn!" : "No tickets in the drum."}</div>
           )}
         </div>
       )}

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { type OrgRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg, requireRole } from "@/lib/auth";
-import { getEligibleEntrants } from "@/lib/giveaway";
+import { getEligibleEntrants, pickWeighted, signDraw } from "@/lib/giveaway";
 
 /**
  * POST /api/admin/giveaways/[id]/draw  — PREVIEW a winner (does NOT commit).
@@ -23,7 +23,8 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
   const g = await prisma.giveaway.findUnique({ where: { id }, select: { organizationId: true, status: true } });
   if (!g || g.organizationId !== orgId) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (g.status !== "ACTIVE") return NextResponse.json({ error: "This giveaway isn't live." }, { status: 409 });
+  // Pull from a live window OR after it's closed ("ended — waiting to pull winners").
+  if (g.status !== "ACTIVE" && g.status !== "ENDED") return NextResponse.json({ error: "This giveaway isn't open." }, { status: 409 });
 
   const prizes = await prisma.item.findMany({
     where: { giveawayId: id },
@@ -36,12 +37,19 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   const pool = await getEligibleEntrants(id);
   if (pool.length === 0) return NextResponse.json({ error: "No eligible entrants left to draw." }, { status: 409 });
 
-  const winner = pool[Math.floor(Math.random() * pool.length)];
+  // Every ticket is one chance — a bidder with 14 tickets is 14x as likely as one with 1.
+  const winner = pickWeighted(pool);
+  if (!winner) return NextResponse.json({ error: "No tickets in the drum." }, { status: 409 });
   const prize = unclaimed[0];
+
+  const { token } = signDraw(id, winner.clerkUserId, prize.id);
+  console.info(`[giveaway draw] ${id} → ${winner.clerkUserId} (${winner.tickets} tickets) for ${prize.id}`);
 
   return NextResponse.json({
     success: true,
-    winner: { clerkUserId: winner.clerkUserId, name: winner.name },
+    token,
+    winner: { clerkUserId: winner.clerkUserId, name: winner.name, tickets: winner.tickets },
+    totalTickets: pool.reduce((s, e) => s + e.tickets, 0),
     prize: { id: prize.id, title: prize.title },
     remaining: unclaimed.length,
   });

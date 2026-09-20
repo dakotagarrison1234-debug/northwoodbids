@@ -22,7 +22,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
   const { id } = await params;
 
-  const g = await prisma.giveaway.findUnique({ where: { id }, select: { organizationId: true, status: true } });
+  const g = await prisma.giveaway.findUnique({ where: { id }, select: { organizationId: true, status: true, endedAt: true } });
   if (!g || g.organizationId !== orgId) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await request.json().catch(() => ({}));
@@ -70,9 +70,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       })
     );
   }
-  // A completed giveaway now has an open prize again — reopen it for drawing.
+  // A completed giveaway now has an open prize again — back to "ended, pull winners"
+  // (the entry window stays closed; we're just re-drawing).
   if (g.status === "DRAWN") {
-    ops.push(prisma.giveaway.update({ where: { id }, data: { status: "ACTIVE" } }));
+    // Keep the original close time if it already closed; only stamp one if it was drawn while still live.
+    ops.push(prisma.giveaway.update({ where: { id }, data: { status: "ENDED", endedAt: g.endedAt ?? new Date() } }));
   }
 
   await prisma.$transaction(ops);

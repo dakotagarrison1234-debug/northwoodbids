@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Northwood Bids — Ticket Machine draw preview</title>
+<style>
+  :root { --espresso:#241a12; --cream:#fbf4e6; --gold:#f0a35a; --amber:#c47b3e; --tan:#c9b79a; }
+  * { box-sizing: border-box; }
+  body { margin:0; background: radial-gradient(1200px 700px at 50% 20%, #3a2a1c 0%, #1a130d 55%, #0e0a07 100%); color: var(--cream); font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif; min-height:100vh; display:flex; flex-direction:column; align-items:center; }
+  header { text-align:center; padding: 22px 16px 6px; }
+  .eyebrow { color: var(--gold); font-weight:900; letter-spacing:.24em; text-transform:uppercase; font-size:11px; }
+  h1 { margin:6px 0 2px; font-size: clamp(22px, 4vw, 34px); font-weight: 900; letter-spacing:-.01em; }
+  .sub { color: var(--tan); font-size: 14px; }
+  .stage { position:relative; width:min(96vw, 960px); aspect-ratio:16/9; border-radius: 22px; overflow:hidden; box-shadow: 0 30px 80px -30px rgba(0,0,0,.9), 0 0 0 1px rgba(240,163,90,.18); background:#000; margin-top:14px; }
+  video { width:100%; height:100%; object-fit:cover; display:block; }
+  /* Name overlay — anchored to where the ticket rests in the final frame */
+  .name { position:absolute; left:24%; top:20%; width:52%; height:62%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; opacity:0; transform: scale(.94); transition: opacity .6s ease, transform .6s cubic-bezier(.2,.9,.2,1.2); pointer-events:none; }
+  .name.show { opacity:1; transform: scale(1); }
+  .name .t1 { color:#8a5a2b; font-size: clamp(10px, 1.4vw, 14px); font-weight:900; letter-spacing:.28em; text-transform:uppercase; }
+  .name .t2 { color:#241a12; font-size: clamp(26px, 5.2vw, 58px); font-weight:900; line-height:1.02; letter-spacing:-.01em; margin-top: 6px; text-shadow: 0 1px 0 rgba(255,255,255,.6); }
+  .name .t3 { color:#6c4d39; font-size: clamp(11px, 1.6vw, 16px); font-weight:700; margin-top:8px; }
+  .name .t4 { margin-top:10px; background:#241a12; color:#f0a35a; font-size: clamp(10px, 1.3vw, 13px); font-weight:900; letter-spacing:.16em; text-transform:uppercase; padding:6px 14px; border-radius:999px; }
+  /* Idle prompt */
+  .idle { position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:center; padding-bottom:22px; background: linear-gradient(to top, rgba(14,10,7,.55), transparent 45%); }
+  .idle.hide { display:none; }
+  button.draw { background: linear-gradient(180deg, #f0a35a, #c47b3e); color:#241a12; border:0; font-weight:900; font-size:16px; letter-spacing:.06em; text-transform:uppercase; padding:14px 30px; border-radius:999px; cursor:pointer; box-shadow: 0 10px 30px -8px rgba(240,163,90,.7), inset 0 1px 0 rgba(255,255,255,.5); }
+  button.draw:active { transform: translateY(1px); }
+  /* Winner card that slides in after the ticket lands */
+  .card { position:absolute; left:50%; bottom:-140px; transform:translateX(-50%); width:min(92%, 560px); background: linear-gradient(180deg, #fbf4e6, #f1e7d5); color:#241a12; border-radius:18px; padding:14px 18px; display:flex; align-items:center; gap:14px; box-shadow: 0 20px 50px -20px rgba(0,0,0,.8); transition: bottom .7s cubic-bezier(.2,.9,.2,1.1); border:1px solid rgba(196,123,62,.35); }
+  .card.show { bottom:18px; }
+  .card .prize { width:56px; height:56px; border-radius:12px; background:#e3d6bf; flex:0 0 auto; display:grid; place-items:center; color:#8a7559; font-size:11px; font-weight:800; }
+  .card .who { font-weight:900; font-size:18px; }
+  .card .what { color:#6c4d39; font-size:13px; font-weight:600; }
+  .card .brand { margin-left:auto; text-align:right; color:#a85f28; font-weight:900; font-size:11px; letter-spacing:.2em; text-transform:uppercase; }
+  .controls { display:flex; gap:10px; margin:14px 0 30px; flex-wrap:wrap; justify-content:center; }
+  .controls button { background: rgba(255,255,255,.08); color: var(--cream); border:1px solid rgba(255,255,255,.14); padding:10px 16px; border-radius:12px; font-weight:700; cursor:pointer; }
+  .note { max-width: 720px; color: var(--tan); font-size: 13px; line-height:1.5; text-align:center; padding: 0 16px 30px; }
+  .note b { color: var(--cream); }
+</style>
+</head>
+<body>
+  <header>
+    <div class="eyebrow">Northwood Bids Giveaway</div>
+    <h1>Fall Kickoff Giveaway</h1>
+    <div class="sub">1,284 tickets in the machine · 3 prizes left</div>
+  </header>
+
+  <div class="stage" id="stage">
+    <video id="v" src="https://d8j0ntlcm91z4.cloudfront.net/user_3IByyQncVzaXbwKjQO3GCQGqPd7/hf_20260920_130847_54b85d44-f1cc-4a38-add4-9707601b54fc.mp4" playsinline preload="auto" muted></video>
+    <div class="name" id="name">
+      <div class="t1">Winner</div>
+      <div class="t2" id="who">Sarah M.</div>
+      <div class="t3" id="entries">14 tickets in the drum</div>
+      <div class="t4">Northwood Bids</div>
+    </div>
+    <div class="idle" id="idle">
+      <button class="draw" id="go">Pull a ticket</button>
+    </div>
+    <div class="card" id="card">
+      <div class="prize">PRIZE</div>
+      <div>
+        <div class="who" id="cwho">Sarah M.</div>
+        <div class="what">won the <b>Milwaukee M18 Drill Kit</b></div>
+      </div>
+      <div class="brand">Northwood<br>Bids</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="again">Reset</button>
+    <button id="sound">Sound: off</button>
+  </div>
+
+  <p class="note">
+    <b>How it works in the app:</b> the server picks the winner the instant you tap Pull a ticket (weighted by how many tickets they hold). The machine plays, the claw snags one, and the moment the ticket is held up the name fades onto it — then the branded winner card slides in for the screenshot. Re-pull discards; <b>Done</b> is what actually awards the prize. Same rules as the wheel, just a different machine.
+  </p>
+
+<script>
+  const v = document.getElementById('v');
+  const name = document.getElementById('name');
+  const idle = document.getElementById('idle');
+  const card = document.getElementById('card');
+  const NAMES = [["Sarah M.", 14, "Milwaukee M18 Drill Kit"],["Dakota G.", 3, "Ninja Air Fryer"],["Marcus T.", 27, "Dyson V8"],["Brianna L.", 1, "LEGO Icons Set"]];
+  let muted = true;
+  function reset(){ v.pause(); v.currentTime = 0; name.classList.remove('show'); card.classList.remove('show'); idle.classList.remove('hide'); }
+  document.getElementById('go').onclick = async () => {
+    const pick = NAMES[Math.floor(Math.random()*NAMES.length)];
+    document.getElementById('who').textContent = pick[0];
+    document.getElementById('cwho').textContent = pick[0];
+    document.getElementById('entries').textContent = pick[1] + (pick[1]===1?' ticket':' tickets') + ' in the drum';
+    document.querySelector('.card .what b').textContent = pick[2];
+    idle.classList.add('hide'); name.classList.remove('show'); card.classList.remove('show');
+    v.muted = muted; v.currentTime = 0; await v.play();
+  };
+  // Reveal the name when the ticket is held up; freeze on the final frame; then the card.
+  v.addEventListener('timeupdate', () => { if (v.currentTime >= 7.55 && !name.classList.contains('show')) name.classList.add('show'); });
+  v.addEventListener('ended', () => { name.classList.add('show'); setTimeout(() => card.classList.add('show'), 700); });
+  document.getElementById('again').onclick = reset;
+  document.getElementById('sound').onclick = (e) => { muted = !muted; v.muted = muted; e.target.textContent = 'Sound: ' + (muted ? 'off' : 'on'); };
+</script>
+</body>
+</html>

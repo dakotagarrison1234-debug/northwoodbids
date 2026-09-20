@@ -1,14 +1,18 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
-import { type OrgRole, type GiveawayRequirementType } from "@prisma/client";
+import { type OrgRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg, requireRole } from "@/lib/auth";
+import { phaseOf, sweepEndedGiveaways } from "@/lib/giveaway";
+import { parseGiveawayFields, validateForLive } from "@/lib/giveawayAdmin";
 
 // GET /api/admin/giveaways — list this org's giveaways (newest first).
 export async function GET() {
   const membership = await getUserOrg();
   if (!membership) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const orgId = membership.organizationId;
+
+  await sweepEndedGiveaways(orgId);
 
   const giveaways = await prisma.giveaway.findMany({
     where: { organizationId: orgId, archived: false },
@@ -32,9 +36,13 @@ export async function GET() {
       id: g.id,
       title: g.title,
       status: g.status,
+      phase: phaseOf(g),
+      entryMode: g.entryMode,
+      drawStyle: g.drawStyle,
       requirement: g.requirement,
       prizeCount: g._count.items,
       winnersDrawn: wonBy.get(g.id) ?? 0,
+      startsAt: g.startsAt,
       endsAt: g.endsAt,
       createdAt: g.createdAt,
     })),
@@ -50,38 +58,34 @@ export async function POST(request: NextRequest) {
   }
   const orgId = membership.organizationId;
 
-  const body = await request.json().catch(() => ({}));
-  const title = String(body.title ?? "").trim();
-  if (!title) return NextResponse.json({ error: "Give your giveaway a title." }, { status: 400 });
+  const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+  const parsed = parseGiveawayFields(body);
+  if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
+  const d = parsed.data;
 
-  const requirement: GiveawayRequirementType = ["NONE", "INFO", "ANSWER"].includes(body.requirement)
-    ? body.requirement
-    : "NONE";
-  const requirementPrompt =
-    requirement !== "NONE" && typeof body.requirementPrompt === "string" && body.requirementPrompt.trim()
-      ? body.requirementPrompt.trim().slice(0, 200)
-      : null;
-  const requirementAnswer =
-    requirement === "ANSWER" && typeof body.requirementAnswer === "string" && body.requirementAnswer.trim()
-      ? body.requirementAnswer.trim().slice(0, 200)
-      : null;
-
-  if (requirement === "ANSWER" && !requirementAnswer) {
-    return NextResponse.json({ error: "A correct-answer giveaway needs the expected answer." }, { status: 400 });
-  }
-  if (requirement !== "NONE" && !requirementPrompt) {
-    return NextResponse.json({ error: "Add the question/prompt entrants will see." }, { status: 400 });
-  }
+  const entryMode = d.entryMode ?? "AUTO";
+  // A question only makes sense for tap-to-enter.
+  const requirement = entryMode === "CLICK" ? d.requirement ?? "NONE" : "NONE";
+  const fields = {
+    entryMode,
+    requirement,
+    requirementPrompt: requirement !== "NONE" ? d.requirementPrompt ?? null : null,
+    requirementAnswer: requirement === "ANSWER" ? d.requirementAnswer ?? null : null,
+    startsAt: d.startsAt ?? null,
+    endsAt: d.endsAt ?? null,
+  };
+  const problem = validateForLive(fields);
+  if (problem) return NextResponse.json({ error: problem }, { status: 400 });
 
   const giveaway = await prisma.giveaway.create({
     data: {
       organizationId: orgId,
-      title: title.slice(0, 120),
-      description: typeof body.description === "string" ? body.description.trim().slice(0, 2000) || null : null,
-      requirement,
-      requirementPrompt,
-      requirementAnswer,
-      endsAt: body.endsAt ? new Date(body.endsAt) : null,
+      title: d.title!,
+      description: d.description ?? null,
+      drawStyle: d.drawStyle ?? (entryMode === "BID" ? "MACHINE" : "WHEEL"),
+      minBidAmount: entryMode === "BID" ? d.minBidAmount ?? null : null,
+      maxTicketsPerUser: entryMode === "BID" ? d.maxTicketsPerUser ?? null : null,
+      ...fields,
       status: "DRAFT",
     },
   });

@@ -3,8 +3,8 @@
 import { useMemo, useRef, useState } from "react";
 import { BidCritter } from "@/app/components/BidIcons";
 
-export type Entrant = { clerkUserId: string; name: string };
-export type DrawResult = { winner: Entrant; prize: { id: string; title: string }; remaining: number };
+export type Entrant = { clerkUserId: string; name: string; tickets?: number };
+export type DrawResult = { winner: Entrant; prize: { id: string; title: string }; remaining: number; totalTickets?: number; token?: string };
 
 const COLORS = ["#6c4d39", "#8a6b4f", "#4a7c59", "#b07a3c", "#7a5340", "#5f7f66"];
 const WIN_COLOR = "#f0a35a";
@@ -106,7 +106,7 @@ export default function SpinWheel({
     }, 4300);
   };
 
-  // ✕ on the card = discard this winner and spin again (nothing was awarded).
+  // Re-spin = discard this winner and spin again (nothing was awarded).
   const respin = () => {
     setResult(null);
     setZoom(false);
@@ -122,7 +122,7 @@ export default function SpinWheel({
       setResult(null);
       setZoom(false);
     } catch {
-      setError("Couldn't award the prize. Try again.");
+      setError("Couldn't save that just now — tap Done once more.");
     }
     setAwarding(false);
   };
@@ -213,13 +213,21 @@ export default function SpinWheel({
         {spinning ? "Spinning…" : "Spin"}
       </button>
 
-      {error && <div className="mt-3 text-sm font-semibold text-red-600">{error}</div>}
+      {error && !result && <div className="mt-3 text-sm font-semibold text-red-600">{error}</div>}
 
-      {/* ── Winner reveal ────────────────────────────────────────────────────── */}
+      {/* ── Winner reveal (the screenshot / screen recording) ─────────────────
+          Nothing here hints a spin can be redone: a quiet X in the corner (silently
+          re-spins) and a Done button. That's it. */}
       {result && !spinning && (
         <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center p-4 bg-black/50">
-          {/* The card itself is ONLY the shareable winner content — no admin buttons,
-              nothing a customer shouldn't see. This is the part you screenshot. */}
+          <button
+            onClick={respin}
+            disabled={awarding}
+            aria-label="Close"
+            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-[#f1e7d5]/70 hover:text-[#f1e7d5] grid place-items-center disabled:opacity-40"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 3l10 10M13 3L3 13" /></svg>
+          </button>
           <div className="relative w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-[#f3ead6] via-[#fbf4e6] to-[#eaf3ec] border-4 border-[#4a7c59]/30">
             <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-[#4a7c59]/15 blur-2xl" aria-hidden />
             <div className="relative px-7 pt-8 pb-7 text-center">
@@ -244,23 +252,14 @@ export default function SpinWheel({
             </div>
           </div>
 
-          {/* Admin controls — OUTSIDE the card so they never appear on a screenshot. */}
-          <div className="w-full max-w-sm mt-4 flex flex-col gap-2">
-            <button
-              onClick={confirmWin}
-              disabled={awarding}
-              className="w-full bg-[#4a7c59] hover:bg-[#3c6449] text-white font-black px-5 py-3.5 rounded-xl text-base disabled:opacity-50 shadow-lg"
-            >
-              {awarding ? "Awarding…" : "Done — add to their orders"}
-            </button>
-            <button
-              onClick={respin}
-              disabled={awarding}
-              className="w-full bg-white/10 hover:bg-white/20 text-[#f1e7d5] font-semibold px-5 py-2.5 rounded-xl text-sm disabled:opacity-50 border border-white/20"
-            >
-              Re-spin
-            </button>
-          </div>
+          {error && <div className="mt-3 text-sm font-semibold text-[#fbe6c8] bg-black/40 rounded-lg px-3 py-1.5">{error}</div>}
+          <button
+            onClick={confirmWin}
+            disabled={awarding}
+            className="mt-5 bg-[#4a7c59] hover:bg-[#3c6449] text-white font-black px-10 py-3 rounded-xl text-base disabled:opacity-50 shadow-lg"
+          >
+            {awarding ? "Saving…" : "Done"}
+          </button>
         </div>
       )}
     </div>

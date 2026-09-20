@@ -7,7 +7,7 @@ import { generateItemCode } from "@/lib/itemCode";
 import { deleteR2ObjectsByUrl } from "@/lib/r2";
 
 async function ownGiveaway(id: string, orgId: string) {
-  const g = await prisma.giveaway.findUnique({ where: { id }, select: { id: true, organizationId: true } });
+  const g = await prisma.giveaway.findUnique({ where: { id }, select: { id: true, organizationId: true, status: true } });
   return g && g.organizationId === orgId ? g : null;
 }
 
@@ -21,7 +21,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "You don't have permission for this action." }, { status: 403 });
   }
   const { id } = await params;
-  if (!(await ownGiveaway(id, orgId))) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const owned = await ownGiveaway(id, orgId);
+  if (!owned) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (owned.status === "DRAWN") {
+    return NextResponse.json({ error: "This giveaway is complete — start a new one for more prizes." }, { status: 409 });
+  }
 
   const body = await request.json().catch(() => ({}));
   const title = String(body.title ?? "").trim();

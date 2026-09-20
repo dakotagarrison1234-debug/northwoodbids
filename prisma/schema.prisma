@@ -606,7 +606,8 @@ model WatchlistItem {
 
 enum GiveawayStatus {
   DRAFT // being set up — not shown publicly
-  ACTIVE // live on the home page; bidders can enter
+  ACTIVE // published: shown on the home page (counting down if startsAt is in the future)
+  ENDED // entry window closed — "waiting to pull winners"; no new tickets
   DRAWN // all prizes drawn — winners assigned
 }
 
@@ -616,11 +617,25 @@ enum GiveawayRequirementType {
   ANSWER // must submit the CORRECT answer to enter (case-insensitive match)
 }
 
+// How a bidder gets a ticket.
+enum GiveawayEntryMode {
+  AUTO // every registered bidder holds one ticket automatically
+  CLICK // tap "Enter" (optionally answer a question — see requirement) → one ticket
+  BID // every bid placed while the window is open = one ticket (win or lose, stacks)
+}
+
+// How winners are pulled on stage.
+enum GiveawayDrawStyle {
+  WHEEL // names on a prize wheel (best for small pools where every name fits)
+  MACHINE // brass ticket machine — claw snags a ticket (best for weighted / big pools)
+}
+
 /**
  * A giveaway/raffle. Prizes are Items attached via Item.giveawayId — the number of
- * prize items IS the number of winners. Entry is either automatic (NONE) or gated by
- * a submitted answer (INFO/ANSWER). Winners are drawn by an admin spinning a wheel;
- * each draw awards one prize and is recorded as if the winner had won it at auction.
+ * prize items IS the number of winners. Tickets come from the entry mode (auto / tap /
+ * every bid). The entry window is [startsAt, endsAt]; when it closes the giveaway is
+ * ENDED and waits for the admin to pull winners (wheel or ticket machine). Each draw
+ * awards one prize and is recorded as if the winner had won it at auction.
  */
 model Giveaway {
   id                String                  @id @default(cuid())
@@ -628,13 +643,22 @@ model Giveaway {
   title             String
   description       String?
   status            GiveawayStatus          @default(DRAFT)
+  entryMode         GiveawayEntryMode       @default(AUTO)
+  drawStyle         GiveawayDrawStyle       @default(WHEEL)
   requirement       GiveawayRequirementType @default(NONE)
   // Prompt shown to entrants for INFO/ANSWER (e.g. "What state do you live in?").
   requirementPrompt String?
   // Expected answer for ANSWER giveaways (compared case-insensitively, trimmed).
   requirementAnswer String?
-  // Optional display-only deadline; winners are still drawn manually by the admin.
+  // Entry window. startsAt null = open as soon as it's published. endsAt null = open
+  // until the admin ends it. Bids/entries only count inside the window.
+  startsAt          DateTime?
   endsAt            DateTime?
+  // When the window actually closed (set by the auto-end sweep or "End now").
+  endedAt           DateTime?
+  // BID mode stipulations: only bids of at least this much count; cap tickets per person.
+  minBidAmount      Decimal?                @db.Decimal(10, 2)
+  maxTicketsPerUser Int?
   archived          Boolean                 @default(false)
   createdAt         DateTime                @default(now())
   updatedAt         DateTime                @default(now()) @updatedAt
@@ -662,6 +686,8 @@ model GiveawayEntry {
   answer      String? // submitted info/answer (INFO/ANSWER)
   removed     Boolean  @default(false) // admin pulled them from the wheel
   manual      Boolean  @default(false) // admin hand-added them
+  // Bonus tickets an admin hands someone (added on top of whatever the entry mode gives).
+  bonusTickets Int     @default(0)
   won         Boolean  @default(false)
   wonItemId   String?
   createdAt   DateTime @default(now())

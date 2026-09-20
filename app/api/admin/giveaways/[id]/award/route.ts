@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { type OrgRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg, requireRole } from "@/lib/auth";
-import { awardGiveawayItem } from "@/lib/giveaway";
+import { awardGiveawayItem, getEligibleEntrants, verifyDraw } from "@/lib/giveaway";
 
 /**
  * POST /api/admin/giveaways/[id]/award   Body: { clerkUserId, itemId }
@@ -21,14 +21,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
   const { id } = await params;
 
-  const g = await prisma.giveaway.findUnique({ where: { id }, select: { organizationId: true, status: true, requirement: true } });
+  const g = await prisma.giveaway.findUnique({ where: { id }, select: { organizationId: true, status: true, requirement: true, entryMode: true } });
   if (!g || g.organizationId !== orgId) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (g.status !== "ACTIVE") return NextResponse.json({ error: "This giveaway isn't live." }, { status: 409 });
+  if (g.status !== "ACTIVE" && g.status !== "ENDED") return NextResponse.json({ error: "This giveaway isn't open." }, { status: 409 });
 
   const body = await request.json().catch(() => ({}));
   const clerkUserId = String(body.clerkUserId ?? "").trim();
   const itemId = String(body.itemId ?? "").trim();
   if (!clerkUserId || !itemId) return NextResponse.json({ error: "Missing winner or prize." }, { status: 400 });
+  // Only what the machine actually pulled can be awarded.
+  if (!verifyDraw(typeof body.token === "string" ? body.token : undefined, id, clerkUserId, itemId)) {
+    return NextResponse.json({ error: "That result didn't come from a draw (or it expired) — pull again." }, { status: 409 });
+  }
 
   // Prize must belong to this giveaway and still be unclaimed.
   const prize = await prisma.item.findUnique({
@@ -47,7 +51,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   });
   if (entry?.won) return NextResponse.json({ error: "That person already won a prize." }, { status: 409 });
   if (entry?.removed) return NextResponse.json({ error: "That person was removed from the wheel." }, { status: 409 });
-  if (g.requirement !== "NONE" && !entry) return NextResponse.json({ error: "That person didn't enter." }, { status: 409 });
+  // Must actually hold a ticket right now (covers tap-to-enter rows AND bid-window counts).
+  const pool = await getEligibleEntrants(id);
+  if (!pool.some((e) => e.clerkUserId === clerkUserId)) {
+    return NextResponse.json({ error: "That person doesn't hold a ticket." }, { status: 409 });
+  }
 
   await awardGiveawayItem(clerkUserId, itemId);
   await prisma.giveawayEntry.upsert({

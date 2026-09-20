@@ -27,6 +27,7 @@ const COLUMNS: { heading: string; links: { href: string; label: string }[] }[] =
     links: [
       { href: "/pickup", label: "Pickup" },
       { href: "/refer", label: "Bid Bucks" },
+      { href: "/giveaways", label: "Giveaways" },
       { href: "/help", label: "Help" },
     ],
   },
