@@ -2306,6 +2306,27 @@ function LocationCard({
 }) {
   const [win, setWin] = useState({ weekday: 3, start: "09:00", end: "17:00", slotMinutes: 30, capacityPerSlot: 2 });
 
+  // ── Edit name / address / instructions in place ──────────────────────────
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState({ name: loc.name, address: loc.address ?? "", instructions: loc.instructions ?? "" });
+  const [saving, setSaving] = useState(false);
+  const startEdit = () => { setDraft({ name: loc.name, address: loc.address ?? "", instructions: loc.instructions ?? "" }); setEditing(true); };
+  const saveEdit = async () => {
+    if (!draft.name.trim()) { flash("Name can't be empty.", false); return; }
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/pickup/locations/${loc.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: draft.name, address: draft.address, instructions: draft.instructions }),
+      });
+      const d = await res.json();
+      if (d.success) { flash("Location updated. Confirmation texts and the pickup page use the new details from now on.", true); setEditing(false); onWindowAdded(); }
+      else flash(d.error || "Could not save.", false);
+    } catch { flash("Something went wrong.", false); }
+    setSaving(false);
+  };
+
   const addWindow = async () => {
     const startMinutes = timeStrToMinutes(win.start);
     const endMinutes = timeStrToMinutes(win.end);
@@ -2363,13 +2384,33 @@ function LocationCard({
   return (
     <div className={`bg-white border rounded-xl overflow-hidden ${loc.isActive ? "border-[#cdbda3]" : "border-[#e3d6bf] opacity-70"}`}>
       <div className="px-5 py-4 border-b border-[#e3d6bf] flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-lg font-semibold text-[#241a12]">{loc.name}</div>
-          {loc.address && <div className="text-base text-[#6f5b46] mt-0.5">{loc.address}</div>}
-          {loc.instructions && <div className="text-sm text-[#8a7559] mt-1">{loc.instructions}</div>}
-          {!loc.isActive && <div className="text-sm text-amber-600 font-semibold mt-1">Hidden from bidders</div>}
-        </div>
+        {editing ? (
+          <div className="min-w-0 flex-1 space-y-2">
+            <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Name (e.g. Owosso)" className="w-full bg-[#faf5ea] border border-[#cdbda3] rounded-xl px-3 py-2 text-[#241a12] font-semibold" />
+            <input value={draft.address} onChange={(e) => setDraft({ ...draft, address: e.target.value })} placeholder="Street address, city, state zip" className="w-full bg-[#faf5ea] border border-[#cdbda3] rounded-xl px-3 py-2 text-[#241a12]" />
+            <textarea value={draft.instructions} onChange={(e) => setDraft({ ...draft, instructions: e.target.value })} rows={2} placeholder="Instructions bidders see (porch pickup, where to park, who to text…)" className="w-full bg-[#faf5ea] border border-[#cdbda3] rounded-xl px-3 py-2 text-sm text-[#241a12]" />
+            <div className="flex gap-2">
+              <button onClick={saveEdit} disabled={saving} className="bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold text-sm px-4 py-2 rounded-xl disabled:opacity-50">{saving ? "Saving…" : "Save"}</button>
+              <button onClick={() => setEditing(false)} className="text-[#6f5b46] font-semibold text-sm px-3 py-2">Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <div className="min-w-0">
+            <div className="text-lg font-semibold text-[#241a12]">{loc.name}</div>
+            {loc.address && <div className="text-base text-[#6f5b46] mt-0.5">{loc.address}</div>}
+            {loc.instructions && <div className="text-sm text-[#8a7559] mt-1">{loc.instructions}</div>}
+            {!loc.isActive && <div className="text-sm text-amber-600 font-semibold mt-1">Hidden from bidders</div>}
+          </div>
+        )}
         <div className="flex gap-2 shrink-0">
+          {!editing && (
+            <button
+              onClick={startEdit}
+              className="bg-white border border-[#cdbda3] text-[#6c4d39] hover:bg-[#efe3d0] font-semibold text-sm px-3 py-2 rounded-xl"
+            >
+              Edit
+            </button>
+          )}
           <button
             onClick={onToggle}
             className="bg-white border border-[#cdbda3] text-[#6f5b46] hover:bg-[#efe3d0] font-semibold text-sm px-3 py-2 rounded-xl"
