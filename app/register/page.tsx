@@ -83,7 +83,9 @@ function RegisterForm() {
   const { user, isLoaded } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectUrl = searchParams.get("redirect_url") || "/dashboard";
+  // After setup, land on the HOME page (live auctions, giveaways) — not the
+  // dashboard. A deep link (item page, invite) still wins when it's present.
+  const redirectUrl = searchParams.get("redirect_url") || "/";
 
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
@@ -109,7 +111,7 @@ function RegisterForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orgSlug }),
-      }).finally(() => router.push(`/${orgSlug}`));
+      }).finally(() => router.push(redirectUrl));
     } else {
       router.push(redirectUrl);
     }

@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { AreaTrend, Donut } from "./Charts";
+import { AreaTrend, Donut, CHART } from "./Charts";
+import {
+  PageBody, Panel, StatCard, Segmented, SearchBox, Pill, Btn, BtnLink, Empty, Eyebrow, Progress, Initials, Row, Toolbar,
+} from "../ui";
 
 type Bidder = {
   clerkUserId: string;
@@ -61,31 +63,18 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 ];
 
 type SortKey = "spend" | "bids" | "signup" | "lastbid";
-
-function StatCard({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: string }) {
-  return (
-    <div className="rounded-2xl bg-white border border-[#e3d6bf] p-4">
-      <div className="text-[11px] font-bold uppercase tracking-wider text-[#8a7559]">{label}</div>
-      <div className="text-2xl font-extrabold tabular-nums mt-0.5" style={{ color: accent ?? "#241a12" }}>{value}</div>
-      {sub && <div className="text-xs text-[#8a7559] mt-0.5">{sub}</div>}
-    </div>
-  );
-}
+const SORTS: { key: SortKey; label: string }[] = [
+  { key: "spend", label: "Spend" },
+  { key: "bids", label: "Bids" },
+  { key: "signup", label: "Newest" },
+  { key: "lastbid", label: "Last bid" },
+];
 
 function StatusTag({ b }: { b: Bidder }) {
-  const map: Record<string, [string, string, string]> = {
-    "Never bid": ["Never bid", "#8a7559", "#f1e7d5"],
-    "Active 30d": ["Active 30d", "#2f7a3f", "#e4f2e4"],
-    "Active 60d": ["Active 60d", "#8a5a2b", "#f6ecda"],
-    "Stale": ["Stale", "#b4462f", "#f7e2dc"],
-  };
-  const key = b.neverBid ? "Never bid" : b.active30 ? "Active 30d" : b.active60 ? "Active 60d" : "Stale";
-  const [txt, fg, bg] = map[key];
-  return (
-    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap" style={{ color: fg, background: bg }}>
-      {txt}
-    </span>
-  );
+  if (b.neverBid) return <Pill tone="slate">Never bid</Pill>;
+  if (b.active30) return <Pill tone="green" dot>Active 30d</Pill>;
+  if (b.active60) return <Pill tone="amber" dot>Active 60d</Pill>;
+  return <Pill tone="red">Stale</Pill>;
 }
 
 export default function BidderReportView() {
@@ -130,153 +119,181 @@ export default function BidderReportView() {
     return sorted;
   }, [d, filter, sort, q]);
 
+  // Counts for the filter tabs — same predicates as the filter above.
+  const counts = useMemo<Record<FilterKey, number>>(() => {
+    const b = d?.bidders ?? [];
+    return {
+      all: b.length,
+      new: b.filter((r) => r.isNew).length,
+      never: b.filter((r) => r.neverBid).length,
+      active30: b.filter((r) => r.active30).length,
+      active60: b.filter((r) => r.active60).length,
+      stale: b.filter((r) => r.stale).length,
+      top: b.filter((r) => r.spend > 0).length,
+    };
+  }, [d]);
+
   if (loading || error || !d) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8">
+      <PageBody>
         {error ? (
-          <div className="text-center">
-            <p className="text-lg text-[#6f5b46]">Couldn&apos;t load the bidder report.</p>
-            <button onClick={() => location.reload()} className="mt-3 bg-[#6c4d39] text-white text-base font-semibold px-5 py-2.5 rounded-xl">Try again</button>
-          </div>
+          <Panel>
+            <Empty
+              text="Couldn't load the bidder report."
+              sub="Check your connection and try again."
+              action={<Btn size="sm" onClick={() => location.reload()}>Try again</Btn>}
+            />
+          </Panel>
         ) : (
-          <p className="text-lg text-[#8a7559]">Loading…</p>
+          <p className="text-lg text-[#8a7559] text-center py-12">Loading…</p>
         )}
-      </div>
+      </PageBody>
     );
   }
 
   const s = d.summary;
   const spendMax = Math.max(1, ...d.topSpenders.map((t) => t.spend));
+  const everBidShare = s.totalBidders > 0 ? s.everBid / s.totalBidders : 0;
 
   // Bidder base, as mutually-exclusive segments (they sum to total bidders):
   //   Active ≤30d · Cooling 31–60d · Stale >60d · Never bid.
   const baseSlices = [
-    { label: "Active (≤30d)", value: s.active30, color: "#4a7c59" },
-    { label: "Cooling (31–60d)", value: Math.max(0, s.active60 - s.active30), color: "#c47b3e" },
-    { label: "Stale (60d+)", value: s.stale, color: "#b4462f" },
-    { label: "Never bid", value: s.neverBid, color: "#b3a085" },
+    { label: "Active (≤30d)", value: s.active30, color: CHART.moss },
+    { label: "Cooling (31–60d)", value: Math.max(0, s.active60 - s.active30), color: CHART.amber },
+    { label: "Stale (60d+)", value: s.stale, color: CHART.red },
+    { label: "Never bid", value: s.neverBid, color: CHART.sand },
   ];
 
   return (
-    <div className="px-4 sm:px-8 py-5 space-y-6 max-w-3xl mx-auto w-full pb-20">
-      {/* ── Headline stats ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <StatCard label="Total bidders" value={s.totalBidders.toLocaleString()} sub={`${s.everBid} have bid`} />
-        <StatCard label="New (30 days)" value={s.newBidders.toLocaleString()} accent="#2f7a3f" sub="just signed up" />
-        <StatCard label="Never bid" value={s.neverBid.toLocaleString()} accent="#8a5a2b" sub="signed up, no bids" />
-        <StatCard label="Active (30d)" value={s.active30.toLocaleString()} accent="#2f7a3f" sub="bid in last 30 days" />
-        <StatCard label="Active (60d)" value={s.active60.toLocaleString()} sub="bid in last 60 days" />
-        <StatCard label="Stale" value={s.stale.toLocaleString()} accent="#b4462f" sub="bid before, quiet 60d+" />
-      </div>
-
+    <PageBody className="pb-20">
       {/* ── Money ── */}
-      <div className="rounded-3xl bg-gradient-to-br from-[#4f6639] to-[#5f7a45] text-white p-6 shadow-[0_8px_28px_rgba(79,102,57,0.25)]">
-        <div className="text-sm font-bold uppercase tracking-[0.15em] text-[#d8e6c8]">Total customer spend</div>
-        <div className="text-4xl sm:text-5xl font-extrabold font-display tracking-tight mt-1 tabular-nums">{money0(s.totalRevenue)}</div>
-        <div className="text-base text-[#d8e6c8] mt-2">
+      <div className="rounded-2xl bg-[#241a12] text-[#fbf4e6] p-5 sm:p-6 shadow-[0_10px_30px_-18px_rgba(36,26,18,0.7)]">
+        <Eyebrow className="!text-[#b9a688]">Total customer spend</Eyebrow>
+        <div className="font-display text-4xl sm:text-5xl font-black tracking-tight mt-1 tabular-nums leading-none text-[#f0a35a]">{money0(s.totalRevenue)}</div>
+        <div className="text-base text-[#d9c7ab] mt-2">
           {s.payers} paying bidder{s.payers !== 1 ? "s" : ""} · {money0(s.avgSpendPerPayer)} avg each · {s.totalBids.toLocaleString()} total bids placed
         </div>
       </div>
 
-      {/* ── Bidder base health ── */}
-      <div className="rounded-2xl bg-white border border-[#e3d6bf] p-4">
-        <div className="text-sm font-bold text-[#241a12] mb-3">Your bidder base</div>
-        <Donut slices={baseSlices} centerTop={s.totalBidders.toLocaleString()} centerSub="bidders" />
-        <p className="text-xs text-[#8a7559] mt-3 leading-snug">
-          {s.everBid} of {s.totalBidders} have ever bid. Chasing the <strong className="text-[#b4462f]">stale</strong>{" "}
-          and <strong className="text-[#8a7559]">never-bid</strong> groups is where re-engagement lives.
-        </p>
+      {/* ── Headline stats ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <StatCard label="Total bidders" value={s.totalBidders.toLocaleString()} sub={`${s.everBid} have bid`} />
+        <StatCard label="New (30 days)" value={s.newBidders.toLocaleString()} tone="green" sub="just signed up" />
+        <StatCard label="Never bid" value={s.neverBid.toLocaleString()} tone="amber" sub="signed up, no bids" />
+        <StatCard label="Active (30d)" value={s.active30.toLocaleString()} tone="green" sub="bid in last 30 days" />
+        <StatCard label="Active (60d)" value={s.active60.toLocaleString()} sub="bid in last 60 days" />
+        <StatCard label="Stale" value={s.stale.toLocaleString()} tone="red" sub="bid before, quiet 60d+" />
       </div>
 
+      {/* ── Bidder base health ── */}
+      <Panel title="Your bidder base" sub={`${s.everBid} of ${s.totalBidders} have ever bid`}>
+        <div className="px-4 sm:px-5 py-4">
+          <Donut slices={baseSlices} centerTop={s.totalBidders.toLocaleString()} centerSub="bidders" />
+          <div className="mt-4">
+            <div className="flex items-center justify-between gap-3 mb-1.5">
+              <Eyebrow>Have placed a bid</Eyebrow>
+              <span className="text-sm font-bold tabular-nums text-[#241a12]">{Math.round(everBidShare * 100)}%</span>
+            </div>
+            <Progress value={everBidShare} tone="green" />
+          </div>
+          <p className="text-sm text-[#8a7559] mt-3 leading-snug">
+            Chasing the <strong className="text-[#a1321f]">stale</strong> and{" "}
+            <strong className="text-[#6f5b46]">never-bid</strong> groups is where re-engagement lives.
+          </p>
+        </div>
+      </Panel>
+
       {/* ── New signups per week ── */}
-      <div className="rounded-2xl bg-white border border-[#e3d6bf] p-4">
-        <div className="text-sm font-bold text-[#241a12] mb-2">New signups · last 12 weeks</div>
-        <AreaTrend data={d.signupTrend.map((t) => ({ label: t.label, value: t.count }))} height={130} valueFmt={(n) => String(n)} />
-      </div>
+      <Panel title="New signups" sub="Last 12 weeks">
+        <div className="px-4 sm:px-5 py-4">
+          <AreaTrend data={d.signupTrend.map((t) => ({ label: t.label, value: t.count }))} height={130} valueFmt={(n) => String(n)} />
+        </div>
+      </Panel>
 
       {/* ── Top spenders ── */}
       {d.topSpenders.length > 0 && (
-        <div className="rounded-2xl bg-white border border-[#e3d6bf] p-4">
-          <div className="text-sm font-bold text-[#241a12] mb-3">Top spenders</div>
-          <div className="space-y-2">
+        <Panel title="Top spenders">
+          <ul className="px-4 sm:px-5 py-4 space-y-3">
             {d.topSpenders.map((t, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div className="w-5 text-xs font-bold text-[#b3a085] tabular-nums text-right shrink-0">{i + 1}</div>
-                <div className="w-28 sm:w-40 text-sm font-semibold text-[#241a12] truncate shrink-0">{t.name}</div>
-                <div className="flex-1 h-5 rounded bg-[#f1e7d5] overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-[#6c4d39] to-[#8a5a2b] rounded" style={{ width: `${(t.spend / spendMax) * 100}%` }} />
+              <li key={i} className="flex items-center gap-3">
+                <span className="w-5 text-xs font-black text-[#a3927b] tabular-nums text-right shrink-0">{i + 1}</span>
+                <Initials name={t.name} size={32} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <span className="text-sm font-bold text-[#241a12] truncate">{t.name}</span>
+                    <span className="text-sm font-extrabold text-[#241a12] tabular-nums shrink-0">{money0(t.spend)}</span>
+                  </div>
+                  <Progress value={t.spend / spendMax} tone="leather" />
                 </div>
-                <div className="w-16 text-sm font-bold text-[#241a12] tabular-nums text-right shrink-0">{money0(t.spend)}</div>
-              </div>
+              </li>
             ))}
-          </div>
-        </div>
+          </ul>
+        </Panel>
       )}
 
       {/* ── Filter + search + sort ── */}
       <div className="space-y-3">
-        <div className="flex flex-wrap gap-1.5">
-          {FILTERS.map((f) => (
-            <button key={f.key} onClick={() => setFilter(f.key)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-bold border transition-colors ${filter === f.key ? "bg-[#6c4d39] text-white border-[#6c4d39]" : "bg-white text-[#6f5b46] border-[#cdbda3]"}`}>
-              {f.label}
-            </button>
-          ))}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <input
+        <Segmented
+          value={filter}
+          onChange={setFilter}
+          options={FILTERS.map((f) => ({ value: f.key, label: f.label, count: counts[f.key] }))}
+          className="w-full"
+        />
+        <Toolbar>
+          <SearchBox
             value={q} onChange={(e) => setQ(e.target.value)}
             placeholder="Search name, email, phone…"
-            className="flex-1 min-w-[180px] bg-white border border-[#e3d6bf] rounded-xl px-3.5 py-2 text-sm text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]/60"
+            className="flex-1 min-w-[200px]"
           />
-          <div className="flex items-center gap-1.5 text-sm">
-            <span className="text-[#8a7559] font-semibold">Sort</span>
-            {(["spend", "bids", "signup", "lastbid"] as SortKey[]).map((k) => (
-              <button key={k} onClick={() => setSort(k)}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border transition-colors ${sort === k ? "bg-[#241a12] text-white border-[#241a12]" : "bg-white text-[#6f5b46] border-[#cdbda3]"}`}>
-                {k === "spend" ? "Spend" : k === "bids" ? "Bids" : k === "signup" ? "Newest" : "Last bid"}
-              </button>
-            ))}
+          <div className="flex items-center gap-2">
+            <Eyebrow>Sort</Eyebrow>
+            <Segmented
+              value={sort}
+              onChange={setSort}
+              options={SORTS.map((k) => ({ value: k.key, label: k.label }))}
+            />
           </div>
-        </div>
-        <div className="text-xs text-[#8a7559] px-1">
-          {filtered.length} bidder{filtered.length !== 1 ? "s" : ""}
-          {" · "}
-          <Link href="/admin/bidders" className="font-semibold text-[#6c4d39] hover:underline">manage bidders →</Link>
-        </div>
+        </Toolbar>
       </div>
 
       {/* ── Bidder list ── */}
-      <div className="space-y-2">
-        {filtered.map((b) => (
-          <div key={b.clerkUserId} className="rounded-2xl bg-white border border-[#e3d6bf] p-3.5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold text-[#241a12] truncate">{b.name}</span>
-                  <StatusTag b={b} />
-                  {b.blocked && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#f7e2dc] text-[#b4462f]">Blocked</span>}
-                </div>
-                <div className="text-xs text-[#8a7559] mt-0.5 truncate">
-                  {b.email || "no email"}{b.phone ? ` · ${b.phone}` : ""}
-                </div>
-                <div className="text-xs text-[#8a7559] mt-0.5">
-                  Joined {dateShort(b.signupAt)} · {b.daysSinceSignup}d ago · last bid {AGO(b.daysSinceLastBid)}
-                </div>
-              </div>
-              <div className="text-right shrink-0">
-                <div className="text-lg font-extrabold text-[#241a12] tabular-nums leading-none">{money0(b.spend)}</div>
-                <div className="text-xs text-[#8a7559] mt-1 tabular-nums">{b.bids} bid{b.bids !== 1 ? "s" : ""} · {b.won} won</div>
-              </div>
-            </div>
-          </div>
-        ))}
-        {filtered.length === 0 && (
-          <p className="text-base text-[#8a7559] bg-white border border-[#e3d6bf] rounded-2xl p-6 text-center">
-            No bidders match.
-          </p>
+      <Panel
+        title={`${filtered.length} bidder${filtered.length !== 1 ? "s" : ""}`}
+        action={<BtnLink href="/admin/bidders" variant="ghost" size="sm">Manage bidders</BtnLink>}
+      >
+        {filtered.length === 0 ? (
+          <Empty text="No bidders match." sub="Try another filter or clear the search." />
+        ) : (
+          <ul className="divide-y divide-[#f0e6d6]">
+            {filtered.map((b) => (
+              <li key={b.clerkUserId}>
+                <Row
+                  leading={<Initials name={b.name} />}
+                  title={
+                    <span className="flex items-center gap-2 flex-wrap">
+                      <span className="truncate min-w-0">{b.name}</span>
+                      <StatusTag b={b} />
+                      {b.blocked && <Pill tone="red">Blocked</Pill>}
+                    </span>
+                  }
+                  sub={
+                    <>
+                      <span className="block truncate">{b.email || "no email"}{b.phone ? ` · ${b.phone}` : ""}</span>
+                      <span className="block truncate">Joined {dateShort(b.signupAt)} · {b.daysSinceSignup}d ago · last bid {AGO(b.daysSinceLastBid)}</span>
+                    </>
+                  }
+                  trailing={
+                    <>
+                      <div className="font-display text-lg font-black text-[#241a12] tabular-nums leading-none">{money0(b.spend)}</div>
+                      <div className="text-xs text-[#8a7559] mt-1 tabular-nums">{b.bids} bid{b.bids !== 1 ? "s" : ""} · {b.won} won</div>
+                    </>
+                  }
+                />
+              </li>
+            ))}
+          </ul>
         )}
-      </div>
-    </div>
+      </Panel>
+    </PageBody>
   );
 }

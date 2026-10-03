@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { fmtMoney0 } from "../format";
-import { Pill } from "../ui";
+import { Pill, Progress, Segmented, Btn, Empty, BtnLink, type Tone } from "../ui";
 
 export type AuctionSummary = {
   id: string;
@@ -19,9 +19,11 @@ export type AuctionSummary = {
 
 const CLOSED_SHOWN = 6;
 
+type Group = "live" | "upcoming" | "closed" | "archived";
+
 /** "3 hrs", "2 days", "12 min" — how long until a moment, in the fewest words. */
-function until(iso: string) {
-  const ms = new Date(iso).getTime() - Date.now();
+function until(iso: string, now: number) {
+  const ms = new Date(iso).getTime() - now;
   if (ms <= 0) return "now";
   const mins = Math.round(ms / 60000);
   if (mins < 60) return `${mins} min`;
@@ -32,134 +34,126 @@ function until(iso: string) {
 const fmtDay = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-function AuctionCard({ a, mode }: { a: AuctionSummary; mode: "live" | "upcoming" | "closed" }) {
-  const hrsLeft = (new Date(a.endAtIso).getTime() - Date.now()) / 36e5;
+function AuctionCard({ a, mode, now }: { a: AuctionSummary; mode: "live" | "upcoming" | "closed"; now: number }) {
+  const hrsLeft = (new Date(a.endAtIso).getTime() - now) / 36e5;
   // Time pressure is the whole point of a live auction, so it's colour-coded:
   // under 6 hours is red, under a day amber, otherwise green.
-  const urgency = hrsLeft <= 6 ? "red" : hrsLeft <= 24 ? "amber" : "green";
+  const urgency: Tone = hrsLeft <= 6 ? "red" : hrsLeft <= 24 ? "amber" : "green";
+  // How far through its run a live auction is — drives the progress bar.
+  const total = Math.max(1, new Date(a.endAtIso).getTime() - new Date(a.startAtIso).getTime());
+  const elapsed = Math.min(1, Math.max(0, (now - new Date(a.startAtIso).getTime()) / total));
 
   return (
     <Link
       href={`/admin/auctions/${a.id}`}
-      className={`block bg-white border-2 rounded-2xl p-4 active:scale-[0.99] transition-transform ${
-        mode === "live" && urgency === "red"
-          ? "border-red-200"
-          : mode === "live"
-          ? "border-slate-200"
-          : "border-slate-200"
+      className={`block bg-white border rounded-2xl p-4 nb-lift-sm hover:border-[#c47b3e]/50 ${
+        mode === "live" && urgency === "red" ? "border-[#f0c4ba]" : "border-[#e6dac6]"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
-        <h3 className="font-bold text-lg text-slate-900 leading-snug break-words min-w-0">{a.title}</h3>
+        <h3 className="font-display font-black text-lg text-[#241a12] leading-snug break-words min-w-0">{a.title}</h3>
         {mode === "live" ? (
-          <Pill tone={urgency}>{until(a.endAtIso)} left</Pill>
+          <Pill tone={urgency} dot>{until(a.endAtIso, now)} left</Pill>
         ) : mode === "upcoming" ? (
-          <Pill tone="slate">{a.isScheduled ? `opens ${until(a.startAtIso)}` : "ready"}</Pill>
+          <Pill tone="slate">{a.isScheduled ? `opens ${until(a.startAtIso, now)}` : "ready"}</Pill>
         ) : (
           <Pill tone="slate">{a.status.toLowerCase()}</Pill>
         )}
       </div>
 
-      {/* Three numbers, evenly weighted — items, bids, money. */}
-      <div className="grid grid-cols-3 gap-2 mt-3">
-        {[
-          { k: "Items", v: String(a.itemsCount) },
-          { k: "Bids", v: String(a.totalBids) },
-          { k: mode === "closed" ? "Sold" : "Bid so far", v: fmtMoney0(a.raised) },
-        ].map((s) => (
-          <div key={s.k} className="rounded-xl bg-slate-50 border border-slate-100 px-2 py-2 text-center">
-            <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{s.k}</div>
-            <div className="text-base font-extrabold text-slate-900 tabular-nums mt-0.5">{s.v}</div>
-          </div>
-        ))}
+      {/* Three numbers, evenly weighted — lots, bids, money. */}
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mt-2.5 text-sm text-[#8a7559]">
+        <span><strong className="font-extrabold text-[#241a12] tabular-nums">{a.itemsCount}</strong> lot{a.itemsCount !== 1 ? "s" : ""}</span>
+        <span><strong className="font-extrabold text-[#241a12] tabular-nums">{a.totalBids}</strong> bid{a.totalBids !== 1 ? "s" : ""}</span>
+        <span>
+          <strong className={`font-extrabold tabular-nums ${mode === "closed" ? "text-[#2f5d3a]" : "text-[#241a12]"}`}>{fmtMoney0(a.raised)}</strong>
+          {" "}{mode === "closed" ? "sold" : "bid so far"}
+        </span>
       </div>
 
-      <div className="text-sm text-slate-400 mt-2.5">
-        {fmtDay(a.startAtIso)} → {fmtDay(a.endAtIso)}
+      {mode === "live" && <Progress value={elapsed} tone={urgency} className="mt-3" />}
+
+      <div className="text-xs text-[#b3a085] mt-2.5">
+        {fmtDay(a.startAtIso)} to {fmtDay(a.endAtIso)}
       </div>
     </Link>
-  );
-}
-
-/** Collapsible group header with a count. */
-function GroupToggle({
-  label, count, open, onClick,
-}: { label: string; count: number; open: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="w-full flex items-center justify-between gap-3 bg-white border-2 border-slate-200 rounded-2xl px-4 min-h-[56px]"
-    >
-      <span className="font-bold text-base text-slate-700">
-        {label} <span className="text-slate-400">({count})</span>
-      </span>
-      <span className={`text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}>
-        <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4" /></svg>
-      </span>
-    </button>
   );
 }
 
 export default function AuctionsList({
   live, upcoming, closed, archived = [],
 }: { live: AuctionSummary[]; upcoming: AuctionSummary[]; closed: AuctionSummary[]; archived?: AuctionSummary[] }) {
-  const [showUpcoming, setShowUpcoming] = useState(false);
-  const [showClosed, setShowClosed] = useState(false);
-  const [showArchived, setShowArchived] = useState(false);
+  // One group open at a time; live is the working set so it's the default.
+  const [group, setGroup] = useState<Group>("live");
   const [closedLimit, setClosedLimit] = useState(CLOSED_SHOWN);
+  // Snapshot the clock once per mount so render stays pure (the page re-renders on
+  // every auction-updated Pusher event anyway).
+  const [now] = useState(() => Date.now());
+
+  const options: { value: Group; label: string; count: number }[] = [
+    { value: "live", label: "Live", count: live.length },
+    { value: "upcoming", label: "Upcoming", count: upcoming.length },
+    { value: "closed", label: "Closed", count: closed.length },
+    ...(archived.length > 0 ? [{ value: "archived" as Group, label: "Archived", count: archived.length }] : []),
+  ];
 
   return (
     <div className="space-y-4">
-      {/* ── Live: never collapsed, this is the working set ── */}
-      <section>
-        <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2 px-1">
-          Live now ({live.length})
-        </h2>
-        {live.length === 0 ? (
-          <div className="bg-white border-2 border-slate-200 rounded-2xl px-4 py-6 text-base text-slate-500 text-center">
-            Nothing live right now.
+      <Segmented value={group} onChange={setGroup} options={options} />
+
+      {/* ── Live: the working set ── */}
+      {group === "live" && (
+        live.length === 0 ? (
+          <div className="bg-white border border-[#e6dac6] rounded-2xl">
+            <Empty
+              text="Nothing live right now."
+              sub={upcoming.length > 0 ? "Your next auction is on deck under Upcoming." : "Open an auction and it shows up here."}
+              action={upcoming.length === 0 ? <BtnLink href="/admin/auctions/new" size="sm">New auction</BtnLink> : undefined}
+            />
           </div>
         ) : (
           <div className="space-y-2.5">
-            {live.map((a) => <AuctionCard key={a.id} a={a} mode="live" />)}
+            {live.map((a) => <AuctionCard key={a.id} a={a} mode="live" now={now} />)}
           </div>
-        )}
-      </section>
-
-      {upcoming.length > 0 && (
-        <section className="space-y-2.5">
-          <GroupToggle label="Upcoming" count={upcoming.length} open={showUpcoming} onClick={() => setShowUpcoming((v) => !v)} />
-          {showUpcoming && upcoming.map((a) => <AuctionCard key={a.id} a={a} mode="upcoming" />)}
-        </section>
+        )
       )}
 
-      {closed.length > 0 && (
-        <section className="space-y-2.5">
-          <GroupToggle label="Closed" count={closed.length} open={showClosed} onClick={() => setShowClosed((v) => !v)} />
-          {showClosed && (
-            <>
-              {/* Capped — after a year of weekly auctions this list is 50+ long and
-                  rendering all of it on a phone is pointless. */}
-              {closed.slice(0, closedLimit).map((a) => <AuctionCard key={a.id} a={a} mode="closed" />)}
-              {closed.length > closedLimit && (
-                <button
-                  onClick={() => setClosedLimit((n) => n + 12)}
-                  className="w-full min-h-[48px] rounded-xl border-2 border-slate-200 bg-white font-bold text-base text-slate-600"
-                >
-                  Show more ({closed.length - closedLimit} older)
-                </button>
-              )}
-            </>
-          )}
-        </section>
+      {group === "upcoming" && (
+        upcoming.length === 0 ? (
+          <div className="bg-white border border-[#e6dac6] rounded-2xl">
+            <Empty text="Nothing upcoming." sub="Drafts and scheduled auctions land here." action={<BtnLink href="/admin/auctions/new" size="sm">New auction</BtnLink>} />
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {upcoming.map((a) => <AuctionCard key={a.id} a={a} mode="upcoming" now={now} />)}
+          </div>
+        )
       )}
 
-      {archived.length > 0 && (
-        <section className="space-y-2.5">
-          <GroupToggle label="Archived (hidden)" count={archived.length} open={showArchived} onClick={() => setShowArchived((v) => !v)} />
-          {showArchived && archived.map((a) => <AuctionCard key={a.id} a={a} mode="closed" />)}
-        </section>
+      {group === "closed" && (
+        closed.length === 0 ? (
+          <div className="bg-white border border-[#e6dac6] rounded-2xl">
+            <Empty text="No closed auctions yet." sub="Once an auction ends it moves here." />
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {/* Capped — after a year of weekly auctions this list is 50+ long and
+                rendering all of it on a phone is pointless. */}
+            {closed.slice(0, closedLimit).map((a) => <AuctionCard key={a.id} a={a} mode="closed" now={now} />)}
+            {closed.length > closedLimit && (
+              <Btn variant="outline" tone="slate" full onClick={() => setClosedLimit((n) => n + 12)}>
+                Show more ({closed.length - closedLimit} older)
+              </Btn>
+            )}
+          </div>
+        )
+      )}
+
+      {group === "archived" && (
+        <div className="space-y-2.5">
+          <p className="text-sm text-[#8a7559] px-1">Hidden from reports, winners and the public site.</p>
+          {archived.map((a) => <AuctionCard key={a.id} a={a} mode="closed" now={now} />)}
+        </div>
       )}
     </div>
   );

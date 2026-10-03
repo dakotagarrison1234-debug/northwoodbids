@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { Pill, Panel, Btn, Empty, StatCard, type Tone } from "../ui";
+import { Pill, Panel, Btn, Empty, StatCard, PageHeader, PageBody, SearchBox, Row, Initials, Input, Money, Eyebrow, type Tone } from "../ui";
 import { fmtMoney } from "../format";
 
 type Person = { clerkUserId: string; name: string | null; email: string | null; phone: string | null };
@@ -112,20 +112,17 @@ export default function AdminReferralsPage() {
 
   return (
     <>
-      <header className="border-b border-slate-200 bg-white px-4 sm:px-8 py-4">
-        <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900">Bid Bucks</h1>
-        <p className="text-base text-slate-500 mt-0.5">Who&apos;s earned credit, and what you owe.</p>
-      </header>
+      <PageHeader title="Referrals" sub="Bid Bucks — who's earned credit, and what you owe." />
 
-      <div className="flex-1 px-4 sm:px-8 py-5 overflow-auto space-y-4 max-w-2xl w-full">
+      <PageBody>
         {error && (
-          <Panel>
-            <Empty text="Couldn't load referrals." action={<Btn tone="slate" onClick={load}>Try again</Btn>} />
+          <Panel tone="red">
+            <Empty text="Couldn't load referrals." sub="Check your connection and try again." action={<Btn tone="slate" variant="outline" onClick={load}>Try again</Btn>} />
           </Panel>
         )}
 
         {loading ? (
-          <p className="text-slate-500">Loading…</p>
+          <p className="text-[#8a7559] py-8 text-center">Loading…</p>
         ) : (
           <>
             {/* Headline: what this screen is actually for. */}
@@ -145,71 +142,71 @@ export default function AdminReferralsPage() {
             </div>
 
             {owing.length > 0 && (
-              <Panel title="Negative balances" sub="These need correcting">
-                <ul className="divide-y divide-slate-100">
+              <Panel title="Negative balances" sub="These need correcting" tone="red">
+                <ul className="divide-y divide-[#f0e6d6]">
                   {owing.map((b) => (
-                    <li key={b.clerkUserId} className="px-4 py-3 flex items-center justify-between gap-3">
-                      <span className="min-w-0 truncate font-semibold text-slate-900">{nameOf(b)}</span>
-                      <span className="shrink-0 font-extrabold text-red-600 tabular-nums">
-                        −{fmtMoney(b.balance)}
-                      </span>
+                    <li key={b.clerkUserId}>
+                      <Row
+                        leading={<Initials name={nameOf(b)} size={36} />}
+                        title={nameOf(b)}
+                        trailing={<span className="text-lg"><Money value={b.balance} /></span>}
+                      />
                     </li>
                   ))}
                 </ul>
               </Panel>
             )}
 
-            <input
+            <SearchBox
               type="text"
               value={q}
               onChange={(e) => { setQ(e.target.value); setBalLimit(25); setRefLimit(25); }}
               placeholder="Search name, email or code…"
-              className="w-full bg-white border-2 border-slate-200 rounded-xl px-4 min-h-[48px] text-base text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400"
             />
 
-            {/* Balances as cards — the old table was 560px wide on a 375px screen,
+            {/* Balances as rows — the old table was 560px wide on a 375px screen,
                 which pushed the Adjust button completely off the side. */}
             <Panel title="Balances" sub={`${filteredBalances.length} ${filteredBalances.length === 1 ? "person" : "people"}`}>
               {sortedBalances.length === 0 ? (
-                <Empty text="No balances yet." />
+                <Empty text="No balances yet." sub={ql ? "Nobody matches that search." : "Balances appear once someone earns or spends Bid Bucks."} />
               ) : (
                 <>
-                  <ul className="divide-y divide-slate-100">
+                  <ul className="divide-y divide-[#f0e6d6]">
                     {sortedBalances.slice(0, balLimit).map((b) => (
-                      <li key={b.clerkUserId} className="px-4 py-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <div className="font-semibold text-slate-900 truncate">{nameOf(b)}</div>
-                            <div className="text-sm text-slate-500 truncate">
-                              earned {fmtMoney(b.earned)} · used {fmtMoney(b.redeemed)}
+                      <li key={b.clerkUserId}>
+                        <Row
+                          leading={<Initials name={nameOf(b)} />}
+                          title={nameOf(b)}
+                          sub={`earned ${fmtMoney(b.earned)} · used ${fmtMoney(b.redeemed)}`}
+                          trailing={
+                            <div className="flex flex-col items-end gap-1">
+                              <span className={`text-xl font-extrabold tabular-nums ${
+                                b.balance < 0 ? "text-[#a1321f]" : b.balance > 0 ? "text-[#2f5d3a]" : "text-[#a3927b]"
+                              }`}>
+                                {b.balance < 0 ? "−" : ""}{fmtMoney(b.balance)}
+                              </span>
+                              <Btn
+                                tone="slate"
+                                variant="ghost"
+                                size="sm"
+                                className="-mr-2"
+                                disabled={busyId === b.clerkUserId}
+                                onClick={() => { setAdjusting(b); setAdjAmount(""); setAdjReason(""); setAdjError(null); }}
+                              >
+                                {busyId === b.clerkUserId ? "Working…" : "Adjust"}
+                              </Btn>
                             </div>
-                          </div>
-                          <div className={`shrink-0 text-xl font-extrabold tabular-nums ${
-                            b.balance < 0 ? "text-red-600" : b.balance > 0 ? "text-green-700" : "text-slate-400"
-                          }`}>
-                            {b.balance < 0 ? "−" : ""}{fmtMoney(b.balance)}
-                          </div>
-                        </div>
-                        <Btn
-                          tone="slate"
-                          variant="outline"
-                          full
-                          className="mt-2.5"
-                          disabled={busyId === b.clerkUserId}
-                          onClick={() => { setAdjusting(b); setAdjAmount(""); setAdjReason(""); setAdjError(null); }}
-                        >
-                          {busyId === b.clerkUserId ? "Working…" : "Adjust balance"}
-                        </Btn>
+                          }
+                        />
                       </li>
                     ))}
                   </ul>
                   {sortedBalances.length > balLimit && (
-                    <button
-                      onClick={() => setBalLimit((n) => n + 25)}
-                      className="w-full min-h-[48px] text-base font-bold text-slate-600 border-t border-slate-100"
-                    >
-                      Show more ({sortedBalances.length - balLimit} left)
-                    </button>
+                    <div className="border-t border-[#f0e6d6]">
+                      <Btn tone="slate" variant="ghost" full className="rounded-none" onClick={() => setBalLimit((n) => n + 25)}>
+                        Show more ({sortedBalances.length - balLimit} left)
+                      </Btn>
+                    </div>
                   )}
                 </>
               )}
@@ -218,48 +215,43 @@ export default function AdminReferralsPage() {
             {/* The full audit log is a lookup tool, not the main event — collapsed. */}
             <Panel>
               <button
+                type="button"
                 onClick={() => setShowLog((v) => !v)}
-                className="w-full px-4 min-h-[52px] flex items-center justify-between gap-3"
+                className="w-full px-4 sm:px-5 min-h-[56px] flex items-center justify-between gap-3 hover:bg-[#faf5ea] transition-colors"
               >
-                <span className="text-lg font-bold text-slate-900">
-                  Referral history <span className="text-slate-400 font-normal">({filteredReferrals.length})</span>
+                <span className="font-display text-lg font-black text-[#241a12]">
+                  Referral history <span className="text-[#a3927b] font-semibold text-base">({filteredReferrals.length})</span>
                 </span>
-                <span className={`text-slate-400 transition-transform ${showLog ? "rotate-180" : ""}`}>
+                <span className={`text-[#a3927b] transition-transform ${showLog ? "rotate-180" : ""}`}>
                   <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4" /></svg>
                 </span>
               </button>
               {showLog && (
                 filteredReferrals.length === 0 ? (
-                  <Empty text="No referrals yet." />
+                  <Empty text="No referrals yet." sub="Every invite someone sends shows up here." />
                 ) : (
                   <>
-                    <ul className="divide-y divide-slate-100 border-t border-slate-100">
+                    <ul className="divide-y divide-[#f0e6d6] border-t border-[#f0e6d6]">
                       {filteredReferrals.slice(0, refLimit).map((r) => (
-                        <li key={r.id} className="px-4 py-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="font-semibold text-slate-900 truncate">{nameOf(r.referrer)}</div>
-                              <div className="text-sm text-slate-500 truncate">invited {nameOf(r.referred)}</div>
-                              <div className="text-xs text-slate-400 mt-0.5">
-                                {fmtDate(r.createdAt)}
-                                {r.earnedAt ? ` · earned ${fmtDate(r.earnedAt)}` : ""}
-                              </div>
-                            </div>
-                            <Pill tone={STATUS[r.status].tone}>{STATUS[r.status].label}</Pill>
-                          </div>
+                        <li key={r.id}>
+                          <Row
+                            leading={<Initials name={nameOf(r.referrer)} size={36} />}
+                            title={nameOf(r.referrer)}
+                            sub={`invited ${nameOf(r.referred)} · ${fmtDate(r.createdAt)}${r.earnedAt ? ` · earned ${fmtDate(r.earnedAt)}` : ""}`}
+                            trailing={<Pill tone={STATUS[r.status].tone}>{STATUS[r.status].label}</Pill>}
+                          />
                           {r.blockedReason && (
-                            <p className="text-sm text-red-600 mt-1.5">{r.blockedReason}</p>
+                            <p className="px-4 pb-3 -mt-1 text-sm text-[#a1321f]">{r.blockedReason}</p>
                           )}
                         </li>
                       ))}
                     </ul>
                     {filteredReferrals.length > refLimit && (
-                      <button
-                        onClick={() => setRefLimit((n) => n + 25)}
-                        className="w-full min-h-[48px] text-base font-bold text-slate-600 border-t border-slate-100"
-                      >
-                        Show more ({filteredReferrals.length - refLimit} left)
-                      </button>
+                      <div className="border-t border-[#f0e6d6]">
+                        <Btn tone="slate" variant="ghost" full className="rounded-none" onClick={() => setRefLimit((n) => n + 25)}>
+                          Show more ({filteredReferrals.length - refLimit} left)
+                        </Btn>
+                      </div>
                     )}
                   </>
                 )
@@ -267,76 +259,74 @@ export default function AdminReferralsPage() {
             </Panel>
           </>
         )}
-      </div>
+      </PageBody>
 
       {/* Adjust dialog — replaces two stacked window.prompt() calls that silently
           did nothing in the installed app. Shows the resulting balance before you commit. */}
       {adjusting && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4" onClick={() => setAdjusting(null)}>
           <div
-            className="bg-white w-full sm:max-w-sm rounded-t-3xl sm:rounded-2xl p-5 pb-8 sm:pb-5 shadow-xl"
+            className="bg-white w-full sm:max-w-sm rounded-t-3xl sm:rounded-2xl border border-[#e6dac6] p-5 pb-8 sm:pb-5 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-xl font-bold text-slate-900">Adjust Bid Bucks</h3>
-            <p className="text-base text-slate-500 mt-0.5 truncate">{nameOf(adjusting)}</p>
+            <h3 className="font-display text-xl font-black text-[#241a12]">Adjust Bid Bucks</h3>
+            <p className="text-base text-[#8a7559] mt-0.5 truncate">{nameOf(adjusting)}</p>
 
-            <div className="mt-4 flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
-              <span className="text-base text-slate-600">Balance now</span>
-              <span className={`text-xl font-extrabold tabular-nums ${adjusting.balance < 0 ? "text-red-600" : "text-slate-900"}`}>
-                {adjusting.balance < 0 ? "−" : ""}{fmtMoney(adjusting.balance)}
-              </span>
+            <div className="mt-4 flex items-center justify-between bg-[#f4ede1] border border-[#e6dac6] rounded-xl px-4 py-3">
+              <span className="text-base text-[#6f5b46]">Balance now</span>
+              <span className="text-xl"><Money value={adjusting.balance} /></span>
             </div>
 
             <label className="block mt-4">
-              <span className="block text-sm font-bold text-slate-600 mb-1.5">Add or remove</span>
-              <input
+              <Eyebrow className="mb-1.5">Add or remove</Eyebrow>
+              <Input
                 type="number"
                 inputMode="decimal"
                 autoFocus
                 value={adjAmount}
                 onChange={(e) => setAdjAmount(e.target.value)}
                 placeholder="5 to add, -5 to remove"
-                className="w-full bg-white border-2 border-slate-200 rounded-xl px-4 min-h-[48px] text-base focus:outline-none focus:border-slate-400"
               />
             </label>
 
             <div className="flex gap-2 mt-2">
               {[5, 10, -5].map((n) => (
-                <button
+                <Btn
                   key={n}
+                  type="button"
+                  tone={n < 0 ? "red" : "green"}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
                   onClick={() => setAdjAmount(String(n))}
-                  className={`flex-1 min-h-[44px] rounded-xl border-2 font-bold text-base ${
-                    n < 0 ? "border-red-200 text-red-700 bg-red-50" : "border-green-200 text-green-700 bg-green-50"
-                  }`}
                 >
                   {n > 0 ? `+$${n}` : `−$${Math.abs(n)}`}
-                </button>
+                </Btn>
               ))}
             </div>
 
             <label className="block mt-3">
-              <span className="block text-sm font-bold text-slate-600 mb-1.5">Reason (optional)</span>
-              <input
+              <Eyebrow className="mb-1.5">Reason (optional)</Eyebrow>
+              <Input
                 type="text"
                 value={adjReason}
                 onChange={(e) => setAdjReason(e.target.value)}
                 placeholder="Shows in the ledger"
-                className="w-full bg-white border-2 border-slate-200 rounded-xl px-4 min-h-[48px] text-base focus:outline-none focus:border-slate-400"
               />
             </label>
 
             {/* Show the outcome before committing — this is real money. */}
             {Number.isFinite(Number(adjAmount)) && Number(adjAmount) !== 0 && (
-              <div className="mt-3 flex items-center justify-between bg-slate-900 text-white rounded-xl px-4 py-3">
+              <div className="mt-3 flex items-center justify-between bg-[#241a12] text-[#fbf4e6] rounded-xl px-4 py-3">
                 <span className="text-base">New balance</span>
-                <span className="text-xl font-extrabold tabular-nums">
+                <span className="font-display text-xl font-black tabular-nums">
                   {adjusting.balance + Number(adjAmount) < 0 ? "−" : ""}
                   {fmtMoney(adjusting.balance + Number(adjAmount))}
                 </span>
               </div>
             )}
 
-            {adjError && <p className="text-base text-red-600 mt-3">{adjError}</p>}
+            {adjError && <p className="text-base font-semibold text-[#a1321f] mt-3">{adjError}</p>}
 
             <div className="flex gap-3 mt-5">
               <Btn tone="slate" variant="outline" full onClick={() => setAdjusting(null)}>Cancel</Btn>

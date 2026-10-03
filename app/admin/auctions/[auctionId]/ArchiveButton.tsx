@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Btn } from "../../ui";
 
 /**
  * Archive (hide) or un-archive an auction. Archived auctions drop out of reports,
@@ -45,40 +46,33 @@ export default function ArchiveButton({
 
   if (archived) {
     return (
-      <div>
-        <button
-          onClick={() => run(false)}
-          disabled={busy}
-          className="text-sm font-bold px-4 py-2.5 rounded-xl border border-[#cdbda3] bg-white hover:bg-[#efe3d0] text-[#6c4d39] disabled:opacity-50"
-        >
+      <div className="flex items-center gap-2 flex-wrap">
+        <Btn variant="outline" size="sm" onClick={() => run(false)} disabled={busy}>
           {busy ? "…" : "Un-archive"}
-        </button>
-        {err && <p className="text-xs text-red-600 mt-1">{err}</p>}
+        </Btn>
+        {err && <span className="text-xs font-semibold text-[#a1321f]">{err}</span>}
       </div>
     );
   }
 
   if (confirming) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <span className="text-sm text-[#6f5b46]">Hide from reports &amp; site?</span>
-        <button onClick={() => run(true)} disabled={busy} className="text-sm font-bold px-3 py-2 rounded-lg bg-[#a32d2d] text-white hover:bg-[#8a2525] disabled:opacity-50">
+        <Btn tone="red" size="sm" onClick={() => run(true)} disabled={busy}>
           {busy ? "…" : "Archive"}
-        </button>
-        <button onClick={() => setConfirming(false)} disabled={busy} className="text-sm font-bold px-3 py-2 rounded-lg border border-[#cdbda3] text-[#6f5b46]">
+        </Btn>
+        <Btn tone="slate" variant="outline" size="sm" onClick={() => setConfirming(false)} disabled={busy}>
           Cancel
-        </button>
-        {err && <p className="text-xs text-red-600">{err}</p>}
+        </Btn>
+        {err && <span className="text-xs font-semibold text-[#a1321f]">{err}</span>}
       </div>
     );
   }
 
   return (
-    <button
-      onClick={() => setConfirming(true)}
-      className="text-sm font-semibold px-4 py-2.5 rounded-xl border border-[#cdbda3] bg-white hover:bg-[#efe3d0] text-[#6f5b46]"
-    >
-      Archive (hide test auction)
-    </button>
+    <Btn tone="slate" variant="outline" size="sm" onClick={() => setConfirming(true)} title="Hide this test auction from reports and the site">
+      Archive
+    </Btn>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Btn } from "../../ui";
 
 export default function DeleteAuctionButton({ auctionId }: { auctionId: string }) {
   const router = useRouter();
@@ -30,31 +31,24 @@ export default function DeleteAuctionButton({ auctionId }: { auctionId: string }
 
   return (
     <>
-      <button
-        onClick={() => setAsking(true)}
-        disabled={deleting}
-        className="bg-white border border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50 text-base font-semibold px-6 py-3.5 rounded-xl transition-colors"
-      >
+      <Btn tone="red" variant="outline" onClick={() => setAsking(true)} disabled={deleting}>
         {deleting ? "Deleting…" : "Delete Auction"}
-      </button>
-      {error && <p className="text-red-600 text-base mt-2">{error}</p>}
+      </Btn>
+      {error && <p className="text-sm font-semibold text-[#a1321f] mt-2">{error}</p>}
 
       {asking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setAsking(false)}>
-          <div className="bg-white rounded-2xl border border-[#cdbda3] max-w-sm w-full p-6 shadow-xl text-left" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl border border-[#e6dac6] max-w-sm w-full p-6 shadow-xl text-left" onClick={(e) => e.stopPropagation()}>
             <p className="text-base text-[#241a12]">
               Delete this draft auction? Its items go back to your drafts. This can&apos;t be undone.
             </p>
             <div className="mt-5 flex gap-3">
-              <button onClick={() => setAsking(false)} className="flex-1 bg-white border border-[#cdbda3] text-[#6f5b46] hover:bg-[#efe3d0] font-semibold text-base py-3 rounded-xl">
+              <Btn tone="slate" variant="outline" full onClick={() => setAsking(false)}>
                 Back
-              </button>
-              <button
-                onClick={() => { setAsking(false); handleDelete(); }}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold text-base py-3 rounded-xl"
-              >
+              </Btn>
+              <Btn tone="red" full onClick={() => { setAsking(false); handleDelete(); }}>
                 Delete
-              </button>
+              </Btn>
             </div>
           </div>
         </div>

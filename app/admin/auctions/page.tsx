@@ -1,8 +1,9 @@
 export const dynamic = "force-dynamic";
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireUserOrg } from "@/lib/auth";
 import PusherRefresh from "@/app/components/PusherRefresh";
+import { IcoGavel } from "@/app/components/BidIcons";
+import { PageHeader, PageBody, BtnLink, Empty } from "../ui";
 import AuctionsList, { type AuctionSummary } from "./AuctionsList";
 
 const SOLD_STATUSES = ["SOLD", "PENDING_PICKUP", "PICKED_UP"] as const;
@@ -87,31 +88,26 @@ export default async function AuctionsPage() {
   return (
     <>
       <PusherRefresh channel="auctions" event="auction-updated" />
-      <header className="border-b border-slate-200 bg-white px-4 sm:px-8 py-4 flex items-center justify-between gap-3">
-        <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900">Auctions</h1>
-        <Link
-          href="/admin/auctions/new"
-          className="shrink-0 inline-flex items-center justify-center min-h-[48px] px-5 rounded-xl bg-slate-900 text-white font-bold text-base"
-        >
-          + New
-        </Link>
-      </header>
+      <PageHeader
+        title="Auctions"
+        sub="Build, run and close auctions."
+        actions={<BtnLink href="/admin/auctions/new" size="sm">New auction</BtnLink>}
+      />
 
-      <div className="px-4 sm:px-8 py-5 max-w-2xl w-full">
+      <PageBody>
         {auctions.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-lg text-slate-500 mb-4">No auctions yet.</p>
-            <Link
-              href="/admin/auctions/new"
-              className="inline-flex items-center justify-center min-h-[48px] px-6 rounded-xl bg-slate-900 text-white font-bold text-base"
-            >
-              Create your first auction
-            </Link>
+          <div className="bg-white border border-[#e6dac6] rounded-2xl">
+            <Empty
+              icon={<IcoGavel className="w-10 h-10" />}
+              text="No auctions yet."
+              sub="Create your first one and start adding lots."
+              action={<BtnLink href="/admin/auctions/new">Create your first auction</BtnLink>}
+            />
           </div>
         ) : (
           <AuctionsList live={live} upcoming={upcoming} closed={closed} archived={archived} />
         )}
-      </div>
+      </PageBody>
     </>
   );
 }

@@ -4,9 +4,22 @@
  * (no chart library) so nothing new can break the live build. Two primitives:
  *
  *  • AreaTrend — a line + soft area fill over time, with gridlines and a marked
- *    latest point. Has a `dark` mode so it reads on the green hero card.
+ *    latest point. Has a `dark` mode so it reads on the ink hero card.
  *  • Donut — a proportional ring with a labelled centre and a legend.
+ *
+ * Colours come from the admin kit palette (leather / moss / amber / gold).
  */
+
+/** Slice colours shared by every money donut so "Stripe's cut" is always the same red. */
+export const CHART = {
+  leather: "#6c4d39",
+  moss: "#4a7c59",
+  amber: "#c47b3e",
+  gold: "#f0a35a",
+  red: "#c0392b",
+  mute: "#8a7559",
+  sand: "#b3a085",
+} as const;
 
 // ── Area / line trend ─────────────────────────────────────────────────────────
 export function AreaTrend({
@@ -39,11 +52,12 @@ export function AreaTrend({
       ? `${line} L ${x(n - 1).toFixed(1)} ${(padT + innerH).toFixed(1)} L ${x(0).toFixed(1)} ${(padT + innerH).toFixed(1)} Z`
       : "";
 
-  const stroke = dark ? "#eef4e4" : "#6c4d39";
-  const grid = dark ? "rgba(255,255,255,0.16)" : "#efe3d0";
-  const labelCol = dark ? "#cfe0bb" : "#a9987c";
-  const fillTop = dark ? "rgba(255,255,255,0.30)" : "rgba(108,77,57,0.20)";
-  const fillBot = dark ? "rgba(255,255,255,0.02)" : "rgba(108,77,57,0.01)";
+  // Palette: leather line on parchment; gold line on the ink hero card.
+  const stroke = dark ? "#f0a35a" : "#6c4d39";
+  const grid = dark ? "rgba(246,236,218,0.14)" : "#efe3d0";
+  const labelCol = dark ? "#b9a688" : "#a3927b";
+  const fillTop = dark ? "rgba(240,163,90,0.32)" : "rgba(108,77,57,0.20)";
+  const fillBot = dark ? "rgba(240,163,90,0.02)" : "rgba(108,77,57,0.01)";
   const gid = `area-${dark ? "d" : "l"}`;
 
   // Thin the x-labels so they never crowd.
@@ -137,6 +151,9 @@ export function Donut({
     <div className="flex items-center gap-5">
       <svg viewBox="0 0 150 150" className="shrink-0" width="150" height="150">
         <circle cx="75" cy="75" r={R} fill="none" stroke="#efe3d0" strokeWidth="18" />
+        {active.length === 0 && (
+          <text x="75" y="118" textAnchor="middle" fontSize="10" fontWeight="700" fill="#b3a085">NO DATA</text>
+        )}
         {active.map((s, i) => {
           const frac = s.value / total;
           const dash = frac * CIRC;
@@ -158,7 +175,7 @@ export function Donut({
           acc += dash;
           return seg;
         })}
-        <text x="75" y="70" textAnchor="middle" fontSize="21" fontWeight="800" fill="#241a12">
+        <text x="75" y="70" textAnchor="middle" fontSize="21" fontWeight="900" fill="#241a12">
           {centerTop}
         </text>
         {centerSub && (
@@ -172,7 +189,7 @@ export function Donut({
           <div key={s.label} className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-full shrink-0" style={{ background: s.color }} />
             <span className="text-sm text-[#4a3a2b] flex-1 min-w-0 truncate">{s.label}</span>
-            <span className="text-sm font-bold text-[#241a12] tabular-nums shrink-0">
+            <span className="text-sm font-black text-[#241a12] tabular-nums shrink-0">
               {Math.round((s.value / total) * 100)}%
             </span>
           </div>

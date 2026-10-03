@@ -1,6 +1,8 @@
 export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import { requireUserOrg } from "@/lib/auth";
+import { IcoTrophy } from "@/app/components/BidIcons";
+import { PageHeader, PageBody, Empty, BtnLink } from "../ui";
 import UnsoldList, { type UnsoldGroup } from "./UnsoldList";
 
 export default async function UnsoldPage() {
@@ -53,22 +55,25 @@ export default async function UnsoldPage() {
 
   return (
     <>
-      <header className="border-b border-slate-200 bg-white px-4 sm:px-8 py-3.5">
-        <h1 className="text-xl sm:text-2xl font-semibold text-slate-900">Unsold items</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Everything that didn&apos;t sell. Relist an item straight into another auction, or save it to drafts for later.
-        </p>
-      </header>
+      <PageHeader
+        title="Unsold & relist"
+        sub="Everything that didn't sell. Relist an item straight into another auction, or save it to drafts for later."
+      />
 
-      <div className="px-4 sm:px-8 py-5 max-w-3xl w-full">
+      <PageBody>
         {items.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-slate-500">
-            Nothing unsold right now — every item found a buyer. 🎉
+          <div className="bg-white border border-[#e6dac6] rounded-2xl">
+            <Empty
+              icon={<IcoTrophy className="w-10 h-10" />}
+              text="Nothing unsold right now."
+              sub="Every lot found a buyer."
+              action={<BtnLink href="/admin/auctions" size="sm" variant="outline">All auctions</BtnLink>}
+            />
           </div>
         ) : (
           <UnsoldList groups={grouped} relistTargets={relistTargets} locations={locations} total={items.length} />
         )}
-      </div>
+      </PageBody>
     </>
   );
 }

@@ -1,8 +1,11 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
 import { fmtMoney, fmtMoney0 } from "../format";
-import { Pill, Panel, Empty } from "../ui";
+import {
+  Pill, Panel, Empty, PageHeader, PageBody, ActionCard, StatCard, Segmented, SearchBox,
+  Btn, Row, Money, Initials, Notice, Progress, Eyebrow, type Tone,
+} from "../ui";
+import { IcoTrophy } from "@/app/components/BidIcons";
 import MessageSheet, { type MessageTarget } from "../MessageSheet";
 
 interface LeaderRow { name: string; value: number; items?: number }
@@ -25,35 +28,33 @@ interface Data {
   total: number; skip: number; page: number;
 }
 
-const MEDALS = ["🥇", "🥈", "🥉"];
+/** Top-three ranks get a coloured badge; everyone else is quiet. */
+const RANK_TONE: Tone[] = ["amber", "slate", "leather"];
 
-/** Horizontal bar leaderboard — rank, name, bar, value. Reads at a glance. */
+/** Horizontal bar leaderboard — rank, avatar, name, bar, value. Reads at a glance. */
 function Board({
-  title, sub, rows, format, color,
-}: { title: string; sub: string; rows: LeaderRow[]; format: (n: number) => string; color: string }) {
+  title, sub, rows, format, tone: t,
+}: { title: string; sub: string; rows: LeaderRow[]; format: (n: number) => string; tone: Tone }) {
   const max = Math.max(1, ...rows.map((r) => r.value));
   return (
     <Panel title={title} sub={sub}>
       {rows.length === 0 ? (
-        <Empty text="Nothing here yet." />
+        <Empty text="Nothing here yet." sub="Leaders show up once people win and bid." />
       ) : (
-        <ul className="px-4 py-3 space-y-2.5">
+        <ul className="px-4 py-3 space-y-3">
           {rows.map((r, i) => (
-            <li key={r.name + i}>
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <span className="min-w-0 flex items-center gap-1.5">
-                  <span className="w-6 shrink-0 text-center text-sm font-bold text-slate-400">
-                    {MEDALS[i] ?? i + 1}
+            <li key={r.name + i} className="flex items-center gap-3">
+              <span className="w-6 shrink-0 text-center text-sm font-black tabular-nums text-[#a3927b]">{i + 1}</span>
+              <Initials name={r.name} size={34} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <span className="truncate font-bold text-[#241a12]">{r.name}</span>
+                  <span className="shrink-0 font-extrabold tabular-nums text-[#241a12]">
+                    {format(r.value)}
+                    {r.items != null && <span className="text-sm font-normal text-[#8a7559]"> · {r.items}</span>}
                   </span>
-                  <span className="truncate font-semibold text-slate-900">{r.name}</span>
-                </span>
-                <span className="shrink-0 font-extrabold tabular-nums text-slate-900">
-                  {format(r.value)}
-                  {r.items != null && <span className="text-sm font-normal text-slate-400"> · {r.items}</span>}
-                </span>
-              </div>
-              <div className="h-2 rounded-full bg-slate-100 overflow-hidden ml-7">
-                <div className="h-full rounded-full" style={{ width: `${(r.value / max) * 100}%`, background: color }} />
+                </div>
+                <Progress value={r.value / max} tone={i < 3 ? RANK_TONE[i] : t} />
               </div>
             </li>
           ))}
@@ -99,7 +100,7 @@ export default function WinnersPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setRetryMsg({ key: clerkUserId, text: data.coveredByCredit ? "Covered by Bid Bucks ✓" : "Charged ✓", ok: true });
+        setRetryMsg({ key: clerkUserId, text: data.coveredByCredit ? "Covered by Bid Bucks" : "Charged", ok: true });
         load(q.trim(), skip, filter);
       } else {
         setRetryMsg({ key: clerkUserId, text: data.error || "Could not charge.", ok: false });
@@ -126,7 +127,7 @@ export default function WinnersPage() {
       const data = await res.json();
       if (data.success) {
         setCashKey(null);
-        setCashMsg({ key: clerkUserId, text: "Marked paid in cash ✓", ok: true });
+        setCashMsg({ key: clerkUserId, text: "Marked paid in cash", ok: true });
         load(q.trim(), skip, filter);
       } else {
         setCashMsg({ key: clerkUserId, text: data.error || "Could not mark cash.", ok: false });
@@ -147,160 +148,155 @@ export default function WinnersPage() {
   useEffect(() => { setSkip(0); }, [q, filter]);
 
   const stats = d?.stats;
+  const paidShare = stats && stats.totalWon > 0 ? Math.max(0, 1 - stats.owedTotal / stats.totalWon) : 1;
 
   return (
     <>
-      <header className="border-b border-slate-200 bg-white px-4 sm:px-8 py-4">
-        <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900">Winners &amp; Payments</h1>
-      </header>
+      <PageHeader
+        title="Winners & payments"
+        sub={stats && stats.owedTotal > 0 ? `${fmtMoney(stats.owedTotal)} still to collect.` : "Everyone's paid up."}
+      />
 
-      <div className="px-4 sm:px-8 py-5 space-y-4 max-w-2xl w-full">
-
+      <PageBody>
         {/* ── Money owed: the only thing that needs action ── */}
         {stats && stats.owedTotal > 0 && (
-          <Link
+          <ActionCard
             href="#owed"
-            className="block rounded-2xl border-2 border-red-200 bg-red-50 p-4 active:scale-[0.99] transition-transform"
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-bold uppercase tracking-wide text-red-700">Not collected</div>
-                <div className="text-3xl font-extrabold text-red-600 tabular-nums mt-0.5">
-                  {fmtMoney(stats.owedTotal)}
-                </div>
-                <div className="text-sm text-red-800 mt-0.5">
-                  {stats.owedPeople} {stats.owedPeople === 1 ? "person" : "people"} owe you
-                </div>
-              </div>
-              <span className="text-red-300 text-2xl">›</span>
-            </div>
-          </Link>
+            tone="red"
+            count={fmtMoney(stats.owedTotal)}
+            label="Not collected"
+            sub={`${stats.owedPeople} ${stats.owedPeople === 1 ? "person owes" : "people owe"} you — card declined or pending`}
+          />
         )}
 
         {/* ── Headline stats ── */}
         {stats && (
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border-2 border-green-200 bg-green-50 p-4">
-              <div className="text-sm font-bold uppercase tracking-wide text-slate-500">Total won</div>
-              <div className="text-2xl font-extrabold text-green-700 tabular-nums mt-0.5">{fmtMoney0(stats.totalWon)}</div>
-              <div className="text-sm text-slate-500 mt-0.5">{stats.winCount} items</div>
+            <StatCard label="Total won" value={fmtMoney0(stats.totalWon)} sub={`${stats.winCount} items`} tone="green" />
+            <StatCard label="Winners" value={stats.winnerCount} sub={`${fmtMoney0(stats.avgWin)} average`} />
+          </div>
+        )}
+
+        {/* Paid vs owed ratio */}
+        {stats && stats.totalWon > 0 && (
+          <div className="rounded-2xl bg-white border border-[#e6dac6] p-4">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <Eyebrow>Collected</Eyebrow>
+              <span className="text-sm font-bold tabular-nums text-[#241a12]">{Math.round(paidShare * 100)}%</span>
             </div>
-            <div className="rounded-2xl border-2 border-slate-200 bg-white p-4">
-              <div className="text-sm font-bold uppercase tracking-wide text-slate-500">Winners</div>
-              <div className="text-2xl font-extrabold text-slate-900 tabular-nums mt-0.5">{stats.winnerCount}</div>
-              <div className="text-sm text-slate-500 mt-0.5">{fmtMoney0(stats.avgWin)} average</div>
-            </div>
+            <Progress value={paidShare} tone={stats.owedTotal > 0 ? "amber" : "green"} />
           </div>
         )}
 
         {/* ── Biggest win — a bit of fun ── */}
         {stats?.biggest && (
-          <div className="rounded-2xl bg-slate-900 text-white p-4 flex items-center gap-4">
-            <span className="text-3xl shrink-0">🏆</span>
+          <div className="rounded-2xl bg-[#241a12] text-[#fbf4e6] p-4 flex items-center gap-4">
+            <span className="w-12 h-12 rounded-2xl bg-[#f0a35a]/15 text-[#f0a35a] grid place-items-center shrink-0">
+              <IcoTrophy className="w-6 h-6" />
+            </span>
             <div className="min-w-0 flex-1">
-              <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Biggest win ever</div>
-              <div className="text-2xl font-extrabold tabular-nums leading-tight">{fmtMoney0(stats.biggest.amount)}</div>
-              <div className="text-sm text-slate-300 truncate">
-                {stats.biggest.name} · {stats.biggest.title}
-              </div>
+              <Eyebrow className="!text-[#b9a688]">Biggest win ever</Eyebrow>
+              <div className="font-display text-2xl font-black tabular-nums leading-tight mt-0.5">{fmtMoney0(stats.biggest.amount)}</div>
+              <div className="text-sm text-[#d9c7ab] truncate">{stats.biggest.name} · {stats.biggest.title}</div>
             </div>
           </div>
         )}
 
         {/* ── Tabs ── */}
-        <div className="flex gap-2">
-          {([
-            { k: "money", label: "Wins & payments" },
-            { k: "leaders", label: "Leaderboards" },
-          ] as const).map((t) => (
-            <button
-              key={t.k}
-              onClick={() => setTab(t.k)}
-              className={`flex-1 min-h-[48px] rounded-xl border-2 font-bold text-base transition-colors ${
-                tab === t.k ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: "money", label: "Wins & payments" },
+            { value: "leaders", label: "Leaderboards" },
+          ]}
+        />
 
         {tab === "leaders" ? (
           <div className="space-y-4">
-            <Board title="Top spenders" sub="Most money won, all time" rows={d?.leaders.spend ?? []} format={fmtMoney0} color="#16a34a" />
-            <Board title="Most wins" sub="Items taken home" rows={d?.leaders.wins ?? []} format={(v) => String(v)} color="#0284c7" />
-            <Board title="Most bids placed" sub="Who's most active" rows={d?.leaders.bids ?? []} format={(v) => String(v)} color="#c47b3e" />
-            <Board title="Leading right now" sub="Winning live items — money in the air" rows={d?.leaders.live ?? []} format={fmtMoney0} color="#7c3aed" />
+            <Board title="Top spenders" sub="Most money won, all time" rows={d?.leaders.spend ?? []} format={fmtMoney0} tone="green" />
+            <Board title="Most wins" sub="Items taken home" rows={d?.leaders.wins ?? []} format={(v) => String(v)} tone="blue" />
+            <Board title="Most bids placed" sub="Who's most active" rows={d?.leaders.bids ?? []} format={(v) => String(v)} tone="amber" />
+            <Board title="Leading right now" sub="Winning live items — money in the air" rows={d?.leaders.live ?? []} format={fmtMoney0} tone="leather" />
           </div>
         ) : (
           <>
             {/* ── Who owes ── */}
             {d && d.owed.length > 0 && (
               <div id="owed" className="scroll-mt-4">
-                <Panel title="Who owes you" sub={`${d.owed.length} ${d.owed.length === 1 ? "person" : "people"}`}>
-                  <ul className="divide-y divide-slate-100">
+                <Panel tone="red" title="Who owes you" sub={`${d.owed.length} ${d.owed.length === 1 ? "person" : "people"}`}>
+                  <ul className="divide-y divide-[#f0e6d6]">
                     {d.owed.map((o) => (
-                      <li key={o.clerkUserId} className="px-4 py-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="font-bold text-slate-900 truncate">{o.name}</div>
-                            <div className="text-sm text-slate-500">
+                      <li key={o.clerkUserId} className="px-4 py-4">
+                        <div className="flex items-center gap-3">
+                          <Initials name={o.name} />
+                          <div className="min-w-0 flex-1">
+                            <div className="font-bold text-[#241a12] truncate">{o.name}</div>
+                            <div className="text-sm text-[#8a7559]">
                               {o.itemCount} item{o.itemCount !== 1 ? "s" : ""}
                             </div>
                           </div>
-                          <div className="text-xl font-extrabold text-red-600 tabular-nums shrink-0">
+                          <div className="font-display text-2xl font-black text-[#a1321f] tabular-nums shrink-0">
                             {fmtMoney(o.amount)}
                           </div>
                         </div>
-                        <div className="flex gap-2 mt-2.5">
-                          <button
+                        <div className="flex gap-2 mt-3">
+                          <Btn
+                            tone="green"
+                            size="sm"
+                            className="flex-1"
                             onClick={() => retryCharge(o.clerkUserId)}
                             disabled={retrying === o.clerkUserId}
-                            className="flex-1 min-h-[44px] inline-flex items-center justify-center rounded-xl bg-[#5f7a45] hover:bg-[#4f6639] disabled:opacity-50 text-white font-bold text-base"
                           >
                             {retrying === o.clerkUserId ? "Charging…" : "Retry charge"}
-                          </button>
+                          </Btn>
                           {o.phone && (
-                            <button
+                            <Btn
+                              tone="blue"
+                              variant="outline"
+                              size="sm"
+                              className="flex-1"
                               onClick={() => setMsgTarget({ clerkUserId: o.clerkUserId, name: o.name, phone: o.phone })}
-                              className="flex-1 min-h-[44px] inline-flex items-center justify-center gap-1.5 rounded-xl border-2 border-slate-200 bg-white font-bold text-base text-slate-700"
                             >
                               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3.5h12v8H5l-3 2.5z"/></svg>
                               Text
-                            </button>
+                            </Btn>
                           )}
                         </div>
                         {/* Cash / in-person — two-tap confirm (it's money). */}
                         {cashKey === o.clerkUserId ? (
                           <div className="flex gap-2 mt-2">
-                            <button
+                            <Btn
+                              tone="green"
+                              size="sm"
+                              className="flex-1"
                               onClick={() => markCash(o.clerkUserId)}
                               disabled={cashBusy === o.clerkUserId}
-                              className="flex-1 min-h-[44px] inline-flex items-center justify-center rounded-xl bg-[#3f5226] hover:bg-[#33421f] disabled:opacity-50 text-white font-bold text-base"
                             >
                               {cashBusy === o.clerkUserId ? "Marking…" : `Confirm cash ${fmtMoney(o.amount)}`}
-                            </button>
-                            <button
-                              onClick={() => setCashKey(null)}
-                              className="min-h-[44px] px-4 inline-flex items-center justify-center rounded-xl border-2 border-slate-200 bg-white font-bold text-base text-slate-600"
-                            >
+                            </Btn>
+                            <Btn tone="slate" variant="outline" size="sm" onClick={() => setCashKey(null)}>
                               Cancel
-                            </button>
+                            </Btn>
                           </div>
                         ) : (
-                          <button
+                          <Btn
+                            tone="green"
+                            variant="outline"
+                            size="sm"
+                            full
+                            className="mt-2"
                             onClick={() => { setCashKey(o.clerkUserId); setCashMsg(null); }}
-                            className="w-full mt-2 min-h-[44px] inline-flex items-center justify-center gap-1.5 rounded-xl border-2 border-[#3f5226]/25 bg-[#eaf1e2] text-[#3f5226] font-bold text-base hover:bg-[#dfeacb]"
                           >
                             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="16" height="10" rx="2" /><circle cx="10" cy="10" r="2.2" /></svg>
                             Mark paid — cash
-                          </button>
+                          </Btn>
                         )}
                         {retryMsg && retryMsg.key === o.clerkUserId && (
-                          <p className={`text-sm mt-1.5 font-medium ${retryMsg.ok ? "text-[#3f5226]" : "text-red-600"}`}>{retryMsg.text}</p>
+                          <Notice tone={retryMsg.ok ? "green" : "red"} className="mt-2">{retryMsg.text}</Notice>
                         )}
                         {cashMsg && cashMsg.key === o.clerkUserId && (
-                          <p className={`text-sm mt-1.5 font-medium ${cashMsg.ok ? "text-[#3f5226]" : "text-red-600"}`}>{cashMsg.text}</p>
+                          <Notice tone={cashMsg.ok ? "green" : "red"} className="mt-2">{cashMsg.text}</Notice>
                         )}
                       </li>
                     ))}
@@ -310,71 +306,65 @@ export default function WinnersPage() {
             )}
 
             {/* ── Search + filter ── */}
-            <input
+            <SearchBox
               type="text"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search winner or item…"
-              className="w-full bg-white border-2 border-slate-200 rounded-xl px-4 min-h-[48px] text-base text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400"
             />
-            <div className="flex gap-2">
-              {([
-                { k: "all", label: "All" },
-                { k: "unpaid", label: "Unpaid" },
-                { k: "paid", label: "Paid" },
-              ] as const).map((f) => (
-                <button
-                  key={f.k}
-                  onClick={() => setFilter(f.k)}
-                  className={`flex-1 min-h-[44px] rounded-xl border-2 font-bold text-base transition-colors ${
-                    filter === f.k ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200"
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
+            <Segmented
+              value={filter}
+              onChange={setFilter}
+              options={[
+                { value: "all", label: "All" },
+                { value: "unpaid", label: "Unpaid" },
+                { value: "paid", label: "Paid" },
+              ]}
+            />
 
             {/* ── Wins feed ── */}
             <Panel title="Wins" sub={d ? `${d.total.toLocaleString()} total` : ""}>
               {loading && !d ? (
-                <p className="px-4 py-8 text-center text-slate-500">Loading…</p>
+                <p className="px-4 py-8 text-center text-[#8a7559]">Loading…</p>
               ) : !d || d.feed.length === 0 ? (
-                <Empty text={q ? "No matches." : "No wins yet."} />
+                <Empty
+                  text={q ? "No matches." : "No wins yet."}
+                  sub={q ? "Try a different name or item." : "Wins land here as auctions close."}
+                />
               ) : (
-                <ul className="divide-y divide-slate-100">
+                <ul className="divide-y divide-[#f0e6d6]">
                   {d.feed.map((w) => {
                     // Sold items open the winner's INVOICE — never the item editor.
                     const href = w.auctionId
                       ? `/invoice/${w.auctionId}?user=${encodeURIComponent(w.clerkUserId)}`
-                      : null;
-                    const row = (
-                      <div className="flex items-center gap-3 px-4 py-3">
-                        <span className="w-12 h-12 shrink-0 rounded-lg overflow-hidden bg-slate-100 grid place-items-center">
-                          {w.photo ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={w.photo} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <span className="text-[10px] text-slate-400">—</span>
-                          )}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="font-semibold text-slate-900 truncate">{w.title}</div>
-                          <div className="text-sm text-slate-500 truncate">{w.name}</div>
-                        </div>
-                        <div className="shrink-0 text-right">
-                          <div className="font-extrabold text-slate-900 tabular-nums">{fmtMoney0(w.amount)}</div>
-                          <div className="mt-0.5">
-                            <Pill tone={w.state === "paid" ? "green" : w.state === "comped" ? "slate" : "red"}>
-                              {w.state === "paid" ? "Paid" : w.state === "comped" ? "Comp" : "Unpaid"}
-                            </Pill>
-                          </div>
-                        </div>
-                      </div>
-                    );
+                      : undefined;
                     return (
                       <li key={w.id}>
-                        {href ? <Link href={href} className="block active:bg-slate-50">{row}</Link> : row}
+                        <Row
+                          href={href}
+                          leading={
+                            w.photo ? (
+                              <span className="w-11 h-11 rounded-xl overflow-hidden bg-[#f4ede1] grid place-items-center">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={w.photo} alt="" className="w-full h-full object-cover" />
+                              </span>
+                            ) : (
+                              <Initials name={w.name} size={44} />
+                            )
+                          }
+                          title={w.title}
+                          sub={w.name}
+                          trailing={
+                            <>
+                              <div><Money value={w.amount} /></div>
+                              <div className="mt-1">
+                                <Pill tone={w.state === "paid" ? "green" : w.state === "comped" ? "slate" : "red"}>
+                                  {w.state === "paid" ? "Paid" : w.state === "comped" ? "Comp" : "Unpaid"}
+                                </Pill>
+                              </div>
+                            </>
+                          }
+                        />
                       </li>
                     );
                   })}
@@ -383,30 +373,36 @@ export default function WinnersPage() {
 
               {/* Pagination — the list never grows unbounded. */}
               {d && d.total > d.page && (
-                <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-slate-100">
-                  <button
+                <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-[#f0e6d6]">
+                  <Btn
+                    tone="slate"
+                    variant="outline"
+                    size="sm"
                     onClick={() => setSkip(Math.max(0, skip - d.page))}
                     disabled={skip === 0}
-                    className="min-h-[44px] px-4 rounded-xl border-2 border-slate-200 bg-white font-bold text-base text-slate-700 disabled:opacity-40"
                   >
-                    ← Prev
-                  </button>
-                  <span className="text-sm text-slate-500 tabular-nums">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3L5 8l5 5" /></svg>
+                    Prev
+                  </Btn>
+                  <span className="text-sm text-[#8a7559] tabular-nums">
                     {skip + 1}–{Math.min(skip + d.page, d.total)} of {d.total.toLocaleString()}
                   </span>
-                  <button
+                  <Btn
+                    tone="slate"
+                    variant="outline"
+                    size="sm"
                     onClick={() => setSkip(skip + d.page)}
                     disabled={skip + d.page >= d.total}
-                    className="min-h-[44px] px-4 rounded-xl border-2 border-slate-200 bg-white font-bold text-base text-slate-700 disabled:opacity-40"
                   >
-                    Next →
-                  </button>
+                    Next
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3l5 5-5 5" /></svg>
+                  </Btn>
                 </div>
               )}
             </Panel>
           </>
         )}
-      </div>
+      </PageBody>
       <MessageSheet target={msgTarget} onClose={() => setMsgTarget(null)} />
     </>
   );

@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import Image from "next/image";
 import RelistControl, { type RelistTarget } from "../../RelistControl";
 import PrintLabelButton from "../../PrintLabelButton";
+import { IcoCheck, IcoTruck } from "@/app/components/BidIcons";
+import { fmtMoney0 } from "../../format";
+import { Panel, Pill, Btn, BtnLink, Initials, Money, SearchBox, Notice, Empty, Progress, Eyebrow, tone, type Tone } from "../../ui";
 
 export interface ResultItem {
   id: string;
@@ -42,8 +44,6 @@ export interface ResultUnsold {
 
 type Bucket = "done" | "scheduled" | "no_pickup" | "no_location";
 
-const money = (n: number) => `$${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-
 // A customer's fulfillment state. "done" (everything collected) wins over
 // everything else so a finished order never shows as "no pickup scheduled".
 function bucketOf(o: ResultOrder): Bucket {
@@ -63,20 +63,36 @@ function fmtWhen(iso: string): string {
   });
 }
 
-function PaidPill({ state }: { state: ResultItem["paidState"] }) {
-  const map = {
-    paid: "bg-green-100 text-green-800",
-    comped: "bg-slate-100 text-slate-600",
-    unpaid: "bg-red-100 text-red-700",
-  } as const;
-  const label = { paid: "Paid", comped: "Comped", unpaid: "Unpaid" }[state];
-  return <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${map[state]}`}>{label}</span>;
+function IcoPin({ className = "w-3 h-3" }: { className?: string }) {
+  return <svg className={className} fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="6" cy="5" r="2"/><path d="M6 1C3.79 1 2 2.79 2 5c0 3 4 7 4 7s4-4 4-7c0-2.21-1.79-4-4-4z"/></svg>;
+}
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden><path d="M4 6l4 4 4-4" /></svg>
+  );
 }
 
-const SECTIONS: { key: Bucket; title: string; dot: string; hint: string }[] = [
-  { key: "scheduled", title: "Pickup scheduled", dot: "bg-green-500", hint: "Has a booked collection time" },
-  { key: "no_pickup", title: "No pickup booked", dot: "bg-amber-500", hint: "Has a location — waiting on the customer to pick a time" },
-  { key: "no_location", title: "No location set", dot: "bg-red-500", hint: "Pick their pickup location to start fulfillment" },
+function PaidPill({ state }: { state: ResultItem["paidState"] }) {
+  const t: Tone = state === "paid" ? "green" : state === "unpaid" ? "red" : "slate";
+  const label = { paid: "Paid", comped: "Comped", unpaid: "Unpaid" }[state];
+  return <Pill tone={t}>{label}</Pill>;
+}
+
+/** Thumb or a blank tile, 40px. */
+function Thumb({ src }: { src: string | null }) {
+  return src ? (
+    <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-white ring-1 ring-[#e6dac6]">
+      <Image src={src} alt="" fill sizes="40px" className="object-contain p-0.5" />
+    </div>
+  ) : (
+    <div className="w-10 h-10 rounded-lg bg-[#f4ede1] ring-1 ring-[#e6dac6] shrink-0" />
+  );
+}
+
+const SECTIONS: { key: Bucket; title: string; tone: Tone; hint: string }[] = [
+  { key: "scheduled", title: "Pickup scheduled", tone: "green", hint: "Has a booked collection time" },
+  { key: "no_pickup", title: "No pickup booked", tone: "amber", hint: "Has a location — waiting on the customer to pick a time" },
+  { key: "no_location", title: "No location set", tone: "red", hint: "Pick their pickup location to start fulfillment" },
 ];
 
 export default function AuctionResults({
@@ -274,64 +290,64 @@ export default function AuctionResults({
     return (
       <div
         key={order.clerkUserId}
-        className={`rounded-2xl border overflow-hidden ${done ? "border-green-200 bg-green-50/50" : "border-slate-200 bg-white"}`}
+        className={`rounded-2xl border overflow-hidden ${done ? "border-[#bfd9c5] bg-[#f3f8f4]" : "border-[#e6dac6] bg-white"}`}
       >
         {/* Header — always visible, tap to expand items */}
         <button
+          type="button"
           onClick={() => toggle(order.clerkUserId)}
-          className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-colors ${done ? "hover:bg-green-50" : "hover:bg-slate-50"}`}
+          aria-expanded={isOpen}
+          className={`w-full text-left px-4 py-3.5 flex items-start gap-3 transition-colors ${done ? "hover:bg-[#e6f1e8]" : "hover:bg-[#faf5ea]"}`}
         >
+          <Initials name={order.name} size={40} className="mt-0.5" />
           <div className="min-w-0 flex-1">
-            <div className={`font-bold truncate ${done ? "text-green-900" : "text-slate-900"}`}>{order.name}</div>
-            <div className="text-xs text-slate-500 truncate">
+            <div className={`font-bold truncate ${done ? "text-[#2f5d3a]" : "text-[#241a12]"}`}>{order.name}</div>
+            <div className="text-xs text-[#8a7559] truncate">
               {[order.phone, order.email].filter(Boolean).join(" · ") || "No contact on file"}
             </div>
-            <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-[11px]">
-              <span className="text-slate-500">
+            <div className="flex flex-wrap items-center gap-1.5 mt-2">
+              <span className="text-xs text-[#8a7559]">
                 {order.items.length} item{order.items.length !== 1 ? "s" : ""}
               </span>
               {done ? (
-                <span className="px-1.5 py-0.5 rounded-full bg-green-600 text-white font-bold">All set ✓</span>
+                <Pill tone="green" dot>All set</Pill>
               ) : (
                 <>
-                  {orderUnpaid > 0 && (
-                    <span className="px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-bold">{orderUnpaid} unpaid</span>
-                  )}
-                  {allGathered && (
-                    <span className="px-1.5 py-0.5 rounded-full bg-[#efe0c9] text-[#8a5a2b] font-bold">Gathered ✓</span>
-                  )}
-                  <span className="px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold">
-                    {orderPicked}/{order.items.length} picked up
-                  </span>
+                  {orderUnpaid > 0 && <Pill tone="red">{orderUnpaid} unpaid</Pill>}
+                  {allGathered && <Pill tone="amber">Gathered</Pill>}
+                  <Pill tone="slate">{orderPicked}/{order.items.length} picked up</Pill>
                 </>
               )}
             </div>
 
             {/* Where their stuff is — at a warehouse (ready to gather) vs transferring. */}
             {!done && (hereByWarehouse.size > 0 || transferringItems.length > 0) && (
-              <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-[11px]">
+              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                 {[...hereByWarehouse.entries()].map(([w, n]) => (
-                  <span key={w} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-green-100 text-green-800 font-bold">
-                    📍 {w} ×{n}
+                  <span key={w} className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#e6f1e8] text-[#2f5d3a] border border-[#bfd9c5]">
+                    <IcoPin /> {w} ×{n}
                   </span>
                 ))}
                 {transferringItems.length > 0 && (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold">
-                    🚚 {transferringItems.length} transferring{transferDests.length ? ` → ${transferDests.join(", ")}` : ""}
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#fbeed8] text-[#8a4f1c] border border-[#eed3ab]">
+                    <IcoTruck className="w-3.5 h-3.5" /> {transferringItems.length} transferring{transferDests.length ? ` to ${transferDests.join(", ")}` : ""}
                   </span>
                 )}
               </div>
             )}
           </div>
           <div className="text-right shrink-0">
-            <div className={`text-lg font-extrabold tabular-nums ${done ? "text-green-700" : "text-green-700"}`}>{money(order.total)}</div>
-            <div className="text-[11px] text-[#6c4d39] font-semibold mt-0.5">{isOpen ? "Hide items ▲" : "View items ▼"}</div>
+            <div className="font-display text-lg"><Money value={order.total} /></div>
+            <div className="inline-flex items-center gap-1 text-[11px] text-[#6c4d39] font-bold mt-0.5">
+              {isOpen ? "Hide items" : "View items"} <Chevron open={isOpen} />
+            </div>
           </div>
         </button>
 
         {/* Scheduled banner (only while not fully done) */}
         {!done && order.scheduledFor && (
-          <div className="px-4 py-2 bg-green-50 border-t border-green-100 text-xs text-green-800 font-semibold">
+          <div className="px-4 py-2 bg-[#e6f1e8] border-t border-[#bfd9c5] text-xs text-[#2f5d3a] font-bold inline-flex w-full items-center gap-1.5">
+            <IcoCheck className="w-3.5 h-3.5" />
             Pickup {fmtWhen(order.scheduledFor)}
             {order.scheduledLocation ? ` · ${order.scheduledLocation}` : ""}
           </div>
@@ -340,39 +356,37 @@ export default function AuctionResults({
         {/* Pickup location — READ ONLY. The customer sets this on their pickup page;
             it sticks until they (or an admin, elsewhere) change it. */}
         {!done && (
-          <div className="px-4 py-2 border-t border-slate-100 text-xs">
+          <div className="px-4 py-2 border-t border-[#f0e6d6] text-xs">
             {chosenLocation ? (
-              <span className="text-slate-600">📍 Picks up at <strong className="text-slate-900">{chosenLocation}</strong></span>
+              <span className="inline-flex items-center gap-1 text-[#6f5b46]"><IcoPin /> Picks up at <strong className="text-[#241a12]">{chosenLocation}</strong></span>
             ) : (
-              <span className="text-amber-700">No pickup location chosen yet — the customer sets it on their pickup page.</span>
+              <span className="text-[#8a4f1c] font-semibold">No pickup location chosen yet — the customer sets it on their pickup page.</span>
             )}
           </div>
         )}
 
         {/* Gather & label — clear this order out of storage now, booked or not. */}
         {!done && (
-          <div className="px-4 py-2.5 border-t border-slate-100 flex flex-wrap items-center gap-2">
+          <div className="px-4 py-2.5 border-t border-[#f0e6d6] flex flex-wrap items-center gap-2">
             <PrintLabelButton
               href={labelHref}
               label="Print 4×6 label"
-              className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg bg-[#6c4d39] text-white hover:bg-[#563e2c] disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 rounded-xl font-bold transition-colors whitespace-nowrap min-h-[40px] px-3.5 text-sm bg-[#6c4d39] hover:bg-[#563e2c] text-white shadow-sm"
             />
             {gatherable.length > 0 && (
-              <button
+              <Btn
+                size="sm"
+                tone="amber"
+                variant={allGathered ? "solid" : "outline"}
                 onClick={() => toggleOrderGathered(order, !allGathered)}
                 disabled={busyGather === order.clerkUserId}
-                className={`text-xs font-bold px-3 py-2 rounded-lg border transition-colors disabled:opacity-50 ${
-                  allGathered
-                    ? "bg-[#efe0c9] border-[#e3c9a3] text-[#8a5a2b]"
-                    : "bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
-                }`}
               >
                 {busyGather === order.clerkUserId
                   ? "…"
                   : allGathered
-                  ? "Gathered ✓ — undo"
+                  ? "Gathered — undo"
                   : `Gather ${gatherable.length} here`}
-              </button>
+              </Btn>
             )}
           </div>
         )}
@@ -380,112 +394,109 @@ export default function AuctionResults({
         {/* Items — hidden until expanded */}
         {isOpen && (
           <>
-            <ul className="divide-y divide-slate-100 border-t border-slate-100">
+            <ul className="divide-y divide-[#f0e6d6] border-t border-[#f0e6d6]">
               {order.items.map((it) => (
-                <li key={it.id} className="flex items-center gap-3 px-4 py-2.5">
-                  {it.photo ? (
-                    <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-white ring-1 ring-slate-200">
-                      <Image src={it.photo} alt="" fill sizes="40px" className="object-contain p-0.5" />
-                    </div>
-                  ) : (
-                    <div className="w-10 h-10 rounded-lg bg-slate-100 shrink-0" />
-                  )}
+                <li key={it.id} className="flex items-start gap-3 px-4 py-3">
+                  <Thumb src={it.photo} />
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium text-slate-900 truncate">
-                      {it.code && <span className="font-mono font-bold text-[#6c4d39] mr-1.5">{it.code}</span>}
+                    <div className="text-sm font-bold text-[#241a12] truncate">
+                      {it.code && <span className="font-mono text-[#6c4d39] mr-1.5">{it.code}</span>}
                       {it.title}
                     </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-sm font-bold text-green-700 tabular-nums">{money(it.amount)}</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-sm"><Money value={it.amount} /></span>
                       <PaidPill state={it.paidState} />
                     </div>
-                    <div className="text-[11px] mt-0.5 font-semibold">
+                    <div className="text-[11px] mt-1 font-semibold inline-flex items-center gap-1">
                       {it.pickedUp ? (
-                        <span className="text-green-700">✓ Picked up</span>
+                        <span className="inline-flex items-center gap-1 text-[#2f5d3a]"><IcoCheck className="w-3 h-3" /> Picked up</span>
                       ) : it.transferring ? (
-                        <span className="text-amber-700">🚚 Transferring{it.transferTo ? ` → ${it.transferTo}` : ""}</span>
+                        <span className="inline-flex items-center gap-1 text-[#8a4f1c]"><IcoTruck className="w-3.5 h-3.5" /> Transferring{it.transferTo ? ` to ${it.transferTo}` : ""}</span>
                       ) : it.gathered ? (
                         // Off the shelf now — the warehouse it came from no longer matters.
-                        <span className="text-[#8a5a2b]">✓ Gathered · off shelf</span>
+                        <span className="inline-flex items-center gap-1 text-[#8a4f1c]"><IcoCheck className="w-3 h-3" /> Gathered · off shelf</span>
                       ) : it.warehouse ? (
-                        <span className="text-slate-500">📍 {it.warehouse} · ready to gather</span>
+                        <span className="inline-flex items-center gap-1 text-[#8a7559]"><IcoPin /> {it.warehouse} · ready to gather</span>
                       ) : (
-                        <span className="text-slate-400">No warehouse set</span>
+                        <span className="text-[#b3a085]">No warehouse set</span>
                       )}
                     </div>
                   </div>
-                  <div className="shrink-0 flex flex-col items-end gap-1">
+                  <div className="shrink-0 flex flex-col items-end gap-1.5">
                     {it.pickedUp ? (
-                      <button
+                      <Btn
+                        size="sm"
+                        tone="green"
                         onClick={() => setItemPickup(order.clerkUserId, it.id, false)}
                         disabled={busyItem === it.id}
-                        className="text-xs font-bold px-3 py-2 rounded-lg border bg-green-600 border-green-600 text-white hover:bg-green-700 disabled:opacity-50"
                       >
-                        {busyItem === it.id ? "…" : "Picked up ✓"}
-                      </button>
+                        {busyItem === it.id ? "…" : <><IcoCheck className="w-4 h-4" /> Picked up</>}
+                      </Btn>
                     ) : it.transferring ? (
-                      <span className="text-[11px] font-bold text-amber-700 px-2 py-1 text-right">Awaiting transfer</span>
+                      <Pill tone="amber">Awaiting transfer</Pill>
                     ) : (
                       <>
-                        <button
+                        <Btn
+                          size="sm"
+                          tone="amber"
+                          variant={it.gathered ? "solid" : "outline"}
                           onClick={() => setItemGathered(order.clerkUserId, it.id, !it.gathered)}
                           disabled={busyItem === it.id}
-                          className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50 ${
-                            it.gathered
-                              ? "bg-[#efe0c9] border-[#e3c9a3] text-[#8a5a2b]"
-                              : "bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
-                          }`}
                         >
-                          {busyItem === it.id ? "…" : it.gathered ? "Gathered ✓" : "Gather"}
-                        </button>
-                        <button
+                          {busyItem === it.id ? "…" : it.gathered ? "Gathered" : "Gather"}
+                        </Btn>
+                        <Btn
+                          size="sm"
+                          tone="slate"
+                          variant="ghost"
                           onClick={() => setItemPickup(order.clerkUserId, it.id, true)}
                           disabled={busyItem === it.id}
-                          className="text-[11px] font-bold px-3 py-1 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-50"
                         >
                           Picked up
-                        </button>
+                        </Btn>
                       </>
                     )}
 
                     {/* Forfeit — refund this item (if paid) + relist. Two-tap. */}
                     {forfeitKey === it.id ? (
                       <div className="flex flex-col items-end gap-1 mt-0.5">
-                        <button
+                        <Btn
+                          size="sm"
+                          tone="red"
                           onClick={() => forfeitItem(order.clerkUserId, it.id)}
                           disabled={busyItem === it.id}
-                          className="text-[11px] font-bold px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 whitespace-nowrap"
                         >
                           {busyItem === it.id
                             ? "…"
                             : it.paidState === "paid"
                             ? "Refund this item & relist"
                             : "Forfeit & relist"}
-                        </button>
-                        <button onClick={() => setForfeitKey(null)} className="text-[10px] text-slate-400 hover:text-slate-600">
+                        </Btn>
+                        <Btn size="sm" tone="slate" variant="ghost" onClick={() => setForfeitKey(null)}>
                           Cancel
-                        </button>
+                        </Btn>
                       </div>
                     ) : (
                       <button
+                        type="button"
                         onClick={() => { setForfeitKey(it.id); setNote(null); }}
-                        className="text-[10px] font-semibold text-red-600 hover:underline mt-0.5"
+                        className="text-xs font-semibold text-[#a1321f] hover:underline min-h-[32px] px-1"
                       >
                         Forfeit item
                       </button>
                     )}
                     {note && note.key === it.id && !note.ok && (
-                      <span className="text-[10px] text-red-600 text-right max-w-[150px] leading-tight">{note.text}</span>
+                      <span className="text-[11px] font-semibold text-[#a1321f] text-right max-w-[160px] leading-tight">{note.text}</span>
                     )}
                   </div>
                 </li>
               ))}
             </ul>
             {!allPickedUp && (
-              <div className="px-4 py-2.5 border-t border-slate-100">
-                <button onClick={() => markOrderPickedUp(order)} className="text-sm font-bold text-[#6c4d39] hover:underline">
+              <div className="px-4 py-2 border-t border-[#f0e6d6]">
+                <Btn size="sm" variant="ghost" onClick={() => markOrderPickedUp(order)}>
                   Mark whole order picked up
-                </button>
+                </Btn>
               </div>
             )}
           </>
@@ -497,69 +508,77 @@ export default function AuctionResults({
   return (
     <div className="space-y-4">
       {/* Summary + report links */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-bold text-slate-900">Results &amp; fulfillment</h2>
-          <div className="flex gap-2">
-            <Link href="/admin/reports" className="text-sm font-bold text-[#6c4d39] border border-[#cdbda3] rounded-lg px-3 py-1.5 hover:bg-[#efe3d0]">
-              Reports
-            </Link>
-            <Link href="/admin/winners" className="text-sm font-bold text-[#6c4d39] border border-[#cdbda3] rounded-lg px-3 py-1.5 hover:bg-[#efe3d0]">
-              Winners
-            </Link>
+      <Panel
+        title="Results & fulfillment"
+        sub="Who won what, who's paid, who's collected."
+        action={
+          <div className="flex gap-1">
+            <BtnLink href="/admin/reports" variant="ghost" size="sm">Reports</BtnLink>
+            <BtnLink href="/admin/winners" variant="ghost" size="sm">Winners</BtnLink>
           </div>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-3">
-          {[
-            { label: "Sold", value: String(soldCount) },
-            { label: "Gross", value: money(grossTotal) },
-            { label: "Unpaid", value: String(unpaidCount) },
-            { label: "Picked up", value: `${pickedUpCount}/${soldCount}` },
-          ].map((s) => (
-            <div key={s.label} className="rounded-xl bg-slate-50 border border-slate-100 px-2 py-2 text-center">
-              <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{s.label}</div>
-              <div className="text-base font-extrabold text-slate-900 tabular-nums mt-0.5">{s.value}</div>
+        }
+      >
+        <div className="px-4 sm:px-5 py-4 space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <div className="rounded-xl bg-[#f4ede1] px-3 py-2.5">
+              <Eyebrow>Sold</Eyebrow>
+              <div className="font-display text-2xl font-black text-[#241a12] tabular-nums mt-0.5">{soldCount}</div>
             </div>
-          ))}
+            <div className="rounded-xl bg-[#f4ede1] px-3 py-2.5">
+              <Eyebrow>Gross</Eyebrow>
+              <div className="font-display text-2xl font-black text-[#2f5d3a] tabular-nums mt-0.5">{fmtMoney0(grossTotal)}</div>
+            </div>
+            <div className={`rounded-xl px-3 py-2.5 ${unpaidCount > 0 ? "bg-[#fbeae6]" : "bg-[#f4ede1]"}`}>
+              <Eyebrow className={unpaidCount > 0 ? "!text-[#a1321f]" : ""}>Unpaid</Eyebrow>
+              <div className={`font-display text-2xl font-black tabular-nums mt-0.5 ${unpaidCount > 0 ? "text-[#a1321f]" : "text-[#241a12]"}`}>{unpaidCount}</div>
+            </div>
+            <div className="rounded-xl bg-[#f4ede1] px-3 py-2.5">
+              <Eyebrow>Picked up</Eyebrow>
+              <div className="font-display text-2xl font-black text-[#241a12] tabular-nums mt-0.5">{pickedUpCount}<span className="text-base text-[#8a7559]">/{soldCount}</span></div>
+              <Progress value={soldCount > 0 ? pickedUpCount / soldCount : 0} className="mt-2" />
+            </div>
+          </div>
+          {orders.length > 5 && (
+            <SearchBox
+              type="text"
+              value={orderSearch}
+              onChange={(e) => setOrderSearch(e.target.value)}
+              placeholder="Search orders by name, email or phone…"
+            />
+          )}
         </div>
-        {orders.length > 5 && (
-          <input
-            type="text"
-            value={orderSearch}
-            onChange={(e) => setOrderSearch(e.target.value)}
-            placeholder="Search orders by name, email or phone…"
-            className="mt-3 w-full bg-white border-2 border-slate-200 rounded-xl px-4 min-h-[42px] text-base text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400"
-          />
-        )}
-      </div>
+      </Panel>
 
-      {note && (
-        <p className={`text-sm font-medium px-1 ${note.ok ? "text-green-700" : "text-red-600"}`}>{note.text}</p>
-      )}
+      {note && <Notice tone={note.ok ? "green" : "red"}>{note.text}</Notice>}
 
       {/* Orders grouped by fulfillment state */}
       {orders.length === 0 ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-slate-500">
-          Nothing sold in this auction.
+        <div className="bg-white border border-[#e6dac6] rounded-2xl">
+          <Empty text="Nothing sold in this auction." sub="Unsold lots are listed below so you can relist them." />
         </div>
       ) : (
         <>
-          {SECTIONS.map(({ key, title, dot, hint }) => {
+          {SECTIONS.map(({ key, title, tone: t, hint }) => {
             const group = orders.filter((o) => bucketOf(o) === key && matchOrder(o));
             if (group.length === 0) return null;
             const open = openSections.has(key);
             return (
               <div key={key} className="space-y-2.5">
                 <button
+                  type="button"
                   onClick={() => toggleSection(key)}
-                  className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-left"
+                  aria-expanded={open}
+                  className="w-full flex items-center gap-2.5 px-4 min-h-[52px] rounded-xl border border-[#e6dac6] bg-white text-left hover:bg-[#faf5ea] transition-colors"
                 >
-                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${dot}`} />
-                  <h3 className="text-sm font-extrabold text-slate-900 flex-1 min-w-0">
-                    {title} <span className="text-slate-400">({group.length})</span>
-                    <span className="text-[11px] font-normal text-slate-400 hidden sm:inline"> — {hint}</span>
-                  </h3>
-                  <span className="text-xs font-bold text-[#6c4d39] shrink-0">{open ? "Hide ▲" : "Show ▼"}</span>
+                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${tone(t).dot}`} />
+                  <span className="flex-1 min-w-0">
+                    <span className="font-bold text-[#241a12]">{title}</span>
+                    <span className="text-[#8a7559] font-bold"> ({group.length})</span>
+                    <span className="text-xs text-[#8a7559] hidden sm:inline"> — {hint}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs font-bold text-[#6c4d39] shrink-0">
+                    {open ? "Hide" : "Show"} <Chevron open={open} />
+                  </span>
                 </button>
                 {open && group.map((o) => renderOrder(o))}
               </div>
@@ -578,18 +597,22 @@ export default function AuctionResults({
             return (
               <div className="space-y-2.5">
                 <button
+                  type="button"
                   onClick={() => setDoneOpen((v) => !v)}
-                  className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border border-green-200 bg-green-50 text-left"
+                  aria-expanded={doneOpen}
+                  className="w-full flex items-center gap-2.5 px-4 min-h-[52px] rounded-xl border border-[#bfd9c5] bg-[#e6f1e8] text-left hover:bg-[#d3e6d7] transition-colors"
                 >
-                  <span className="w-2.5 h-2.5 rounded-full bg-green-600" />
-                  <h3 className="text-sm font-extrabold text-green-900 flex-1">
-                    All set — picked up <span className="text-green-700/70">({allDone.length})</span>
-                  </h3>
-                  <span className="text-xs font-bold text-green-700">{doneOpen ? "Hide ▲" : "Show ▼"}</span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#4a7c59] shrink-0" />
+                  <span className="flex-1 min-w-0 font-bold text-[#2f5d3a]">
+                    All set — picked up <span className="opacity-70">({allDone.length})</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs font-bold text-[#2f5d3a] shrink-0">
+                    {doneOpen ? "Hide" : "Show"} <Chevron open={doneOpen} />
+                  </span>
                 </button>
                 {doneOpen && doneOrders.map((o) => renderOrder(o, true))}
                 {doneOpen && hiddenDone > 0 && (
-                  <p className="text-[11px] text-slate-400 px-3 pb-1">
+                  <p className="text-xs text-[#8a7559] px-3 pb-1">
                     Showing 5 most recent. Search above to find any of the other {hiddenDone}.
                   </p>
                 )}
@@ -601,43 +624,35 @@ export default function AuctionResults({
 
       {/* Unsold — where each sits + relist it straight into another auction */}
       {unsold.length > 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3">
-            <h2 className="text-base font-bold text-slate-900">Didn&apos;t sell ({unsold.length})</h2>
-            <Link href="/admin/unsold" className="text-xs font-bold text-[#6c4d39] hover:underline">
-              All unsold →
-            </Link>
-          </div>
-          <ul className="divide-y divide-slate-100">
+        <Panel
+          title={<>Didn&apos;t sell <span className="text-[#8a7559] text-base">({unsold.length})</span></>}
+          sub="Relist straight into another auction."
+          action={<BtnLink href="/admin/unsold" variant="ghost" size="sm">All unsold</BtnLink>}
+        >
+          <ul className="divide-y divide-[#f0e6d6]">
             {unsold.map((u) => (
               <li key={u.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
-                {u.photo ? (
-                  <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-white ring-1 ring-slate-200">
-                    <Image src={u.photo} alt="" fill sizes="40px" className="object-contain p-0.5" />
-                  </div>
-                ) : (
-                  <div className="w-10 h-10 rounded-lg bg-slate-100 shrink-0" />
-                )}
+                <Thumb src={u.photo} />
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-slate-900 truncate">
-                    {u.code && <span className="font-mono font-bold text-[#6c4d39] mr-1.5">{u.code}</span>}
+                  <div className="text-sm font-bold text-[#241a12] truncate">
+                    {u.code && <span className="font-mono text-[#6c4d39] mr-1.5">{u.code}</span>}
                     {u.title}
                   </div>
-                  <div className="text-xs text-slate-400 truncate">
-                    {(u.warehouse || u.storageLocation)
-                      ? `📍 ${[u.warehouse, u.storageLocation].filter(Boolean).join(" · ")}`
-                      : "No location set"}
-                    {u.highBid > 0 ? ` · high bid ${money(u.highBid)}` : ""}
+                  <div className="text-xs text-[#8a7559] truncate inline-flex items-center gap-1">
+                    {(u.warehouse || u.storageLocation) ? (
+                      <><IcoPin /> {[u.warehouse, u.storageLocation].filter(Boolean).join(" · ")}</>
+                    ) : (
+                      "No location set"
+                    )}
+                    {u.highBid > 0 ? ` · high bid ${fmtMoney0(u.highBid)}` : ""}
                   </div>
                 </div>
                 <RelistControl itemId={u.id} targets={relistTargets} locations={locations} />
-                <Link href={`/admin/items/${u.id}`} className="shrink-0 text-xs font-bold text-[#6c4d39] px-1">
-                  Edit
-                </Link>
+                <BtnLink href={`/admin/items/${u.id}`} variant="ghost" size="sm">Edit</BtnLink>
               </li>
             ))}
           </ul>
-        </div>
+        </Panel>
       )}
     </div>
   );

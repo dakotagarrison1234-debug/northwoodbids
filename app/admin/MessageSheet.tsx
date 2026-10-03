@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import { IcoCheck } from "@/app/components/BidIcons";
+import { Btn, Initials, Notice } from "./ui";
 
 export type MessageTarget = {
   clerkUserId: string;
@@ -70,44 +72,56 @@ export default function MessageSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4" onClick={close}>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#241a12]/60 backdrop-blur-[2px] p-0 sm:p-4" onClick={close}>
       <div
-        className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-5 pb-8 sm:pb-5 shadow-xl max-h-[92vh] overflow-y-auto"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Text customer"
+        className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl border border-[#e6dac6] p-5 pb-8 sm:pb-5 shadow-[0_24px_60px_-20px_rgba(36,26,18,0.6)] max-h-[92vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Grab handle on phones — it's a bottom sheet there. */}
+        <div className="sm:hidden mx-auto w-10 h-1.5 rounded-full bg-[#e6dac6] mb-4" />
+
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className="text-xl font-bold text-slate-900">Text customer</h3>
-            <p className="text-base text-slate-500 truncate">
-              {target.name || "Unnamed bidder"}{target.phone ? ` · ${target.phone}` : ""}
-            </p>
+          <div className="flex items-center gap-3 min-w-0">
+            <Initials name={target.name} size={44} />
+            <div className="min-w-0">
+              <h3 className="font-display text-xl font-black text-[#241a12] leading-tight">Text customer</h3>
+              <p className="text-sm text-[#8a7559] truncate">
+                {target.name || "Unnamed bidder"}{target.phone ? ` · ${target.phone}` : ""}
+              </p>
+            </div>
           </div>
-          <button onClick={close} className="shrink-0 text-slate-400 p-1" aria-label="Close">
-            <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 5l12 12M17 5L5 17" /></svg>
+          <button
+            type="button"
+            onClick={close}
+            className="shrink-0 inline-flex items-center justify-center w-11 h-11 -mr-2 -mt-2 rounded-xl text-[#8a7559] hover:bg-[#f4ede1] hover:text-[#241a12] transition-colors"
+            aria-label="Close"
+          >
+            <svg width="20" height="20" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden><path d="M5 5l12 12M17 5L5 17" /></svg>
           </button>
         </div>
 
         {noPhone ? (
-          <div className="mt-4 rounded-xl bg-amber-50 border-2 border-amber-200 text-amber-800 px-4 py-3 text-base">
+          <Notice tone="amber" className="mt-4">
             No phone number on file for this bidder, so they can&apos;t be texted.
-          </div>
+          </Notice>
         ) : sent ? (
           <div className="mt-6 text-center py-6">
-            <div className="text-4xl mb-2">✅</div>
-            <p className="text-lg font-bold text-green-700">Sent!</p>
+            <div className="mx-auto w-14 h-14 rounded-full bg-[#e6f1e8] text-[#4a7c59] grid place-items-center mb-3">
+              <IcoCheck className="w-7 h-7" />
+            </div>
+            <p className="font-display text-lg font-black text-[#2f5d3a]">Sent!</p>
           </div>
         ) : (
           <>
             {/* Templates — tap to drop a pre-written message in, then edit freely. */}
             <div className="flex flex-wrap gap-2 mt-4">
               {TEMPLATES.map((t) => (
-                <button
-                  key={t.label}
-                  onClick={() => setText(fill(t.body))}
-                  className="min-h-[40px] px-3.5 rounded-xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-600 active:bg-slate-100"
-                >
+                <Btn key={t.label} size="sm" tone="slate" variant="outline" onClick={() => setText(fill(t.body))}>
                   {t.label}
-                </button>
+                </Btn>
               ))}
             </div>
 
@@ -117,26 +131,22 @@ export default function MessageSheet({
               rows={5}
               autoFocus
               placeholder="Write a message…"
-              className="w-full mt-3 bg-white border-2 border-slate-200 rounded-xl px-4 py-3 text-base text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400 resize-none"
+              className="w-full mt-3 bg-white border border-[#d9c7ab] focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 rounded-xl px-4 py-3 text-base text-[#241a12] placeholder:text-[#b3a085] outline-none transition resize-none"
             />
-            <div className="flex items-center justify-between mt-1.5">
-              <span className="text-sm text-slate-400 tabular-nums">{text.length}/{MAX}</span>
-              <span className="text-sm text-slate-400">Sent by SMS</span>
+            <div className="flex items-center justify-between mt-1.5 text-sm text-[#8a7559]">
+              <span className="tabular-nums">{text.length}/{MAX}</span>
+              <span>Sent by SMS</span>
             </div>
 
-            {error && <p className="text-base text-red-600 mt-2">{error}</p>}
+            {error && <Notice tone="red" className="mt-2">{error}</Notice>}
 
             <div className="flex gap-3 mt-4">
-              <button onClick={close} className="flex-1 min-h-[52px] rounded-xl border-2 border-slate-200 bg-white font-bold text-base text-slate-700">
+              <Btn tone="slate" variant="outline" onClick={close} className="flex-1">
                 Cancel
-              </button>
-              <button
-                onClick={send}
-                disabled={busy || !text.trim()}
-                className="flex-1 min-h-[52px] rounded-xl bg-slate-900 active:bg-slate-800 disabled:opacity-40 text-white font-bold text-base"
-              >
+              </Btn>
+              <Btn onClick={send} disabled={busy || !text.trim()} className="flex-1">
                 {busy ? "Sending…" : "Send text"}
-              </button>
+              </Btn>
             </div>
           </>
         )}

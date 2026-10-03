@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { Pill } from "../ui";
+import { Pill, PageHeader, PageBody, SearchBox, Segmented, Panel, Row, Initials, Btn, Empty, Notice, Eyebrow } from "../ui";
 import MessageSheet, { type MessageTarget } from "../MessageSheet";
 
 interface Bidder {
@@ -16,6 +16,8 @@ interface Bidder {
   role: "OWNER" | "ADMIN" | "STAFF" | null;
 }
 
+type Filter = "all" | "blocked" | "staff";
+
 export default function BiddersPage() {
   const [bidders, setBidders] = useState<Bidder[]>([]);
   const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
@@ -27,7 +29,7 @@ export default function BiddersPage() {
   const [confirmDialog, setConfirmDialog] = useState<
     { text: string; confirmLabel: string; danger?: boolean; onConfirm: () => void } | null
   >(null);
-  const [filter, setFilter] = useState<"all" | "blocked" | "staff">("all");
+  const [filter, setFilter] = useState<Filter>("all");
   const [msgTarget, setMsgTarget] = useState<MessageTarget | null>(null);
 
   const canManage = myRole === "OWNER" || myRole === "ADMIN";
@@ -147,7 +149,8 @@ export default function BiddersPage() {
   const roleBadge = (role: Bidder["role"]) => {
     if (!role) return null;
     const label = role === "OWNER" ? "Owner" : role === "ADMIN" ? "Admin" : "Staff";
-    return <Pill tone={role === "OWNER" ? "blue" : "slate"}>{label}</Pill>;
+    // Same mapping as the Team page so a role reads the same everywhere.
+    return <Pill tone={role === "OWNER" ? "blue" : role === "ADMIN" ? "green" : "slate"}>{label}</Pill>;
   };
 
   // Filter by what you actually came here to do. Scanning 200 cards to find the
@@ -159,189 +162,158 @@ export default function BiddersPage() {
   const staffCount = bidders.filter((b) => b.role != null).length;
   const atCap = bidders.length >= 200;
 
-  const FILTERS: { key: typeof filter; label: string; count: number }[] = [
-    { key: "all", label: "Everyone", count: bidders.length },
-    { key: "blocked", label: "Blocked", count: blockedCount },
-    { key: "staff", label: "Staff", count: staffCount },
+  const FILTERS: { value: Filter; label: string; count: number }[] = [
+    { value: "all", label: "Everyone", count: bidders.length },
+    { value: "blocked", label: "Blocked", count: blockedCount },
+    { value: "staff", label: "Staff", count: staffCount },
   ];
 
   return (
     <>
-      <header className="border-b border-slate-200 bg-white px-4 sm:px-8 py-4">
-        <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900">Bidders</h1>
-        <p className="text-base text-slate-500 mt-0.5">Block someone, or make them staff.</p>
-      </header>
+      <PageHeader title="Bidders" sub="Block someone, or make them staff." />
 
-      <div className="flex-1 px-4 sm:px-8 py-5 overflow-auto max-w-2xl w-full">
-        <input
+      <PageBody>
+        <SearchBox
           type="text"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search name, email, or phone…"
-          className="w-full bg-white border-2 border-slate-200 rounded-xl px-4 min-h-[48px] text-base text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400"
         />
 
-        <div className="flex gap-2 mt-3 mb-4">
-          {FILTERS.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={`flex-1 min-h-[44px] rounded-xl border-2 font-bold text-base transition-colors ${
-                filter === f.key
-                  ? "bg-slate-900 text-white border-slate-900"
-                  : "bg-white text-slate-600 border-slate-200"
-              }`}
-            >
-              {f.label}
-              <span className={filter === f.key ? "text-slate-400 ml-1.5" : "text-slate-400 ml-1.5"}>{f.count}</span>
-            </button>
-          ))}
-        </div>
+        <Segmented<Filter> value={filter} onChange={setFilter} options={FILTERS} />
 
         {/* The API caps at 200. Silently dropping records is worse than saying so. */}
         {atCap && !q && (
-          <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
-            Showing the 200 most recent bidders. Use search to find anyone else.
-          </p>
+          <Notice tone="amber">Showing the 200 most recent bidders. Use search to find anyone else.</Notice>
         )}
 
-        {loading ? (
-          <p className="text-slate-500 text-base">Loading…</p>
-        ) : shown.length === 0 ? (
-          <p className="text-slate-500 text-base">
-            {filter === "blocked" ? "Nobody is blocked." : filter === "staff" ? "No staff yet." : "No bidders found."}
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {shown.map((b) => {
-              const busy = busyId === b.clerkUserId;
-              const isMember = b.role != null;
-              return (
-                <div
-                  key={b.clerkUserId}
-                  className={`bg-white border-2 rounded-2xl p-4 ${
-                    b.blocked ? "border-red-300 bg-red-50" : "border-slate-200"
-                  }`}
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-base font-bold text-slate-900 break-words">{b.name || "Unnamed bidder"}</span>
-                      {roleBadge(b.role)}
-                      {b.blocked && <Pill tone="red">Blocked</Pill>}
-                    </div>
-                    {/* break-all: a long email used to run straight out of the card. */}
-                    <div className="text-sm text-slate-500 mt-1 space-y-0.5">
-                      {b.email && <div className="break-all">{b.email}</div>}
-                      {b.phone && <div>{b.phone}</div>}
-                    </div>
+        <Panel>
+          {loading ? (
+            <p className="px-4 py-8 text-center text-[#8a7559]">Loading…</p>
+          ) : shown.length === 0 ? (
+            <Empty
+              text={filter === "blocked" ? "Nobody is blocked." : filter === "staff" ? "No staff yet." : "No bidders found."}
+              sub={filter === "blocked" ? "Blocked bidders show up here." : filter === "staff" ? "Make someone staff from the Everyone list." : q ? "Try a different name, email or phone." : "Bidders appear once they sign up."}
+            />
+          ) : (
+            <ul className="divide-y divide-[#f0e6d6]">
+              {shown.map((b) => {
+                const busy = busyId === b.clerkUserId;
+                const isMember = b.role != null;
+                const contact = [b.email, b.phone].filter(Boolean).join(" · ");
+                return (
+                  <li key={b.clerkUserId} className={b.blocked ? "bg-[#fbeae6]" : ""}>
+                    <Row
+                      tone={b.blocked ? "red" : undefined}
+                      leading={<Initials name={b.name || b.email} />}
+                      title={b.name || "Unnamed bidder"}
+                      sub={contact || "No contact details"}
+                      trailing={
+                        (b.role || b.blocked) ? (
+                          <div className="flex flex-wrap justify-end gap-1.5">
+                            {roleBadge(b.role)}
+                            {b.blocked && <Pill tone="red" dot>Blocked</Pill>}
+                          </div>
+                        ) : undefined
+                      }
+                    />
                     {b.blocked && b.blockedReason && (
-                      <p className="text-sm text-red-700 mt-1.5">{b.blockedReason}</p>
+                      <p className="px-4 pb-3 -mt-1 text-sm text-[#a1321f]">{b.blockedReason}</p>
                     )}
-                  </div>
 
-                  {/* Pickup location — the bidder normally sets this, but the owner can
-                      override it here (it sticks until they or a customer change it). */}
-                  {canManage && locations.length > 0 && (
-                    <div className="flex items-center gap-2 mt-3">
-                      <span className="text-xs font-bold uppercase tracking-wide text-slate-400 shrink-0">Pickup</span>
-                      <select
-                        value={b.preferredPickupLocationId ?? ""}
-                        disabled={busyLoc === b.clerkUserId}
-                        onChange={(e) => setBidderLocation(b.clerkUserId, e.target.value)}
-                        className="min-w-0 flex-1 max-w-[220px] bg-white border-2 border-slate-200 rounded-xl px-3 min-h-[40px] text-base text-slate-900 focus:outline-none focus:border-slate-400 disabled:opacity-50"
-                      >
-                        <option value="" disabled>Not set — choose…</option>
-                        {locations.map((l) => (
-                          <option key={l.id} value={l.id}>{l.name}</option>
-                        ))}
-                      </select>
+                    {/* Pickup location — the bidder normally sets this, but the owner can
+                        override it here (it sticks until they or a customer change it). */}
+                    {canManage && locations.length > 0 && (
+                      <div className="px-4 pb-3 flex items-center gap-3">
+                        <Eyebrow className="shrink-0">Pickup</Eyebrow>
+                        <select
+                          value={b.preferredPickupLocationId ?? ""}
+                          disabled={busyLoc === b.clerkUserId}
+                          onChange={(e) => setBidderLocation(b.clerkUserId, e.target.value)}
+                          className="min-w-0 flex-1 max-w-[240px] min-h-[44px] bg-white border border-[#d9c7ab] focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 rounded-xl px-3 text-[#241a12] outline-none transition disabled:opacity-50"
+                        >
+                          <option value="" disabled>Not set — choose…</option>
+                          {locations.map((l) => (
+                            <option key={l.id} value={l.id}>{l.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    <div className="px-4 pb-4 flex flex-wrap gap-2">
+                      {/* Text this customer directly. Owner/admin only, and only if
+                          we have a number to text. */}
+                      {canManage && b.phone && (
+                        <Btn
+                          tone="blue"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setMsgTarget({ clerkUserId: b.clerkUserId, name: b.name, phone: b.phone })}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h12v8H5l-3 3V3z" /></svg>
+                          Text
+                        </Btn>
+                      )}
+                      {/* Role management (owner/admin only). Never for the owner row. */}
+                      {b.role !== "OWNER" && canManage && (
+                        <>
+                          {!isMember && (
+                            <Btn size="sm" onClick={() => askRole(b, "STAFF")} disabled={busy}>
+                              Make staff
+                            </Btn>
+                          )}
+                          {!isMember && isOwner && (
+                            <Btn size="sm" variant="outline" onClick={() => askRole(b, "ADMIN")} disabled={busy}>
+                              Make admin
+                            </Btn>
+                          )}
+                          {isMember && isOwner && (
+                            <Btn size="sm" tone="slate" variant="outline" onClick={() => askRole(b, null)} disabled={busy}>
+                              Remove staff
+                            </Btn>
+                          )}
+                        </>
+                      )}
+
+                      {/* Block only applies to plain bidders (not staff/owner). */}
+                      {!isMember && (
+                        <Btn
+                          size="sm"
+                          tone={b.blocked ? "slate" : "red"}
+                          variant="outline"
+                          onClick={() => toggleBlock(b)}
+                          disabled={busy}
+                        >
+                          {busy ? "Working…" : b.blocked ? "Unblock" : "Block"}
+                        </Btn>
+                      )}
                     </div>
-                  )}
-
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {/* Text this customer directly. Owner/admin only, and only if
-                        we have a number to text. */}
-                    {canManage && b.phone && (
-                      <button
-                        onClick={() => setMsgTarget({ clerkUserId: b.clerkUserId, name: b.name, phone: b.phone })}
-                        className="inline-flex items-center gap-1.5 text-base font-bold px-4 min-h-[44px] rounded-xl bg-sky-600 active:bg-sky-700 text-white"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h12v8H5l-3 3V3z" /></svg>
-                        Text
-                      </button>
-                    )}
-                    {/* Role management (owner/admin only). Never for the owner row. */}
-                    {b.role !== "OWNER" && canManage && (
-                      <>
-                        {!isMember && (
-                          <button
-                            onClick={() => askRole(b, "STAFF")}
-                            disabled={busy}
-                            className="text-base font-semibold px-4 py-3 rounded-xl bg-[#6c4d39] hover:bg-[#563e2c] text-white transition-colors disabled:opacity-50"
-                          >
-                            Make staff
-                          </button>
-                        )}
-                        {!isMember && isOwner && (
-                          <button
-                            onClick={() => askRole(b, "ADMIN")}
-                            disabled={busy}
-                            className="text-base font-semibold px-4 py-3 rounded-xl bg-white border border-[#cdbda3] hover:bg-[#efe3d0] text-[#4a3a2b] transition-colors disabled:opacity-50"
-                          >
-                            Make admin
-                          </button>
-                        )}
-                        {isMember && isOwner && (
-                          <button
-                            onClick={() => askRole(b, null)}
-                            disabled={busy}
-                            className="text-base font-semibold px-4 py-3 rounded-xl bg-white border border-[#cdbda3] hover:bg-[#efe3d0] text-[#6f5b46] transition-colors disabled:opacity-50"
-                          >
-                            Remove staff
-                          </button>
-                        )}
-                      </>
-                    )}
-
-                    {/* Block only applies to plain bidders (not staff/owner). */}
-                    {!isMember && (
-                      <button
-                        onClick={() => toggleBlock(b)}
-                        disabled={busy}
-                        className={`text-base font-semibold px-5 py-3 rounded-xl transition-colors disabled:opacity-50 ${
-                          b.blocked
-                            ? "bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] text-[#241a12]"
-                            : "bg-red-600 hover:bg-red-700 text-white"
-                        }`}
-                      >
-                        {busy ? "Working…" : b.blocked ? "Unblock" : "Block"}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Panel>
+      </PageBody>
 
       <MessageSheet target={msgTarget} onClose={() => setMsgTarget(null)} />
 
       {/* In-app confirmation (native confirm() is blocked in some installed/PWA webviews) */}
       {confirmDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setConfirmDialog(null)}>
-          <div className="bg-white rounded-2xl border border-[#cdbda3] max-w-sm w-full p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl border border-[#e6dac6] max-w-sm w-full p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <p className="text-base text-[#241a12]">{confirmDialog.text}</p>
             <div className="mt-5 flex gap-3">
-              <button onClick={() => setConfirmDialog(null)} className="flex-1 bg-white border border-[#cdbda3] text-[#6f5b46] hover:bg-[#efe3d0] font-semibold text-base py-3 rounded-xl">
+              <Btn tone="slate" variant="outline" full onClick={() => setConfirmDialog(null)}>
                 Back
-              </button>
-              <button
+              </Btn>
+              <Btn
+                tone={confirmDialog.danger ? "red" : "leather"}
+                full
                 onClick={() => { const fn = confirmDialog.onConfirm; setConfirmDialog(null); fn(); }}
-                className={`flex-1 text-white font-semibold text-base py-3 rounded-xl ${confirmDialog.danger ? "bg-red-600 hover:bg-red-700" : "bg-[#6c4d39] hover:bg-[#563e2c]"}`}
               >
                 {confirmDialog.confirmLabel}
-              </button>
+              </Btn>
             </div>
           </div>
         </div>

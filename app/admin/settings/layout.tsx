@@ -1,10 +1,7 @@
-import SettingsNav from "./SettingsNav";
-
+/**
+ * Settings pages own their PageHeader (the kit renders the group's section tabs
+ * automatically), so this layout is just a pass-through wrapper.
+ */
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col flex-1 min-h-0 p-6 sm:p-8">
-      <SettingsNav />
-      {children}
-    </div>
-  );
+  return <div className="flex flex-col flex-1 min-h-0">{children}</div>;
 }

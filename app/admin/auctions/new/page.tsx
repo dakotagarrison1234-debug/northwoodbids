@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { PageHeader, PageBody, Panel, Input, Btn, Notice, Eyebrow } from "../../ui";
 
 // Format a Date as a value the datetime-local input understands (local time).
 function toLocalInput(d: Date): string {
@@ -16,6 +16,9 @@ function defaultStart(): Date {
   d.setHours(9, 0, 0, 0);
   return d;
 }
+
+const TEXTAREA =
+  "w-full bg-white border border-[#d9c7ab] focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 rounded-xl px-4 py-3 text-[#241a12] placeholder:text-[#b3a085] outline-none transition resize-none";
 
 export default function NewAuctionPage() {
   const router = useRouter();
@@ -77,9 +80,6 @@ export default function NewAuctionPage() {
     finally { setSaving(false); }
   };
 
-  const input =
-    "w-full bg-white border-2 border-slate-200 rounded-xl px-4 min-h-[52px] text-base text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400";
-
   // Plain-English summary of what they've set, so the dates aren't just two
   // opaque pickers. Bad ranges are caught here rather than on submit.
   const start = formData.startAt ? new Date(formData.startAt) : null;
@@ -91,71 +91,64 @@ export default function NewAuctionPage() {
 
   return (
     <>
-      <header className="border-b border-slate-200 bg-white px-4 sm:px-8 py-3.5">
-        <div className="flex items-center gap-2 min-w-0">
-          <Link href="/admin/auctions" className="text-slate-500 text-base font-semibold shrink-0 py-2 pr-1">← Auctions</Link>
-          <span className="text-slate-300">/</span>
-          <h1 className="text-xl sm:text-2xl font-semibold text-slate-900">New auction</h1>
-        </div>
-      </header>
+      <PageHeader
+        title="New auction"
+        sub="Name it, set when it runs, then add lots."
+        back={{ href: "/admin/auctions", label: "All auctions" }}
+      />
 
-      <div className="px-4 sm:px-8 py-5 max-w-2xl w-full space-y-4">
-        {error && (
-          <p className="text-base text-red-700 bg-red-50 border-2 border-red-200 rounded-xl px-4 py-3">{error}</p>
-        )}
+      <PageBody>
+        {error && <Notice tone="red">{error}</Notice>}
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-4">
-          <label className="block">
-            <span className="block text-sm font-bold text-slate-600 mb-1.5">Name *</span>
-            <input name="title" value={formData.title} onChange={handleChange}
-              placeholder="e.g. Weekly Overstock — Sept 12"
-              className={input} />
-          </label>
-          <label className="block">
-            <span className="block text-sm font-bold text-slate-600 mb-1.5">Description</span>
-            <textarea name="description" value={formData.description} onChange={handleChange} rows={3}
-              placeholder="What's in this one? Shown to bidders."
-              className={`${input} py-3 resize-none`} />
-          </label>
-        </div>
+        <Panel title="Set it up" sub="Shown to bidders on the auction page.">
+          <div className="px-4 sm:px-5 py-5 space-y-5">
+            <label className="block">
+              <span className="block text-sm font-bold text-[#4a3a2b] mb-1.5">Name</span>
+              <Input name="title" value={formData.title} onChange={handleChange}
+                placeholder="e.g. Weekly Overstock — Sept 12" />
+            </label>
+            <label className="block">
+              <span className="block text-sm font-bold text-[#4a3a2b] mb-1.5">Description <span className="font-semibold text-[#b3a085]">(optional)</span></span>
+              <textarea name="description" value={formData.description} onChange={handleChange} rows={3}
+                placeholder="What's in this one? Shown to bidders."
+                className={TEXTAREA} />
+            </label>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-4">
-          <div className="text-sm font-bold text-slate-600 uppercase tracking-wide">When it runs</div>
-          <label className="block">
-            <span className="block text-sm font-bold text-slate-600 mb-1.5">Opens</span>
-            <input name="startAt" value={formData.startAt} onChange={handleChange} type="datetime-local" className={input} />
-          </label>
-          <label className="block">
-            <span className="block text-sm font-bold text-slate-600 mb-1.5">Closes</span>
-            <input name="endAt" value={formData.endAt} onChange={handleChange} type="datetime-local" className={input} />
-          </label>
+            <div className="border-t border-[#f0e6d6] pt-5">
+              <Eyebrow className="mb-3">When it runs</Eyebrow>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className="block">
+                  <span className="block text-sm font-bold text-[#4a3a2b] mb-1.5">Opens</span>
+                  <Input name="startAt" value={formData.startAt} onChange={handleChange} type="datetime-local" />
+                </label>
+                <label className="block">
+                  <span className="block text-sm font-bold text-[#4a3a2b] mb-1.5">Closes</span>
+                  <Input name="endAt" value={formData.endAt} onChange={handleChange} type="datetime-local" />
+                </label>
+              </div>
 
-          {start && end && !validRange ? (
-            <p className="text-base text-red-700 bg-red-50 border-2 border-red-200 rounded-xl px-4 py-3">
-              The closing time has to be after the opening time.
-            </p>
-          ) : validRange ? (
-            <div className="rounded-xl bg-slate-900 text-white px-4 py-3">
-              <div className="text-sm text-slate-400 font-bold uppercase tracking-wide">Runs for</div>
-              <div className="text-xl font-extrabold mt-0.5">{days} day{days !== 1 ? "s" : ""}</div>
-              <div className="text-sm text-slate-300 mt-1">{fmt(start)} → {fmt(end)}</div>
+              {start && end && !validRange ? (
+                <Notice tone="red" className="mt-4">The closing time has to be after the opening time.</Notice>
+              ) : validRange ? (
+                <div className="mt-4 rounded-xl bg-[#241a12] text-[#fbf4e6] px-4 py-3">
+                  <Eyebrow className="!text-[#b9a688]">Runs for</Eyebrow>
+                  <div className="font-display text-2xl font-black mt-0.5">{days} day{days !== 1 ? "s" : ""}</div>
+                  <div className="text-sm text-[#d9c7ab] mt-1">{fmt(start)} to {fmt(end)}</div>
+                </div>
+              ) : null}
+
+              <p className="text-sm text-[#8a7559] mt-4">
+                It opens and closes on its own at these times. Nothing is texted to bidders when it opens —
+                you send that yourself from the auction&apos;s controls when you&apos;re ready.
+              </p>
             </div>
-          ) : null}
 
-          <p className="text-sm text-slate-500">
-            It opens and closes on its own at these times. Nothing is texted to bidders when it opens —
-            you send that yourself from the auction&apos;s controls when you&apos;re ready.
-          </p>
-        </div>
-
-        <button
-          onClick={handleSave}
-          disabled={saving || !formData.title.trim() || !validRange}
-          className="w-full min-h-[52px] bg-slate-900 active:bg-slate-800 disabled:opacity-40 text-white text-base font-bold rounded-xl transition-colors"
-        >
-          {saving ? "Creating…" : "Create auction"}
-        </button>
-      </div>
+            <Btn full onClick={handleSave} disabled={saving || !formData.title.trim() || !validRange}>
+              {saving ? "Creating…" : "Create auction"}
+            </Btn>
+          </div>
+        </Panel>
+      </PageBody>
     </>
   );
 }

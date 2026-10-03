@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
+import { PageBody, Panel, StatCard, Segmented, Btn, Empty, Eyebrow, Initials, Row } from "../ui";
 
 type Line = {
   itemId: string; title: string; itemCode: string | null; auctionTitle: string | null;
@@ -43,103 +44,100 @@ export default function CashReportView() {
   useEffect(() => { load(range); }, [range, load]);
 
   return (
-    <div className="px-4 sm:px-8 py-5 space-y-5 max-w-2xl mx-auto w-full pb-16">
-      <div className="flex gap-1.5 flex-wrap">
-        {RANGES.map((r) => (
-          <button
-            key={r.key}
-            onClick={() => setRange(r.key)}
-            className={`px-3.5 py-2 rounded-lg text-sm font-bold border transition-colors ${
-              range === r.key ? "bg-[#6c4d39] text-white border-[#6c4d39]" : "bg-white text-[#6f5b46] border-[#cdbda3]"
-            }`}
-          >
-            {r.label}
-          </button>
-        ))}
-      </div>
+    <PageBody className="pb-16">
+      <Segmented
+        value={range}
+        onChange={setRange}
+        options={RANGES.map((r) => ({ value: r.key, label: r.label }))}
+      />
 
       {loading || error || !d ? (
-        <div className="flex items-center justify-center p-10">
-          {error ? (
-            <div className="text-center">
-              <p className="text-lg text-[#6f5b46]">Couldn&apos;t load the cash report.</p>
-              <button onClick={() => load(range)} className="mt-3 bg-[#6c4d39] text-white text-base font-semibold px-5 py-2.5 rounded-xl">Try again</button>
-            </div>
-          ) : (
-            <p className="text-lg text-[#8a7559]">Loading…</p>
-          )}
-        </div>
+        error ? (
+          <Panel>
+            <Empty
+              text="Couldn't load the cash report."
+              sub="Check your connection and try again."
+              action={<Btn size="sm" onClick={() => load(range)}>Try again</Btn>}
+            />
+          </Panel>
+        ) : (
+          <p className="text-lg text-[#8a7559] text-center py-12">Loading…</p>
+        )
       ) : (
         <>
           {/* Hero */}
-          <div className="rounded-3xl bg-gradient-to-br from-[#3f5226] to-[#5f7a45] text-white p-6 shadow-[0_8px_28px_rgba(79,102,57,0.25)]">
-            <div className="text-sm font-bold uppercase tracking-[0.15em] text-[#d8e6c8]">Cash collected in person</div>
-            <div className="text-5xl sm:text-6xl font-extrabold font-display tracking-tight mt-1 tabular-nums">
+          <div className="rounded-2xl bg-[#241a12] text-[#fbf4e6] p-5 sm:p-6 shadow-[0_10px_30px_-18px_rgba(36,26,18,0.7)]">
+            <Eyebrow className="!text-[#b9a688]">Cash collected in person</Eyebrow>
+            <div className="font-display text-5xl sm:text-6xl font-black tracking-tight mt-1 tabular-nums leading-none text-[#f0a35a]">
               {money0(d.totals.collected)}
             </div>
-            <div className="text-base text-[#d8e6c8] mt-2">
-              {d.totals.items} item{d.totals.items !== 1 ? "s" : ""} · {d.totals.people} customer{d.totals.people !== 1 ? "s" : ""} · full amount incl. tax
-            </div>
+            <div className="text-base text-[#d9c7ab] mt-2">Full amount handed over, tax included.</div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <StatCard label="Items" value={d.totals.items.toLocaleString()} sub="paid in cash" tone="green" />
+            <StatCard label="Customers" value={d.totals.people.toLocaleString()} sub="paid at the counter" />
           </div>
 
           {d.rows.length === 0 ? (
-            <p className="text-base text-[#8a7559] bg-white border border-[#e3d6bf] rounded-2xl p-6 text-center">
-              No cash payments in this period.
-            </p>
+            <Panel>
+              <Empty text="No cash payments in this period." sub="Mark a balance paid in cash from Winners & payments and it lands here." />
+            </Panel>
           ) : (
-            <div className="space-y-2.5">
-              {d.rows.map((g) => {
-                const isOpen = open === g.clerkUserId;
-                return (
-                  <div key={g.clerkUserId} className="bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => setOpen(isOpen ? null : g.clerkUserId)}
-                      className="w-full text-left p-4 hover:bg-[#faf5ea] transition-colors flex items-start justify-between gap-3"
-                    >
-                      <div className="min-w-0">
-                        <div className="font-bold text-[#241a12] truncate">{g.name}</div>
-                        <div className="text-sm text-[#8a7559] truncate">
-                          {g.items} item{g.items !== 1 ? "s" : ""}
-                          {g.lastPaidAt ? ` · last ${dt(g.lastPaidAt)}` : ""}
-                          {g.phone ? ` · ${g.phone}` : ""}
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <div className="text-2xl font-extrabold text-[#3f5226] tabular-nums leading-none">{money0(g.collected)}</div>
-                        <div className="text-[11px] font-bold text-[#8a7559] uppercase tracking-wide mt-1">
-                          {isOpen ? "Hide" : "Details"} ›
-                        </div>
-                      </div>
-                    </button>
-                    {isOpen && (
-                      <div className="px-4 pb-4 border-t border-[#efe3d0] pt-3 space-y-2">
-                        {g.lines.map((l) => (
-                          <div key={l.itemId} className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="text-base text-[#241a12] flex items-center gap-1.5 flex-wrap">
-                                {l.itemCode && <span className="font-mono font-bold text-[#6c4d39] text-sm">{l.itemCode}</span>}
-                                <span className="truncate">{l.title}</span>
+            <Panel title="Who paid cash" sub="Tap a name for the items.">
+              <ul className="divide-y divide-[#f0e6d6]">
+                {d.rows.map((g) => {
+                  const isOpen = open === g.clerkUserId;
+                  return (
+                    <li key={g.clerkUserId}>
+                      <Row
+                        onClick={() => setOpen(isOpen ? null : g.clerkUserId)}
+                        leading={<Initials name={g.name} />}
+                        title={g.name}
+                        sub={
+                          <>
+                            {g.items} item{g.items !== 1 ? "s" : ""}
+                            {g.lastPaidAt ? ` · last ${dt(g.lastPaidAt)}` : ""}
+                            {g.phone ? ` · ${g.phone}` : ""}
+                          </>
+                        }
+                        trailing={
+                          <>
+                            <div className="font-display text-xl font-black text-[#2f5d3a] tabular-nums leading-none">{money0(g.collected)}</div>
+                            <div className="text-[11px] font-black text-[#8a7559] uppercase tracking-wide mt-1">{isOpen ? "Hide" : "Details"}</div>
+                          </>
+                        }
+                        className={isOpen ? "bg-[#faf5ea]" : ""}
+                      />
+                      {isOpen && (
+                        <ul className="px-4 pb-4 pt-3 bg-[#faf5ea] border-t border-[#f0e6d6] space-y-2.5">
+                          {g.lines.map((l) => (
+                            <li key={l.itemId} className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="text-base text-[#241a12] flex items-center gap-1.5 flex-wrap">
+                                  {l.itemCode && <span className="font-mono font-bold text-[#6c4d39] text-sm">{l.itemCode}</span>}
+                                  <span className="truncate">{l.title}</span>
+                                </div>
+                                <div className="text-xs text-[#8a7559]">
+                                  {l.auctionTitle ? `${l.auctionTitle} · ` : ""}{dt(l.when)}
+                                  {l.note ? ` · “${l.note}”` : ""}
+                                </div>
                               </div>
-                              <div className="text-xs text-[#8a7559]">
-                                {l.auctionTitle ? `${l.auctionTitle} · ` : ""}{dt(l.when)}
-                                {l.note ? ` · “${l.note}”` : ""}
+                              <div className="text-right shrink-0">
+                                <div className="font-bold text-[#241a12] tabular-nums">{money(l.total)}</div>
+                                <div className="text-[11px] text-[#8a7559] tabular-nums">
+                                  {money(l.hammer)} + {money(l.premium)} prem{l.tax > 0 ? ` + ${money(l.tax)} tax` : ""}
+                                </div>
                               </div>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <div className="font-bold text-[#241a12] tabular-nums">{money(l.total)}</div>
-                              <div className="text-[11px] text-[#8a7559] tabular-nums">
-                                {money(l.hammer)} + {money(l.premium)} prem{l.tax > 0 ? ` + ${money(l.tax)} tax` : ""}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </Panel>
           )}
 
           <p className="text-sm text-[#8a7559] px-1 leading-snug">
@@ -149,6 +147,6 @@ export default function CashReportView() {
           </p>
         </>
       )}
-    </div>
+    </PageBody>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { IcoMegaphone, IcoUsers, IcoCheck } from "@/app/components/BidIcons";
+import { IcoUsers, IcoCheck } from "@/app/components/BidIcons";
+import { PageHeader, PageBody, Panel, Btn, Notice, Eyebrow } from "../ui";
 
 type Kind = "everyone" | "preferred" | "waiting" | "preferred_or_waiting";
 type Loc = { id: string; name: string; isActive: boolean };
@@ -85,95 +86,119 @@ export default function BlastPage() {
   const ready = message.trim().length >= 10 && preview && preview.count > 0 && preview.configured;
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
-      <div className="flex items-center gap-2 mb-1">
-        <IcoMegaphone className="w-6 h-6 text-[#6c4d39]" />
-        <h1 className="text-2xl sm:text-3xl font-semibold text-[#241a12]">Text a group</h1>
-      </div>
-      <p className="text-sm text-[#8a7559] mb-5">One text to a slice of your bidders. Goes out through the same line as the auction-live texts.</p>
+    <>
+      <PageHeader title="Text a group" sub="One text to a slice of your bidders. Goes out through the same line as the auction-live texts." />
 
-      {/* Who */}
-      <section className="rounded-2xl border border-[#e3d6bf] bg-[#fbf4e6] p-4 mb-4">
-        <div className="text-xs font-bold uppercase tracking-wide text-[#8a7559] mb-2">Who</div>
-        <div className="grid sm:grid-cols-2 gap-2 mb-3">
-          {KINDS.map((k) => (
-            <button key={k.v} type="button" onClick={() => pick(k.v)} className={`text-left rounded-xl border-2 px-3 py-2.5 transition-colors ${kind === k.v ? "border-[#6c4d39] bg-white" : "border-[#e3d6bf] bg-white/60 hover:bg-white"}`}>
-              <div className="font-bold text-sm text-[#241a12]">{k.label}{k.needsLoc && locName ? ` ${locName}` : ""}</div>
-              <div className="text-[11px] text-[#8a7559] leading-tight mt-0.5">{k.sub}</div>
-            </button>
-          ))}
-        </div>
-        {needsLoc && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-bold text-[#6f5b46]">Warehouse</span>
-            {locations.map((l) => (
-              <button key={l.id} type="button" onClick={() => pickLoc(l.id)} className={`text-xs font-bold rounded-full px-3 py-1.5 border ${locationId === l.id ? "bg-[#6c4d39] text-white border-[#6c4d39]" : "bg-white text-[#6c4d39] border-[#cdbda3]"}`}>
-                {l.name}{!l.isActive ? " (inactive)" : ""}
-              </button>
-            ))}
+      <PageBody>
+        {/* Who */}
+        <Panel title="Who" sub="Pick the crowd first — the count updates as you go.">
+          <div className="p-4 sm:p-5">
+            <div className="grid sm:grid-cols-2 gap-2 mb-3">
+              {KINDS.map((k) => (
+                <button
+                  key={k.v}
+                  type="button"
+                  onClick={() => pick(k.v)}
+                  className={`text-left rounded-xl border-2 px-3.5 py-3 min-h-[56px] transition-colors ${kind === k.v ? "border-[#6c4d39] bg-[#f1e7d5]" : "border-[#e6dac6] bg-white hover:bg-[#faf5ea]"}`}
+                >
+                  <div className="font-bold text-[#241a12]">{k.label}{k.needsLoc && locName ? ` ${locName}` : ""}</div>
+                  <div className="text-xs text-[#8a7559] leading-snug mt-0.5">{k.sub}</div>
+                </button>
+              ))}
+            </div>
+            {needsLoc && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <Eyebrow>Warehouse</Eyebrow>
+                {locations.map((l) => (
+                  <button
+                    key={l.id}
+                    type="button"
+                    onClick={() => pickLoc(l.id)}
+                    className={`min-h-[40px] text-sm font-bold rounded-full px-4 border-2 transition-colors ${locationId === l.id ? "bg-[#6c4d39] text-white border-[#6c4d39]" : "bg-white text-[#563e2c] border-[#d9c7ab] hover:bg-[#faf5ea]"}`}
+                  >
+                    {l.name}{!l.isActive ? " (inactive)" : ""}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-[#f4ede1] border border-[#e6dac6] px-4 py-3 min-h-[48px]">
+              <div className="inline-flex items-center gap-2 font-bold text-[#241a12]">
+                <IcoUsers className="w-4 h-4 text-[#6c4d39]" />
+                {loadingPreview ? "Counting…" : preview ? `${preview.count} ${preview.count === 1 ? "person" : "people"}` : "—"}
+                {preview && preview.withPhone < preview.count && <span className="text-xs font-semibold text-[#8a7559]">({preview.withPhone} with a phone)</span>}
+              </div>
+              {preview && preview.count > 0 && (
+                <Btn type="button" tone="leather" variant="ghost" size="sm" onClick={() => setShowList((s) => !s)}>
+                  {showList ? "Hide names" : "See names"}
+                </Btn>
+              )}
+            </div>
+            {showList && preview && (
+              <div className="mt-2 max-h-56 overflow-y-auto rounded-xl border border-[#e6dac6] bg-white divide-y divide-[#f0e6d6] text-sm">
+                {preview.sample.map((r, i) => (
+                  <div key={i} className="flex justify-between px-3 py-2"><span className="text-[#241a12] truncate">{r.name}</span><span className="text-[#8a7559] tabular-nums shrink-0 ml-2">{r.phone}</span></div>
+                ))}
+                {preview.count > preview.sample.length && <div className="px-3 py-2 text-[#8a7559]">…and {preview.count - preview.sample.length} more</div>}
+              </div>
+            )}
           </div>
+        </Panel>
+
+        {/* Message */}
+        <Panel title="Message" sub="Keep it short — one text per person is cheapest.">
+          <div className="p-4 sm:p-5">
+            <textarea
+              value={message}
+              onChange={(e) => { setMessage(e.target.value); setConfirm(false); }}
+              rows={6}
+              placeholder="Northwood Bids: …"
+              className="w-full bg-white border border-[#d9c7ab] focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 rounded-xl px-4 py-3 text-[#241a12] placeholder:text-[#b3a085] leading-relaxed outline-none transition"
+            />
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-[#8a7559]">
+              <span>{message.length} characters · {parts.n} text{parts.n !== 1 ? "s" : ""} per person{!parts.isGsm ? " · special characters make texts shorter — plain quotes and dashes keep it to 160" : ""}</span>
+              <span className="flex flex-wrap gap-1">
+                <Btn type="button" tone="leather" variant="ghost" size="sm" onClick={() => setMessage(OWOSSO_NOTICE)}>Owosso Oct 4–11 notice</Btn>
+                <Btn type="button" tone="amber" variant="ghost" size="sm" onClick={() => setMessage(OWOSSO_CORRECTION)}>Weekday correction</Btn>
+              </span>
+            </div>
+          </div>
+        </Panel>
+
+        {preview && !preview.configured && (
+          <Notice tone="amber">Texting isn&apos;t configured on this server (GHL_AUCTION_STARTED_WEBHOOK).</Notice>
         )}
-        <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-white border border-[#e3d6bf] px-3 py-2.5">
-          <div className="inline-flex items-center gap-2 text-sm font-bold text-[#241a12]">
-            <IcoUsers className="w-4 h-4 text-[#6c4d39]" />
-            {loadingPreview ? "Counting…" : preview ? `${preview.count} ${preview.count === 1 ? "person" : "people"}` : "—"}
-            {preview && preview.withPhone < preview.count && <span className="text-xs font-semibold text-[#8a7559]">({preview.withPhone} with a phone)</span>}
-          </div>
-          {preview && preview.count > 0 && (
-            <button type="button" onClick={() => setShowList((s) => !s)} className="text-xs font-semibold text-[#6c4d39] underline">{showList ? "Hide names" : "See names"}</button>
-          )}
-        </div>
-        {showList && preview && (
-          <div className="mt-2 max-h-56 overflow-y-auto rounded-xl border border-[#e3d6bf] bg-white divide-y divide-[#efe6d4] text-sm">
-            {preview.sample.map((r, i) => (
-              <div key={i} className="flex justify-between px-3 py-1.5"><span className="text-[#241a12]">{r.name}</span><span className="text-[#8a7559] tabular-nums">{r.phone}</span></div>
-            ))}
-            {preview.count > preview.sample.length && <div className="px-3 py-1.5 text-[#8a7559]">…and {preview.count - preview.sample.length} more</div>}
-          </div>
+        {err && <Notice tone="red">{err}</Notice>}
+        {result && (
+          <Notice tone="green">
+            <span className="inline-flex items-center gap-2"><IcoCheck className="w-4 h-4" /> {result}</span>
+          </Notice>
         )}
-      </section>
 
-      {/* Message */}
-      <section className="rounded-2xl border border-[#e3d6bf] bg-[#fbf4e6] p-4 mb-4">
-        <div className="text-xs font-bold uppercase tracking-wide text-[#8a7559] mb-2">Message</div>
-        <textarea
-          value={message}
-          onChange={(e) => { setMessage(e.target.value); setConfirm(false); }}
-          rows={6}
-          placeholder="Northwood Bids: …"
-          className="w-full bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] leading-relaxed"
-        />
-        <div className="mt-1.5 flex items-center justify-between text-[11px] text-[#8a7559]">
-          <span>{message.length} characters · {parts.n} text{parts.n !== 1 ? "s" : ""} per person{!parts.isGsm ? " · special characters make texts shorter — plain quotes and dashes keep it to 160" : ""}</span>
-          <button type="button" onClick={() => setMessage(OWOSSO_NOTICE)} className="underline font-semibold text-[#6c4d39]">Use the Owosso Oct 4–11 notice</button>
-        </div>
-      </section>
-
-      {preview && !preview.configured && (
-        <div className="mb-4 rounded-xl bg-[#fbe6c8] text-[#a85f28] px-4 py-2.5 text-sm font-semibold">Texting isn&apos;t configured on this server (GHL_AUCTION_STARTED_WEBHOOK).</div>
-      )}
-      {err && <div className="mb-4 rounded-xl bg-[#fbe9e5] text-red-700 px-4 py-2.5 text-sm font-semibold">{err}</div>}
-      {result && <div className="mb-4 rounded-xl bg-[#dcebdf] text-[#2f5d3a] px-4 py-2.5 text-sm font-semibold inline-flex items-center gap-2"><IcoCheck className="w-4 h-4" /> {result}</div>}
-
-      {!confirm ? (
-        <button type="button" disabled={!ready} onClick={() => setConfirm(true)} className="bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold px-6 py-3 rounded-xl text-sm disabled:opacity-40">
-          Review and send
-        </button>
-      ) : (
-        <div className="rounded-2xl border-2 border-[#c47b3e] bg-white p-4">
-          <div className="font-bold text-[#241a12] mb-1">Send this to {preview?.count} {preview?.count === 1 ? "person" : "people"}?</div>
-          <pre className="whitespace-pre-wrap text-sm text-[#6f5b46] bg-[#faf5ea] rounded-xl p-3 mb-3 font-sans">{message}</pre>
-          <div className="flex gap-2">
-            <button type="button" onClick={send} disabled={sending} className="bg-[#c47b3e] hover:bg-[#a85f28] text-white font-black px-6 py-2.5 rounded-xl text-sm disabled:opacity-50">{sending ? "Sending…" : "Yes, send it"}</button>
-            <button type="button" onClick={() => setConfirm(false)} className="text-[#6f5b46] font-semibold px-4 py-2.5 text-sm">Back</button>
-          </div>
-        </div>
-      )}
-    </div>
+        {!confirm ? (
+          <Btn type="button" disabled={!ready} onClick={() => setConfirm(true)}>
+            Review and send
+          </Btn>
+        ) : (
+          <Panel tone="amber" title={`Send this to ${preview?.count} ${preview?.count === 1 ? "person" : "people"}?`}>
+            <div className="p-4 sm:p-5">
+              <pre className="whitespace-pre-wrap text-sm text-[#4a3a2b] bg-[#f4ede1] border border-[#e6dac6] rounded-xl p-3 mb-3 font-sans">{message}</pre>
+              <div className="flex flex-wrap gap-2">
+                <Btn type="button" tone="amber" onClick={send} disabled={sending}>{sending ? "Sending…" : "Yes, send it"}</Btn>
+                <Btn type="button" tone="slate" variant="ghost" onClick={() => setConfirm(false)}>Back</Btn>
+              </div>
+            </div>
+          </Panel>
+        )}
+      </PageBody>
+    </>
   );
 }
 
 const OWOSSO_NOTICE =
-  "Northwood Bids: Heads up, Owosso! No auction or regular pickups Oct 4-11 while we move. " +
-  "Items from earlier auctions: book a PORCH PICKUP on Sun Oct 5, Wed Oct 8 or Thu Oct 9 at 1505 W South St, Owosso MI 48867 - https://northwoodbids.com/pickup " +
-  "Big news: we are opening a NEW STOREFRONT in Corunna for easier, faster pickups. Details soon. Questions? Just reply.";
+  "Northwood Bids: Owosso update. We are moving, so there is no Owosso auction the week of Oct 4-11. " +
+  "Still have items to grab? Porch pickup is Mon Oct 5, Fri Oct 9 and Sat Oct 10 at 1505 W South St, Owosso 48867 - book your time at https://northwoodbids.com/pickup " +
+  "Then starting Oct 15, all Owosso pickups move to our NEW STOREFRONT in downtown Corunna - easier, faster, straight in and out. Questions? Just reply.";
+
+const OWOSSO_CORRECTION =
+  "Northwood Bids: Quick correction on the days! Owosso porch pickup is MONDAY Oct 5, FRIDAY Oct 9 and SATURDAY Oct 10 at 1505 W South St. " +
+  "Dates were right, weekdays were wrong - sorry for the mix-up. Book at https://northwoodbids.com/pickup";

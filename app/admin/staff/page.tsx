@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Pill } from "../ui";
+import { Pill, PageHeader, PageBody, Panel, Row, Initials, Btn, BtnLink, Input, Notice, Empty, Eyebrow, type Tone } from "../ui";
 import { useUser } from "@clerk/nextjs";
 
 interface Member {
@@ -113,201 +113,179 @@ export default function StaffPage() {
     return "Staff";
   };
 
-  const roleColor = (role: string) => {
-    if (role === "OWNER") return "text-[#c47b3e]";
-    if (role === "ADMIN") return "text-[#6c4d39]";
-    return "text-[#6f5b46]";
-  };
+  const roleTone = (role: string): Tone => (role === "OWNER" ? "blue" : role === "ADMIN" ? "green" : "slate");
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <p className="text-base text-[#8a7559]">Loading...</p>
-      </div>
+      <>
+        <PageHeader title="Team" sub="Who can get into the Workshop." />
+        <PageBody>
+          <p className="text-[#8a7559] py-8 text-center">Loading…</p>
+        </PageBody>
+      </>
     );
   }
 
   return (
     <>
-      <header className="border-b border-slate-200 bg-white px-4 sm:px-8 py-4 flex items-center justify-between gap-3">
-        <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900">Team</h1>
-        {canInvite && (
-          /* The reason people open this page is to add someone — it was previously
-             the LAST thing on the page, below every member and every invite. */
-          <a
-            href="#invite"
-            className="shrink-0 inline-flex items-center justify-center min-h-[48px] px-5 rounded-xl bg-slate-900 text-white font-bold text-base"
-          >
-            + Invite
-          </a>
-        )}
-      </header>
+      <PageHeader
+        title="Team"
+        sub="Who can get into the Workshop."
+        actions={
+          canInvite ? (
+            /* The reason people open this page is to add someone — it was previously
+               the LAST thing on the page, below every member and every invite. */
+            <BtnLink href="#invite" size="sm">Invite someone</BtnLink>
+          ) : undefined
+        }
+      />
 
-      <div className="px-4 sm:px-8 py-5 max-w-2xl space-y-6">
+      <PageBody>
         {/* Errors surface HERE, at the top, not buried inside the invite form where
             a failed "Remove" would render off-screen (or not at all for non-admins). */}
-        {error && (
-          <p className="text-base text-red-700 bg-red-50 border-2 border-red-200 rounded-xl px-4 py-3">{error}</p>
-        )}
+        {error && <Notice tone="red">{error}</Notice>}
 
         {/* Current Members */}
-        <section>
-          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">
-            Members ({members.length})
-          </h2>
-          <div className="bg-white border border-slate-200 rounded-2xl divide-y divide-slate-100">
-            {members.map((member) => {
-              const isSelf = member.clerkUserId === user?.id;
-              const isOwner = member.role === "OWNER";
-              const canRemoveMember = canRemove && !isSelf && !isOwner;
-              return (
-                <div key={member.id} className="px-4 py-3.5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="text-base font-bold text-slate-900 flex items-center gap-2 flex-wrap">
-                        <span className="break-words">{member.displayName || "New team member"}</span>
-                        {isSelf && <span className="text-sm font-normal text-slate-400">(you)</span>}
-                      </div>
-                      {member.email && member.email !== member.displayName && (
-                        <div className="text-sm text-slate-500 mt-0.5 break-all">{member.email}</div>
-                      )}
-                      {!member.displayName && (
-                        <div className="text-sm text-slate-400 mt-0.5">Hasn&apos;t signed in yet.</div>
-                      )}
-                    </div>
-                    {/* Role as a coloured pill — three muted browns at 14px were
-                        effectively unreadable, and role is the whole point of the row. */}
-                    <Pill tone={member.role === "OWNER" ? "blue" : member.role === "ADMIN" ? "green" : "slate"}>
-                      {roleLabel(member.role)}
-                    </Pill>
-                  </div>
-                  {canRemoveMember && (
-                    <button
-                      onClick={() => removeMember(member.id, member.displayName || "this team member")}
-                      className="mt-2.5 w-full min-h-[44px] text-base font-bold text-red-600 bg-white rounded-xl border-2 border-red-200 active:bg-red-50 transition-colors"
-                    >
-                      Remove from team
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
+        <Panel title="Members" sub={`${members.length} on the team`}>
+          {members.length === 0 ? (
+            <Empty text="No members yet." sub="Invite someone to get started." />
+          ) : (
+            <ul className="divide-y divide-[#f0e6d6]">
+              {members.map((member) => {
+                const isSelf = member.clerkUserId === user?.id;
+                const isOwner = member.role === "OWNER";
+                const canRemoveMember = canRemove && !isSelf && !isOwner;
+                const showEmail = member.email && member.email !== member.displayName;
+                return (
+                  <li key={member.id}>
+                    <Row
+                      leading={<Initials name={member.displayName || member.email} />}
+                      title={
+                        <>
+                          {member.displayName || "New team member"}
+                          {isSelf && <span className="ml-1.5 text-sm font-normal text-[#a3927b]">(you)</span>}
+                        </>
+                      }
+                      sub={showEmail ? member.email : !member.displayName ? "Hasn't signed in yet." : undefined}
+                      trailing={
+                        <div className="flex flex-col items-end gap-1">
+                          {/* Role as a coloured pill — three muted browns at 14px were
+                              effectively unreadable, and role is the whole point of the row. */}
+                          <Pill tone={roleTone(member.role)}>{roleLabel(member.role)}</Pill>
+                          {canRemoveMember && (
+                            <Btn
+                              tone="red"
+                              variant="ghost"
+                              size="sm"
+                              className="-mr-2"
+                              onClick={() => removeMember(member.id, member.displayName || "this team member")}
+                            >
+                              Remove
+                            </Btn>
+                          )}
+                        </div>
+                      }
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Panel>
 
         {/* Pending Invites */}
         {invites.length > 0 && (
-          <section>
-            <h2 className="text-sm font-semibold text-[#8a7559] uppercase tracking-wider mb-4">
-              Pending Invites ({invites.length})
-            </h2>
-            <div className="bg-white border border-slate-200 rounded-2xl divide-y divide-slate-100">
+          <Panel title="Pending invites" sub={`${invites.length} waiting`}>
+            <ul className="divide-y divide-[#f0e6d6]">
               {invites.map((invite) => (
-                <div key={invite.id} className="px-4 py-3.5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      {/* break-all — a long invite email used to spill over the button. */}
-                      <div className="text-base font-semibold text-slate-900 break-all">{invite.email}</div>
-                      <div className="text-sm text-slate-500 mt-0.5">
-                        Expires <span suppressHydrationWarning>{new Date(invite.expiresAt).toLocaleDateString()}</span>
+                <li key={invite.id}>
+                  <Row
+                    leading={<Initials name={invite.email} />}
+                    title={invite.email}
+                    sub={<>Expires <span suppressHydrationWarning>{new Date(invite.expiresAt).toLocaleDateString()}</span></>}
+                    trailing={
+                      <div className="flex flex-col items-end gap-1">
+                        <Pill tone="amber">{roleLabel(invite.role)}</Pill>
+                        {canInvite && (
+                          <Btn tone="red" variant="ghost" size="sm" className="-mr-2" onClick={() => revokeInvite(invite.id, invite.email)}>
+                            Revoke
+                          </Btn>
+                        )}
                       </div>
-                    </div>
-                    <Pill tone="amber">{roleLabel(invite.role)}</Pill>
-                  </div>
-                  {canInvite && (
-                    <button
-                      onClick={() => revokeInvite(invite.id, invite.email)}
-                      className="mt-2.5 w-full min-h-[44px] text-base font-bold text-red-600 bg-white rounded-xl border-2 border-red-200 active:bg-red-50 transition-colors"
-                    >
-                      Revoke invite
-                    </button>
-                  )}
-                </div>
+                    }
+                  />
+                </li>
               ))}
-            </div>
-          </section>
+            </ul>
+          </Panel>
         )}
 
         {/* Invite Form — OWNER/ADMIN only */}
         {canInvite && (
-          <section id="invite" className="scroll-mt-4">
-            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">
-              Invite someone
-            </h2>
-            <div className="bg-white border border-[#e3d6bf] rounded-xl p-6 sm:p-7 space-y-4">
-              <div>
-                <label className="text-base text-[#6f5b46] mb-1.5 block">Email Address</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="teammate@email.com"
-                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39]"
-                />
-              </div>
-              <div>
-                <label className="text-base text-[#6f5b46] mb-1.5 block">Role</label>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value as "STAFF" | "ADMIN")}
-                  className="w-full bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-4 py-3.5 text-base text-[#241a12] focus:outline-none focus:border-[#6c4d39]"
-                >
-                  <option value="STAFF">Staff — can manage items and auctions</option>
-                  <option value="ADMIN">Admin — can manage everything including team</option>
-                </select>
-              </div>
-
-              {error && <p className="text-red-600 text-base">{error}</p>}
-
-              <button
-                onClick={handleInvite}
-                disabled={sending}
-                className="w-full bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white text-base font-semibold py-3.5 rounded-xl transition-colors"
-              >
-                {sending ? "Generating Invite..." : "Generate Invite Link"}
-              </button>
-
-              {inviteUrl && (
-                <div className="bg-[#6c4d39]/10 border border-[#6c4d39]/30 rounded-xl p-4">
-                  <p className="text-[#6c4d39] text-base font-semibold mb-2">Invite link created! Share this:</p>
-                  <div className="flex items-center gap-2">
-                    <input
-                      readOnly
-                      value={inviteUrl}
-                      className="flex-1 bg-[#efe3d0] border border-[#cdbda3] rounded-lg px-3 py-2.5 text-sm text-[#4a3a2b] font-mono"
-                    />
-                    <button
-                      onClick={() => navigator.clipboard.writeText(inviteUrl)}
-                      className="bg-[#e7dcc6] hover:bg-[#cdbda3] text-[#241a12] text-base font-semibold px-5 py-2.5 rounded-xl transition-colors"
-                    >
-                      Copy
-                    </button>
-                  </div>
-                  <p className="text-[#8a7559] text-sm mt-2">Expires in 7 days. One-time use.</p>
+          <div id="invite" className="scroll-mt-4">
+            <Panel title="Invite someone" sub="They get a one-time link that expires in 7 days.">
+              <div className="p-4 sm:p-5 space-y-4">
+                <div>
+                  <Eyebrow className="mb-1.5">Email address</Eyebrow>
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="teammate@email.com"
+                  />
                 </div>
-              )}
-            </div>
-          </section>
+                <div>
+                  <Eyebrow className="mb-1.5">Role</Eyebrow>
+                  <select
+                    value={role}
+                    onChange={(e) => setRole(e.target.value as "STAFF" | "ADMIN")}
+                    className="w-full min-h-[46px] bg-white border border-[#d9c7ab] focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 rounded-xl px-4 text-[#241a12] outline-none transition"
+                  >
+                    <option value="STAFF">Staff — can manage items and auctions</option>
+                    <option value="ADMIN">Admin — can manage everything including team</option>
+                  </select>
+                </div>
+
+                {error && <p className="text-sm font-semibold text-[#a1321f]">{error}</p>}
+
+                <Btn full onClick={handleInvite} disabled={sending}>
+                  {sending ? "Generating Invite..." : "Generate Invite Link"}
+                </Btn>
+
+                {inviteUrl && (
+                  <div className="bg-[#f1e7d5] border border-[#d9c7ab] rounded-xl p-4">
+                    <p className="text-[#563e2c] text-base font-bold mb-2">Invite link created. Share this:</p>
+                    <div className="flex items-center gap-2">
+                      <Input readOnly value={inviteUrl} className="font-mono text-sm" />
+                      <Btn tone="slate" variant="outline" onClick={() => navigator.clipboard.writeText(inviteUrl)}>
+                        Copy
+                      </Btn>
+                    </div>
+                    <p className="text-[#8a7559] text-sm mt-2">Expires in 7 days. One-time use.</p>
+                  </div>
+                )}
+              </div>
+            </Panel>
+          </div>
         )}
-      </div>
+      </PageBody>
 
       {/* In-app confirmation (native confirm() is blocked in some installed/PWA webviews) */}
       {confirmDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setConfirmDialog(null)}>
-          <div className="bg-white rounded-2xl border border-[#cdbda3] max-w-sm w-full p-6 shadow-xl text-left" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl border border-[#e6dac6] max-w-sm w-full p-6 shadow-xl text-left" onClick={(e) => e.stopPropagation()}>
             <p className="text-base text-[#241a12]">{confirmDialog.text}</p>
             <div className="mt-5 flex gap-3">
-              <button onClick={() => setConfirmDialog(null)} className="flex-1 bg-white border border-[#cdbda3] text-[#6f5b46] hover:bg-[#efe3d0] font-semibold text-base py-3 rounded-xl">
+              <Btn tone="slate" variant="outline" full onClick={() => setConfirmDialog(null)}>
                 Back
-              </button>
-              <button
+              </Btn>
+              <Btn
+                tone={confirmDialog.danger ? "red" : "leather"}
+                full
                 onClick={() => { const fn = confirmDialog.onConfirm; setConfirmDialog(null); fn(); }}
-                className={`flex-1 text-white font-semibold text-base py-3 rounded-xl ${
-                  confirmDialog.danger ? "bg-red-600 hover:bg-red-700" : "bg-[#6c4d39] hover:bg-[#563e2c]"
-                }`}
               >
                 {confirmDialog.confirmLabel}
-              </button>
+              </Btn>
             </div>
           </div>
         </div>

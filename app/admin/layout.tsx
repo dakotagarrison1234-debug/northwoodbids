@@ -1,30 +1,13 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import UserMenu from "@/app/components/UserMenu";
 import { prisma } from "@/lib/prisma";
 import { isSuperAdmin } from "@/lib/auth";
 import MobileNav from "./MobileNav";
+import AdminSidebar from "./AdminSidebar";
+import { visibleGroups } from "./nav";
 
 const BUSINESS_LOGO_URL =
   "https://assets.cdn.filesafe.space/TwuL7EwKfW8oGIV0Zo5q/media/6a373b261c5d711b35bf4e56.png";
-
-function AdminNavIcon({ name }: { name: string }) {
-  const s = { width: 24, height: 24, fill: "none", viewBox: "0 0 16 16", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
-  if (name === "grid") return <svg {...s}><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>;
-  if (name === "gavel") return <svg {...s}><path d="M10 2L6 6l4 4 4-4-4-4zM2 14l5-5"/><path d="M6 10l-4 4"/></svg>;
-  if (name === "trophy") return <svg {...s}><path d="M4 3H2V6a4 4 0 0 0 3.5 3.97M12 3h2V6a4 4 0 0 1-3.5 3.97M4 3h8v5a4 4 0 0 1-8 0V3zM6 14h4M8 12v2"/></svg>;
-  if (name === "package") return <svg {...s}><path d="M8 2L2 5v6l6 3 6-3V5L8 2z"/><path d="M2 5l6 3 6-3M8 8v7M5 3.5l6 3"/></svg>;
-  if (name === "users") return <svg {...s}><circle cx="6" cy="5" r="2.5"/><path d="M1 14c0-3 2-4.5 5-4.5s5 1.5 5 4.5"/><circle cx="12" cy="5" r="2"/><path d="M12 10c2 0 3 1 3 3.5"/></svg>;
-  if (name === "settings") return <svg {...s}><circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"/></svg>;
-  if (name === "mybids") return <svg {...s}><path d="M8 2v4l3 3"/><circle cx="8" cy="8" r="6"/></svg>;
-  if (name === "chart") return <svg {...s}><path d="M2 2v12h12"/><path d="M5 11V8M8 11V5M11 11V9"/></svg>;
-  if (name === "megaphone") return <svg {...s}><path d="M2 7v2a1 1 0 001 1h1l3 3V3L4 6H3a1 1 0 00-1 1z"/><path d="M10 5.5a3 3 0 010 5"/><path d="M12.5 3.5a6 6 0 010 9"/></svg>;
-  if (name === "gift") return <svg {...s}><rect x="2" y="6" width="12" height="8" rx="1"/><path d="M2 9h12M8 6v8"/><path d="M8 6S6.5 2.5 4.5 3.5 6 6 8 6zM8 6s1.5-3.5 3.5-2.5S10 6 8 6z"/></svg>;
-  if (name === "refresh") return <svg {...s}><path d="M13.5 7a5.5 5.5 0 1 0-.7 3.5"/><path d="M13.5 3v4h-4"/></svg>;
-  if (name === "ticket") return <svg {...s}><path d="M2 5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1.5a1.5 1.5 0 0 0 0 3V11a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V9.5a1.5 1.5 0 0 0 0-3V5z"/><path d="M9 4v8" strokeDasharray="1.5 1.5"/></svg>;
-  return null;
-}
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const { userId } = await auth();
@@ -69,77 +52,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   const org = membership.organization;
-  const isOwnerOrAdmin = membership.role === "OWNER" || membership.role === "ADMIN";
 
-  const navItems = [
-    { label: "Overview", href: "/admin/dashboard", icon: "grid" },
-    { label: "Auctions", href: "/admin/auctions", icon: "gavel" },
-    ...(isOwnerOrAdmin ? [{ label: "Winners & Payments", href: "/admin/winners", icon: "trophy" }] : []),
-    { label: "Pickup", href: "/admin/pickup", icon: "package" },
-    ...(isOwnerOrAdmin ? [{ label: "Unsold / Relist", href: "/admin/unsold", icon: "refresh" }] : []),
-    ...(isOwnerOrAdmin ? [{ label: "Giveaways", href: "/admin/giveaways", icon: "ticket" }] : []),
-    ...(isOwnerOrAdmin ? [{ label: "Reports", href: "/admin/reports", icon: "chart" }] : []),
-    ...(isOwnerOrAdmin ? [{ label: "Bidders", href: "/admin/bidders", icon: "users" }] : []),
-    ...(isOwnerOrAdmin ? [{ label: "Referrals", href: "/admin/referrals", icon: "gift" }] : []),
-    ...(isOwnerOrAdmin ? [{ label: "Text a group", href: "/admin/blast", icon: "megaphone" }] : []),
-    ...(isOwnerOrAdmin ? [{ label: "Team", href: "/admin/staff", icon: "users" }] : []),
-    ...(isOwnerOrAdmin ? [{ label: "Settings", href: "/admin/settings", icon: "settings" }] : []),
-  ];
+  const groups = visibleGroups(membership.role);
 
   return (
-    <div className="min-h-screen bg-[#f1e7d5] text-[#241a12] flex flex-col">
-      {/* Mobile nav (hamburger + drawer) */}
-      <MobileNav
-        navItems={navItems}
-        orgName={org.name}
-        role={membership.role.toLowerCase()}
-      />
+    <div className="min-h-screen bg-[#f4ede1] text-[#241a12] flex flex-col">
+      {/* Phone: top bar + drawer + bottom tab bar */}
+      <MobileNav groups={groups} orgName={org.name} role={membership.role.toLowerCase()} logoUrl={BUSINESS_LOGO_URL} />
 
       <div className="flex flex-1 min-h-0">
-        <aside className="hidden md:flex w-64 bg-white border-r border-[#e3d6bf] flex-col shrink-0">
-          <div className="px-6 py-5 border-b border-[#e3d6bf]">
-            <Link href="/admin/dashboard" className="flex items-center gap-3 mb-1">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={BUSINESS_LOGO_URL}
-                alt={org.name}
-                className="h-14 w-auto max-w-[200px] object-contain"
-              />
-              <span className="sr-only">{membership.role.toLowerCase()}</span>
-            </Link>
-          </div>
-
-          <nav className="flex-1 px-4 py-4 space-y-2">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-base text-[#4a3a2b] font-semibold hover:text-[#241a12] hover:bg-[#efe3d0] transition-colors"
-              >
-                <span className="w-6 h-6 flex items-center justify-center shrink-0">
-                  <AdminNavIcon name={item.icon} />
-                </span>
-                <span>{item.label}</span>
-              </Link>
-            ))}
-            <div className="pt-2 border-t border-[#e3d6bf] mt-2">
-              <Link
-                href="/dashboard"
-                className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-base text-[#4a3a2b] font-semibold hover:text-[#241a12] hover:bg-[#efe3d0] transition-colors"
-              >
-                <span className="w-6 h-6 flex items-center justify-center shrink-0">
-                  <AdminNavIcon name="mybids" />
-                </span>
-                <span>My Bids</span>
-              </Link>
-            </div>
-          </nav>
-
-          <div className="px-4 py-4 border-t border-[#e3d6bf] flex items-center gap-3">
-            <UserMenu />
-            <div className="text-base text-[#8a7559] truncate">Account</div>
-          </div>
-        </aside>
+        {/* Desktop: the dark workshop sidebar */}
+        <AdminSidebar groups={groups} orgName={org.name} role={membership.role.toLowerCase()} logoUrl={BUSINESS_LOGO_URL} />
 
         {/* pb on mobile clears the fixed bottom tab bar so the last row of any
             page is never hidden underneath it. */}

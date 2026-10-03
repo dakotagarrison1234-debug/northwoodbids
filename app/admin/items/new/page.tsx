@@ -3,6 +3,29 @@ import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Skeleton from "@/app/components/Skeleton";
+import { PageHeader, PageBody, Panel, Btn, Input, Notice, Eyebrow } from "../../ui";
+
+// Select / textarea share the kit Input look (the kit only ships a text input).
+const fieldCls =
+  "w-full min-h-[46px] bg-white border border-[#d9c7ab] focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 rounded-xl px-4 text-[#241a12] placeholder:text-[#b3a085] outline-none transition";
+
+/** Chip button — the kit's Segmented look as a standalone toggle (44px tall). */
+function Chip({
+  on, children, className = "", ...rest
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { on: boolean }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      className={`inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3 rounded-xl text-sm font-bold border transition-colors ${
+        on ? "bg-[#241a12] text-[#f6ecda] border-[#241a12] shadow-sm" : "bg-white text-[#6f5b46] border-[#e6dac6] hover:bg-[#f4ede1]"
+      } ${className}`}
+      {...rest}
+    >
+      {children}
+    </button>
+  );
+}
 
 // ── Barcode scanner card ───────────────────────────────────────────────────────
 interface BarcodeResult {
@@ -376,56 +399,57 @@ function BarcodeScanner({
       <button
         type="button"
         onClick={() => onCollapsedChange?.(false)}
-        className="w-full flex items-center justify-between gap-2 rounded-xl bg-white border border-[#e3d6bf] px-4 py-3 hover:border-[#6c4d39] transition-colors"
+        className="w-full min-h-[56px] flex items-center justify-between gap-3 rounded-2xl bg-white border border-[#e6dac6] px-4 py-3 hover:bg-[#faf5ea] hover:border-[#c47b3e]/50 transition-colors nb-lift-sm"
       >
-        <span className="flex items-center gap-2 font-semibold text-[#4a3a2b] text-base">
+        <span className="flex items-center gap-2.5 font-bold text-[#241a12] text-base">
           <svg className="w-5 h-5 text-[#6c4d39]" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><rect x="1" y="3" width="14" height="11" rx="1.5"/><circle cx="8" cy="8.5" r="2.5"/><path d="M6 3V1.5M10 3V1.5"/></svg>
           Scan another barcode
         </span>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#8a7559]"><path d="M4 6l4 4 4-4" /></svg>
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#cdbda3]"><path d="M4 6l4 4 4-4" /></svg>
       </button>
     );
   }
 
   return (
-    <div>
+    <Panel>
+      <div className="p-3 sm:p-4">
       {/* Input row */}
       <div className="flex gap-2">
-        <button
+        <Btn
           type="button"
           onClick={scanning ? releaseCamera : startCamera}
-          className={`flex items-center gap-1.5 px-4 py-3 rounded-xl text-base font-semibold border shrink-0 transition-colors ${
-            scanning
-              ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
-              : "bg-[#6c4d39] text-white border-[#6c4d39] hover:bg-[#563e2c]"
-          }`}
+          tone={scanning ? "red" : "leather"}
+          variant={scanning ? "outline" : "solid"}
+          className="shrink-0 !px-4"
         >
           {scanning ? (
             <><svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><rect x="2" y="2" width="12" height="12" rx="2"/></svg> Stop</>
           ) : (
             <><svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><rect x="1" y="3" width="14" height="11" rx="1.5"/><circle cx="8" cy="8.5" r="2.5"/><path d="M6 3V1.5M10 3V1.5"/></svg> Scan</>
           )}
-        </button>
-        <input
+        </Btn>
+        <Input
           type="text"
           value={barcode}
           onChange={e => setBarcode(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="or type barcode / FNSKU / ASIN"
-          className="flex-1 min-w-0 bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] text-base"
+          className="flex-1 min-w-0 text-base"
           inputMode="text"
           autoCapitalize="characters"
           autoCorrect="off"
           spellCheck={false}
         />
-        <button
+        <Btn
           type="button"
           onClick={() => doLookup(barcode)}
           disabled={loading || !barcode.trim()}
-          className="bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] disabled:opacity-40 text-[#241a12] px-4 py-3 rounded-xl text-base font-semibold shrink-0 transition-colors"
+          tone="slate"
+          variant="outline"
+          className="shrink-0 !px-4"
         >
           {loading ? "…" : "Go"}
-        </button>
+        </Btn>
       </div>
 
       {/* Camera preview */}
@@ -433,7 +457,7 @@ function BarcodeScanner({
         <div className="mt-3 rounded-xl overflow-hidden border-2 border-[#6c4d39]/30 relative bg-black">
           <video ref={videoRef} className="w-full max-h-48 object-cover" playsInline muted />
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-48 h-24 border-2 border-[#6c4d39] rounded-lg opacity-60" />
+            <div className="w-48 h-24 border-2 border-[#f0a35a] rounded-lg opacity-70" />
           </div>
           <div className="absolute bottom-2 left-0 right-0 text-center text-white/80 text-xs">Point at barcode</div>
         </div>
@@ -445,7 +469,7 @@ function BarcodeScanner({
 
       {/* Error */}
       {error && !loading && (
-        <p className="mt-2.5 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">{error}</p>
+        <Notice tone="amber" className="mt-2.5">{error}</Notice>
       )}
 
       {/* Search-by-name toggle */}
@@ -453,7 +477,7 @@ function BarcodeScanner({
         <button
           type="button"
           onClick={() => setShowSearch(s => !s)}
-          className="mt-2.5 text-sm font-semibold text-[#6c4d39] hover:text-[#563e2c] underline underline-offset-2"
+          className="mt-1 min-h-[44px] text-sm font-bold text-[#6c4d39] hover:text-[#563e2c] underline underline-offset-2"
         >
           {showSearch ? "Hide name search" : "Can't scan it? Search by name"}
         </button>
@@ -461,24 +485,24 @@ function BarcodeScanner({
 
       {/* Text-search fallback */}
       {showSearch && !result && (
-        <div className="mt-3 bg-[#faf5ea] border border-[#e3d6bf] rounded-xl p-4">
+        <div className="mt-2 bg-[#faf5ea] border border-[#e6dac6] rounded-xl p-3 sm:p-4">
           <div className="flex gap-2">
-            <input
+            <Input
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               onKeyDown={handleSearchKeyDown}
               placeholder='e.g. "Ninja air fryer 5.5qt"'
-              className="flex-1 min-w-0 bg-white border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] text-base"
+              className="flex-1 min-w-0 text-base"
             />
-            <button
+            <Btn
               type="button"
               onClick={() => doSearch(searchQuery)}
               disabled={searching || !searchQuery.trim()}
-              className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-40 text-white px-4 py-3 rounded-xl text-base font-semibold shrink-0 transition-colors"
+              className="shrink-0 !px-4"
             >
               {searching ? "…" : "Search"}
-            </button>
+            </Btn>
           </div>
 
           {/* Results pick list */}
@@ -489,21 +513,21 @@ function BarcodeScanner({
                   key={r.asin}
                   type="button"
                   onClick={() => pickSearchResult(r)}
-                  className="w-full flex items-center gap-3 text-left bg-white hover:bg-[#f1e7d5] border border-[#e3d6bf] hover:border-[#6c4d39] rounded-lg p-2.5 transition-colors"
+                  className="w-full min-h-[56px] flex items-center gap-3 text-left bg-white hover:bg-[#faf5ea] border border-[#e6dac6] hover:border-[#c47b3e]/50 rounded-xl p-2.5 transition-colors"
                 >
-                  <div className="w-12 h-12 shrink-0 rounded-md overflow-hidden bg-[#efe3d0] flex items-center justify-center">
+                  <div className="w-12 h-12 shrink-0 rounded-lg overflow-hidden bg-[#efe3d0] flex items-center justify-center">
                     {r.image
                       ? <img src={r.image} alt="" className="w-full h-full object-contain" />
                       : <span className="text-[#b3a085] text-xs">No image</span>}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-semibold text-[#241a12] leading-snug line-clamp-2">{r.title}</div>
+                    <div className="text-sm font-bold text-[#241a12] leading-snug line-clamp-2">{r.title}</div>
                     <div className="text-xs text-[#8a7559] mt-0.5 flex items-center gap-2">
                       {r.brand && <span>{r.brand}</span>}
-                      {r.price != null && <span className="text-[#6c4d39] font-semibold">${r.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
+                      {r.price != null && <span className="text-[#6c4d39] font-bold">${r.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
                     </div>
                   </div>
-                  <span className="text-[#6c4d39] text-sm font-semibold shrink-0 pr-1">Use</span>
+                  <span className="text-[#6c4d39] text-sm font-bold shrink-0 pr-1">Use</span>
                 </button>
               ))}
             </div>
@@ -514,9 +538,9 @@ function BarcodeScanner({
       {/* Result preview — only for name-search picks and combo scans. */}
       {result && (
         <div className="mt-3 bg-white border-2 border-[#6c4d39] rounded-xl p-4">
-          <div className="text-xs text-[#6c4d39] font-bold uppercase tracking-wide mb-1">
+          <Eyebrow className="!text-[#6c4d39] mb-1">
             {comboMode ? "Add to combo" : "Confirm this is it"}
-          </div>
+          </Eyebrow>
           <div className="font-bold text-[#241a12] text-sm leading-snug">{result.title}</div>
           {result.brand && <div className="text-xs text-[#8a7559] mt-0.5">{result.brand}</div>}
 
@@ -551,25 +575,24 @@ function BarcodeScanner({
 
           <div className="flex gap-2 mt-3">
             {!comboMode && (
-              <button
-                type="button"
-                onClick={() => applyResult()}
-                className="flex-1 bg-[#6c4d39] hover:bg-[#563e2c] text-white text-base font-bold py-3 rounded-xl transition-colors"
-              >
+              <Btn type="button" onClick={() => applyResult()} className="flex-1">
                 Use this — fill the form
-              </button>
+              </Btn>
             )}
-            <button
+            <Btn
               type="button"
               onClick={() => { setResult(null); setBarcode(""); }}
-              className={`text-[#8a7559] hover:text-[#4a3a2b] text-base px-4 py-3 border border-[#cdbda3] rounded-xl transition-colors ${comboMode ? "flex-1" : ""}`}
+              tone="slate"
+              variant="outline"
+              className={comboMode ? "flex-1" : ""}
             >
               {comboMode ? "Skip / scan next" : "Not it"}
-            </button>
+            </Btn>
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </Panel>
   );
 }
 
@@ -883,8 +906,7 @@ function NewItemForm() {
     finally { setSaving(false); }
   };
 
-  const inputCls =
-    "w-full bg-[#faf5ea] border border-[#cdbda3] rounded-xl px-4 py-3 text-base text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] focus:bg-white transition-colors";
+  const labelCls = "text-[11px] font-black uppercase tracking-[0.14em] text-[#8a7559] mb-1 block";
 
   return (
     <>
@@ -892,89 +914,90 @@ function NewItemForm() {
           item's tag # front-and-centre so staff can write it on the item while they
           wait, instead of hunting for it after the form loads. */}
       {filling && (
-        <div className="fixed inset-0 z-[60] bg-[#f1e7d5]/95 backdrop-blur-sm flex flex-col items-center justify-center gap-4 px-8 text-center">
-          <div className="w-14 h-14 rounded-full border-4 border-[#e3d6bf] border-t-[#6c4d39] animate-spin" />
+        <div className="fixed inset-0 z-[60] bg-[#f4ede1]/95 backdrop-blur-sm flex flex-col items-center justify-center gap-4 px-8 text-center">
+          <div className="w-14 h-14 rounded-full border-4 border-[#e6dac6] border-t-[#6c4d39] animate-spin" />
           {formData.itemCode && (
             <div className="flex flex-col items-center gap-1">
-              <div className="text-xs font-bold uppercase tracking-[0.18em] text-[#8a7559]">Write this on the item</div>
+              <Eyebrow>Write this on the item</Eyebrow>
               <div className="font-display text-5xl sm:text-6xl font-black tracking-tight text-[#241a12] tabular-nums leading-none">
                 #{formData.itemCode}
               </div>
             </div>
           )}
-          <div className="text-lg font-extrabold text-[#6c4d39]">Filling the form…</div>
+          <div className="font-display text-lg font-black text-[#6c4d39]">Filling the form…</div>
           <div className="text-sm text-[#8a7559]">Pulling in the title, price &amp; photos</div>
         </div>
       )}
 
-      <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-4 flex items-center gap-2 min-w-0">
-        {preselectedAuctionId ? (
-          <Link href={`/admin/auctions/${preselectedAuctionId}`} className="text-[#6f5b46] hover:text-[#241a12] text-base font-semibold shrink-0">← Auction</Link>
-        ) : (
-          <Link href="/admin/items" className="text-[#6f5b46] hover:text-[#241a12] text-base font-semibold shrink-0">← Items</Link>
-        )}
-        <span className="text-[#8a7559]">/</span>
-        <h1 className="text-2xl sm:text-3xl font-semibold">New item</h1>
-        <button
-          type="button"
-          onClick={resetForm}
-          title="Clear everything and start a fresh item"
-          className="ml-auto shrink-0 inline-flex items-center gap-1.5 min-h-[44px] text-[#6f5b46] hover:text-[#241a12] hover:bg-[#efe3d0] border border-[#cdbda3] rounded-xl px-3.5 py-2 text-base font-semibold transition-colors"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9" /><path d="M13.5 2v3h-3" />
-          </svg>
-          <span className="hidden sm:inline">Start fresh</span>
-        </button>
-      </header>
+      <PageHeader
+        title="Add a lot"
+        sub={preselectedAuctionId ? "Goes straight into this auction." : "Scan it, tag it, save it. Next."}
+        back={preselectedAuctionId ? { href: `/admin/auctions/${preselectedAuctionId}`, label: "Auction" } : { href: "/admin/auctions", label: "Auctions" }}
+        tabs={!preselectedAuctionId}
+        actions={
+          <Btn
+            type="button"
+            onClick={resetForm}
+            title="Clear everything and start a fresh item"
+            variant="outline"
+            size="sm"
+            className="min-h-[44px]"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9" /><path d="M13.5 2v3h-3" />
+            </svg>
+            Start fresh
+          </Btn>
+        }
+      />
 
-      <div data-scroll-root className="flex-1 overflow-auto px-3 sm:px-6 py-3">
-        <div className="mx-auto w-full max-w-3xl space-y-2.5">
+      <div data-scroll-root className="flex-1 overflow-auto">
+        <PageBody>
+        <div className="space-y-3">
 
           {/* Status banner (scan landed / item saved). */}
           {banner && (() => {
             const good = /saved|filled|ready/i.test(banner);
             return (
-              <div className={`rounded-xl px-4 py-2.5 text-base font-semibold flex items-center gap-2 border-2 ${
-                good ? "bg-[#5f7a45]/10 border-[#5f7a45]/40 text-[#3f5430]" : "bg-red-50 border-red-200 text-red-700"
-              }`}>
-                <svg width="20" height="20" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <Notice tone={good ? "green" : "red"} className="flex items-center gap-2 text-base">
+                <svg width="20" height="20" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
                   {good ? <path d="M4 10l4 4 8-8" /> : <><circle cx="10" cy="10" r="8" /><path d="M10 6v5M10 13.5v.5" /></>}
                 </svg>
                 {banner}
-              </div>
+              </Notice>
             );
           })()}
 
-          {/* ── Big tag # + scan + combo ── */}
-          <div className="rounded-2xl bg-[#6c4d39] text-white px-4 py-3 flex items-center gap-3">
+          {/* ── Big tag # + combo ── */}
+          <div className="rounded-2xl bg-[#241a12] text-[#fbf4e6] px-4 py-3.5 flex items-center gap-3">
             <div className="min-w-0 flex-1">
-              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#e7d8c4]">Write this # on the item</div>
-              <div className="font-mono font-black tracking-wider leading-none text-5xl sm:text-6xl">#{nextCode || "…"}</div>
-              {lastCode && <div className="text-[11px] text-[#e7d8c4] mt-1 truncate">Last saved #{lastCode}{lastTitle ? ` · ${lastTitle}` : ""}</div>}
+              <Eyebrow className="!text-[#b9a688]">Write this # on the item</Eyebrow>
+              <div className="font-mono font-black tracking-wider leading-none text-5xl sm:text-6xl mt-1">#{nextCode || "…"}</div>
+              {lastCode && <div className="text-[11px] text-[#b9a688] mt-1.5 truncate">Last saved #{lastCode}{lastTitle ? ` · ${lastTitle}` : ""}</div>}
             </div>
             <div className="flex flex-col gap-1.5 shrink-0">
-              <button type="button" onClick={toggleCombo}
-                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border-2 transition-colors ${
-                  combo ? "bg-white text-[#6c4d39] border-white" : "bg-transparent text-white border-white/50 hover:bg-white/10"
-                }`}>
+              <Btn
+                type="button"
+                onClick={toggleCombo}
+                tone={combo ? "amber" : "leather"}
+                variant={combo ? "solid" : "outline"}
+                size="sm"
+                className="min-h-[44px]"
+              >
                 <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1.5" y="1.5" width="6" height="6" rx="1" /><rect x="8.5" y="1.5" width="6" height="6" rx="1" /><rect x="1.5" y="8.5" width="6" height="6" rx="1" /><rect x="8.5" y="8.5" width="6" height="6" rx="1" /></svg>
                 {combo ? "Combo on" : "Combo"}
-              </button>
+              </Btn>
             </div>
           </div>
 
           {/* Combo size picker (only when on). */}
           {combo && (
-            <div className="rounded-xl bg-[#f6ecda] border border-[#e3d6bf] px-3 py-2.5 flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-bold text-[#4a3a2b]">Lot size:</span>
+            <div className="rounded-2xl bg-[#fbeed8] border border-[#eed3ab] px-3 py-2.5 flex items-center gap-2 flex-wrap">
+              <Eyebrow className="!text-[#8a4f1c]">Lot size</Eyebrow>
               {[2, 3, 4, 5, 6].map((n) => (
-                <button key={n} type="button" onClick={() => setPackSize(n)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-bold border transition-colors ${
-                    formData.packSize === n ? "bg-[#6c4d39] text-white border-[#6c4d39]" : "bg-white text-[#4a3a2b] border-[#cdbda3]"
-                  }`}>{n}</button>
+                <Chip key={n} on={formData.packSize === n} onClick={() => setPackSize(n)} className="min-w-[44px]">{n}</Chip>
               ))}
-              <span className="text-xs text-[#6f5b46] ml-auto">{photos.length}/{formData.packSize} photos · one code</span>
+              <span className="text-xs font-semibold text-[#8a4f1c] ml-auto">{photos.length}/{formData.packSize} photos · one code</span>
             </div>
           )}
 
@@ -990,158 +1013,164 @@ function NewItemForm() {
             autoStart={scannerAutoStart}
           />
 
-          {/* ── Everything else, one dense panel ── */}
-          <div className="rounded-2xl bg-white border border-[#e3d6bf] p-3 space-y-2.5">
-            <input type="file" accept="image/*" multiple id="photo-upload" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
+          <input type="file" accept="image/*" multiple id="photo-upload" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
 
-            {/* Title */}
-            <textarea ref={titleRef} name="title" value={formData.title} onChange={handleChange} rows={1}
-              placeholder='Title * — e.g. Apple iPad Pro 12.9"'
-              className={`${inputCls} resize-none overflow-hidden leading-snug py-2.5`} />
+          {/* ── Details ── */}
+          <Panel title="Details">
+            <div className="p-3 sm:p-4 space-y-3">
+              {/* Title */}
+              <textarea ref={titleRef} name="title" value={formData.title} onChange={handleChange} rows={1}
+                placeholder='Title * — e.g. Apple iPad Pro 12.9"'
+                className={`${fieldCls} resize-none overflow-hidden leading-snug py-2.5 text-base font-semibold`} />
 
-            {/* Condition chips */}
-            <div className="grid grid-cols-5 gap-1.5">
-              {[
-                { value: "NEW", label: "New" },
-                { value: "LIKE_NEW", label: "Like new" },
-                { value: "GOOD", label: "Good" },
-                { value: "FAIR", label: "Fair" },
-                { value: "POOR", label: "Poor" },
-              ].map((c) => (
-                <button key={c.value} type="button"
-                  onClick={() => setFormData((prev) => ({ ...prev, condition: c.value }))}
-                  className={`px-1 py-2 rounded-lg text-xs font-bold border transition-colors ${
-                    formData.condition === c.value ? "bg-[#c47b3e] text-white border-[#c47b3e]" : "bg-[#faf5ea] text-[#4a3a2b] border-[#cdbda3]"
-                  }`}>{c.label}</button>
-              ))}
-            </div>
-
-            {/* Size + Feature */}
-            <div className="grid grid-cols-2 gap-2">
-              <input name="size" value={formData.size} onChange={handleChange} placeholder="Size (optional)" className={`${inputCls} py-2.5`} />
-              <button type="button" onClick={() => setFormData((prev) => ({ ...prev, isPremium: !prev.isPremium }))}
-                className={`inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-bold border-2 transition-colors ${
-                  formData.isPremium ? "bg-[#c47b3e] text-white border-[#c47b3e]" : "bg-white text-[#8a7559] border-[#cdbda3]"
-                }`}>
-                <svg width="15" height="15" viewBox="0 0 16 16" fill={formData.isPremium ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M8 1.5l1.8 3.9 4.2.5-3.1 2.9.8 4.2L8 11.4 4.3 13l.8-4.2L2 5.9l4.2-.5L8 1.5z" /></svg>
-                {formData.isPremium ? "Featured" : "Feature"}
-              </button>
-            </div>
-
-            {/* Price row */}
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { label: "Retail", name: "retailValue", placeholder: "0" },
-                { label: "Start *", name: "startingBid", placeholder: "2" },
-                { label: "Reserve", name: "reservePrice", placeholder: "—" },
-              ].map((field) => (
-                <div key={field.name}>
-                  <label className="text-[11px] font-bold text-[#8a7559] uppercase tracking-wide mb-0.5 block">{field.label}</label>
-                  <div className="relative">
-                    <span className="absolute left-2.5 top-2.5 text-[#8a7559]">$</span>
-                    <input name={field.name} value={formData[field.name as keyof typeof formData] as string}
-                      onChange={handleChange} type="number" inputMode="decimal" placeholder={field.placeholder}
-                      className={`${inputCls} pl-6 pr-1.5 py-2.5`} />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Warehouse + spot */}
-            <div className="grid grid-cols-2 gap-2">
+              {/* Condition chips */}
               <div>
-                <label className="text-[11px] font-bold text-[#8a7559] uppercase tracking-wide mb-0.5 block">Warehouse *</label>
-                {pickupLocations.length === 0 ? (
-                  <a href="/admin/pickup" className="block rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm text-amber-800 font-semibold">Set one up →</a>
-                ) : (
-                  <select name="locationId" value={formData.locationId} onChange={handleChange}
-                    className={`${inputCls} py-2.5 ${!formData.locationId ? "border-[#c47b3e]" : ""}`}>
-                    <option value="">Choose…</option>
-                    {pickupLocations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                <span className={labelCls}>Condition</span>
+                <div className="grid grid-cols-5 gap-1.5">
+                  {[
+                    { value: "NEW", label: "New" },
+                    { value: "LIKE_NEW", label: "Like new" },
+                    { value: "GOOD", label: "Good" },
+                    { value: "FAIR", label: "Fair" },
+                    { value: "POOR", label: "Poor" },
+                  ].map((c) => (
+                    <Chip key={c.value} on={formData.condition === c.value}
+                      onClick={() => setFormData((prev) => ({ ...prev, condition: c.value }))}
+                      className="!px-1 text-xs sm:text-sm">{c.label}</Chip>
+                  ))}
+                </div>
+              </div>
+
+              {/* Size + Feature */}
+              <div className="grid grid-cols-2 gap-2">
+                <Input name="size" value={formData.size} onChange={handleChange} placeholder="Size (optional)" className="text-base" />
+                <Chip on={formData.isPremium} onClick={() => setFormData((prev) => ({ ...prev, isPremium: !prev.isPremium }))}>
+                  <svg width="15" height="15" viewBox="0 0 16 16" fill={formData.isPremium ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M8 1.5l1.8 3.9 4.2.5-3.1 2.9.8 4.2L8 11.4 4.3 13l.8-4.2L2 5.9l4.2-.5L8 1.5z" /></svg>
+                  {formData.isPremium ? "Featured" : "Feature"}
+                </Chip>
+              </div>
+
+              {/* Description — compact, optional. */}
+              <textarea name="description" value={formData.description} onChange={handleChange} rows={2}
+                placeholder="Description (optional)"
+                className={`${fieldCls} resize-none py-2.5 text-base`} />
+            </div>
+          </Panel>
+
+          {/* ── Pricing ── */}
+          <Panel title="Pricing">
+            <div className="p-3 sm:p-4">
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { label: "Retail", name: "retailValue", placeholder: "0" },
+                  { label: "Start *", name: "startingBid", placeholder: "2" },
+                  { label: "Reserve", name: "reservePrice", placeholder: "—" },
+                ].map((field) => (
+                  <div key={field.name}>
+                    <label className={labelCls}>{field.label}</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8a7559] font-bold">$</span>
+                      <Input name={field.name} value={formData[field.name as keyof typeof formData] as string}
+                        onChange={handleChange} type="number" inputMode="decimal" placeholder={field.placeholder}
+                        className="!pl-7 !pr-2 text-base tabular-nums" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Panel>
+
+          {/* ── Location ── */}
+          <Panel title="Location">
+            <div className="p-3 sm:p-4 space-y-3">
+              {/* Warehouse + spot */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className={labelCls}>Warehouse *</label>
+                  {pickupLocations.length === 0 ? (
+                    <Link href="/admin/pickup" className="flex items-center min-h-[46px] rounded-xl border border-[#eed3ab] bg-[#fbeed8] px-3 text-sm text-[#8a4f1c] font-bold">Set one up</Link>
+                  ) : (
+                    <select name="locationId" value={formData.locationId} onChange={handleChange}
+                      className={`${fieldCls} text-base ${!formData.locationId ? "!border-[#c47b3e]" : ""}`}>
+                      <option value="">Choose…</option>
+                      {pickupLocations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                    </select>
+                  )}
+                </div>
+                <div>
+                  <label className={labelCls}>Shelf / spot</label>
+                  <Input name="storageLocation" value={formData.storageLocation} onChange={handleChange}
+                    placeholder="Type a new spot" autoComplete="off" className="text-base" />
+                </div>
+              </div>
+              {/* Spots already used for this auction + warehouse — tap to reuse.
+                  (A tappable chip row, not a native <datalist>, which doesn't render
+                  reliably on mobile.) */}
+              {spotOptions.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {spotOptions.slice(0, 12).map((s) => (
+                    <Chip key={s} on={formData.storageLocation === s}
+                      onClick={() => setFormData((prev) => ({ ...prev, storageLocation: s }))}
+                      className="text-xs">
+                      {s}
+                    </Chip>
+                  ))}
+                </div>
+              )}
+
+              {/* Transfer + auction */}
+              <div className={`grid gap-2 ${preselectedAuctionId ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"}`}>
+                <Chip on={formData.transferable} onClick={() => setFormData((prev) => ({ ...prev, transferable: true }))}>Can transfer</Chip>
+                <Chip on={!formData.transferable} onClick={() => setFormData((prev) => ({ ...prev, transferable: false }))}>Pickup only</Chip>
+                {!preselectedAuctionId && (
+                  <select name="auctionId" value={formData.auctionId} onChange={handleChange} className={`${fieldCls} text-sm col-span-2 sm:col-span-1`}>
+                    <option value="">Save as draft</option>
+                    {auctions.map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}
                   </select>
                 )}
               </div>
-              <div>
-                <label className="text-[11px] font-bold text-[#8a7559] uppercase tracking-wide mb-0.5 block">Shelf / spot</label>
-                <input name="storageLocation" value={formData.storageLocation} onChange={handleChange}
-                  placeholder="Type a new spot" autoComplete="off" className={`${inputCls} py-2.5`} />
-                {/* Spots already used for this auction + warehouse — tap to reuse.
-                    (A tappable chip row, not a native <datalist>, which doesn't render
-                    reliably on mobile.) */}
-                {spotOptions.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {spotOptions.slice(0, 12).map((s) => (
-                      <button type="button" key={s}
-                        onClick={() => setFormData((prev) => ({ ...prev, storageLocation: s }))}
-                        className={`px-2 py-1 rounded-md text-xs font-bold border transition-colors ${
-                          formData.storageLocation === s
-                            ? "bg-[#6c4d39] text-white border-[#6c4d39]"
-                            : "bg-[#faf5ea] text-[#6c4d39] border-[#cdbda3] hover:bg-[#efe3d0]"
-                        }`}>
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                )}
+            </div>
+          </Panel>
+
+          {/* ── Photos ── horizontal strip (no vertical growth). Tap a thumb to make it
+              the main photo; the corner button removes it. Scanned items pull their photo in. */}
+          <Panel title="Photos" sub={photos.length ? `${photos.length} of 10 · first one is the main photo` : "Up to 10 · first one is the main photo"}>
+            <div className="p-3 sm:p-4">
+              <div className="flex gap-2 overflow-x-auto pt-0.5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {photos.map((url, i) => (
+                  <button type="button" key={i} onClick={() => i !== 0 && setMainPhoto(i)}
+                    className={`relative shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 ${i === 0 ? "border-[#4a7c59]" : "border-[#e6dac6]"}`}>
+                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    {i === 0 && <span className="absolute bottom-0 inset-x-0 bg-[#4a7c59] text-white text-[9px] font-black uppercase tracking-wide text-center leading-tight py-0.5">Main</span>}
+                    <span onClick={(e) => { e.stopPropagation(); setPhotos(photos.filter((_, idx) => idx !== i)); }}
+                      className="absolute top-0 right-0 w-6 h-6 grid place-items-center bg-black/55 text-white rounded-bl-lg">
+                      <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 3l6 6M9 3l-6 6" /></svg>
+                    </span>
+                  </button>
+                ))}
+                <label htmlFor="photo-upload"
+                  className="shrink-0 w-20 h-20 rounded-xl border-2 border-dashed border-[#d9c7ab] grid place-items-center text-[#8a7559] hover:border-[#6c4d39] hover:text-[#6c4d39] cursor-pointer transition-colors">
+                  {uploading ? (
+                    <span className="text-2xl leading-none">…</span>
+                  ) : (
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                  )}
+                </label>
               </div>
             </div>
-
-            {/* Transfer + auction */}
-            <div className={`grid gap-2 ${preselectedAuctionId ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-3"}`}>
-              <button type="button" onClick={() => setFormData((prev) => ({ ...prev, transferable: true }))}
-                className={`px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${
-                  formData.transferable ? "bg-[#7b6a3f] text-white border-[#7b6a3f]" : "bg-[#faf5ea] text-[#4a3a2b] border-[#cdbda3]"
-                }`}>Can transfer</button>
-              <button type="button" onClick={() => setFormData((prev) => ({ ...prev, transferable: false }))}
-                className={`px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${
-                  !formData.transferable ? "bg-[#8a4f1c] text-white border-[#8a4f1c]" : "bg-[#faf5ea] text-[#4a3a2b] border-[#cdbda3]"
-                }`}>Pickup only</button>
-              {!preselectedAuctionId && (
-                <select name="auctionId" value={formData.auctionId} onChange={handleChange} className={`${inputCls} py-2 text-sm`}>
-                  <option value="">Save as draft</option>
-                  {auctions.map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}
-                </select>
-              )}
-            </div>
-
-            {/* Photos — horizontal strip (no vertical growth). Tap a thumb to make it
-                the main photo; × removes it. Scanned items pull their photo in. */}
-            <div className="flex gap-2 overflow-x-auto pt-0.5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {photos.map((url, i) => (
-                <button type="button" key={i} onClick={() => i !== 0 && setMainPhoto(i)}
-                  className={`relative shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 ${i === 0 ? "border-[#4a7c59]" : "border-[#e3d6bf]"}`}>
-                  <img src={url} alt="" className="w-full h-full object-cover" />
-                  {i === 0 && <span className="absolute bottom-0 inset-x-0 bg-[#4a7c59] text-white text-[9px] font-bold text-center leading-tight py-0.5">MAIN</span>}
-                  <span onClick={(e) => { e.stopPropagation(); setPhotos(photos.filter((_, idx) => idx !== i)); }}
-                    className="absolute top-0 right-0 w-5 h-5 grid place-items-center bg-black/55 text-white rounded-bl-lg">
-                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 3l6 6M9 3l-6 6" /></svg>
-                  </span>
-                </button>
-              ))}
-              <label htmlFor="photo-upload"
-                className="shrink-0 w-16 h-16 rounded-lg border-2 border-dashed border-[#cdbda3] grid place-items-center text-[#8a7559] cursor-pointer">
-                <span className="text-2xl leading-none">{uploading ? "…" : "＋"}</span>
-              </label>
-            </div>
-
-            {/* Description — compact, optional. */}
-            <textarea name="description" value={formData.description} onChange={handleChange} rows={2}
-              placeholder="Description (optional)"
-              className={`${inputCls} resize-none py-2`} />
-          </div>
+          </Panel>
         </div>
+        </PageBody>
       </div>
 
       {/* ── Sticky action bar ── */}
-      <footer className="bar-safe-bottom safe-x border-t border-[#e3d6bf] bg-[#faf5ea] px-3 sm:px-8 pt-2.5 flex items-center gap-2">
-        <button onClick={() => handleSave(true)} disabled={saving || uploading}
-          className="flex-1 bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] disabled:opacity-50 text-[#241a12] text-base py-3.5 rounded-xl font-bold transition-colors whitespace-nowrap">
+      <footer className="bar-safe-bottom safe-x border-t border-[#e6dac6] bg-white/85 backdrop-blur px-3 sm:px-8 pt-2.5 flex items-center gap-2">
+        <Btn onClick={() => handleSave(true)} disabled={saving || uploading} variant="outline" className="flex-1">
           {saving ? "Saving…" : "Save + next"}
-        </button>
-        <button onClick={() => handleSave(false)} disabled={saving || uploading}
-          className="flex-1 bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white text-base py-3.5 rounded-xl font-bold transition-colors whitespace-nowrap">
+        </Btn>
+        <Btn onClick={() => handleSave(false)} disabled={saving || uploading} className="flex-1">
           {saving ? "Saving…" : uploading ? "Uploading…" : "Save & done"}
-        </button>
+        </Btn>
       </footer>
     </>
   );
@@ -1151,13 +1180,13 @@ export default function NewItemPage() {
   return (
     <Suspense fallback={
       <>
-        <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-4 flex items-center gap-2">
+        <header className="bg-white/70 border-b border-[#e6dac6] px-4 sm:px-8 py-4 flex items-center gap-2">
           <Skeleton className="h-8 w-48" />
         </header>
         <div className="flex-1 px-4 sm:px-8 py-6">
-          <div className="mx-auto w-full max-w-2xl space-y-4">
+          <div className="w-full max-w-3xl space-y-4">
             {[0, 1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-white border border-[#e3d6bf] rounded-2xl p-5 space-y-3">
+              <div key={i} className="bg-white border border-[#e6dac6] rounded-2xl p-5 space-y-3">
                 <Skeleton className="h-5 w-40" />
                 <Skeleton className="h-12 w-full rounded-xl" />
               </div>
