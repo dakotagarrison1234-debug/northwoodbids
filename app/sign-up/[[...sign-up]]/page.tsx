@@ -1,5 +1,6 @@
 import { SignUp } from "@clerk/nextjs";
 import AuthSwitch from "@/app/components/AuthSwitch";
+import PromoBanner from "@/app/components/PromoBanner";
 import { IcoNew, IcoCoin, IcoTruck, IcoGift, IcoShield } from "@/app/components/BidIcons";
 
 const LOGO_URL =
@@ -26,6 +27,8 @@ export default function SignUpPage() {
             <h1 className="font-display text-[1.7rem] leading-tight font-black">Brand-name deals from $2</h1>
             <p className="text-white/85 text-sm mt-1">Free to join. You only pay if you win.</p>
           </div>
+
+          <PromoBanner />
 
           {/* Benefit chips */}
           <div className="px-5 pt-4 flex flex-wrap justify-center gap-1.5">

@@ -44,3 +44,6 @@ Save the machine clip to `public/giveaway/ticket-machine.mp4` (download from the
 - **+1 ticket nudge**: while a bid-to-enter giveaway is live, every bid confirmation on the item page says "+1 giveaway ticket (title)".
 - **Share** on every giveaway card — signed-in bidders share their referral link pointed at /giveaways, so a friend who signs up credits their Bid Bucks.
 - Public giveaway data is cached ~10s per server so the home page doesn't rescan bidders per visitor; the viewer's own standing is always read fresh.
+
+## Welcome codes (QR on business cards)
+Admin → People → Welcome codes. Create a code (e.g. CARD5, $5), copy its link `northwoodbids.com/go/CARD5`, paste into GHL's QR generator. Scan → sign-up page shows "$5 is waiting" → after registration (phone required) the credit lands with a toast. One claim per account AND per phone number; established buyers can't claim; optional cap + expiry; turn off any time. The credit is spent FIRST on their first bill of $5+ and is tagged separately, so it never uses up one of the five referral ticket slots.

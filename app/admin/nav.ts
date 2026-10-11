@@ -73,6 +73,7 @@ export const ADMIN_GROUPS: NavGroup[] = [
     pages: [
       { label: "Bidders", href: "/admin/bidders" },
       { label: "Referrals", href: "/admin/referrals" },
+      { label: "Welcome codes", href: "/admin/promos" },
       { label: "Team", href: "/admin/staff" },
       { label: "Text a group", href: "/admin/blast" },
     ],

@@ -313,11 +313,20 @@ export async function reserveReferralCredit(
         return 0; // (full, full+min) window — skip rather than strand value
       }
 
+      // Spend WELCOME credit (QR / business card) before referral coupons, and tag
+      // the spend so it never shows as one of the five referral tickets being used.
+      const promoAgg = await tx.creditLedger.aggregate({
+        where: { clerkUserId, OR: [{ reason: { startsWith: "promo:" } }, { reason: { in: ["promo_redeemed", "promo_refund_return"] } }] },
+        _sum: { amount: true },
+      });
+      const promoRemainingCents = Math.round(Number(promoAgg._sum.amount ?? 0) * 100);
+      const reason = promoRemainingCents >= discount ? "promo_redeemed" : "referral_redeemed";
+
       await tx.creditLedger.create({
         data: {
           clerkUserId,
           amount: -(discount / 100),
-          reason: "referral_redeemed",
+          reason,
           redemptionKey,
         },
       });
@@ -335,11 +344,32 @@ export async function reserveReferralCredit(
   }
 }
 
+/**
+ * Compensating credit when a redemption can't be deleted by key (fully-covered
+ * bills with no PaymentIntent, Stripe-dashboard refunds). Mirrors "spend welcome
+ * credit first": if the user's welcome pool is in deficit the return is labelled
+ * promo_refund_return, otherwise referral_refund_return — so the /refer coupon
+ * book and the welcome strip each get their own money back.
+ */
+export async function creditReturnReason(clerkUserId: string): Promise<"promo_refund_return" | "referral_refund_return"> {
+  const [granted, spent] = await Promise.all([
+    prisma.creditLedger.aggregate({ where: { clerkUserId, reason: { startsWith: "promo:" } }, _sum: { amount: true } }),
+    prisma.creditLedger.aggregate({ where: { clerkUserId, reason: { in: ["promo_redeemed", "promo_refund_return"] } }, _sum: { amount: true } }),
+  ]);
+  const promoDeficit = Number(spent._sum.amount ?? 0) < 0 && Number(granted._sum.amount ?? 0) + Number(spent._sum.amount ?? 0) < Number(granted._sum.amount ?? 0);
+  return promoDeficit ? "promo_refund_return" : "referral_refund_return";
+}
+export async function returnCreditFallback(clerkUserId: string, amount: number): Promise<void> {
+  if (!(amount > 0)) return;
+  const reason = await creditReturnReason(clerkUserId);
+  await prisma.creditLedger.create({ data: { clerkUserId, amount, reason } });
+}
+
 /** Releases a previously-reserved discount (call when the charge fails). */
 export async function releaseReferralCredit(redemptionKey: string): Promise<void> {
   try {
     await prisma.creditLedger.deleteMany({
-      where: { redemptionKey, reason: "referral_redeemed" },
+      where: { redemptionKey, reason: { in: ["referral_redeemed", "promo_redeemed"] } },
     });
   } catch (e) {
     console.error("releaseReferralCredit error:", e);
@@ -358,6 +388,9 @@ export type ReferralSummary = {
   cap: number;
   pendingCount: number;
   totalRedeemed: number;
+  // Welcome-code credit (QR / business card), separate from referral coupons.
+  welcomeCredit: number;
+  welcomeGranted: number;
   // Exactly `cap` entries — the bidder's coupon book. Redeemed first, then
   // available, then still-locked slots they can still earn.
   coupons: CouponState[];
@@ -384,7 +417,7 @@ function maskName(name: string | null): string {
 
 /** Everything the /refer page needs in one shot. */
 export async function getReferralSummary(clerkUserId: string): Promise<ReferralSummary> {
-  const [code, balance, referrals, redemptionRows, refundReturnCount] = await Promise.all([
+  const [code, balance, referrals, redemptionRows, refundReturnCount, welcomeRows] = await Promise.all([
     getOrCreateReferralCode(clerkUserId),
     getCreditBalance(clerkUserId),
     prisma.referral.findMany({
@@ -404,7 +437,14 @@ export async function getReferralSummary(clerkUserId: string): Promise<ReferralS
     prisma.creditLedger.count({
       where: { clerkUserId, reason: "referral_refund_return" },
     }),
+    // Welcome-code credit (QR / business card) — shown separately from coupons.
+    prisma.creditLedger.findMany({
+      where: { clerkUserId, OR: [{ reason: { startsWith: "promo:" } }, { reason: { in: ["promo_redeemed", "promo_refund_return"] } }] },
+      select: { amount: true, reason: true },
+    }),
   ]);
+  const welcomeCredit = Math.max(0, welcomeRows.reduce((s, r) => s + Number(r.amount), 0));
+  const welcomeGranted = welcomeRows.filter((r) => r.reason.startsWith("promo:")).reduce((s, r) => s + Number(r.amount), 0);
 
   // Net spend = redemptions minus any that were refunded back, so the coupon book
   // never shows a coupon as permanently spent after it was returned.
@@ -473,6 +513,8 @@ export async function getReferralSummary(clerkUserId: string): Promise<ReferralS
     cap,
     pendingCount,
     totalRedeemed: redemptions.reduce((s, r) => s + r.amount, 0),
+    welcomeCredit,
+    welcomeGranted,
     coupons,
     redemptions,
     referrals: referrals

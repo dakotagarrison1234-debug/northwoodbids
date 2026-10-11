@@ -209,6 +209,9 @@ export default function HelpPage() {
             <Q q="What doesn't count?">
               <p>Inviting yourself, or accounts that share your phone number or card. Bid Bucks have no cash value and can&apos;t be transferred.</p>
             </Q>
+            <Q q="I scanned a card that said &quot;$5 to bid&quot; — where is it?">
+              <p>Finish signing up with your phone number and it lands in your account on its own (you&apos;ll see a little note). It comes off your first winning bill of $5 or more. One per person, and it doesn&apos;t use up any of your five friend coupons.</p>
+            </Q>
           </Topic>
 
           {/* ── Account ── */}

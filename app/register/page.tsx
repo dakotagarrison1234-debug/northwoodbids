@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { AVATARS, Avatar } from "@/app/components/Avatars";
@@ -96,6 +96,13 @@ function RegisterForm() {
   const [savingAvatar, setSavingAvatar] = useState(false);
   const [locations, setLocations] = useState<{ id: string; name: string; address: string | null }[]>([]);
   const [savingLocation, setSavingLocation] = useState(false);
+
+  // A welcome-code (QR) visitor has an nb_promo cookie — the $5 needs their phone.
+  const hasWelcomeCode = useSyncExternalStore(
+    () => () => {},
+    () => document.cookie.split("; ").some((c) => c.startsWith("nb_promo=") && c.length > "nb_promo=".length),
+    () => false
+  );
 
   // Read the org reference cookie set when user visited an org landing page
   useEffect(() => {
@@ -373,6 +380,9 @@ function RegisterForm() {
           {saving ? "Saving" : "Save and continue"}
         </button>
         <BranchDivider className="w-40 h-5 mx-auto opacity-80" />
+        {hasWelcomeCode && (
+          <p className="text-center text-xs font-bold text-[#a85f28] -mb-1">Your $5 welcome credit needs a phone number — skipping forfeits it.</p>
+        )}
         <button onClick={handleSkipPhone} className={`${SKIP_BTN} mt-0`}>
           Skip for now (no text alerts)
         </button>

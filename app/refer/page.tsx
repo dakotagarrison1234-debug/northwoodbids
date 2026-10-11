@@ -25,6 +25,8 @@ type Summary = {
   cap: number;
   pendingCount: number;
   totalRedeemed: number;
+  welcomeCredit?: number;
+  welcomeGranted?: number;
   coupons: CouponState[];
   redemptions: { amount: number; date: string; auctionTitle: string }[];
   referrals: Referral[];
@@ -193,6 +195,26 @@ export default function ReferPage() {
               </p>
             </div>
           </div>
+
+          {/* Welcome credit from a QR / business card */}
+          {(data.welcomeGranted ?? 0) > 0 && (
+            <div className="mt-5 flex items-center gap-3 rounded-2xl bg-[#241a12] text-[#fbf4e6] px-5 py-4">
+              <span className="w-10 h-10 rounded-full bg-[#f0a35a] text-[#241a12] grid place-items-center shrink-0"><IcoTicket className="w-5 h-5" /></span>
+              <div className="min-w-0">
+                {(data.welcomeCredit ?? 0) > 0 ? (
+                  <>
+                    <p className="font-display font-black text-lg leading-tight">${(data.welcomeCredit ?? 0).toFixed(0)} welcome credit</p>
+                    <p className="text-sm text-[#c9b79a]">From your sign-up code. It comes off your first winning bill of $5+ automatically.</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-display font-black text-lg leading-tight">Welcome credit used</p>
+                    <p className="text-sm text-[#c9b79a]">Your ${(data.welcomeGranted ?? 0).toFixed(0)} sign-up credit came off a winning bill. The tickets below are separate.</p>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Coupon stash */}
           <div className="mt-5 bg-white border border-[#e3d6bf] rounded-2xl p-5">

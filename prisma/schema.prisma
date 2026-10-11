@@ -702,3 +702,39 @@ model GiveawayEntry {
   @@index([giveawayId])
 }
 
+
+/**
+ * Welcome codes — the thing behind "scan me, sign up, get $5 to bid". A code is
+ * printed on a card / poster / QR; anyone can scan it any number of times, but a
+ * person can claim it ONCE: one claim per account AND one per phone number, so a
+ * second account with the same phone gets nothing. The claim writes a CreditLedger
+ * row (Bid Bucks), spent automatically on their first bill of $5+.
+ */
+model PromoCode {
+  id             String       @id @default(cuid())
+  organizationId String
+  code           String       @unique // short, uppercase, e.g. CARD5
+  label          String // "Business card", "Fall fair poster"
+  amount         Decimal      @default(5) @db.Decimal(10, 2)
+  active         Boolean      @default(true)
+  maxClaims      Int? // optional cap; null = unlimited
+  expiresAt      DateTime?
+  createdAt      DateTime     @default(now())
+  claims         PromoClaim[]
+
+  @@index([organizationId])
+}
+
+model PromoClaim {
+  id          String    @id @default(cuid())
+  promoCodeId String
+  promoCode   PromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  clerkUserId String
+  phoneKey    String // normalized phone (last 10 digits) — the real "one per person" key
+  ledgerId    String?   @unique // the CreditLedger row that granted the credit
+  createdAt   DateTime  @default(now())
+
+  @@unique([promoCodeId, clerkUserId])
+  @@unique([promoCodeId, phoneKey])
+  @@index([clerkUserId])
+}

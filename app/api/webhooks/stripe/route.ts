@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { autoAttachPaidItems } from "@/lib/pickup";
 import { notifyPaymentFailed, notifyPaymentReceipt } from "@/lib/paymentNotify";
-import { vestReferralForPayer, releaseReferralCredit } from "@/lib/referral";
+import { vestReferralForPayer, releaseReferralCredit, returnCreditFallback } from "@/lib/referral";
 import Stripe from "stripe";
 
 // App Router route handlers expose the raw body via request.text(), so no
@@ -221,9 +221,7 @@ async function markPaymentsRefunded(paymentIntentId: string): Promise<void> {
     await prisma.payment.update({ where: { id: p.id }, data: { status: "REFUNDED" } });
     // Restore a spent coupon.
     if (Number(p.creditApplied ?? 0) > 0) {
-      await prisma.creditLedger.create({
-        data: { clerkUserId: p.clerkUserId, amount: Number(p.creditApplied), reason: "referral_refund_return" },
-      });
+      await returnCreditFallback(p.clerkUserId, Number(p.creditApplied));
     }
     // Free the item for re-listing — detach from any appointment/transfer and clear
     // the gather/pickup residue so it doesn't leave a phantom staged spot behind.

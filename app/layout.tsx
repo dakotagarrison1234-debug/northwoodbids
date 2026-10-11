@@ -4,6 +4,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import HomeHeader from "@/app/components/HomeHeader";
 import { GlobalFooter } from "@/app/components/SiteFooter";
 import ReferralClaimer from "@/app/components/ReferralClaimer";
+import PromoClaimer from "@/app/components/PromoClaimer";
 import ChatWidget from "@/app/components/ChatWidget";
 import JsonLd from "@/app/components/JsonLd";
 import { siteGraphLd } from "@/lib/seo";
@@ -135,6 +136,7 @@ export default function RootLayout({
           <JsonLd data={siteGraphLd()} />
           <HomeHeader />
           <ReferralClaimer />
+          <PromoClaimer />
           {children}
           <GlobalFooter />
           {/* Woody — GHL support chat widget (only on customer-browsing pages). */}

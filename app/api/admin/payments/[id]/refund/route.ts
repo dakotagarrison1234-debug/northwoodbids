@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma, type OrgRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg, requireRole } from "@/lib/auth";
-import { releaseReferralCredit } from "@/lib/referral";
+import { releaseReferralCredit, returnCreditFallback } from "@/lib/referral";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -102,15 +102,8 @@ export async function POST(
   ];
 
   if (Number(payment.creditApplied ?? 0) > 0 && !creditReleased) {
-    ops.push(
-      prisma.creditLedger.create({
-        data: {
-          clerkUserId: payment.clerkUserId,
-          amount: Number(payment.creditApplied),
-          reason: "referral_refund_return",
-        },
-      })
-    );
+    // Labelled promo- vs referral-return by whichever pool is in deficit (see lib).
+    await returnCreditFallback(payment.clerkUserId, Number(payment.creditApplied));
   }
 
   // Free the item for re-listing, but don't disturb one already collected, and
