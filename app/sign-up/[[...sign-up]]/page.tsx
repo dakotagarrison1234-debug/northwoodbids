@@ -1,43 +1,24 @@
 import { SignUp } from "@clerk/nextjs";
 import AuthSwitch from "@/app/components/AuthSwitch";
-import PromoBanner from "@/app/components/PromoBanner";
-import { IcoNew, IcoCoin, IcoTruck, IcoGift, IcoShield } from "@/app/components/BidIcons";
+import SignUpHeader, { type PromoHint } from "@/app/components/PromoBanner";
+import { IcoShield } from "@/app/components/BidIcons";
 
-const LOGO_URL =
-  "https://assets.cdn.filesafe.space/TwuL7EwKfW8oGIV0Zo5q/media/6a373b261c5d711b35bf4e56.png";
+type SP = Record<string, string | string[] | undefined>;
 
-const CHIPS: { Icon: (p: { className?: string }) => React.ReactElement; label: string }[] = [
-  { Icon: IcoNew, label: "99% brand-new" },
-  { Icon: IcoCoin, label: "Bids from $2" },
-  { Icon: IcoTruck, label: "Free transfers" },
-  { Icon: IcoGift, label: "Free Bid Bucks" },
-  { Icon: IcoShield, label: "Pay only if you win" },
-];
+export default async function SignUpPage({ searchParams }: { searchParams: Promise<SP> }) {
+  const sp = await searchParams;
+  const rawCode = typeof sp.promo === "string" ? sp.promo : "";
+  const code = rawCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 16);
+  const amt = Number(typeof sp.amt === "string" ? sp.amt : "") || 5;
+  const initialPromo: PromoHint = code ? { code, amount: amt } : null;
 
-export default function SignUpPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#f3ead6] to-[#ece0c9] flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
         {/* Card */}
         <div className="bg-white border border-[#e3d6bf] rounded-3xl shadow-[0_24px_60px_-24px_rgba(108,77,57,0.5)] overflow-hidden">
-          {/* Warm header band */}
-          <div className="relative px-6 pt-7 pb-6 text-center text-white" style={{ background: "linear-gradient(140deg,#6c4d39,#8a5a2f)" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={LOGO_URL} alt="Northwood Bids" className="h-16 w-auto max-w-[200px] object-contain mx-auto mb-3 drop-shadow" />
-            <h1 className="font-display text-[1.7rem] leading-tight font-black">Brand-name deals from $2</h1>
-            <p className="text-white/85 text-sm mt-1">Free to join. You only pay if you win.</p>
-          </div>
-
-          <PromoBanner />
-
-          {/* Benefit chips */}
-          <div className="px-5 pt-4 flex flex-wrap justify-center gap-1.5">
-            {CHIPS.map((c) => (
-              <span key={c.label} className="inline-flex items-center gap-1.5 bg-[#faf5ea] border border-[#e3d6bf] text-[#6f5b46] text-xs font-bold px-2.5 py-1.5 rounded-full">
-                <c.Icon className="w-3.5 h-3.5 text-[#6c4d39]" /> {c.label}
-              </span>
-            ))}
-          </div>
+          {/* Header band (+ benefit chips when not arriving from a welcome QR) */}
+          <SignUpHeader initialPromo={initialPromo} />
 
           {/* Form */}
           <div className="px-5 sm:px-7 pt-5 pb-6">
