@@ -92,9 +92,12 @@ export const ADMIN_GROUPS: NavGroup[] = [
     label: "Settings",
     icon: "settings",
     href: "/admin/settings/payments",
-    blurb: "Payments and business setup.",
+    blurb: "Payments, doors and business setup.",
     ownerOnly: true,
-    pages: [{ label: "Payments", href: "/admin/settings/payments" }],
+    pages: [
+      { label: "Payments", href: "/admin/settings/payments" },
+      { label: "Doors", href: "/admin/settings/doors" },
+    ],
   },
 ];
 

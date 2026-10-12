@@ -124,6 +124,16 @@ just look for the spot/box label shown on your Pickup page.
 Yes — you can reschedule or cancel on your Pickup page, and mark "I picked up my order"
 when you've got it.
 
+**What's a door code? / How do I get in at Corunna?**
+Our Corunna storefront has keypad locks on the pickup doors. When you book a pickup
+there, you get a door code by text (it's also on your Pickup page). It works
+all day on your pickup date, on every pickup door. Touch the keypad to wake it, enter
+your code, and the door unlocks. Press the Schlage button on the way out to lock up.
+Your order is in the spot shown on your Pickup page. If you reschedule, the code
+follows your new date. Codes stop working the moment an order is collected or
+cancelled. If the keypad won't take your code, text us and we can unlock the door
+from here.
+
 ---
 
 ## Transfers between spots

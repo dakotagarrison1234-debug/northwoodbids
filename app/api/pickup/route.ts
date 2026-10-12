@@ -9,6 +9,7 @@ import {
   getUnscheduledPickupItemIds,
 } from "@/lib/pickup";
 import { notifyAppointmentBooked } from "@/lib/appointmentNotify";
+import { issueAndTextDoorCode, seamConfigured, doorHowTo, doorCodeWindow } from "@/lib/doorLock";
 import { healPickupLinks } from "@/lib/pickupIntegrity";
 
 type ItemCard = {
@@ -55,7 +56,7 @@ export async function GET() {
       orderBy: { startsAt: "asc" },
       take: 20,
       include: {
-        location: true,
+        location: { include: { doorLocks: { where: { active: true }, select: { name: true } } } },
         items: {
           include: {
             photos: { where: { isPrimary: true }, take: 1 },
@@ -70,6 +71,16 @@ export async function GET() {
       startsAt: a.startsAt.toISOString(),
       // Set once staff box the whole order up — "your order is in Box 4".
       stagedSpot: a.stagedSpot ?? null,
+      // Self-serve door code (only at locations with smart locks).
+      door: a.doorCode
+        ? {
+            code: a.doorCode,
+            status: a.doorCodeStatus ?? "pending",
+            dayLabel: doorCodeWindow(a.startsAt).dayLabel,
+            doors: a.location.doorLocks.map((l) => l.name),
+            howTo: doorHowTo(a.doorCode, a.location.doorLocks.map((l) => l.name)),
+          }
+        : null,
       location: {
         id: a.location.id,
         name: a.location.name,
@@ -282,7 +293,15 @@ export async function POST(request: NextRequest) {
     // Team heads-up (fire-and-forget): text the owner that a pickup was booked.
     notifyAppointmentBooked(appointmentId).catch(() => {});
 
-    return NextResponse.json({ success: true, appointmentId, transferred });
+    // Self-serve doors: program a one-day code on the location's locks and text
+    // it. Awaited so the response can show the code right away; never throws.
+    let doorCode: string | null = null;
+    if (seamConfigured()) {
+      await issueAndTextDoorCode(appointmentId, "booked");
+      doorCode = (await prisma.pickupAppointment.findUnique({ where: { id: appointmentId }, select: { doorCode: true } }))?.doorCode ?? null;
+    }
+
+    return NextResponse.json({ success: true, appointmentId, transferred, doorCode });
   } catch (err) {
     console.error("[pickup POST]:", err);
     return NextResponse.json(

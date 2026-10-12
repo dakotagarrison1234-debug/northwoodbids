@@ -40,6 +40,7 @@ model Organization {
   pickupLocations        PickupLocation[]
   pickupAppointments     PickupAppointment[]
   transferRequests       TransferRequest[]
+  doorLocks              DoorLock[]
 }
 
 model OrgMember {
@@ -192,8 +193,27 @@ model PickupLocation {
   items          Item[]             @relation("ItemLocation")
   soldItems      Item[]             @relation("ItemSoldLocation")
   transfersTo    TransferRequest[]  @relation("TransferTo")
+  doorLocks      DoorLock[]
 
   @@index([organizationId])
+}
+
+/// A smart lock on a pickup door (Schlage Encode Plus via Seam). Every active lock
+/// at a location gets the same one-day code for each appointment there, so the
+/// customer's text says one number and it works on every door they might try.
+model DoorLock {
+  id             String         @id @default(cuid())
+  organizationId String
+  locationId     String?
+  seamDeviceId   String         @unique
+  name           String         // "Side door", "Back door"
+  active         Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location       PickupLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([locationId])
 }
 
 // Block-off dates (vacations, holidays) — no pickup slots are offered on any day
@@ -255,6 +275,17 @@ model PickupAppointment {
   stagedSpot     String?
   stagedAt       DateTime?
   notes          String?
+  // Door code for self-serve pickup. One PIN, valid all day on the pickup date,
+  // programmed on every active lock at the location through Seam. `doorCodeIds`
+  // holds the Seam access_code_id per lock so we can move or revoke it later.
+  // doorCodeStatus: "pending" (Seam is programming it) | "set" | "failed" | null.
+  doorCode       String?
+  doorCodeIds    String[]          @default([])
+  // Seam ids of codes we tried to delete and couldn't (Seam hiccup). A cron sweep
+  // retries them until they're gone, so a PIN is never live without a record.
+  doorCodeStaleIds String[]        @default([])
+  doorCodeStatus String?
+  doorCodeSentAt DateTime?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)

@@ -47,6 +47,8 @@ interface Appointment {
   startsAt: string;
   /** Set once staff box the order up — "your order is in Box 4". */
   stagedSpot: string | null;
+  /** Self-serve door code — only at locations with smart locks. */
+  door: { code: string; status: string; dayLabel: string; doors: string[]; howTo: string } | null;
   location: ApptLocation;
   items: ItemCard[];
 }
@@ -142,6 +144,7 @@ function downloadAppointmentIcs(appt: Appointment) {
     `Pickup at ${appt.location.name}`,
     `Local time (Michigan): ${fmtDateTime(appt.startsAt)}`,
     appt.location.instructions ? `Instructions: ${appt.location.instructions}` : "",
+    appt.door ? `Door code: ${appt.door.code} (works all day). ${appt.door.howTo}` : "",
     appt.items.length ? `Items: ${itemList}` : "",
   ].filter(Boolean);
 
@@ -490,10 +493,11 @@ export default function PickupPage() {
       const d = await res.json();
       if (d.success) {
         const n = Number(d.transferred ?? 0);
+        const door = d.doorCode ? ` Your door code is ${d.doorCode} — we texted it to you too.` : "";
         setMsg({
           text: n > 0
-            ? `Booked. ${n} item${n !== 1 ? "s" : ""} from the other warehouse will ride over and join this pickup (usually 5 to 6 days). We'll text you when your order is staged.`
-            : "Booked. We'll text you when your order is staged.",
+            ? `Booked. ${n} item${n !== 1 ? "s" : ""} from the other warehouse will ride over and join this pickup (usually 5 to 6 days). We'll text you when your order is staged.${door}`
+            : `Booked. We'll text you when your order is staged.${door}`,
           ok: true,
         });
         load();
@@ -889,6 +893,26 @@ export default function PickupPage() {
                       </p>
                     </div>
                   )}
+                  {/* Door code — the thing they'll be looking for on their phone at the
+                      door, so it's big, high-contrast and above the fold. */}
+                  {appointment.door && (
+                    <div className="bg-[#241a12] text-[#fbf4e6] px-6 py-6 text-center border-t border-white/10">
+                      <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[#f0a35a]">
+                        Your door code
+                      </div>
+                      <div className="font-mono text-5xl sm:text-6xl font-black leading-none tracking-[0.18em] mt-2 mb-1 tabular-nums">
+                        {appointment.door.code}
+                      </div>
+                      <p className="text-sm text-[#c9b79a] font-semibold mt-3">
+                        Works all day {appointment.door.dayLabel}
+                        {appointment.door.doors.length ? ` on the ${appointment.door.doors.map((d) => d.toLowerCase()).join(" and ")}` : ""}.
+                      </p>
+                      <p className="text-sm text-white/85 mt-2 leading-relaxed max-w-md mx-auto">{appointment.door.howTo}</p>
+                      {appointment.door.status === "failed" && (
+                        <p className="text-xs text-[#f0a35a] mt-3">Hmm, the lock hasn&apos;t accepted this code yet. Text us if it doesn&apos;t work when you arrive.</p>
+                      )}
+                    </div>
+                  )}
                   <div className="px-5 sm:px-6 py-5">
                     <LocationBadge name={appointment.location.name} />
                     {appointment.location.address && <div className="text-sm text-[#6f5b46] mt-1.5">{appointment.location.address}</div>}
@@ -1075,6 +1099,15 @@ export default function PickupPage() {
                         <Eyebrow tone="moss">Booked</Eyebrow>
                         <div className="font-display text-xl font-black text-[#2f5d3a] mt-0.5">{fmtDateTime(a.startsAt)}</div>
                       </div>
+                      {a.door && (
+                        <div className="bg-[#241a12] text-[#fbf4e6] px-5 py-4 flex items-center justify-between gap-3">
+                          <div>
+                            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#f0a35a]">Door code</div>
+                            <div className="text-xs text-[#c9b79a]">All day {a.door.dayLabel}</div>
+                          </div>
+                          <div className="font-mono text-3xl font-black tracking-[0.18em] tabular-nums">{a.door.code}</div>
+                        </div>
+                      )}
                       <div className="px-5 py-4">
                         <LocationBadge name={a.location.name} />
                         {a.location.address && <div className="text-sm text-[#6f5b46] mt-1.5">{a.location.address}</div>}

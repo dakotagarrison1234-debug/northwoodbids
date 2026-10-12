@@ -55,6 +55,10 @@ export type ConciergeStatus = {
     boxed: boolean;
     /** The staged spot string (e.g. "Shelf 2") when the order is boxed & waiting. */
     spot: string | null;
+    /** True when the pickup location has keypad locks. The PIN itself is never
+     *  returned here — a phone number is not proof of identity on the web widget —
+     *  so Woody points them at their text / the Pickup page instead. */
+    hasDoorCode: boolean;
   };
   needsToBook: boolean;
   links: { bookPickup: string; account: string };
@@ -70,7 +74,7 @@ function notFound(): ConciergeStatus {
     firstName: null,
     itemCount: 0,
     items: [],
-    pickup: { booked: false, when: null, locationName: null, address: null, boxed: false, spot: null },
+    pickup: { booked: false, when: null, locationName: null, address: null, boxed: false, spot: null, hasDoorCode: false },
     needsToBook: false,
     links: LINKS,
     briefing:
@@ -143,7 +147,7 @@ export async function getBidderStatus(phone: string): Promise<ConciergeStatus> {
     const xfer = it.transferRequest;
 
     if (it.status === "PICKED_UP") {
-      return { title: it.title, state: "picked_up", stateLabel: "Picked up ✓", locationName: loc };
+      return { title: it.title, state: "picked_up", stateLabel: "Picked up", locationName: loc };
     }
     if (xfer && (xfer.status === "REQUESTED" || xfer.status === "LOADED")) {
       const to = xfer.toLocation?.name ?? "your pickup location";
@@ -186,7 +190,10 @@ export async function getBidderStatus(phone: string): Promise<ConciergeStatus> {
   const nextAppt = await prisma.pickupAppointment.findFirst({
     where: { clerkUserId, status: "SCHEDULED", startsAt: { gte: new Date() } },
     orderBy: { startsAt: "asc" },
-    select: { startsAt: true, stagedSpot: true, location: { select: { name: true, address: true } } },
+    select: {
+      startsAt: true, stagedSpot: true, doorCode: true,
+      location: { select: { name: true, address: true } },
+    },
   });
 
   const needsToBook = !nextAppt && conciergeItems.some((i) => i.state === "ready_unbooked");
@@ -198,6 +205,7 @@ export async function getBidderStatus(phone: string): Promise<ConciergeStatus> {
     address: nextAppt?.location?.address ?? null,
     boxed: !!nextAppt?.stagedSpot,
     spot: nextAppt?.stagedSpot ?? null,
+    hasDoorCode: !!nextAppt?.doorCode,
   };
 
   return {
@@ -254,7 +262,10 @@ function buildBriefing(
     const loc = pickup.locationName ? ` at ${pickup.locationName}` : "";
     const when = pickup.when ? ` on ${pickup.when}` : "";
     const spot = pickup.spot ? `, ${pickup.spot}` : "";
-    let msg = `${hi}Your ${noun(n)} ${isare(n)} ready for pickup${loc}${when}${spot}. Come on in and help yourself — the doors are unlocked!`;
+    const door = pickup.hasDoorCode
+      ? ` Your door code is in the text we sent you and on your Pickup page (${LINKS.bookPickup}) — it works all day on your pickup date. Touch the keypad, enter it, and you're in.`
+      : " Come on in and help yourself — the doors are unlocked!";
+    let msg = `${hi}Your ${noun(n)} ${isare(n)} ready for pickup${loc}${when}${spot}.${door}`;
     if (notReady > 0 && notReady < n) {
       msg += ` (${noun(notReady)} ${isare(notReady)} still on the way — I'll text you when ${itthey(notReady)} ready.)`;
     }

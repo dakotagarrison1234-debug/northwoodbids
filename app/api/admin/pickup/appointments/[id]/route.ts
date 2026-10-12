@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg } from "@/lib/auth";
+import { issueAndTextDoorCode, moveDoorCode, revokeDoorCode, seamConfigured, textDoorCode } from "@/lib/doorLock";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -119,6 +120,23 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       });
     }
 
+    // Door code lifecycle (never blocks the response):
+    //  - collected or cancelled → pull the PIN off the locks right away
+    //  - reopened              → a fresh PIN, texted
+    //  - moved (time/place)    → PIN follows; texted when it changes or the day moves
+    if (seamConfigured()) {
+      const moved = (startsAt !== undefined && new Date(startsAt).getTime() !== appt.startsAt.getTime()) || (locationId !== undefined && locationId !== appt.locationId);
+      if (status === "COLLECTED" || status === "CANCELLED") {
+        revokeDoorCode(id).catch((e) => console.error("revokeDoorCode (admin) failed:", e));
+      } else if (reopening) {
+        issueAndTextDoorCode(id, "booked").catch(() => {});
+      } else if (moved && updated.status === "SCHEDULED") {
+        moveDoorCode(id, appt.locationId)
+          .then((r) => (r.code ? textDoorCode(id, "moved") : null))
+          .catch((e) => console.error("moveDoorCode (admin) failed:", e));
+      }
+    }
+
     return NextResponse.json({ success: true, appointment: updated });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Internal error";
@@ -147,6 +165,7 @@ export async function DELETE(_request: NextRequest, { params }: Props) {
       where: { id },
       data: { status: "CANCELLED" },
     });
+    revokeDoorCode(id).catch((e) => console.error("revokeDoorCode (admin delete) failed:", e));
 
     return NextResponse.json({ success: true });
   } catch (err) {

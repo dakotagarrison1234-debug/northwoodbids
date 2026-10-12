@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { notifyTransferRequested } from "@/lib/transferNotify";
+import { revokeDoorCodesFor } from "@/lib/doorLock";
 
 /**
  * Pickup scheduling helpers. All pickup times are interpreted in the business's
@@ -42,6 +43,7 @@ export async function switchPreferredCascade(
     const ids = staleAppts.map((a) => a.id);
     await prisma.item.updateMany({ where: { pickupAppointmentId: { in: ids } }, data: { pickupAppointmentId: null } });
     await prisma.pickupAppointment.updateMany({ where: { id: { in: ids } }, data: { status: "CANCELLED", stagedSpot: null, stagedAt: null } });
+    revokeDoorCodesFor(ids).catch(() => {});
   }
 
   // Merge duplicate REQUESTED transfers to the new location into one cart.

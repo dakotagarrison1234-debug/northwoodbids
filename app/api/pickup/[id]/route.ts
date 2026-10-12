@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { consolidatePickup, getAvailableSlots } from "@/lib/pickup";
+import { moveDoorCode, revokeDoorCode, seamConfigured, textDoorCode } from "@/lib/doorLock";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -67,6 +68,17 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       }
     }
 
+    // Door code follows the appointment: same place → same PIN, new day; new
+    // place → new PIN. Either way the customer gets a fresh text with the details.
+    if (changed && seamConfigured()) {
+      try {
+        const r = await moveDoorCode(id, appt.locationId);
+        if (r.code) await textDoorCode(id, "moved");
+      } catch (e) {
+        console.error("moveDoorCode (reschedule) failed:", e);
+      }
+    }
+
     return NextResponse.json({ success: true, appointment: updated });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Internal error";
@@ -95,6 +107,8 @@ export async function DELETE(_request: NextRequest, { params }: Props) {
       where: { id },
       data: { status: "CANCELLED" },
     });
+    // Nobody should be able to walk in on a cancelled pickup.
+    revokeDoorCode(id).catch((e) => console.error("revokeDoorCode (cancel) failed:", e));
 
     return NextResponse.json({ success: true });
   } catch (err) {

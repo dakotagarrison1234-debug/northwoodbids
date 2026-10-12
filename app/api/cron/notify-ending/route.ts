@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300; // a full ending-soon SMS blast can take a while
 import { NextRequest, NextResponse } from "next/server";
 import { notifyAuctionEndingSoon } from "@/lib/closeAuction";
+import { retryFailedDoorRevokes } from "@/lib/doorLock";
 
 /**
  * "Ending soon" SMS blast — its OWN cron, deliberately decoupled from the
@@ -31,6 +32,14 @@ export async function GET(request: NextRequest) {
     console.error("[cron] notifyAuctionEndingSoon failed:", msg, err);
   }
 
+  // Piggyback: finish any door-code deletes Seam refused earlier (usually none).
+  let doorRevokes = 0;
+  try {
+    doorRevokes = await retryFailedDoorRevokes();
+  } catch (err) {
+    console.error("[cron] retryFailedDoorRevokes failed:", err);
+  }
+
   console.log(`[cron] Ending-soon: notified ${notifiedAuctions} auction(s)`);
-  return NextResponse.json({ notifiedAuctions });
+  return NextResponse.json({ notifiedAuctions, doorRevokes });
 }

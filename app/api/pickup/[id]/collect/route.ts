@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import { revokeDoorCode } from "@/lib/doorLock";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -46,6 +47,9 @@ export async function POST(_request: NextRequest, { params }: Props) {
       // shouldn't linger as "gathered".
       data: { status: "PICKED_UP", pickedUpAt: new Date(), grabbedAt: null },
     });
+
+    // They've got their order — the door code has done its job.
+    revokeDoorCode(id).catch((e) => console.error("revokeDoorCode (self-collect) failed:", e));
 
     return NextResponse.json({ success: true });
   } catch (err) {

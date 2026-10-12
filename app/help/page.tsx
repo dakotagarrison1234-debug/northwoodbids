@@ -196,6 +196,9 @@ export default function HelpPage() {
             <Q q="How long do I have to collect?">
               <p>Book your pickup as soon as you can after the win; we&apos;ll remind you by text. If life gets in the way, call us at <a href="tel:+18108181772">(810) 818-1772</a> and we&apos;ll work something out.</p>
             </Q>
+            <Q q="What's a door code?">
+              <p>Some of our pickup doors have keypad locks. When you book a pickup at one of those spots, we text you a door code (it&apos;s on your <Link href="/pickup">Pickup</Link> page too). It works all day on your pickup date on every pickup door: touch the keypad to wake it, enter your code, and you&apos;re in. Press the Schlage button on your way out to lock up. Reschedule and the code moves with you; it stops working once your order is collected.</p>
+            </Q>
           </Topic>
 
           {/* ── Bid Bucks ── */}

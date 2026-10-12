@@ -15,7 +15,7 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://northwoodbids.com";
 
 // Post a team alert through the shared transfer webhook. Blank contact fields =
 // route to the staff recipient configured in the GHL workflow.
-async function postTeamAlert(event: string, smsMessage: string, extra: Record<string, unknown> = {}) {
+export async function postTeamAlert(event: string, smsMessage: string, extra: Record<string, unknown> = {}) {
   if (!process.env.GHL_TRANSFER_REQUESTED_WEBHOOK) return;
   try {
     await fetch(process.env.GHL_TRANSFER_REQUESTED_WEBHOOK, {
@@ -126,7 +126,8 @@ export async function sendAppointmentsDigest(): Promise<{ sent: boolean; count: 
   const lines = appts.slice(0, 12).map((a) => {
     const n = a.items.length;
     const loc = a.location?.name ? `, ${a.location.name}` : "";
-    return `• ${timeOf(a.startsAt)} ${nameBy.get(a.clerkUserId) ?? "Bidder"} (${n} item${n !== 1 ? "s" : ""}${loc})`;
+    const code = a.doorCode ? ` code ${a.doorCode}` : "";
+    return `• ${timeOf(a.startsAt)} ${nameBy.get(a.clerkUserId) ?? "Bidder"} (${n} item${n !== 1 ? "s" : ""}${loc})${code}`;
   });
   const more = count > 12 ? `\n+${count - 12} more` : "";
 

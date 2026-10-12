@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg } from "@/lib/auth";
 import { healPickupLinks } from "@/lib/pickupIntegrity";
+import { seamConfigured } from "@/lib/doorLock";
 
 // GET /api/admin/pickup/appointments — all SCHEDULED + COLLECTED appts for the org
 export async function GET() {
@@ -43,12 +44,29 @@ export async function GET() {
       : [];
     const profileMap = new Map(profiles.map((p) => [p.clerkUserId, p]));
 
+    // Which locations have smart locks — so the board can show a door-code panel
+    // (and its buttons) only where it means something.
+    const locks = seamConfigured()
+      ? await prisma.doorLock.findMany({
+          where: { organizationId: membership.organizationId, active: true, locationId: { not: null } },
+          select: { id: true, name: true, locationId: true },
+        })
+      : [];
+    const locksByLocation = new Map<string, { id: string; name: string }[]>();
+    for (const l of locks) {
+      if (!l.locationId) continue;
+      locksByLocation.set(l.locationId, [...(locksByLocation.get(l.locationId) ?? []), { id: l.id, name: l.name }]);
+    }
+
     const result = appointments.map((a) => ({
       id: a.id,
       startsAt: a.startsAt.toISOString(),
       status: a.status,
       notes: a.notes,
       stagedSpot: a.stagedSpot ?? null,
+      door: locksByLocation.has(a.locationId)
+        ? { code: a.doorCode ?? null, status: a.doorCodeStatus ?? null, sentAt: a.doorCodeSentAt?.toISOString() ?? null, locks: locksByLocation.get(a.locationId)! }
+        : null,
       clerkUserId: a.clerkUserId,
       location: a.location,
       locationId: a.locationId,
