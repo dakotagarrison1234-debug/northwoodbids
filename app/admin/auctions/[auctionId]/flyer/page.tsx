@@ -1,9 +1,9 @@
 export const dynamic = "force-dynamic";
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireUserOrg } from "@/lib/auth";
 import FlyerStudio from "./FlyerStudio";
 import type { MotionItem } from "./FlyerMotion";
+import { PageHeader, PageBody, Empty, BtnLink } from "../../../ui";
 
 const LOGO_URL =
   "https://assets.cdn.filesafe.space/TwuL7EwKfW8oGIV0Zo5q/media/6a373b261c5d711b35bf4e56.png";
@@ -50,12 +50,14 @@ export default async function FlyerPage({ params }: Props) {
 
   if (!auction) {
     return (
-      <div className="flex items-center justify-center flex-1 p-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Auction not found</h1>
-          <Link href="/admin/auctions" className="text-[#6c4d39] font-semibold">Back to auctions</Link>
-        </div>
-      </div>
+      <>
+        <PageHeader title="Auction not found" tabs={false} back={{ href: "/admin/auctions", label: "Auctions" }} />
+        <PageBody>
+          <div className="bg-white border border-[#e6dac6] rounded-2xl">
+            <Empty text="That auction doesn't exist." action={<BtnLink href="/admin/auctions" size="sm">Auctions</BtnLink>} />
+          </div>
+        </PageBody>
+      </>
     );
   }
 
@@ -92,15 +94,9 @@ export default async function FlyerPage({ params }: Props) {
 
   return (
     <>
-      <header className="border-b border-[#e3d6bf] px-6 sm:px-8 py-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <Link href={`/admin/auctions/${auction.id}`} className="text-[#6f5b46] hover:text-[#241a12] text-base font-semibold shrink-0">← Auction</Link>
-          <span className="text-[#8a7559]">/</span>
-          <h1 className="text-2xl sm:text-3xl font-semibold truncate">Social post</h1>
-        </div>
-      </header>
+      <PageHeader title="Flyer" tabs={false} back={{ href: `/admin/auctions/${auction.id}`, label: auction.title }} />
 
-      <div className="px-6 sm:px-8 py-6">
+      <PageBody>
         <FlyerStudio
           items={motionItems}
           auction={{ title: auction.title, closes: fmtCloses(auction.endAt) }}
@@ -170,18 +166,14 @@ export default async function FlyerPage({ params }: Props) {
             {/* Footer — bold brown CTA band */}
             <div style={{ background: "#6c4d39", padding: "22px 40px 26px", textAlign: "center", flexShrink: 0 }}>
               <div style={{ color: "#e0954f", fontSize: 15, fontWeight: 900, letterSpacing: "0.22em", textTransform: "uppercase" }}>
-                Bid • Win • Pick up local
+                Bid · Win · Pick up local
               </div>
               <div style={{ color: "#fff", fontWeight: 900, fontSize: 40, lineHeight: 1.1, marginTop: 4 }}>northwoodbids.com</div>
               <div style={{ color: "#e8d9c2", fontSize: 18, marginTop: 6 }}>New auctions every week — sign up free and start bidding.</div>
             </div>
           </div>
         </FlyerStudio>
-
-        {chosen.length === 0 && (
-          <p className="text-base text-[#8a7559] mt-4">This auction has no items with photos yet — add some items first.</p>
-        )}
-      </div>
+      </PageBody>
     </>
   );
 }

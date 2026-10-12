@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { Btn, Notice } from "../../../ui";
 
 // "Download as PNG" via html2canvas (CDN). The flyer is a real 1080×1080 element
 // that's only *displayed* shrunk, so we drop the preview transform for the moment
@@ -13,6 +14,7 @@ const SIZE = 1080;
 
 export default function DownloadFlyerButton() {
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
   const download = async () => {
     const flyer = document.getElementById("flyer");
@@ -21,6 +23,7 @@ export default function DownloadFlyerButton() {
     if (!flyer || !scaleEl || !stageEl) return;
 
     setBusy(true);
+    setErr(null);
 
     // Remember the preview sizing so we can restore it no matter what happens.
     const prevTransform = scaleEl.style.transform;
@@ -64,7 +67,7 @@ export default function DownloadFlyerButton() {
       link.href = canvas.toDataURL("image/png");
       link.click();
     } catch {
-      alert("Couldn't auto-save the image. Screenshot the flyer below instead — it's sized to fit your screen.");
+      setErr("Couldn't save the image. Screenshot the flyer below instead.");
     } finally {
       scaleEl.style.transform = prevTransform;
       stageEl.style.height = prevStageH;
@@ -74,12 +77,11 @@ export default function DownloadFlyerButton() {
   };
 
   return (
-    <button
-      onClick={download}
-      disabled={busy}
-      className="bg-[#6c4d39] hover:bg-[#563e2c] disabled:opacity-50 text-white text-base font-semibold px-5 py-2.5 rounded-xl transition-colors"
-    >
-      {busy ? "Preparing…" : "Download image"}
-    </button>
+    <div className="flex flex-wrap items-center gap-3">
+      <Btn onClick={download} disabled={busy}>
+        {busy ? "Preparing…" : "Download image"}
+      </Btn>
+      {err && <Notice tone="red" className="py-2">{err}</Notice>}
+    </div>
   );
 }

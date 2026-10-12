@@ -1,18 +1,27 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { IcoCheck } from "@/app/components/BidIcons";
 
 interface Props {
   auctionId: string;
   status: string;
   /** ISO date the "auction is live" blast was sent, or null if it hasn't been. */
   liveNotifiedAtISO?: string | null;
+  /**
+   * Which buttons to render. "primary" = Open now / Send live text (the daily
+   * ones); "more" = Mark closing soon / Un-open (rare, lives under More).
+   * Default renders all of them.
+   */
+  show?: "all" | "primary" | "more";
+  /** Let the primary buttons stretch to fill a row of big buttons. */
+  className?: string;
 }
 
 const BTN_BASE =
-  "text-base font-semibold px-6 py-3.5 rounded-xl transition-colors whitespace-nowrap disabled:opacity-50 w-full sm:w-auto text-center";
+  "inline-flex items-center justify-center gap-2 rounded-xl font-bold transition-colors whitespace-nowrap min-h-[50px] px-5 text-[17px] disabled:opacity-50 w-full sm:w-auto";
 
-export default function AuctionStatusButtons({ auctionId, status, liveNotifiedAtISO = null }: Props) {
+export default function AuctionStatusButtons({ auctionId, status, liveNotifiedAtISO = null, show = "all", className = "" }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +67,7 @@ export default function AuctionStatusButtons({ auctionId, status, liveNotifiedAt
       if (data.success) {
         const n = Number(data.sent) || 0;
         setLiveSent(true);
-        setOk(`“Auction is live” sent to ${n} ${n === 1 ? "bidder" : "bidders"}.`);
+        setOk(`Live text sent to ${n} ${n === 1 ? "bidder" : "bidders"}.`);
         router.refresh();
       } else {
         // 409 = the server says it already went out. Believe it and lock the button.
@@ -72,37 +81,39 @@ export default function AuctionStatusButtons({ auctionId, status, liveNotifiedAt
     }
   };
 
+  const isLive = status === "OPEN" || status === "CLOSING";
+  const primary = show === "all" || show === "primary";
+  const more = show === "all" || show === "more";
+
   if (loading) {
-    return <span className="text-[#6f5b46] text-base font-semibold">Working…</span>;
+    return <span className={`inline-flex items-center min-h-[50px] text-[#6f5b46] font-semibold ${className}`}>Working…</span>;
   }
 
-  const isLive = status === "OPEN" || status === "CLOSING";
-
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-        {status === "DRAFT" && (
+    <div className={className}>
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-3">
+        {primary && status === "DRAFT" && (
           <button
             onClick={() =>
               setConfirmDialog({
-                text: "Open this auction now? Items go live immediately. No text is sent — use “Send live text” when you're ready to announce it.",
-                confirmLabel: "Open silently",
+                text: "Open this auction now? Lots go live immediately. No text is sent — use Send live text when you're ready to announce it.",
+                confirmLabel: "Open now",
                 onConfirm: () => updateStatus("OPEN"),
               })
             }
-            className={`${BTN_BASE} bg-[#6c4d39] hover:bg-[#563e2c] text-white`}
+            className={`${BTN_BASE} bg-[#6c4d39] hover:bg-[#563e2c] text-white shadow-sm`}
           >
-            Open Auction
+            Open now
           </button>
         )}
 
-        {isLive && (
+        {primary && isLive && (
           liveSent ? (
             <span
               title={liveNotifiedAtISO ? `Sent ${new Date(liveNotifiedAtISO).toLocaleString()}` : "Already sent"}
-              className={`${BTN_BASE} bg-[#efe3d0] border border-[#cdbda3] text-[#8a7559] cursor-not-allowed inline-flex items-center justify-center gap-1.5`}
+              className={`${BTN_BASE} bg-[#efe3d0] border border-[#cdbda3] text-[#8a7559] cursor-not-allowed`}
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8.5l3.5 3.5L13 5" /></svg>
+              <IcoCheck className="w-4 h-4" />
               Live text sent
             </span>
           ) : (
@@ -114,36 +125,36 @@ export default function AuctionStatusButtons({ auctionId, status, liveNotifiedAt
                   onConfirm: sendLive,
                 })
               }
-              className={`${BTN_BASE} bg-[#c47b3e] hover:bg-[#a9642c] text-white`}
+              className={`${BTN_BASE} bg-[#c47b3e] hover:bg-[#a85f28] text-white shadow-sm`}
             >
-              Send &ldquo;Auction is Live&rdquo; text
+              Send live text
             </button>
           )
         )}
 
-        {status === "OPEN" && (
+        {more && status === "OPEN" && (
           <button
             onClick={() => updateStatus("CLOSING")}
-            className={`${BTN_BASE} bg-[#efe3d0] hover:bg-[#e7dcc6] border border-[#cdbda3] text-[#241a12]`}
+            className={`${BTN_BASE} bg-white border-2 border-[#eed3ab] text-[#8a4f1c] hover:bg-[#faf5ea]`}
           >
-            Mark Closing Soon
+            Mark closing soon
           </button>
         )}
 
         {/* Undo an accidental open. Not a close — no winners, no charges, bids kept. */}
-        {isLive && (
+        {more && isLive && (
           <button
             onClick={() =>
               setConfirmDialog({
                 text:
-                  "Un-open this auction and put it back to draft? Items are hidden from bidders again. Nothing is closed or charged, and any bids already placed are kept — reopen and it picks up right where it left off. Set the new start time in Edit auction.",
+                  "Un-open this auction and put it back to draft? Lots are hidden from bidders again. Nothing is closed or charged, and any bids already placed are kept — reopen and it picks up right where it left off. Set the new start time under Details.",
                 confirmLabel: "Un-open it",
                 onConfirm: () => updateStatus("DRAFT"),
               })
             }
-            className={`${BTN_BASE} bg-white hover:bg-[#efe3d0] border border-[#cdbda3] text-[#6f5b46]`}
+            className={`${BTN_BASE} bg-white border-2 border-[#e6dac6] text-[#6f5b46] hover:bg-[#faf5ea]`}
           >
-            Un-open (back to draft)
+            Un-open
           </button>
         )}
 
@@ -151,21 +162,21 @@ export default function AuctionStatusButtons({ auctionId, status, liveNotifiedAt
             when it ends (the CLOSED state). There's no separate manual settle step. */}
       </div>
 
-      {error && <p className="text-red-600 text-base mt-2">{error}</p>}
-      {ok && <p className="text-[#3f5226] text-base mt-2 font-semibold">{ok}</p>}
+      {error && <p className="text-[#a1321f] text-[15px] font-semibold mt-2">{error}</p>}
+      {ok && <p className="text-[#2f5d3a] text-[15px] font-semibold mt-2">{ok}</p>}
 
       {/* In-app confirmation (native confirm() is blocked in some installed/PWA webviews) */}
       {confirmDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setConfirmDialog(null)}>
           <div className="bg-white rounded-2xl border border-[#cdbda3] max-w-sm w-full p-6 shadow-xl text-left" onClick={(e) => e.stopPropagation()}>
-            <p className="text-base text-[#241a12]">{confirmDialog.text}</p>
+            <p className="text-[#241a12]">{confirmDialog.text}</p>
             <div className="mt-5 flex gap-3">
-              <button onClick={() => setConfirmDialog(null)} className="flex-1 bg-white border border-[#cdbda3] text-[#6f5b46] hover:bg-[#efe3d0] font-semibold text-base py-3 rounded-xl">
+              <button onClick={() => setConfirmDialog(null)} className="flex-1 min-h-[50px] bg-white border-2 border-[#e6dac6] text-[#6f5b46] hover:bg-[#faf5ea] font-bold rounded-xl">
                 Back
               </button>
               <button
                 onClick={() => { const fn = confirmDialog.onConfirm; setConfirmDialog(null); fn(); }}
-                className="flex-1 bg-[#6c4d39] hover:bg-[#563e2c] text-white font-semibold text-base py-3 rounded-xl"
+                className="flex-1 min-h-[50px] bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold rounded-xl"
               >
                 {confirmDialog.confirmLabel}
               </button>

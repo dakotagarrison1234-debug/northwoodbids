@@ -8,10 +8,10 @@ type Kind = "everyone" | "preferred" | "waiting" | "preferred_or_waiting";
 type Loc = { id: string; name: string; isActive: boolean };
 
 const KINDS: { v: Kind; label: string; sub: string; needsLoc: boolean }[] = [
-  { v: "preferred", label: "Picks up at…", sub: "Everyone who chose this warehouse as their pickup spot", needsLoc: true },
-  { v: "waiting", label: "Has items at…", sub: "Anyone with paid items sitting, booked, or on the way to this warehouse", needsLoc: true },
-  { v: "preferred_or_waiting", label: "Both", sub: "Picks up here OR has items here — the widest local group", needsLoc: true },
-  { v: "everyone", label: "Everyone", sub: "Every engaged bidder (same crowd as the auction-live text)", needsLoc: false },
+  { v: "preferred", label: "Picks up at…", sub: "Chose this warehouse for pickup", needsLoc: true },
+  { v: "waiting", label: "Has items at…", sub: "Paid items waiting at this warehouse", needsLoc: true },
+  { v: "preferred_or_waiting", label: "Both", sub: "Either of the above", needsLoc: true },
+  { v: "everyone", label: "Everyone", sub: "Same crowd as the auction-live text", needsLoc: false },
 ];
 
 /** GSM-7 segments at 160/153; non-GSM characters push a text to UCS-2 (70/67). */
@@ -61,7 +61,11 @@ export default function BlastPage() {
       .catch(() => {})
       .finally(() => setLoadingPreview(false));
   }, [kind, locationId, needsLoc]);
-  useEffect(() => { loadPreview(); }, [loadPreview]);
+  // Short debounce: tapping across segment cards shouldn't fire a count per tap.
+  useEffect(() => {
+    const t = setTimeout(loadPreview, 150);
+    return () => clearTimeout(t);
+  }, [loadPreview]);
   const pick = (k: Kind) => { setKind(k); setConfirm(false); setResult(null); };
   const pickLoc = (id: string) => { setLocationId(id); setConfirm(false); setResult(null); };
 
@@ -87,11 +91,11 @@ export default function BlastPage() {
 
   return (
     <>
-      <PageHeader title="Text a group" sub="One text to a slice of your bidders. Goes out through the same line as the auction-live texts." />
+      <PageHeader title="Text a group" />
 
       <PageBody>
         {/* Who */}
-        <Panel title="Who" sub="Pick the crowd first — the count updates as you go.">
+        <Panel title="Who">
           <div className="p-4 sm:p-5">
             <div className="grid sm:grid-cols-2 gap-2 mb-3">
               {KINDS.map((k) => (
@@ -102,7 +106,7 @@ export default function BlastPage() {
                   className={`text-left rounded-xl border-2 px-3.5 py-3 min-h-[56px] transition-colors ${kind === k.v ? "border-[#6c4d39] bg-[#f1e7d5]" : "border-[#e6dac6] bg-white hover:bg-[#faf5ea]"}`}
                 >
                   <div className="font-bold text-[#241a12]">{k.label}{k.needsLoc && locName ? ` ${locName}` : ""}</div>
-                  <div className="text-xs text-[#8a7559] leading-snug mt-0.5">{k.sub}</div>
+                  <div className="text-[15px] text-[#8a7559] leading-snug mt-0.5">{k.sub}</div>
                 </button>
               ))}
             </div>
@@ -114,7 +118,7 @@ export default function BlastPage() {
                     key={l.id}
                     type="button"
                     onClick={() => pickLoc(l.id)}
-                    className={`min-h-[40px] text-sm font-bold rounded-full px-4 border-2 transition-colors ${locationId === l.id ? "bg-[#6c4d39] text-white border-[#6c4d39]" : "bg-white text-[#563e2c] border-[#d9c7ab] hover:bg-[#faf5ea]"}`}
+                    className={`min-h-[44px] text-[15px] font-bold rounded-full px-4 border-2 transition-colors ${locationId === l.id ? "bg-[#6c4d39] text-white border-[#6c4d39]" : "bg-white text-[#563e2c] border-[#d9c7ab] hover:bg-[#faf5ea]"}`}
                   >
                     {l.name}{!l.isActive ? " (inactive)" : ""}
                   </button>
@@ -125,7 +129,7 @@ export default function BlastPage() {
               <div className="inline-flex items-center gap-2 font-bold text-[#241a12]">
                 <IcoUsers className="w-4 h-4 text-[#6c4d39]" />
                 {loadingPreview ? "Counting…" : preview ? `${preview.count} ${preview.count === 1 ? "person" : "people"}` : "—"}
-                {preview && preview.withPhone < preview.count && <span className="text-xs font-semibold text-[#8a7559]">({preview.withPhone} with a phone)</span>}
+                {preview && preview.withPhone < preview.count && <span className="text-[15px] font-semibold text-[#8a7559]">({preview.withPhone} with a phone)</span>}
               </div>
               {preview && preview.count > 0 && (
                 <Btn type="button" tone="leather" variant="ghost" size="sm" onClick={() => setShowList((s) => !s)}>
@@ -134,7 +138,7 @@ export default function BlastPage() {
               )}
             </div>
             {showList && preview && (
-              <div className="mt-2 max-h-56 overflow-y-auto rounded-xl border border-[#e6dac6] bg-white divide-y divide-[#f0e6d6] text-sm">
+              <div className="mt-2 max-h-56 overflow-y-auto rounded-xl border border-[#e6dac6] bg-white divide-y divide-[#f0e6d6] text-[15px]">
                 {preview.sample.map((r, i) => (
                   <div key={i} className="flex justify-between px-3 py-2"><span className="text-[#241a12] truncate">{r.name}</span><span className="text-[#8a7559] tabular-nums shrink-0 ml-2">{r.phone}</span></div>
                 ))}
@@ -145,7 +149,7 @@ export default function BlastPage() {
         </Panel>
 
         {/* Message */}
-        <Panel title="Message" sub="Keep it short — one text per person is cheapest.">
+        <Panel title="Message">
           <div className="p-4 sm:p-5">
             <textarea
               value={message}
@@ -154,12 +158,8 @@ export default function BlastPage() {
               placeholder="Northwood Bids: …"
               className="w-full bg-white border border-[#d9c7ab] focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 rounded-xl px-4 py-3 text-[#241a12] placeholder:text-[#b3a085] leading-relaxed outline-none transition"
             />
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-[#8a7559]">
-              <span>{message.length} characters · {parts.n} text{parts.n !== 1 ? "s" : ""} per person{!parts.isGsm ? " · special characters make texts shorter — plain quotes and dashes keep it to 160" : ""}</span>
-              <span className="flex flex-wrap gap-1">
-                <Btn type="button" tone="leather" variant="ghost" size="sm" onClick={() => setMessage(OWOSSO_NOTICE)}>Owosso Oct 4–11 notice</Btn>
-                <Btn type="button" tone="amber" variant="ghost" size="sm" onClick={() => setMessage(OWOSSO_CORRECTION)}>Weekday correction</Btn>
-              </span>
+            <div className="mt-2 text-[15px] text-[#8a7559]">
+              {message.length} characters · {parts.n} text{parts.n !== 1 ? "s" : ""} per person{!parts.isGsm ? " · special characters make texts shorter — plain quotes and dashes keep it to 160" : ""}
             </div>
           </div>
         </Panel>
@@ -181,7 +181,7 @@ export default function BlastPage() {
         ) : (
           <Panel tone="amber" title={`Send this to ${preview?.count} ${preview?.count === 1 ? "person" : "people"}?`}>
             <div className="p-4 sm:p-5">
-              <pre className="whitespace-pre-wrap text-sm text-[#4a3a2b] bg-[#f4ede1] border border-[#e6dac6] rounded-xl p-3 mb-3 font-sans">{message}</pre>
+              <pre className="whitespace-pre-wrap text-[15px] text-[#4a3a2b] bg-[#f4ede1] border border-[#e6dac6] rounded-xl p-3 mb-3 font-sans">{message}</pre>
               <div className="flex flex-wrap gap-2">
                 <Btn type="button" tone="amber" onClick={send} disabled={sending}>{sending ? "Sending…" : "Yes, send it"}</Btn>
                 <Btn type="button" tone="slate" variant="ghost" onClick={() => setConfirm(false)}>Back</Btn>
@@ -193,12 +193,3 @@ export default function BlastPage() {
     </>
   );
 }
-
-const OWOSSO_NOTICE =
-  "Northwood Bids: Owosso update. We are moving, so there is no Owosso auction the week of Oct 4-11. " +
-  "Still have items to grab? Porch pickup is Mon Oct 5, Fri Oct 9 and Sat Oct 10 at 1505 W South St, Owosso 48867 - book your time at https://northwoodbids.com/pickup " +
-  "Then starting Oct 15, all Owosso pickups move to our NEW STOREFRONT in downtown Corunna - easier, faster, straight in and out. Questions? Just reply.";
-
-const OWOSSO_CORRECTION =
-  "Northwood Bids: Quick correction on the days! Owosso porch pickup is MONDAY Oct 5, FRIDAY Oct 9 and SATURDAY Oct 10 at 1505 W South St. " +
-  "Dates were right, weekdays were wrong - sorry for the mix-up. Book at https://northwoodbids.com/pickup";

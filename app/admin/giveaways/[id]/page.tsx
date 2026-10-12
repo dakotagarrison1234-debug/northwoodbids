@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import SpinWheel, { type DrawResult } from "./SpinWheel";
 import TicketMachine from "./TicketMachine";
 import { IcoTrophy, IcoCheck } from "@/app/components/BidIcons";
-import { PageHeader, PageBody, Panel, Pill, Btn, Input, Notice, Eyebrow, Initials, type Tone } from "../../ui";
+import { PageHeader, PageBody, Panel, Pill, Btn, Input, Notice, Eyebrow, Initials, Disclosure, type Tone } from "../../ui";
 
 type Requirement = "NONE" | "INFO" | "ANSWER";
 type EntryMode = "AUTO" | "CLICK" | "BID";
@@ -166,6 +166,9 @@ export default function ManageGiveaway() {
   type Match = { clerkUserId: string; name: string; email: string; inWheel: boolean; tickets: number; bonusTickets: number; removed: boolean; won: boolean; ineligible: "blocked" | "incomplete" | "no_card" | "duplicate" | null; duplicateOf: string | null };
   const [q, setQ] = useState("");
   const [results, setResults] = useState<Match[]>([]);
+  // Inline bonus-ticket editor (replaces window.prompt, which the installed PWA blocks).
+  const [bonusEdit, setBonusEdit] = useState<{ id: string; value: string } | null>(null);
+  const [savingBonus, setSavingBonus] = useState(false);
 
   const runSearch = useCallback((term: string) => {
     if (!term.trim()) { setResults([]); return; }
@@ -188,10 +191,12 @@ export default function ManageGiveaway() {
     await fetch(`/api/admin/giveaways/${id}/entries`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clerkUserId, removed }) });
     runSearch(q); load();
   };
-  const setBonus = async (clerkUserId: string, current: number) => {
-    const v = window.prompt("Bonus tickets for this person (0 to clear):", String(current));
-    if (v == null) return;
-    await fetch(`/api/admin/giveaways/${id}/entries`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clerkUserId, bonusTickets: Number(v) || 0 }) });
+  const saveBonus = async () => {
+    if (!bonusEdit) return;
+    setSavingBonus(true);
+    await fetch(`/api/admin/giveaways/${id}/entries`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clerkUserId: bonusEdit.id, bonusTickets: Number(bonusEdit.value) || 0 }) });
+    setSavingBonus(false);
+    setBonusEdit(null);
     runSearch(q); load();
   };
 
@@ -259,10 +264,13 @@ export default function ManageGiveaway() {
   const isDraft = g.status === "DRAFT";
   const isActive = g.status === "ACTIVE";
   const isEnded = g.status === "ENDED";
+  const isDrawn = g.status === "DRAWN";
   const unclaimed = d.prizes.filter((p) => !p.wonBy).length;
   const canSpin = (isActive || isEnded) && unclaimed > 0 && d.counts.eligible > 0;
   const phase = PHASE[g.phase];
   const poolLine = `${d.counts.tickets.toLocaleString()} tickets · ${d.counts.eligible.toLocaleString()} people · ${unclaimed} prize${unclaimed !== 1 ? "s" : ""} left`;
+  // Rare controls live behind "More"; nothing in there is needed on draw night.
+  const hasMore = isActive || isEnded || isDrawn;
 
   return (
     <>
@@ -276,67 +284,46 @@ export default function ManageGiveaway() {
       />
 
       <PageBody>
-        <div className="text-sm text-[#8a7559] flex flex-wrap gap-x-3 gap-y-1 -mt-1">
+        <div className="text-[15px] text-[#8a7559] flex flex-wrap gap-x-3 gap-y-1 -mt-1">
           <span>{g.drawStyle === "MACHINE" ? "Ticket machine" : "Prize wheel"}</span>
           {g.startsAt && <span>· opens {fmt(g.startsAt)}</span>}
           {g.endsAt && <span>· {g.phase === "ended" || g.phase === "complete" ? "closed" : "closes"} {fmt(g.endedAt ?? g.endsAt)}</span>}
           {!g.endsAt && !isDraft && g.phase !== "complete" && <span>· closes when you end it</span>}
+          {g.announcedAt && <span>· announced {fmt(g.announcedAt)}</span>}
         </div>
 
         {msg && <Notice tone={msg.startsWith("Texted") ? "green" : "red"}>{msg}</Notice>}
 
-        {/* Status actions */}
-        <div className="flex flex-wrap gap-2">
-          {isDraft && (
-            <Btn tone="green" onClick={() => patch({ status: "ACTIVE" })}>
-              Go live (show on home)
-            </Btn>
-          )}
-          {isActive && (
-            <>
-              {g.phase === "live" && !g.announcedAt && (
-                confirmAnnounce ? (
-                  <span className="inline-flex flex-wrap items-center gap-2 bg-[#fbeed8] border border-[#eed3ab] rounded-xl px-3 py-2 text-sm">
-                    <span className="text-[#8a4f1c] font-semibold">Text every bidder that it&apos;s live?</span>
-                    <Btn tone="ink" size="sm" onClick={announce} disabled={announcing}>{announcing ? "Sending…" : "Yes, send"}</Btn>
-                    <Btn tone="slate" variant="ghost" size="sm" onClick={() => setConfirmAnnounce(false)}>cancel</Btn>
-                  </span>
-                ) : (
-                  <Btn tone="ink" onClick={() => setConfirmAnnounce(true)}>
-                    Announce (text everyone)
-                  </Btn>
-                )
-              )}
-              {g.announcedAt && <span className="self-center text-xs text-[#8a7559]">Announced {fmt(g.announcedAt)}</span>}
-              <Btn tone="amber" onClick={() => patch({ status: "ENDED" })}>
-                End now (close entries)
+        {/* Primary status actions */}
+        {(isDraft || isActive) && (
+          <div className="flex flex-wrap gap-2">
+            {isDraft && (
+              <Btn tone="green" onClick={() => patch({ status: "ACTIVE" })}>
+                Go live (show on home)
               </Btn>
-              <Btn tone="slate" variant="outline" onClick={() => setEditEnd(editEnd == null ? toLocalInput(g.endsAt) : null)}>
-                Change close time
-              </Btn>
-              {d.counts.drawn === 0 && (
-                <Btn tone="slate" variant="outline" onClick={() => patch({ status: "DRAFT" })}>
-                  Unpublish
+            )}
+            {isActive && (
+              <>
+                {g.phase === "live" && !g.announcedAt && (
+                  confirmAnnounce ? (
+                    <span className="inline-flex flex-wrap items-center gap-2 bg-[#fbeed8] border border-[#eed3ab] rounded-xl px-3 py-2 text-[15px]">
+                      <span className="text-[#8a4f1c] font-semibold">Text every bidder that it&apos;s live?</span>
+                      <Btn tone="ink" size="sm" onClick={announce} disabled={announcing}>{announcing ? "Sending…" : "Yes, send"}</Btn>
+                      <Btn tone="slate" variant="ghost" size="sm" onClick={() => setConfirmAnnounce(false)}>Cancel</Btn>
+                    </span>
+                  ) : (
+                    <Btn tone="ink" onClick={() => setConfirmAnnounce(true)}>
+                      Announce (text everyone)
+                    </Btn>
+                  )
+                )}
+                <Btn tone="amber" onClick={() => patch({ status: "ENDED" })}>
+                  End now (close entries)
                 </Btn>
-              )}
-            </>
-          )}
-          {isEnded && d.counts.drawn === 0 && (
-            <Btn tone="slate" variant="outline" onClick={() => setEditEnd(editEnd == null ? toLocalInput(g.endsAt) : null)}>
-              Reopen with a new close time
-            </Btn>
-          )}
-          {(isActive || isEnded) && (
-            <Btn tone="slate" variant="outline" onClick={() => patch({ drawStyle: g.drawStyle === "MACHINE" ? "WHEEL" : "MACHINE" })}>
-              Switch to {g.drawStyle === "MACHINE" ? "wheel" : "ticket machine"}
-            </Btn>
-          )}
-          {g.status === "DRAWN" && (
-            <Btn tone="slate" variant="outline" onClick={() => patch({ archived: true })}>
-              Archive
-            </Btn>
-          )}
-        </div>
+              </>
+            )}
+          </div>
+        )}
 
         {editEnd != null && (
           <Panel title={isEnded ? "New close time" : "Change close time"}>
@@ -359,14 +346,13 @@ export default function ManageGiveaway() {
         )}
 
         {/* ── Draw (live, ended, or complete) ────────────────────────────────── */}
-        {(isActive || isEnded || g.status === "DRAWN") && (
-          <Panel title="Pull winners" sub={poolLine}>
+        {(isActive || isEnded || isDrawn) && (
+          <Panel
+            title="Pull winners"
+            sub={poolLine}
+            action={isActive && unclaimed > 0 ? <Pill tone="amber" dot>Entries open</Pill> : undefined}
+          >
             <div className="p-4 sm:p-5">
-              {isActive && unclaimed > 0 && (
-                <Notice tone="amber" className="mb-3">
-                  Entries are still open — tickets keep stacking until it closes. You can pull now, but most people wait for “Ended”.
-                </Notice>
-              )}
               {unclaimed === 0 ? (
                 <div className="flex items-center justify-center gap-2 py-6 text-[#2f5d3a] font-display font-black text-lg"><IcoTrophy className="w-5 h-5" /> All prizes drawn!</div>
               ) : d.counts.eligible === 0 ? (
@@ -406,9 +392,9 @@ export default function ManageGiveaway() {
         )}
 
         {/* ── Prizes ─────────────────────────────────────────────────────────── */}
-        <Panel title={`Prizes (${d.counts.prizes})`} sub="Each prize = one winner.">
+        <Panel title={`Prizes (${d.counts.prizes})`}>
           {d.prizes.length === 0 ? (
-            <div className="px-4 sm:px-5 py-4 text-sm text-[#8a7559]">No prizes yet — add one below.</div>
+            <div className="px-4 sm:px-5 py-4 text-[15px] text-[#8a7559]">No prizes yet.</div>
           ) : (
             <ul className="divide-y divide-[#f0e6d6]">
               {d.prizes.map((p) => (
@@ -421,7 +407,7 @@ export default function ManageGiveaway() {
                   )}
                   <div className="min-w-0 flex-1">
                     <div className="font-bold text-[#241a12] truncate">{p.title}</div>
-                    <div className="text-sm text-[#8a7559] truncate">
+                    <div className="text-[15px] text-[#8a7559] truncate">
                       {p.retailValue != null ? `$${p.retailValue.toFixed(2)} value` : "No value set"}
                       {p.wonBy ? ` · won by ${p.wonBy.name}` : ""}
                     </div>
@@ -449,7 +435,7 @@ export default function ManageGiveaway() {
               </div>
               <div className="flex items-center gap-2 mb-3">
                 <input ref={fileRef} type="file" accept="image/*" onChange={uploadPhoto} className="hidden" id="prize-photo" />
-                <label htmlFor="prize-photo" className="cursor-pointer inline-flex items-center justify-center min-h-[40px] px-3.5 rounded-xl bg-white border-2 border-[#e6dac6] text-[#6f5b46] text-sm font-bold hover:bg-[#faf5ea] transition-colors">
+                <label htmlFor="prize-photo" className="cursor-pointer inline-flex items-center justify-center min-h-[44px] px-3.5 rounded-xl bg-white border-2 border-[#e6dac6] text-[#6f5b46] text-[15px] font-bold hover:bg-[#faf5ea] transition-colors">
                   {uploading ? "Uploading…" : pPhoto ? "Photo added" : "Add photo"}
                 </label>
                 {pPhoto && (
@@ -467,19 +453,12 @@ export default function ManageGiveaway() {
         {/* ── Entrants ───────────────────────────────────────────────────────── */}
         <Panel title={`Tickets (${d.counts.tickets.toLocaleString()})`} sub={`across ${d.counts.eligible.toLocaleString()} people`}>
           <div className="p-4 sm:p-5 space-y-3">
-            <p className="text-sm text-[#8a7559]">
-              {g.entryMode === "AUTO"
-                ? "Every registered bidder is in automatically. Remove anyone you want to exclude, or hand out bonus tickets."
-                : g.entryMode === "BID"
-                  ? "Tickets are counted live from bids placed in the window. Remove anyone, hand-add someone, or give bonus tickets."
-                  : "Bidders who tapped in (and answered, if asked) hold a ticket. You can hand-add, remove, or give bonus tickets."}
-            </p>
             {g.entryMode === "BID" && d.pool.length > 0 && (
               <div className="rounded-xl border border-[#e6dac6] bg-[#f4ede1] p-3">
                 <Eyebrow className="mb-1.5">Top ticket holders</Eyebrow>
                 <div className="flex flex-wrap gap-1.5">
                   {d.pool.slice(0, 12).map((e) => (
-                    <span key={e.clerkUserId} className="text-xs bg-white border border-[#e6dac6] rounded-full px-2.5 py-1 text-[#6f5b46]">
+                    <span key={e.clerkUserId} className="text-[13px] bg-white border border-[#e6dac6] rounded-full px-2.5 py-1 text-[#6f5b46]">
                       {e.name} · <b className="text-[#241a12]">{e.tickets}</b>
                     </span>
                   ))}
@@ -487,19 +466,24 @@ export default function ManageGiveaway() {
               </div>
             )}
 
-            <div className="rounded-xl border border-[#e6dac6] bg-[#f4ede1] p-3 text-xs text-[#6f5b46]">
-              <Eyebrow className="mb-1">Fair-play filter</Eyebrow>
-              {g.requireCard ? "Card on file, " : ""}phone + email, not blocked, one account per phone number. Kept out right now:{" "}
-              {g.requireCard && <><b className="text-[#241a12]">{d.fairness.filtered.noCard}</b> no card · </>}<b className="text-[#241a12]">{d.fairness.filtered.incomplete}</b> incomplete · <b className="text-[#241a12]">{d.fairness.filtered.blocked}</b> blocked · <b className="text-[#241a12]">{d.fairness.filtered.duplicate}</b> duplicate phone.
+            {/* Fair-play filter: who's kept out, and the one switch that changes the bar. */}
+            <div className="rounded-xl border border-[#e6dac6] bg-[#f4ede1] p-3">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Eyebrow className="mr-1">Kept out</Eyebrow>
+                {g.requireCard && <Pill tone="slate">{d.fairness.filtered.noCard} no card</Pill>}
+                <Pill tone="slate">{d.fairness.filtered.incomplete} incomplete</Pill>
+                <Pill tone="slate">{d.fairness.filtered.blocked} blocked</Pill>
+                <Pill tone="slate">{d.fairness.filtered.duplicate} duplicate phone</Pill>
+              </div>
               {(isDraft || isActive) && (
-                <button type="button" onClick={() => patch({ requireCard: !g.requireCard })} className="ml-2 underline font-semibold text-[#6c4d39] min-h-[24px]">
+                <button type="button" onClick={() => patch({ requireCard: !g.requireCard })} className="mt-2 underline underline-offset-2 font-bold text-[15px] text-[#6c4d39] min-h-[44px]">
                   {g.requireCard ? "Switch to any registered bidder" : "Require a card on file"}
                 </button>
               )}
               {d.fairness.duplicates.length > 0 && (
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {d.fairness.duplicates.map((x, i) => (
-                    <span key={i} className="bg-[#fbeed8] text-[#8a4f1c] rounded-full px-2 py-0.5 font-semibold">{x.name} = {x.sameAs}</span>
+                    <span key={i} className="text-[13px] bg-[#fbeed8] text-[#8a4f1c] rounded-full px-2 py-0.5 font-semibold">{x.name} = {x.sameAs}</span>
                   ))}
                 </div>
               )}
@@ -510,45 +494,67 @@ export default function ManageGiveaway() {
               {q.trim() && (
                 <div className="mt-1 bg-white border border-[#e6dac6] rounded-xl overflow-hidden divide-y divide-[#f0e6d6]">
                   {results.length === 0 ? (
-                    <div className="px-3 py-3 text-sm text-[#8a7559]">No matching bidders.</div>
+                    <div className="px-3 py-3 text-[15px] text-[#8a7559]">No matching bidders.</div>
                   ) : (
-                    results.map((r) => (
-                      <div key={r.clerkUserId} className="flex items-center justify-between gap-2 px-3 py-2 min-h-[56px]">
-                        <Initials name={r.name} size={32} />
-                        <div className="min-w-0 flex-1">
-                          <div className="font-semibold text-[#241a12] text-sm truncate">
-                            {r.name}
-                            {r.inWheel && !r.won && <span className="ml-2 text-[11px] font-bold text-[#8a4f1c]">{r.tickets} ticket{r.tickets !== 1 ? "s" : ""}{r.bonusTickets > 0 ? ` (+${r.bonusTickets} bonus)` : ""}</span>}
+                    results.map((r) => {
+                      const editing = bonusEdit?.id === r.clerkUserId;
+                      return (
+                        <div key={r.clerkUserId} className="px-3 py-2 min-h-[56px]">
+                          <div className="flex items-center justify-between gap-2">
+                            <Initials name={r.name} size={32} />
+                            <div className="min-w-0 flex-1">
+                              <div className="font-semibold text-[#241a12] truncate">
+                                {r.name}
+                                {r.inWheel && !r.won && <span className="ml-2 text-[13px] font-bold text-[#8a4f1c]">{r.tickets} ticket{r.tickets !== 1 ? "s" : ""}{r.bonusTickets > 0 ? ` (+${r.bonusTickets} bonus)` : ""}</span>}
+                              </div>
+                              {r.email && <div className="text-[15px] text-[#8a7559] truncate">{r.email}</div>}
+                              {r.ineligible && (
+                                <div className="text-[13px] font-bold text-[#8a4f1c]">
+                                  {r.ineligible === "no_card" ? "No card on file — can't hold a ticket" : r.ineligible === "incomplete" ? "Account incomplete — can't hold a ticket" : r.ineligible === "blocked" ? "Blocked" : `Duplicate phone — same as ${r.duplicateOf ?? "another account"}`}
+                                </div>
+                              )}
+                            </div>
+                            {!r.won && !r.removed && !r.ineligible && !editing && (
+                              <Btn tone="leather" variant="outline" size="sm" onClick={() => setBonusEdit({ id: r.clerkUserId, value: String(r.bonusTickets) })}>
+                                Bonus
+                              </Btn>
+                            )}
+                            {r.won ? (
+                              <Pill tone="green"><IcoCheck className="w-3 h-3" /> Won</Pill>
+                            ) : r.inWheel ? (
+                              <Btn tone="red" variant="outline" size="sm" onClick={() => setRemoved(r.clerkUserId, true)}>
+                                Remove
+                              </Btn>
+                            ) : r.removed ? (
+                              <Btn tone="green" variant="outline" size="sm" onClick={() => setRemoved(r.clerkUserId, false)}>
+                                Restore
+                              </Btn>
+                            ) : r.ineligible ? null : (
+                              <Btn tone="leather" variant="outline" size="sm" onClick={() => addName(r.clerkUserId)}>
+                                Add
+                              </Btn>
+                            )}
                           </div>
-                          {r.email && <div className="text-xs text-[#8a7559] truncate">{r.email}</div>}
-                          {r.ineligible && (
-                            <div className="text-[11px] font-bold text-[#8a4f1c]">
-                              {r.ineligible === "no_card" ? "No card on file — can't hold a ticket" : r.ineligible === "incomplete" ? "Account incomplete — can't hold a ticket" : r.ineligible === "blocked" ? "Blocked" : `Duplicate phone — same as ${r.duplicateOf ?? "another account"}`}
+                          {editing && bonusEdit && (
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <Eyebrow className="shrink-0">Bonus tickets</Eyebrow>
+                              <Input
+                                type="number"
+                                min={0}
+                                inputMode="numeric"
+                                autoFocus
+                                value={bonusEdit.value}
+                                onChange={(e) => setBonusEdit({ id: r.clerkUserId, value: e.target.value })}
+                                onKeyDown={(e) => { if (e.key === "Enter") saveBonus(); }}
+                                className="max-w-[120px] min-h-[44px]"
+                              />
+                              <Btn size="sm" onClick={saveBonus} disabled={savingBonus}>{savingBonus ? "Saving…" : "Save"}</Btn>
+                              <Btn size="sm" tone="slate" variant="ghost" onClick={() => setBonusEdit(null)} disabled={savingBonus}>Cancel</Btn>
                             </div>
                           )}
                         </div>
-                        {!r.won && !r.removed && !r.ineligible && (
-                          <Btn tone="leather" variant="outline" size="sm" onClick={() => setBonus(r.clerkUserId, r.bonusTickets)}>
-                            Bonus
-                          </Btn>
-                        )}
-                        {r.won ? (
-                          <Pill tone="green"><IcoCheck className="w-3 h-3" /> Won</Pill>
-                        ) : r.inWheel ? (
-                          <Btn tone="red" variant="outline" size="sm" onClick={() => setRemoved(r.clerkUserId, true)}>
-                            Remove
-                          </Btn>
-                        ) : r.removed ? (
-                          <Btn tone="green" variant="outline" size="sm" onClick={() => setRemoved(r.clerkUserId, false)}>
-                            Restore
-                          </Btn>
-                        ) : r.ineligible ? null : (
-                          <Btn tone="leather" variant="outline" size="sm" onClick={() => addName(r.clerkUserId)}>
-                            Add
-                          </Btn>
-                        )}
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               )}
@@ -556,7 +562,7 @@ export default function ManageGiveaway() {
 
             {d.removed.length > 0 && (
               <div className="rounded-xl border border-[#e6dac6] bg-[#f4ede1] p-3">
-                <Eyebrow className="mb-2">Removed from wheel ({d.removed.length})</Eyebrow>
+                <Eyebrow className="mb-2">Removed ({d.removed.length})</Eyebrow>
                 <div className="flex flex-wrap gap-2">
                   {d.removed.map((r) => (
                     <Btn key={r.clerkUserId} tone="slate" variant="outline" size="sm" onClick={() => setRemoved(r.clerkUserId, false)}>
@@ -578,14 +584,14 @@ export default function ManageGiveaway() {
                   <span className="grid place-items-center w-10 h-10 rounded-full bg-white text-[#4a7c59] shrink-0"><IcoTrophy className="w-5 h-5" /></span>
                   <div className="min-w-0 flex-1">
                     <div className="font-bold text-[#241a12] truncate">{w.name}</div>
-                    <div className="text-sm text-[#2f5d3a] truncate">won {w.itemTitle} — added to their pickups</div>
+                    <div className="text-[15px] text-[#2f5d3a] truncate">won {w.itemTitle} — added to their pickups</div>
                   </div>
                   {w.itemId && (
                     confirmRevert === w.itemId ? (
                       <div className="shrink-0 flex items-center gap-1.5">
-                        <span className="text-xs text-[#8a7559]">Undo?</span>
+                        <span className="text-[15px] text-[#8a7559]">Undo?</span>
                         <Btn tone="red" variant="outline" size="sm" onClick={() => revert(w.itemId!)}>Yes, undo</Btn>
-                        <Btn tone="slate" variant="ghost" size="sm" onClick={() => setConfirmRevert(null)}>cancel</Btn>
+                        <Btn tone="slate" variant="ghost" size="sm" onClick={() => setConfirmRevert(null)}>Cancel</Btn>
                       </div>
                     ) : (
                       <Btn tone="slate" variant="ghost" size="sm" className="-mr-2" onClick={() => setConfirmRevert(w.itemId)}>
@@ -598,6 +604,39 @@ export default function ManageGiveaway() {
             </ul>
           </Panel>
         )}
+
+        {/* ── Rare controls ──────────────────────────────────────────────────── */}
+        {hasMore && (
+          <Disclosure label="More">
+            <div className="p-4 sm:p-5 flex flex-wrap gap-2">
+              {isActive && (
+                <Btn tone="slate" variant="outline" onClick={() => setEditEnd(editEnd == null ? toLocalInput(g.endsAt) : null)}>
+                  Change close time
+                </Btn>
+              )}
+              {isEnded && d.counts.drawn === 0 && (
+                <Btn tone="slate" variant="outline" onClick={() => setEditEnd(editEnd == null ? toLocalInput(g.endsAt) : null)}>
+                  Reopen with a new close time
+                </Btn>
+              )}
+              {(isActive || isEnded) && (
+                <Btn tone="slate" variant="outline" onClick={() => patch({ drawStyle: g.drawStyle === "MACHINE" ? "WHEEL" : "MACHINE" })}>
+                  Switch to {g.drawStyle === "MACHINE" ? "wheel" : "ticket machine"}
+                </Btn>
+              )}
+              {isActive && d.counts.drawn === 0 && (
+                <Btn tone="slate" variant="outline" onClick={() => patch({ status: "DRAFT" })}>
+                  Unpublish
+                </Btn>
+              )}
+              {isDrawn && (
+                <Btn tone="slate" variant="outline" onClick={() => patch({ archived: true })}>
+                  Archive
+                </Btn>
+              )}
+            </div>
+          </Disclosure>
+        )}
       </PageBody>
 
       {/* ── Full-screen presentation (customer-facing draw) ────────────────── */}
@@ -605,14 +644,14 @@ export default function ManageGiveaway() {
         <div className="fixed inset-0 z-[70] bg-gradient-to-b from-[#241a12] to-[#12100c] flex flex-col items-center justify-center px-4">
           <button
             onClick={() => setPresenting(false)}
-            className="absolute top-4 right-4 text-[#f1e7d5]/70 hover:text-[#f1e7d5] font-bold text-sm bg-white/10 rounded-full px-4 py-2"
+            className="absolute top-4 right-4 text-[#f1e7d5]/70 hover:text-[#f1e7d5] font-bold text-[15px] bg-white/10 rounded-full px-4 py-2 min-h-[44px]"
           >
             Exit
           </button>
           <div className="text-center mb-3">
-            <div className="text-[#f0a35a] font-black uppercase tracking-[0.24em] text-xs">Northwood Bids Giveaway</div>
+            <div className="text-[#f0a35a] font-black uppercase tracking-[0.24em] text-[13px]">Northwood Bids Giveaway</div>
             <div className="text-[#fbf4e6] font-display text-2xl sm:text-3xl font-black mt-1">{g.title}</div>
-            <div className="text-[#c9b79a] text-sm mt-1">
+            <div className="text-[#c9b79a] text-[17px] mt-1">
               {d.counts.tickets.toLocaleString()} tickets · {d.counts.eligible.toLocaleString()} people · {unclaimed} prize{unclaimed !== 1 ? "s" : ""} left
             </div>
           </div>

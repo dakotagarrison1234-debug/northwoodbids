@@ -16,7 +16,7 @@ interface Bidder {
   role: "OWNER" | "ADMIN" | "STAFF" | null;
 }
 
-type Filter = "all" | "blocked" | "staff";
+type Filter = "all" | "blocked";
 
 export default function BiddersPage() {
   const [bidders, setBidders] = useState<Bidder[]>([]);
@@ -26,6 +26,8 @@ export default function BiddersPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [busyLoc, setBusyLoc] = useState<string | null>(null);
   const [myRole, setMyRole] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<
     { text: string; confirmLabel: string; danger?: boolean; onConfirm: () => void } | null
   >(null);
@@ -33,7 +35,6 @@ export default function BiddersPage() {
   const [msgTarget, setMsgTarget] = useState<MessageTarget | null>(null);
 
   const canManage = myRole === "OWNER" || myRole === "ADMIN";
-  const isOwner = myRole === "OWNER";
 
   const load = useCallback((query: string) => {
     setLoading(true);
@@ -65,12 +66,12 @@ export default function BiddersPage() {
     }
   };
 
-  useEffect(() => { load(""); }, [load]);
   useEffect(() => {
     fetch("/api/me").then((r) => r.json()).then((d) => setMyRole(d.role ?? null)).catch(() => {});
   }, []);
 
-  // Debounced search
+  // Debounced search. Also does the first load (q is "" on mount), so there's no
+  // separate mount fetch — the old version fetched twice on open.
   useEffect(() => {
     const t = setTimeout(() => load(q.trim()), 300);
     return () => clearTimeout(t);
@@ -91,6 +92,7 @@ export default function BiddersPage() {
 
   const doBlock = async (b: Bidder, blocking: boolean) => {
     setBusyId(b.clerkUserId);
+    setNotice(null);
     try {
       const res = await fetch(`/api/admin/bidders/${b.clerkUserId}/block`, {
         method: "POST",
@@ -101,46 +103,10 @@ export default function BiddersPage() {
       if (data.success) {
         setBidders((prev) => prev.map((x) => (x.clerkUserId === b.clerkUserId ? { ...x, blocked: blocking } : x)));
       } else {
-        alert(data.error || "Could not update that bidder.");
+        setNotice(data.error || "Could not update that bidder.");
       }
     } catch {
-      alert("Something went wrong. Please try again.");
-    } finally {
-      setBusyId(null);
-    }
-  };
-
-  const askRole = (b: Bidder, role: "STAFF" | "ADMIN" | null) => {
-    const who = b.name || b.email || "this bidder";
-    setConfirmDialog({
-      text:
-        role === null
-          ? `Remove staff access from ${who}? They'll go back to being a regular bidder.`
-          : role === "ADMIN"
-          ? `Make ${who} an Admin? They'll be able to manage everything, including the team.`
-          : `Make ${who} a Staff member? They'll be able to manage items and auctions.`,
-      confirmLabel: role === null ? "Remove access" : role === "ADMIN" ? "Make Admin" : "Make Staff",
-      danger: role === null,
-      onConfirm: () => doRole(b, role),
-    });
-  };
-
-  const doRole = async (b: Bidder, role: "STAFF" | "ADMIN" | null) => {
-    setBusyId(b.clerkUserId);
-    try {
-      const res = await fetch(`/api/admin/bidders/${b.clerkUserId}/role`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setBidders((prev) => prev.map((x) => (x.clerkUserId === b.clerkUserId ? { ...x, role: data.role ?? null } : x)));
-      } else {
-        alert(data.error || "Could not update that bidder's role.");
-      }
-    } catch {
-      alert("Something went wrong. Please try again.");
+      setNotice("Something went wrong. Please try again.");
     } finally {
       setBusyId(null);
     }
@@ -153,58 +119,47 @@ export default function BiddersPage() {
     return <Pill tone={role === "OWNER" ? "blue" : role === "ADMIN" ? "green" : "slate"}>{label}</Pill>;
   };
 
-  // Filter by what you actually came here to do. Scanning 200 cards to find the
-  // blocked people was the only way to answer "who's blocked?" before.
-  const shown = bidders.filter((b) =>
-    filter === "blocked" ? b.blocked : filter === "staff" ? b.role != null : true
-  );
+  const shown = bidders.filter((b) => (filter === "blocked" ? b.blocked : true));
   const blockedCount = bidders.filter((b) => b.blocked).length;
-  const staffCount = bidders.filter((b) => b.role != null).length;
-  const atCap = bidders.length >= 200;
 
   const FILTERS: { value: Filter; label: string; count: number }[] = [
     { value: "all", label: "Everyone", count: bidders.length },
     { value: "blocked", label: "Blocked", count: blockedCount },
-    { value: "staff", label: "Staff", count: staffCount },
   ];
 
   return (
     <>
-      <PageHeader title="Bidders" sub="Block someone, or make them staff." />
+      <PageHeader title="Bidders" />
 
       <PageBody>
         <SearchBox
           type="text"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search name, email, or phone…"
+          placeholder="Search name, phone or email"
         />
 
         <Segmented<Filter> value={filter} onChange={setFilter} options={FILTERS} />
 
-        {/* The API caps at 200. Silently dropping records is worse than saying so. */}
-        {atCap && !q && (
-          <Notice tone="amber">Showing the 200 most recent bidders. Use search to find anyone else.</Notice>
-        )}
+        {notice && <Notice tone="red">{notice}</Notice>}
 
         <Panel>
           {loading ? (
             <p className="px-4 py-8 text-center text-[#8a7559]">Loading…</p>
           ) : shown.length === 0 ? (
-            <Empty
-              text={filter === "blocked" ? "Nobody is blocked." : filter === "staff" ? "No staff yet." : "No bidders found."}
-              sub={filter === "blocked" ? "Blocked bidders show up here." : filter === "staff" ? "Make someone staff from the Everyone list." : q ? "Try a different name, email or phone." : "Bidders appear once they sign up."}
-            />
+            <Empty text={filter === "blocked" ? "Nobody is blocked." : "No bidders found."} />
           ) : (
             <ul className="divide-y divide-[#f0e6d6]">
               {shown.map((b) => {
                 const busy = busyId === b.clerkUserId;
                 const isMember = b.role != null;
-                const contact = [b.email, b.phone].filter(Boolean).join(" · ");
+                const open = openId === b.clerkUserId;
+                const contact = [b.phone, b.email].filter(Boolean).join(" · ");
                 return (
                   <li key={b.clerkUserId} className={b.blocked ? "bg-[#fbeae6]" : ""}>
                     <Row
                       tone={b.blocked ? "red" : undefined}
+                      onClick={() => setOpenId(open ? null : b.clerkUserId)}
                       leading={<Initials name={b.name || b.email} />}
                       title={b.name || "Unnamed bidder"}
                       sub={contact || "No contact details"}
@@ -217,77 +172,62 @@ export default function BiddersPage() {
                         ) : undefined
                       }
                     />
-                    {b.blocked && b.blockedReason && (
-                      <p className="px-4 pb-3 -mt-1 text-sm text-[#a1321f]">{b.blockedReason}</p>
-                    )}
 
-                    {/* Pickup location — the bidder normally sets this, but the owner can
-                        override it here (it sticks until they or a customer change it). */}
-                    {canManage && locations.length > 0 && (
-                      <div className="px-4 pb-3 flex items-center gap-3">
-                        <Eyebrow className="shrink-0">Pickup</Eyebrow>
-                        <select
-                          value={b.preferredPickupLocationId ?? ""}
-                          disabled={busyLoc === b.clerkUserId}
-                          onChange={(e) => setBidderLocation(b.clerkUserId, e.target.value)}
-                          className="min-w-0 flex-1 max-w-[240px] min-h-[44px] bg-white border border-[#d9c7ab] focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 rounded-xl px-3 text-[#241a12] outline-none transition disabled:opacity-50"
-                        >
-                          <option value="" disabled>Not set — choose…</option>
-                          {locations.map((l) => (
-                            <option key={l.id} value={l.id}>{l.name}</option>
-                          ))}
-                        </select>
+                    {open && (
+                      <div className="px-4 pb-4 space-y-3">
+                        {b.blocked && b.blockedReason && (
+                          <p className="text-[15px] text-[#a1321f]">{b.blockedReason}</p>
+                        )}
+
+                        {/* Pickup location — the bidder normally sets this, but the owner can
+                            override it here (it sticks until they or a customer change it). */}
+                        {canManage && locations.length > 0 && (
+                          <div className="flex items-center gap-3">
+                            <Eyebrow className="shrink-0">Pickup</Eyebrow>
+                            <select
+                              value={b.preferredPickupLocationId ?? ""}
+                              disabled={busyLoc === b.clerkUserId}
+                              onChange={(e) => setBidderLocation(b.clerkUserId, e.target.value)}
+                              className="min-w-0 flex-1 max-w-[240px] min-h-[44px] bg-white border border-[#d9c7ab] focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 rounded-xl px-3 text-[#241a12] outline-none transition disabled:opacity-50"
+                            >
+                              <option value="" disabled>Not set — choose…</option>
+                              {locations.map((l) => (
+                                <option key={l.id} value={l.id}>{l.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        <div className="flex flex-wrap gap-2">
+                          {/* Text this customer directly. Owner/admin only, and only if
+                              we have a number to text. */}
+                          {canManage && b.phone && (
+                            <Btn
+                              tone="blue"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setMsgTarget({ clerkUserId: b.clerkUserId, name: b.name, phone: b.phone })}
+                            >
+                              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h12v8H5l-3 3V3z" /></svg>
+                              Text
+                            </Btn>
+                          )}
+
+                          {/* Block only applies to plain bidders (not staff/owner). Roles are managed on Team. */}
+                          {!isMember && (
+                            <Btn
+                              size="sm"
+                              tone={b.blocked ? "slate" : "red"}
+                              variant="outline"
+                              onClick={() => toggleBlock(b)}
+                              disabled={busy}
+                            >
+                              {busy ? "Working…" : b.blocked ? "Unblock" : "Block"}
+                            </Btn>
+                          )}
+                        </div>
                       </div>
                     )}
-
-                    <div className="px-4 pb-4 flex flex-wrap gap-2">
-                      {/* Text this customer directly. Owner/admin only, and only if
-                          we have a number to text. */}
-                      {canManage && b.phone && (
-                        <Btn
-                          tone="blue"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setMsgTarget({ clerkUserId: b.clerkUserId, name: b.name, phone: b.phone })}
-                        >
-                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h12v8H5l-3 3V3z" /></svg>
-                          Text
-                        </Btn>
-                      )}
-                      {/* Role management (owner/admin only). Never for the owner row. */}
-                      {b.role !== "OWNER" && canManage && (
-                        <>
-                          {!isMember && (
-                            <Btn size="sm" onClick={() => askRole(b, "STAFF")} disabled={busy}>
-                              Make staff
-                            </Btn>
-                          )}
-                          {!isMember && isOwner && (
-                            <Btn size="sm" variant="outline" onClick={() => askRole(b, "ADMIN")} disabled={busy}>
-                              Make admin
-                            </Btn>
-                          )}
-                          {isMember && isOwner && (
-                            <Btn size="sm" tone="slate" variant="outline" onClick={() => askRole(b, null)} disabled={busy}>
-                              Remove staff
-                            </Btn>
-                          )}
-                        </>
-                      )}
-
-                      {/* Block only applies to plain bidders (not staff/owner). */}
-                      {!isMember && (
-                        <Btn
-                          size="sm"
-                          tone={b.blocked ? "slate" : "red"}
-                          variant="outline"
-                          onClick={() => toggleBlock(b)}
-                          disabled={busy}
-                        >
-                          {busy ? "Working…" : b.blocked ? "Unblock" : "Block"}
-                        </Btn>
-                      )}
-                    </div>
                   </li>
                 );
               })}
@@ -302,7 +242,7 @@ export default function BiddersPage() {
       {confirmDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setConfirmDialog(null)}>
           <div className="bg-white rounded-2xl border border-[#e6dac6] max-w-sm w-full p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <p className="text-base text-[#241a12]">{confirmDialog.text}</p>
+            <p className="text-[#241a12]">{confirmDialog.text}</p>
             <div className="mt-5 flex gap-3">
               <Btn tone="slate" variant="outline" full onClick={() => setConfirmDialog(null)}>
                 Back

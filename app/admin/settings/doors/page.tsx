@@ -29,8 +29,10 @@ type Data = {
   locks: Lock[];
 };
 
+const plural = (n: number, word: string) => `${n} ${word}${n !== 1 ? "s" : ""}`;
+
 /**
- * Settings → Doors. Link the Schlage account once, pull the locks in, put each
+ * Settings / Doors. Link the Schlage account once, pull the locks in, put each
  * one on a pickup location. From then on every pickup booked at that location
  * gets a one-day door code automatically.
  */
@@ -95,7 +97,7 @@ export default function DoorsSettingsPage() {
     <>
       <PageHeader
         title="Settings"
-        sub="Doors: customers let themselves in with a one-day code."
+        sub={data?.configured ? `${plural(data.locks.length, "lock")} · ${data.locks.filter((l) => l.online).length} online · ${plural(data.codesOut, "code")} out today` : undefined}
         actions={data?.configured ? <Btn size="sm" variant="outline" onClick={sync} disabled={busy === "sync"}>{busy === "sync" ? "Looking…" : "Find my locks"}</Btn> : undefined}
       />
       <PageBody>
@@ -105,26 +107,19 @@ export default function DoorsSettingsPage() {
           <div className="text-[#8a7559] py-10 text-center">Loading…</div>
         ) : !data.configured ? (
           <Panel title="Doors aren't turned on yet" tone="amber">
-            <div className="p-4 sm:p-5 text-sm text-[#4a3a2b] space-y-2">
-              <p>Add <span className="font-mono font-bold">SEAM_API_KEY</span> to the site&apos;s environment and redeploy. The full checklist is in <span className="font-mono">docs/door-locks.md</span>.</p>
+            <div className="p-4 sm:p-5 text-[#4a3a2b]">
+              <p>Add <span className="font-mono font-bold">SEAM_API_KEY</span> to the site&apos;s environment and redeploy. The checklist is in <span className="font-mono">docs/door-locks.md</span>.</p>
             </div>
           </Panel>
         ) : (
           <>
             {data.seamError && <Notice tone="red">Seam: {data.seamError}</Notice>}
 
-            <div className="grid sm:grid-cols-3 gap-3">
-              <div className="rounded-2xl bg-white border border-[#e6dac6] p-4"><Eyebrow>Locks</Eyebrow><div className="font-display text-3xl font-black text-[#241a12] tabular-nums">{data.locks.length}</div></div>
-              <div className="rounded-2xl bg-white border border-[#e6dac6] p-4"><Eyebrow>Online</Eyebrow><div className="font-display text-3xl font-black text-[#4a7c59] tabular-nums">{data.locks.filter((l) => l.online).length}</div></div>
-              <div className="rounded-2xl bg-white border border-[#e6dac6] p-4"><Eyebrow>Codes out</Eyebrow><div className="font-display text-3xl font-black text-[#241a12] tabular-nums">{data.codesOut}</div></div>
-            </div>
-
             {data.locks.length === 0 && (
               <Panel>
                 <Empty
                   icon={<IcoLock className="w-8 h-8" />}
                   text="No locks linked yet."
-                  sub="Step 1: link the Schlage Home account the locks live in. Step 2: tap Find my locks."
                   action={<Btn onClick={connect} disabled={busy === "connect"}>{busy === "connect" ? "Opening…" : "Link Schlage account"}</Btn>}
                 />
               </Panel>
@@ -161,12 +156,12 @@ export default function DoorsSettingsPage() {
                               {l.locked != null && <Pill tone={l.locked ? "ink" : "amber"}>{l.locked ? "Locked" : "Unlocked"}</Pill>}
                             </div>
                           )}
-                          <div className="text-sm text-[#6f5b46] mt-1">
+                          <div className="text-[15px] text-[#6f5b46] mt-1">
                             {l.model ?? "Schlage"}{l.battery != null ? ` · battery ${l.battery}%` : ""}{l.codeLength ? ` · ${l.codeLength}-digit codes` : ""}
                             {l.canProgram === false ? " · can't program codes" : ""}
                           </div>
-                          {l.issues.length > 0 && <div className="text-xs text-[#a84a2f] mt-1">{l.issues.join(" · ")}</div>}
-                          {l.battery != null && l.battery < 25 && <div className="text-xs text-[#a84a2f] mt-1">Battery low — swap the 4 AA batteries.</div>}
+                          {l.issues.length > 0 && <div className="text-[15px] text-[#a84a2f] mt-1">{l.issues.join(" · ")}</div>}
+                          {l.battery != null && l.battery < 25 && <div className="text-[15px] text-[#a84a2f] mt-1">Battery low — swap the 4 AA batteries.</div>}
                         </div>
                         <div className="flex gap-2 shrink-0">
                           <Btn size="sm" variant="outline" tone="green" onClick={() => act(l.id, "unlock")} disabled={busy === `${l.id}:unlock` || l.online === false}><IcoBolt className="w-4 h-4" /> Unlock</Btn>
@@ -176,11 +171,11 @@ export default function DoorsSettingsPage() {
 
                       <div className="mt-4 grid sm:grid-cols-[1fr_auto] gap-3 items-end">
                         <div>
-                          <Eyebrow className="mb-1">Which pickup location is this door at?</Eyebrow>
+                          <Eyebrow className="mb-1">Warehouse</Eyebrow>
                           <select
                             value={l.locationId ?? ""}
                             onChange={(e) => patch(l.id, { locationId: e.target.value || null })}
-                            className="w-full min-h-[46px] bg-white border border-[#d9c7ab] rounded-xl px-3 text-[#241a12] font-semibold"
+                            className="w-full min-h-[50px] bg-white border border-[#d9c7ab] rounded-xl px-3 text-[#241a12] font-semibold"
                           >
                             <option value="">Not assigned</option>
                             {data.locations.map((loc) => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
@@ -201,16 +196,6 @@ export default function DoorsSettingsPage() {
                 <Btn variant="outline" onClick={connect} disabled={busy === "connect"}>Link another Schlage account</Btn>
               </div>
             )}
-
-            <Panel title="How it works" tone="leather">
-              <ol className="p-4 sm:p-5 text-sm text-[#4a3a2b] space-y-1.5 list-decimal list-inside">
-                <li>A customer books a pickup at a location that has a lock assigned. The site makes a one-day code on every active lock there and texts it to them right away.</li>
-                <li>The code works from 6am to midnight on their pickup date, on every door. The text tells them which doors and how the keypad works.</li>
-                <li>Reschedule: the code moves with the appointment. Cancel or mark collected: the code is pulled off the locks on the spot.</li>
-                <li>On the Pickup board each appointment shows its code, with Resend, New code and Unlock buttons for when someone is standing at the door.</li>
-                <li>Staff and family codes you set in the Schlage Home app stay as they are — the site only touches the codes it made.</li>
-              </ol>
-            </Panel>
           </>
         )}
       </PageBody>

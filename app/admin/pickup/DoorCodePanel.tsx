@@ -54,10 +54,10 @@ export default function DoorCodePanel({ appointmentId, door, scheduled, onChange
           <div className="min-w-0">
             <Eyebrow>Door code</Eyebrow>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-mono font-black text-2xl tracking-[0.2em] text-[#241a12] tabular-nums">{door.code ?? "----"}</span>
+              <span className="font-mono font-black text-3xl tracking-[0.2em] text-[#241a12] tabular-nums">{door.code ?? "----"}</span>
               <Pill tone={status.tone} dot={status.tone === "green"}>{status.label}</Pill>
             </div>
-            <div className="text-xs text-[#8a7559]">
+            <div className="text-[13px] text-[#8a7559]">
               {door.locks.map((l) => l.name).join(" + ")}
               {door.sentAt ? ` · texted ${new Date(door.sentAt).toLocaleString("en-US", { timeZone: "America/Detroit", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}` : door.code ? " · not texted yet" : ""}
             </div>
@@ -81,7 +81,7 @@ export default function DoorCodePanel({ appointmentId, door, scheduled, onChange
           <Btn size="sm" variant="ghost" tone="red" onClick={() => run("revoke")} disabled={busy !== null}>Remove code</Btn>
         )}
       </div>
-      {note && <div className={`mt-2 text-sm font-semibold ${note.ok ? "text-[#2f5d3a]" : "text-[#a84a2f]"}`}>{note.text}</div>}
+      {note && <div className={`mt-2 text-[15px] font-semibold ${note.ok ? "text-[#2f5d3a]" : "text-[#a84a2f]"}`}>{note.text}</div>}
     </div>
   );
 }

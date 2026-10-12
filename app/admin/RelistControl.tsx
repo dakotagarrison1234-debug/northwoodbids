@@ -16,11 +16,11 @@ export interface RelistLocation {
 }
 
 const SELECT =
-  "w-full min-h-[44px] bg-white border border-[#d9c7ab] focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 rounded-xl px-3 text-sm text-[#241a12] outline-none transition disabled:opacity-50";
+  "w-full min-h-[44px] bg-white border border-[#d9c7ab] focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 rounded-xl px-3 text-[15px] text-[#241a12] outline-none transition disabled:opacity-50";
 
 /**
- * Relist an unsold item in one clear step: tap Relist → pick the auction → pick the
- * warehouse → confirm. The item's price/bids reset and it moves (goes live if the
+ * Relist an unsold item in one clear step: tap Relist, pick the auction, pick the
+ * warehouse, confirm. The item's price/bids reset and it moves (goes live if the
  * auction is already open, else a draft). Shared by the closed-auction results
  * screen and the /admin/unsold page.
  */
@@ -66,8 +66,8 @@ export default function RelistControl({
 
   if (done) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-bold text-[#2f5d3a] shrink-0">
-        <IcoCheck className="w-3.5 h-3.5" /> {done}
+      <span className="inline-flex items-center gap-1 text-[15px] font-bold text-[#2f5d3a] shrink-0">
+        <IcoCheck className="w-4 h-4" /> {done}
       </span>
     );
   }
@@ -83,7 +83,7 @@ export default function RelistControl({
 
   const destIsLive = !!dest && (targets.find((t) => t.id === dest)?.status === "OPEN" || targets.find((t) => t.id === dest)?.status === "CLOSING");
 
-  // Expanded: pick auction → pick location → confirm.
+  // Expanded: pick auction, pick location, confirm.
   return (
     <div className="w-full sm:w-72 bg-[#faf5ea] border border-[#e6dac6] rounded-xl p-3 space-y-3">
       <div>
@@ -98,7 +98,7 @@ export default function RelistControl({
           ))}
         </select>
         {destIsLive && (
-          <p className="text-[11px] text-[#2f5d3a] font-semibold mt-1">Goes live immediately in this auction.</p>
+          <p className="text-[13px] text-[#2f5d3a] font-semibold mt-1">Goes live immediately.</p>
         )}
       </div>
 
@@ -116,7 +116,7 @@ export default function RelistControl({
         </div>
       )}
 
-      {err && <p className="text-xs font-semibold text-[#a1321f]">{err}</p>}
+      {err && <p className="text-[15px] font-semibold text-[#a1321f]">{err}</p>}
 
       <div className="flex items-center gap-2 pt-0.5">
         <Btn size="sm" onClick={relist} disabled={busy} className="flex-1">

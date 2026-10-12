@@ -47,10 +47,10 @@ export default function ArchiveButton({
   if (archived) {
     return (
       <div className="flex items-center gap-2 flex-wrap">
-        <Btn variant="outline" size="sm" onClick={() => run(false)} disabled={busy}>
-          {busy ? "…" : "Un-archive"}
+        <Btn variant="outline" onClick={() => run(false)} disabled={busy}>
+          {busy ? "Working…" : "Un-archive"}
         </Btn>
-        {err && <span className="text-xs font-semibold text-[#a1321f]">{err}</span>}
+        {err && <span className="text-[15px] font-semibold text-[#a1321f]">{err}</span>}
       </div>
     );
   }
@@ -58,20 +58,20 @@ export default function ArchiveButton({
   if (confirming) {
     return (
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm text-[#6f5b46]">Hide from reports &amp; site?</span>
-        <Btn tone="red" size="sm" onClick={() => run(true)} disabled={busy}>
-          {busy ? "…" : "Archive"}
+        <span className="text-[15px] text-[#6f5b46]">Hide from reports and the site?</span>
+        <Btn tone="red" onClick={() => run(true)} disabled={busy}>
+          {busy ? "Working…" : "Archive"}
         </Btn>
-        <Btn tone="slate" variant="outline" size="sm" onClick={() => setConfirming(false)} disabled={busy}>
+        <Btn tone="slate" variant="outline" onClick={() => setConfirming(false)} disabled={busy}>
           Cancel
         </Btn>
-        {err && <span className="text-xs font-semibold text-[#a1321f]">{err}</span>}
+        {err && <span className="text-[15px] font-semibold text-[#a1321f]">{err}</span>}
       </div>
     );
   }
 
   return (
-    <Btn tone="slate" variant="outline" size="sm" onClick={() => setConfirming(true)} title="Hide this test auction from reports and the site">
+    <Btn tone="slate" variant="outline" onClick={() => setConfirming(true)} title="Hide this auction from reports and the site">
       Archive
     </Btn>
   );

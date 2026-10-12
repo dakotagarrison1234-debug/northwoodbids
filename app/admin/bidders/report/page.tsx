@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
-// The bidder report now lives as the "Bidders" tab inside /admin/reports.
-// Kept as a redirect so any old bookmarks still land in the right place.
+// The bidder report view is gone; the bidder list is the one home for bidders.
+// Kept as a redirect so any old bookmarks still land somewhere useful.
 export default function BidderReportRedirect() {
-  redirect("/admin/reports");
+  redirect("/admin/bidders");
 }

@@ -186,7 +186,9 @@ export default function SpinWheel({
                       x={tx}
                       y={ty}
                       fill={isWinner ? "#241a12" : "#fbf4e6"}
-                      fontSize={isWinner ? Math.min(12, Math.max(6, seg * 0.9)) : n > 40 ? 7 : n > 14 ? 9 : 11}
+                      // Wedge labels are geometry-bound: past ~40 names a wedge is thinner than any
+                      // readable glyph, so the end-of-spin 2.5x zoom is what makes the winner legible.
+                      fontSize={isWinner ? Math.min(14, Math.max(8, seg * 0.9)) : n > 40 ? 8 : n > 14 ? 11 : 14}
                       fontWeight={isWinner ? 800 : 700}
                       textAnchor="middle"
                       dominantBaseline="middle"
@@ -203,7 +205,7 @@ export default function SpinWheel({
         </div>
       </div>
 
-      <div className="text-xs text-[#8a7559] mt-1">{entrants.length.toLocaleString()} names on the wheel</div>
+      <div className="text-[15px] text-[#8a7559] mt-1">{entrants.length.toLocaleString()} names on the wheel</div>
 
       <button
         onClick={spin}
@@ -213,7 +215,7 @@ export default function SpinWheel({
         {spinning ? "Spinning…" : "Spin"}
       </button>
 
-      {error && !result && <div className="mt-3 text-sm font-semibold text-red-600">{error}</div>}
+      {error && !result && <div className="mt-3 text-[15px] font-semibold text-red-600">{error}</div>}
 
       {/* ── Winner reveal (the screenshot / screen recording) ─────────────────
           Nothing here hints a spin can be redone: a quiet X in the corner (silently
@@ -231,32 +233,32 @@ export default function SpinWheel({
           <div className="relative w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-[#f3ead6] via-[#fbf4e6] to-[#eaf3ec] border-4 border-[#4a7c59]/30">
             <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-[#4a7c59]/15 blur-2xl" aria-hidden />
             <div className="relative px-7 pt-8 pb-7 text-center">
-              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[#8a7559]">{brand}</div>
-              <div className="text-sm font-bold text-[#6f5b46] mt-0.5">{giveawayTitle}</div>
+              <div className="text-[13px] font-black uppercase tracking-[0.2em] text-[#8a7559]">{brand}</div>
+              <div className="text-[15px] font-bold text-[#6f5b46] mt-0.5">{giveawayTitle}</div>
 
               <div className="my-3 flex justify-center"><BidCritter className="w-20 h-20" /></div>
 
-              <div className="text-xs font-black uppercase tracking-[0.24em] text-[#4a7c59]">Winner</div>
+              <div className="text-[15px] font-black uppercase tracking-[0.24em] text-[#4a7c59]">Winner</div>
               <div className="font-display text-4xl font-black text-[#241a12] leading-tight mt-1 break-words">
                 {result.winner.name}
               </div>
 
               <div className="mt-4 inline-block rounded-2xl bg-white/70 border border-[#e3d6bf] px-5 py-3">
-                <div className="text-[11px] font-bold uppercase tracking-wider text-[#8a7559]">Won</div>
-                <div className="text-lg font-black text-[#6c4d39] leading-tight">{result.prize.title}</div>
+                <div className="text-[13px] font-bold uppercase tracking-wider text-[#8a7559]">Won</div>
+                <div className="text-xl font-black text-[#6c4d39] leading-tight">{result.prize.title}</div>
               </div>
 
-              <div className="mt-4 text-[11px] text-[#8a7559]">
+              <div className="mt-4 text-[13px] text-[#8a7559]">
                 {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
               </div>
             </div>
           </div>
 
-          {error && <div className="mt-3 text-sm font-semibold text-[#fbe6c8] bg-black/40 rounded-lg px-3 py-1.5">{error}</div>}
+          {error && <div className="mt-3 text-[15px] font-semibold text-[#fbe6c8] bg-black/40 rounded-lg px-3 py-1.5">{error}</div>}
           <button
             onClick={confirmWin}
             disabled={awarding}
-            className="mt-5 bg-[#4a7c59] hover:bg-[#3c6449] text-white font-black px-10 py-3 rounded-xl text-base disabled:opacity-50 shadow-lg"
+            className="mt-5 bg-[#4a7c59] hover:bg-[#3c6449] text-white font-black px-10 py-3 min-h-[50px] rounded-xl text-[17px] disabled:opacity-50 shadow-lg"
           >
             {awarding ? "Saving…" : "Done"}
           </button>

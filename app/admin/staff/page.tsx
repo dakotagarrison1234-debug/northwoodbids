@@ -51,6 +51,36 @@ export default function StaffPage() {
   const canInvite = myRole === "OWNER" || myRole === "ADMIN";
   const canRemove = myRole === "OWNER";
 
+  // Promote an existing bidder straight to staff — no invite link needed when
+  // they already have an account. Search the bidder list, tap Make staff.
+  const [pickQ, setPickQ] = useState("");
+  const [picks, setPicks] = useState<{ clerkUserId: string; name: string | null; phone: string | null; email: string | null; role: string | null }[]>([]);
+  const [picking, setPicking] = useState(false);
+  useEffect(() => {
+    const q = pickQ.trim();
+    const t = setTimeout(() => {
+      if (q.length < 2) { setPicks([]); return; }
+      setPicking(true);
+      fetch(`/api/admin/bidders?q=${encodeURIComponent(q)}`)
+        .then((r) => r.json())
+        .then((d) => setPicks((d.bidders ?? []).slice(0, 6)))
+        .catch(() => setPicks([]))
+        .finally(() => setPicking(false));
+    }, 200);
+    return () => clearTimeout(t);
+  }, [pickQ]);
+
+  const setMemberRole = async (clerkUserId: string, nextRole: "STAFF" | "ADMIN" | null) => {
+    setError("");
+    const res = await fetch(`/api/admin/bidders/${clerkUserId}/role`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role: nextRole }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) { setError(data.error || "Couldn't change that role."); return; }
+    setPickQ(""); setPicks([]);
+    load();
+  };
+
   // In-app confirm — native confirm() is silently blocked in the installed/PWA
   // webview, so these buttons did nothing at all there.
   const doRevokeInvite = async (inviteId: string) => {
@@ -118,7 +148,7 @@ export default function StaffPage() {
   if (loading) {
     return (
       <>
-        <PageHeader title="Team" sub="Who can get into the Workshop." />
+        <PageHeader title="Settings" />
         <PageBody>
           <p className="text-[#8a7559] py-8 text-center">Loading…</p>
         </PageBody>
@@ -129,26 +159,18 @@ export default function StaffPage() {
   return (
     <>
       <PageHeader
-        title="Team"
-        sub="Who can get into the Workshop."
-        actions={
-          canInvite ? (
-            /* The reason people open this page is to add someone — it was previously
-               the LAST thing on the page, below every member and every invite. */
-            <BtnLink href="#invite" size="sm">Invite someone</BtnLink>
-          ) : undefined
-        }
+        title="Settings"
+        actions={canInvite ? <BtnLink href="#invite" size="sm">Invite someone</BtnLink> : undefined}
       />
 
       <PageBody>
-        {/* Errors surface HERE, at the top, not buried inside the invite form where
-            a failed "Remove" would render off-screen (or not at all for non-admins). */}
+        {/* Errors surface at the top, not buried inside the invite form where a
+            failed "Remove" would render off-screen (or not at all for non-admins). */}
         {error && <Notice tone="red">{error}</Notice>}
 
-        {/* Current Members */}
-        <Panel title="Members" sub={`${members.length} on the team`}>
+        <Panel title="Team">
           {members.length === 0 ? (
-            <Empty text="No members yet." sub="Invite someone to get started." />
+            <Empty text="No members yet." />
           ) : (
             <ul className="divide-y divide-[#f0e6d6]">
               {members.map((member) => {
@@ -163,25 +185,26 @@ export default function StaffPage() {
                       title={
                         <>
                           {member.displayName || "New team member"}
-                          {isSelf && <span className="ml-1.5 text-sm font-normal text-[#a3927b]">(you)</span>}
+                          {isSelf && <span className="ml-1.5 text-[15px] font-normal text-[#a3927b]">(you)</span>}
                         </>
                       }
                       sub={showEmail ? member.email : !member.displayName ? "Hasn't signed in yet." : undefined}
                       trailing={
                         <div className="flex flex-col items-end gap-1">
-                          {/* Role as a coloured pill — three muted browns at 14px were
-                              effectively unreadable, and role is the whole point of the row. */}
                           <Pill tone={roleTone(member.role)}>{roleLabel(member.role)}</Pill>
-                          {canRemoveMember && (
-                            <Btn
-                              tone="red"
-                              variant="ghost"
-                              size="sm"
-                              className="-mr-2"
-                              onClick={() => removeMember(member.id, member.displayName || "this team member")}
-                            >
-                              Remove
-                            </Btn>
+                          {!isOwner && !isSelf && (
+                            <div className="flex gap-1 -mr-2">
+                              {myRole === "OWNER" && (
+                                <Btn tone="slate" variant="ghost" size="sm" onClick={() => setMemberRole(member.clerkUserId, member.role === "ADMIN" ? "STAFF" : "ADMIN")}>
+                                  {member.role === "ADMIN" ? "Make staff" : "Make admin"}
+                                </Btn>
+                              )}
+                              {canRemoveMember && (
+                                <Btn tone="red" variant="ghost" size="sm" onClick={() => removeMember(member.id, member.displayName || "this team member")}>
+                                  Remove
+                                </Btn>
+                              )}
+                            </div>
                           )}
                         </div>
                       }
@@ -193,9 +216,8 @@ export default function StaffPage() {
           )}
         </Panel>
 
-        {/* Pending Invites */}
         {invites.length > 0 && (
-          <Panel title="Pending invites" sub={`${invites.length} waiting`}>
+          <Panel title="Pending invites">
             <ul className="divide-y divide-[#f0e6d6]">
               {invites.map((invite) => (
                 <li key={invite.id}>
@@ -220,10 +242,40 @@ export default function StaffPage() {
           </Panel>
         )}
 
-        {/* Invite Form — OWNER/ADMIN only */}
+        {/* Already a bidder? Promote them without an invite link. */}
+        {canInvite && (
+          <Panel title="Add a bidder to the team">
+            <div className="p-4 sm:p-5 space-y-3">
+              <Input value={pickQ} onChange={(e) => setPickQ(e.target.value)} placeholder="Search a bidder by name or phone" />
+              {picking && <p className="text-[15px] text-[#8a7559]">Searching…</p>}
+              {picks.length > 0 && (
+                <ul className="divide-y divide-[#f0e6d6] rounded-xl border border-[#e6dac6] overflow-hidden">
+                  {picks.map((b) => (
+                    <li key={b.clerkUserId}>
+                      <Row
+                        leading={<Initials name={b.name || b.email} />}
+                        title={b.name || b.email || "Unnamed bidder"}
+                        sub={[b.phone, b.email].filter(Boolean).join(" · ")}
+                        trailing={
+                          b.role ? (
+                            <Pill tone={roleTone(b.role)}>{roleLabel(b.role)}</Pill>
+                          ) : (
+                            <Btn size="sm" onClick={() => setMemberRole(b.clerkUserId, "STAFF")}>Make staff</Btn>
+                          )
+                        }
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </Panel>
+        )}
+
+        {/* Invite form — OWNER/ADMIN only */}
         {canInvite && (
           <div id="invite" className="scroll-mt-4">
-            <Panel title="Invite someone" sub="They get a one-time link that expires in 7 days.">
+            <Panel title="Invite someone">
               <div className="p-4 sm:p-5 space-y-4">
                 <div>
                   <Eyebrow className="mb-1.5">Email address</Eyebrow>
@@ -239,29 +291,26 @@ export default function StaffPage() {
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value as "STAFF" | "ADMIN")}
-                    className="w-full min-h-[46px] bg-white border border-[#d9c7ab] focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 rounded-xl px-4 text-[#241a12] outline-none transition"
+                    className="w-full min-h-[50px] bg-white border border-[#d9c7ab] focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 rounded-xl px-4 text-[#241a12] outline-none transition"
                   >
-                    <option value="STAFF">Staff — can manage items and auctions</option>
-                    <option value="ADMIN">Admin — can manage everything including team</option>
+                    <option value="STAFF">Staff — lots, auctions and pickup</option>
+                    <option value="ADMIN">Admin — everything, including the team</option>
                   </select>
                 </div>
 
-                {error && <p className="text-sm font-semibold text-[#a1321f]">{error}</p>}
-
                 <Btn full onClick={handleInvite} disabled={sending}>
-                  {sending ? "Generating Invite..." : "Generate Invite Link"}
+                  {sending ? "Creating…" : "Create invite link"}
                 </Btn>
 
                 {inviteUrl && (
                   <div className="bg-[#f1e7d5] border border-[#d9c7ab] rounded-xl p-4">
-                    <p className="text-[#563e2c] text-base font-bold mb-2">Invite link created. Share this:</p>
                     <div className="flex items-center gap-2">
-                      <Input readOnly value={inviteUrl} className="font-mono text-sm" />
+                      <Input readOnly value={inviteUrl} className="font-mono text-[15px]" />
                       <Btn tone="slate" variant="outline" onClick={() => navigator.clipboard.writeText(inviteUrl)}>
                         Copy
                       </Btn>
                     </div>
-                    <p className="text-[#8a7559] text-sm mt-2">Expires in 7 days. One-time use.</p>
+                    <p className="text-[#8a7559] text-[15px] mt-2">One-time link · expires in 7 days.</p>
                   </div>
                 )}
               </div>
@@ -274,7 +323,7 @@ export default function StaffPage() {
       {confirmDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setConfirmDialog(null)}>
           <div className="bg-white rounded-2xl border border-[#e6dac6] max-w-sm w-full p-6 shadow-xl text-left" onClick={(e) => e.stopPropagation()}>
-            <p className="text-base text-[#241a12]">{confirmDialog.text}</p>
+            <p className="text-[#241a12]">{confirmDialog.text}</p>
             <div className="mt-5 flex gap-3">
               <Btn tone="slate" variant="outline" full onClick={() => setConfirmDialog(null)}>
                 Back

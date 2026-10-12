@@ -40,13 +40,13 @@ export default function AuctionItemsList({ items }: { items: AuctionListItem[] }
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search lots by title or shelf…"
+            placeholder="Search lots by title or spot…"
           />
         </div>
       )}
 
       {shown.length === 0 ? (
-        <Empty text={`No lots match "${search.trim()}".`} sub="Try a shorter word or the shelf code." />
+        <Empty text={`No lots match "${search.trim()}".`} />
       ) : (
         <ul className="divide-y divide-[#f0e6d6]">
           {shown.map((item) => (

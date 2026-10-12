@@ -60,7 +60,7 @@ export default function FlyerMotion({
   const [overlaySide, setOverlaySide] = useState(360);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── Largest square that fits the viewport (portrait phone → full width). ──
+  // ── Largest square that fits the viewport (portrait phone = full width). ──
   useEffect(() => {
     const fit = () => setOverlaySide(Math.min(window.innerWidth, window.innerHeight));
     fit();
@@ -173,11 +173,11 @@ export default function FlyerMotion({
               <svg width="26" height="26" viewBox="0 0 24 24" fill="#6c4d39"><path d="M8 5v14l11-7z" /></svg>
             </span>
             <span className="text-lg font-extrabold">Play &amp; record</span>
-            <span className="text-sm text-white/85 mt-0.5">Full screen · 3-2-1 countdown</span>
+            <span className="text-[15px] text-white/85 mt-0.5">Full screen · 3-2-1 countdown</span>
           </button>
         </div>
-        <p className="text-sm text-[#8a7559] mt-2">
-          Tap play, start your phone&apos;s screen recorder when the countdown hits GO, let it run one full loop, then stop.
+        <p className="text-[15px] text-[#8a7559] mt-2">
+          Start your screen recorder on GO; stop after one loop.
         </p>
       </div>
 
@@ -235,8 +235,9 @@ export default function FlyerMotion({
             {/* Loop-complete flag */}
             {loopFlash && mode === "playing" && (
               <div className="absolute top-0 left-0 right-0 grid place-items-center pt-8 pointer-events-none">
-                <span className="bg-[#4a7c59] text-white font-extrabold rounded-full px-5 py-2 shadow-lg" style={{ fontSize: overlaySide * 0.035, animation: "fm-pop .4s both" }}>
-                  ✓ One loop done — you can stop
+                <span className="inline-flex items-center gap-2 bg-[#4a7c59] text-white font-extrabold rounded-full px-5 py-2 shadow-lg" style={{ fontSize: overlaySide * 0.035, animation: "fm-pop .4s both" }}>
+                  <svg width="1em" height="1em" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 8.5l3.5 3.5L13 5" /></svg>
+                  One loop done. You can stop.
                 </span>
               </div>
             )}
@@ -308,7 +309,7 @@ function SceneContent({ scene, auction, logo }: { scene: Scene; auction: { title
     return (
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 44px" }}>
         <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 56, textAlign: "center", background: "#6c4d39", borderRadius: 32 }}>
-          <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: "0.2em", textTransform: "uppercase", color: "#e0954f", animation: "fm-slideup .5s both" }}>Bid • Win • Pick up local</div>
+          <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: "0.2em", textTransform: "uppercase", color: "#e0954f", animation: "fm-slideup .5s both" }}>Bid · Win · Pick up local</div>
           <div style={{ marginTop: 16, fontSize: 78, fontWeight: 900, color: "#fff", lineHeight: 1, animation: "fm-pop .5s .12s both" }}>
             northwoodbids<span style={{ color: "#e0954f" }}>.com</span>
           </div>
@@ -347,7 +348,7 @@ function ItemTile({ item, delay }: { item: MotionItem; delay: number }) {
         )}
         {hot && (
           <div style={{ position: "absolute", top: 10, left: 10, background: "#c0392b", color: "#fff", fontSize: 24, fontWeight: 900, padding: "7px 15px", borderRadius: 13, animation: `fm-pop .4s ${delay + 0.15}s both` }}>
-            🔥 {item.bidCount}
+            {item.bidCount} bid{item.bidCount === 1 ? "" : "s"}
           </div>
         )}
         {pctOff >= 20 && (

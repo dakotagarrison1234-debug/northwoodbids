@@ -56,7 +56,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const groups = visibleGroups(membership.role);
 
   return (
-    <div className="min-h-screen bg-[#f4ede1] text-[#241a12] flex flex-col">
+    <div className="min-h-screen bg-[#f4ede1] text-[#241a12] text-[17px] leading-normal flex flex-col">
       {/* Phone: top bar + drawer + bottom tab bar */}
       <MobileNav groups={groups} orgName={org.name} role={membership.role.toLowerCase()} logoUrl={BUSINESS_LOGO_URL} />
 

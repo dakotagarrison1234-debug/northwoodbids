@@ -12,7 +12,7 @@ export const MACHINE_VIDEO_CDN =
 const REVEAL_AT = 7.45;
 
 /**
- * The ticket machine draw. Same contract as the wheel (server picks → preview → Done
+ * The ticket machine draw. Same contract as the wheel (server picks, then preview, then Done
  * awards), different show: the brass drum tumbles, the claw snags one ticket and holds
  * it to camera, and the winner's name fades onto the blank ticket. Built for a crowd
  * and a phone camera — every ticket in the drum is a real chance, weighted by count.
@@ -119,7 +119,7 @@ export default function TicketMachine({
           }`}
           style={{ left: "24%", top: "20%", width: "52%", height: "62%" }}
         >
-          <div className="text-[#8a5a2b] font-black uppercase tracking-[0.28em]" style={{ fontSize: "clamp(9px, 1.4vw, 14px)" }}>Winner</div>
+          <div className="text-[#8a5a2b] font-black uppercase tracking-[0.28em]" style={{ fontSize: "clamp(13px, 1.4vw, 16px)" }}>Winner</div>
           <div
             className="font-display font-black text-[#241a12] leading-[1.02] break-words px-2"
             style={{ fontSize: "clamp(22px, 5vw, 56px)", textShadow: "0 1px 0 rgba(255,255,255,.6)" }}
@@ -127,11 +127,11 @@ export default function TicketMachine({
             {result?.winner.name}
           </div>
           {result?.winner.tickets != null && (
-            <div className="text-[#6c4d39] font-bold mt-1" style={{ fontSize: "clamp(10px, 1.5vw, 15px)" }}>
+            <div className="text-[#6c4d39] font-bold mt-1" style={{ fontSize: "clamp(13px, 1.5vw, 17px)" }}>
               {result.winner.tickets.toLocaleString()} ticket{result.winner.tickets === 1 ? "" : "s"} in the drum
             </div>
           )}
-          <div className="mt-2 bg-[#241a12] text-[#f0a35a] font-black uppercase tracking-[0.16em] rounded-full px-3 py-1" style={{ fontSize: "clamp(9px, 1.2vw, 12px)" }}>
+          <div className="mt-2 bg-[#241a12] text-[#f0a35a] font-black uppercase tracking-[0.16em] rounded-full px-3 py-1" style={{ fontSize: "clamp(13px, 1.2vw, 14px)" }}>
             {brand}
           </div>
         </div>
@@ -142,27 +142,27 @@ export default function TicketMachine({
             <button
               onClick={pull}
               disabled={!canSpin}
-              className="bg-gradient-to-b from-[#f0a35a] to-[#c47b3e] text-[#241a12] font-black uppercase tracking-wider text-base sm:text-lg px-10 py-4 rounded-full shadow-[0_10px_30px_-8px_rgba(240,163,90,.7)] disabled:opacity-40 active:translate-y-px"
+              className="bg-gradient-to-b from-[#f0a35a] to-[#c47b3e] text-[#241a12] font-black uppercase tracking-wider text-[17px] sm:text-lg px-10 py-4 rounded-full shadow-[0_10px_30px_-8px_rgba(240,163,90,.7)] disabled:opacity-40 active:translate-y-px"
             >
               Pull a ticket
             </button>
           </div>
         )}
         {playing && (
-          <div className="absolute top-3 left-3 text-[#fbf4e6]/80 text-xs font-bold uppercase tracking-widest bg-black/40 rounded-full px-3 py-1">
+          <div className="absolute top-3 left-3 text-[#fbf4e6]/80 text-[13px] font-bold uppercase tracking-widest bg-black/40 rounded-full px-3 py-1">
             Drawing
           </div>
         )}
       </div>
 
-      <div className="mt-2 flex items-center gap-3 text-xs text-[#8a7559]">
+      <div className="mt-2 flex items-center gap-3 text-[15px] text-[#8a7559]">
         <span>{totalTickets.toLocaleString()} tickets · {entrants.length.toLocaleString()} people in the drum</span>
-        <button onClick={() => { setMuted((m) => !m); if (videoRef.current) videoRef.current.muted = !muted; }} className="underline">
+        <button onClick={() => { setMuted((m) => !m); if (videoRef.current) videoRef.current.muted = !muted; }} className="underline min-h-[44px]">
           Sound {muted ? "off" : "on"}
         </button>
       </div>
 
-      {error && !showCard && <div className="mt-3 text-sm font-semibold text-red-600">{error}</div>}
+      {error && !showCard && <div className="mt-3 text-[15px] font-semibold text-red-600">{error}</div>}
 
       {/* ── Winner card (the screenshot / screen recording) ──────────────────
           Nothing on this screen hints that a draw can be redone. The only controls
@@ -180,26 +180,26 @@ export default function TicketMachine({
           <div className="relative w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-[#f3ead6] via-[#fbf4e6] to-[#f7e4c9] border-4 border-[#f0a35a]/40">
             <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-[#f0a35a]/20 blur-2xl" aria-hidden />
             <div className="relative px-7 pt-8 pb-7 text-center">
-              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[#8a7559]">{brand}</div>
-              <div className="text-sm font-bold text-[#6f5b46] mt-0.5">{giveawayTitle}</div>
+              <div className="text-[13px] font-black uppercase tracking-[0.2em] text-[#8a7559]">{brand}</div>
+              <div className="text-[15px] font-bold text-[#6f5b46] mt-0.5">{giveawayTitle}</div>
               <div className="my-3 flex justify-center"><BidCritter className="w-20 h-20" /></div>
-              <div className="text-xs font-black uppercase tracking-[0.24em] text-[#a85f28]">Winner</div>
+              <div className="text-[15px] font-black uppercase tracking-[0.24em] text-[#a85f28]">Winner</div>
               <div className="font-display text-4xl font-black text-[#241a12] leading-tight mt-1 break-words">{result.winner.name}</div>
               <div className="mt-4 inline-block rounded-2xl bg-white/70 border border-[#e3d6bf] px-5 py-3">
-                <div className="text-[11px] font-bold uppercase tracking-wider text-[#8a7559]">Won</div>
-                <div className="text-lg font-black text-[#6c4d39] leading-tight">{result.prize.title}</div>
+                <div className="text-[13px] font-bold uppercase tracking-wider text-[#8a7559]">Won</div>
+                <div className="text-xl font-black text-[#6c4d39] leading-tight">{result.prize.title}</div>
               </div>
-              <div className="mt-4 text-[11px] text-[#8a7559]">
+              <div className="mt-4 text-[13px] text-[#8a7559]">
                 {result.winner.tickets != null ? `${result.winner.tickets.toLocaleString()} of ${totalTickets.toLocaleString()} tickets · ` : ""}
                 {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
               </div>
             </div>
           </div>
-          {error && <div className="mt-3 text-sm font-semibold text-[#fbe6c8] bg-black/40 rounded-lg px-3 py-1.5">{error}</div>}
+          {error && <div className="mt-3 text-[15px] font-semibold text-[#fbe6c8] bg-black/40 rounded-lg px-3 py-1.5">{error}</div>}
           <button
             onClick={confirmWin}
             disabled={awarding}
-            className="mt-5 bg-[#4a7c59] hover:bg-[#3c6449] text-white font-black px-10 py-3 rounded-xl text-base disabled:opacity-50 shadow-lg"
+            className="mt-5 bg-[#4a7c59] hover:bg-[#3c6449] text-white font-black px-10 py-3 min-h-[50px] rounded-xl text-[17px] disabled:opacity-50 shadow-lg"
           >
             {awarding ? "Saving…" : "Done"}
           </button>

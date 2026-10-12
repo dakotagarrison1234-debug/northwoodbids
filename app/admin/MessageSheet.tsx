@@ -88,7 +88,7 @@ export default function MessageSheet({
             <Initials name={target.name} size={44} />
             <div className="min-w-0">
               <h3 className="font-display text-xl font-black text-[#241a12] leading-tight">Text customer</h3>
-              <p className="text-sm text-[#8a7559] truncate">
+              <p className="text-[15px] text-[#8a7559] truncate">
                 {target.name || "Unnamed bidder"}{target.phone ? ` · ${target.phone}` : ""}
               </p>
             </div>
@@ -131,9 +131,9 @@ export default function MessageSheet({
               rows={5}
               autoFocus
               placeholder="Write a message…"
-              className="w-full mt-3 bg-white border border-[#d9c7ab] focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 rounded-xl px-4 py-3 text-base text-[#241a12] placeholder:text-[#b3a085] outline-none transition resize-none"
+              className="w-full mt-3 bg-white border border-[#d9c7ab] focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 rounded-xl px-4 py-3 text-[#241a12] placeholder:text-[#b3a085] outline-none transition resize-none"
             />
-            <div className="flex items-center justify-between mt-1.5 text-sm text-[#8a7559]">
+            <div className="flex items-center justify-between mt-1.5 text-[15px] text-[#8a7559]">
               <span className="tabular-nums">{text.length}/{MAX}</span>
               <span>Sent by SMS</span>
             </div>

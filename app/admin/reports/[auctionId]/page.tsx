@@ -2,8 +2,8 @@ export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import { requireUserOrg } from "@/lib/auth";
 import { ensureSoldLocations } from "@/lib/soldLocation";
-import { Donut, CHART } from "../Charts";
-import { PageHeader, PageBody, Panel, StatCard, Empty, BtnLink, Eyebrow, Progress, Initials } from "../../ui";
+import { fmtMoney, fmtMoney0 } from "../../format";
+import { PageHeader, PageBody, Panel, StatCard, Empty, BtnLink, Eyebrow, Progress, ActionCard } from "../../ui";
 
 // Match the aggregate reports endpoint exactly so a single-auction view can never
 // disagree with the ranked list it was opened from.
@@ -14,10 +14,8 @@ const SOLD_STATUSES = ["SOLD", "PENDING_PICKUP", "PICKED_UP"] as const;
 
 const num = (d: unknown) => (d == null ? 0 : Number(d));
 const r2 = (n: number) => Math.round(n * 100) / 100;
-const money = (n: number) => "$" + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const money0 = (n: number) => "$" + Math.round(n).toLocaleString();
 const fmtDate = (d: Date | null) =>
-  d ? d.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+  d ? d.toLocaleString("en-US", { timeZone: "America/Detroit", month: "short", day: "numeric", year: "numeric" }) : "";
 
 interface Props {
   params: Promise<{ auctionId: string }>;
@@ -35,10 +33,9 @@ export default async function AuctionReportPage({ params }: Props) {
 
   const orgConfig = await prisma.organization.findUnique({
     where: { id: orgId },
-    select: { platformFeePercent: true, taxPercent: true, taxExempt: true },
+    select: { platformFeePercent: true },
   });
   const feePercent = num(orgConfig?.platformFeePercent);
-  const taxPercent = orgConfig?.taxExempt ? 0 : num(orgConfig?.taxPercent);
 
   const auction = isNone
     ? null
@@ -53,11 +50,7 @@ export default async function AuctionReportPage({ params }: Props) {
         <PageHeader title="Auction not found" back={{ href: "/admin/reports", label: "Reports" }} tabs={false} />
         <PageBody>
           <Panel>
-            <Empty
-              text="That auction isn't here."
-              sub="It may have been deleted, or belongs to another organization."
-              action={<BtnLink href="/admin/reports" size="sm">Back to reports</BtnLink>}
-            />
+            <Empty text="That auction isn't here." action={<BtnLink href="/admin/reports" size="sm">Back to reports</BtnLink>} />
           </Panel>
         </PageBody>
       </>
@@ -99,8 +92,6 @@ export default async function AuctionReportPage({ params }: Props) {
 
   let hammer = 0, premium = 0, tax = 0, credit = 0, fees = 0, itemsSold = 0;
   const byWarehouse = new Map<string, number>();
-  const pis = new Set<string>();
-  let soloCharges = 0;
   for (const p of rows) {
     const fee = feeForRow(p);
     const sale = num(p.amount), prem = num(p.applicationFeeAmount);
@@ -111,12 +102,8 @@ export default async function AuctionReportPage({ params }: Props) {
     // location, which after a pickup transfer is the destination.
     const wLabel = p.item?.soldLocation?.name ?? "Unassigned";
     byWarehouse.set(wLabel, (byWarehouse.get(wLabel) ?? 0) + (sale + prem - cr - fee));
-    if (p.stripePaymentIntentId) pis.add(p.stripePaymentIntentId);
-    else if (!p.paidInCash && grossOf(p) > 0) soloCharges++;
   }
   const net = hammer + premium - credit - fees;
-  const buyersPaid = hammer + premium + tax;
-  const chargeCount = pis.size + soloCharges;
   const avgItem = itemsSold > 0 ? hammer / itemsSold : 0;
   const warehouses = [...byWarehouse.entries()].map(([label, n]) => ({ label, net: r2(n) })).sort((a, b) => b.net - a.net);
   const topWh = Math.max(1, ...warehouses.map((w) => w.net));
@@ -130,69 +117,22 @@ export default async function AuctionReportPage({ params }: Props) {
   const offered = soldItemCount + unsoldItemCount;
   const sellThrough = offered > 0 ? Math.round((soldItemCount / offered) * 100) : 0;
 
-  // Left on the table (headroom) — winners who set a max above what they paid.
-  const wonBids = await prisma.bid.findMany({
-    where: { status: "WON", item: { organizationId: orgId, ...auctionFilter } },
-    select: { itemId: true, clerkUserId: true, amount: true },
-    take: ROW_CAP,
-  });
-  const wonItemIds = wonBids.map((b) => b.itemId);
-  const proxies = wonItemIds.length
-    ? await prisma.proxyBid.findMany({
-        where: { itemId: { in: wonItemIds } },
-        select: { itemId: true, clerkUserId: true, maxAmount: true },
-      })
-    : [];
-  const proxyByKey = new Map(proxies.map((p) => [`${p.itemId}:${p.clerkUserId}`, num(p.maxAmount)]));
-  let headroomTotal = 0, headroomItems = 0, biggestGap = 0;
-  for (const b of wonBids) {
-    const max = proxyByKey.get(`${b.itemId}:${b.clerkUserId}`);
-    if (max == null) continue;
-    const gap = max - num(b.amount);
-    if (gap <= 0) continue;
-    headroomTotal += gap; headroomItems += 1;
-    if (gap > biggestGap) biggestGap = gap;
-  }
-
-  // Still owed on this auction (failed/pending cards).
+  // Still owed on this auction (failed/pending cards). Collecting happens on Payments.
   const owedRows = await prisma.payment.findMany({
     where: { status: { in: ["PENDING", "FAILED"] }, comped: false, item: { organizationId: orgId, ...auctionFilter } },
     select: { clerkUserId: true, amount: true, applicationFeeAmount: true, taxAmount: true },
     take: 2000,
   });
-  const owedBy = new Map<string, { amountDue: number; count: number }>();
-  for (const p of owedRows) {
-    const cur = owedBy.get(p.clerkUserId) ?? { amountDue: 0, count: 0 };
-    cur.amountDue += num(p.amount) + num(p.applicationFeeAmount) + num(p.taxAmount);
-    cur.count += 1;
-    owedBy.set(p.clerkUserId, cur);
-  }
-  const owedIds = [...owedBy.keys()];
-  const owedProfiles = owedIds.length
-    ? await prisma.bidderProfile.findMany({ where: { clerkUserId: { in: owedIds } }, select: { clerkUserId: true, name: true, phone: true } })
-    : [];
-  const owedNameById = new Map(owedProfiles.map((p) => [p.clerkUserId, p]));
-  const owers = [...owedBy.entries()]
-    .map(([uid, v]) => ({ name: owedNameById.get(uid)?.name ?? "Bidder", phone: owedNameById.get(uid)?.phone ?? "", amountDue: r2(v.amountDue), count: v.count }))
-    .sort((a, b) => b.amountDue - a.amountDue);
-  const owedTotal = owers.reduce((s, o) => s + o.amountDue, 0);
+  const owedTotal = r2(owedRows.reduce((s, p) => s + num(p.amount) + num(p.applicationFeeAmount) + num(p.taxAmount), 0));
+  const owedPeople = new Set(owedRows.map((p) => p.clerkUserId)).size;
 
   const title = isNone ? "Items with no auction" : auction!.title;
-
-  const moneyParts = [
-    { label: "In your pocket", value: net, color: CHART.moss },
-    { label: "Sales tax (to Michigan)", value: tax, color: CHART.amber },
-    { label: "Stripe's cut", value: fees, color: CHART.red },
-    { label: "Bid Bucks used", value: credit, color: CHART.mute },
-  ].filter((p) => p.value > 0.005);
-  const moneyTotal = moneyParts.reduce((s, p) => s + p.value, 0) || 1;
 
   return (
     <>
       <PageHeader
-        eyebrow="Auction report"
         title={title}
-        sub={auction ? `${fmtDate(auction.startAt)} to ${fmtDate(auction.endAt)} · ${auction.status.toLowerCase()}` : undefined}
+        sub={auction ? `${fmtDate(auction.startAt)} to ${fmtDate(auction.endAt)}` : undefined}
         back={{ href: "/admin/reports", label: "Reports" }}
         tabs={false}
       />
@@ -201,73 +141,35 @@ export default async function AuctionReportPage({ params }: Props) {
         {/* Hero: net */}
         <div className="rounded-2xl bg-[#241a12] text-[#fbf4e6] p-5 sm:p-6 shadow-[0_10px_30px_-18px_rgba(36,26,18,0.7)]">
           <Eyebrow className="!text-[#b9a688]">You made</Eyebrow>
-          <div className="font-display text-5xl sm:text-6xl font-black tracking-tight mt-1 tabular-nums leading-none text-[#f0a35a]">{money0(net)}</div>
-          <div className="text-base text-[#d9c7ab] mt-2">
-            {itemsSold} item{itemsSold !== 1 ? "s" : ""} sold{avgItem > 0 ? ` · ${money0(avgItem)} average` : ""}
+          <div className="font-display text-5xl sm:text-6xl font-black tracking-tight mt-1 tabular-nums leading-none text-[#f0a35a]">{fmtMoney0(net)}</div>
+          <div className="text-[#d9c7ab] mt-2">
+            {itemsSold} lot{itemsSold !== 1 ? "s" : ""} sold{avgItem > 0 ? ` · ${fmtMoney0(avgItem)} average` : ""}
           </div>
         </div>
 
         {/* Key figures */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <StatCard label="Hammer (bids)" value={money0(hammer)} />
-          <StatCard label={`Premium (${feePercent}%)`} value={money0(premium)} tone="green" />
-          <StatCard label="Stripe fees" value={"−" + money0(fees)} tone="red" />
-          <StatCard label="Bid Bucks used" value={"−" + money0(credit)} tone="amber" />
-          <StatCard label="Sell-through" value={`${sellThrough}%`} sub={`${soldItemCount} of ${offered} offered`} tone={sellThrough >= 80 ? "green" : sellThrough >= 50 ? "amber" : "slate"} />
-          <StatCard label="Card charges" value={String(chargeCount)} />
+          <StatCard label="Hammer" value={fmtMoney0(hammer)} />
+          <StatCard label={`Premium (${feePercent}%)`} value={fmtMoney0(premium)} tone="green" />
+          <StatCard label="Stripe fees" value={"−" + fmtMoney0(fees)} tone="red" />
+          <StatCard label="Sales tax" value={fmtMoney0(tax)} tone="amber" />
+          <StatCard
+            label="Sell-through"
+            value={`${sellThrough}%`}
+            sub={`${soldItemCount} of ${offered}`}
+            tone={sellThrough >= 80 ? "green" : sellThrough >= 50 ? "amber" : "slate"}
+          />
         </div>
-
-        {/* Tax breakdown — the part you collect for Michigan */}
-        <Panel title="Sales tax" sub="Collected from buyers and passed to the state — never counted as your earnings.">
-          <div className="px-4 sm:px-5 py-4">
-            <div className="space-y-2">
-              {[
-                { k: "Hammer (winning bids)", v: money(hammer) },
-                { k: `Buyer's premium (${feePercent}%)`, v: money(premium) },
-                { k: "Taxable subtotal", v: money(hammer + premium), strong: true },
-                { k: `Tax rate`, v: `${taxPercent}%` },
-                { k: "Tax collected", v: money(tax), tax: true },
-              ].map((x) => (
-                <div key={x.k} className={`flex items-center justify-between gap-3 ${x.strong ? "border-t border-[#f0e6d6] pt-2" : ""}`}>
-                  <span className={`text-base ${x.strong ? "font-bold text-[#241a12]" : "text-[#4a3a2b]"}`}>{x.k}</span>
-                  <span className={`text-base font-bold tabular-nums ${x.tax ? "text-[#8a4f1c]" : "text-[#241a12]"}`}>{x.v}</span>
-                </div>
-              ))}
-            </div>
-            <p className="text-sm text-[#8a7559] mt-3">
-              Buyers paid <strong className="text-[#4a3a2b]">{money(buyersPaid)}</strong> total (hammer + premium + tax) across {chargeCount} charge{chargeCount !== 1 ? "s" : ""}.
-            </p>
-          </div>
-        </Panel>
-
-        {/* Where the money went */}
-        {moneyParts.length > 0 && (
-          <Panel title="Where the money went">
-            <div className="px-4 sm:px-5 py-4">
-              <Donut slices={moneyParts} centerTop={money0(buyersPaid)} centerSub="buyers paid" />
-              <div className="mt-4 space-y-2">
-                {moneyParts.map((p) => (
-                  <div key={p.label} className="flex items-center gap-2.5">
-                    <span className="w-3 h-3 rounded-full shrink-0" style={{ background: p.color }} />
-                    <span className="text-base text-[#4a3a2b] flex-1 min-w-0">{p.label}</span>
-                    <span className="text-base font-bold text-[#241a12] tabular-nums shrink-0">{money(p.value)}</span>
-                    <span className="text-sm text-[#8a7559] w-11 text-right shrink-0 tabular-nums">{Math.round((p.value / moneyTotal) * 100)}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Panel>
-        )}
 
         {/* By warehouse */}
         {warehouses.length > 0 && (
-          <Panel title="By warehouse" sub="This auction's net, split by where items were stored.">
+          <Panel title="By warehouse">
             <ul className="px-4 sm:px-5 py-4 space-y-3">
               {warehouses.map((w) => (
                 <li key={w.label}>
-                  <div className="flex items-center justify-between gap-3 text-base mb-1.5">
-                    <span className="text-[#4a3a2b] min-w-0 truncate">{w.label}</span>
-                    <span className="font-bold text-[#241a12] tabular-nums shrink-0">{money0(w.net)}</span>
+                  <div className="flex items-center justify-between gap-3 mb-1.5">
+                    <span className="font-bold text-[#241a12] min-w-0 truncate">{w.label}</span>
+                    <span className="font-extrabold text-[#241a12] tabular-nums shrink-0">{fmtMoney0(w.net)}</span>
                   </div>
                   <Progress value={w.net / topWh} tone="leather" />
                 </li>
@@ -276,66 +178,20 @@ export default async function AuctionReportPage({ params }: Props) {
           </Panel>
         )}
 
-        {/* Sell-through detail */}
-        <Panel title="Sell-through" sub={offered > 0 ? `${sellThrough}% of what was offered found a buyer.` : "No lots offered yet."}>
-          <div className="px-4 sm:px-5 py-4">
-            <Progress value={offered > 0 ? soldItemCount / offered : 0} tone="green" className="mb-4" />
-            <div className="grid grid-cols-3 gap-2.5">
-              {[
-                { k: "Sold", v: String(soldItemCount), c: "text-[#2f5d3a]" },
-                { k: "Didn't sell", v: String(unsoldItemCount), c: unsoldItemCount > 0 ? "text-[#8a4f1c]" : "text-[#241a12]" },
-                { k: "Offered", v: String(offered), c: "text-[#241a12]" },
-              ].map((x) => (
-                <div key={x.k} className="bg-[#faf5ea] border border-[#e6dac6] rounded-xl px-3 py-3 text-center">
-                  <Eyebrow>{x.k}</Eyebrow>
-                  <div className={`font-display text-xl font-black tabular-nums mt-0.5 ${x.c}`}>{x.v}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Panel>
-
-        {/* Left on the table (per this auction) */}
-        {headroomItems > 0 && (
-          <Panel tone="amber" title="Left on the table">
-            <div className="px-4 sm:px-5 py-4">
-              <div className="font-display text-3xl font-black text-[#8a4f1c] tabular-nums">{money0(headroomTotal)}</div>
-              <p className="text-base text-[#4a3a2b] mt-2 leading-snug">
-                On <strong>{headroomItems}</strong> item{headroomItems !== 1 ? "s" : ""} the winner set a max
-                bid higher than what they paid — the lot stopped one increment above the runner-up. Biggest gap{" "}
-                <strong>{money0(biggestGap)}</strong>. That&apos;s demand you had but didn&apos;t capture.
-              </p>
-            </div>
-          </Panel>
-        )}
-
-        {/* Still owed */}
-        {owers.length > 0 && (
-          <Panel
+        {/* Still owed: collecting lives on Payments */}
+        {owedTotal > 0 && (
+          <ActionCard
+            href="/admin/winners"
             tone="red"
-            title="Still owed on this auction"
-            sub="Cards that haven't gone through. Not counted above."
-            action={<BtnLink href="/admin/winners" size="sm" variant="outline" tone="red">Collect</BtnLink>}
-          >
-            <div className="px-4 sm:px-5 pt-3 font-display text-3xl font-black text-[#a1321f] tabular-nums mb-3">{money(owedTotal)}</div>
-            <ul className="divide-y divide-[#f0e6d6] border-t border-[#f0e6d6]">
-              {owers.map((o, i) => (
-                <li key={i} className="flex items-center gap-3 px-4 sm:px-5 py-3 min-h-[56px]">
-                  <Initials name={o.name} size={36} />
-                  <div className="min-w-0 flex-1">
-                    <div className="font-bold text-[#241a12] truncate">{o.name}</div>
-                    <div className="text-sm text-[#8a7559] truncate">{o.count} item{o.count !== 1 ? "s" : ""}{o.phone ? ` · ${o.phone}` : ""}</div>
-                  </div>
-                  <span className="shrink-0 font-extrabold tabular-nums text-[#a1321f]">{money(o.amountDue)}</span>
-                </li>
-              ))}
-            </ul>
-          </Panel>
+            count={fmtMoney(owedTotal)}
+            label="Still owed on this auction"
+            sub={`${owedPeople} ${owedPeople === 1 ? "person" : "people"} · not counted above`}
+          />
         )}
 
         {itemsSold === 0 && (
           <Panel>
-            <Empty text="No paid sales recorded for this auction yet." sub="Figures fill in as winners pay." />
+            <Empty text="No paid sales recorded for this auction yet." />
           </Panel>
         )}
       </PageBody>

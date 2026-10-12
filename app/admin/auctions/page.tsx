@@ -69,20 +69,17 @@ export default async function AuctionsPage() {
     endAtIso: a.endAt.toISOString(),
   }));
 
-  // Archived (test/junk) auctions get their own collapsed group and are pulled out
-  // of the working live/upcoming/closed lists.
+  // Archived (test/junk) auctions sit inside Closed with a muted pill — they're
+  // never live or upcoming, whatever their status says.
   const active = summaries.filter((a) => !a.archived);
-  const archived = summaries
-    .filter((a) => a.archived)
-    .sort((a, b) => b.endAtIso.localeCompare(a.endAtIso));
   const live = active
     .filter((a) => a.status === "OPEN" || a.status === "CLOSING")
     .sort((a, b) => a.endAtIso.localeCompare(b.endAtIso));
   const upcoming = active
     .filter((a) => a.status === "DRAFT")
     .sort((a, b) => a.startAtIso.localeCompare(b.startAtIso));
-  const closed = active
-    .filter((a) => a.status !== "OPEN" && a.status !== "CLOSING" && a.status !== "DRAFT")
+  const closed = summaries
+    .filter((a) => a.archived || (a.status !== "OPEN" && a.status !== "CLOSING" && a.status !== "DRAFT"))
     .sort((a, b) => b.endAtIso.localeCompare(a.endAtIso));
 
   return (
@@ -90,7 +87,6 @@ export default async function AuctionsPage() {
       <PusherRefresh channel="auctions" event="auction-updated" />
       <PageHeader
         title="Auctions"
-        sub="Build, run and close auctions."
         actions={<BtnLink href="/admin/auctions/new" size="sm">New auction</BtnLink>}
       />
 
@@ -100,12 +96,11 @@ export default async function AuctionsPage() {
             <Empty
               icon={<IcoGavel className="w-10 h-10" />}
               text="No auctions yet."
-              sub="Create your first one and start adding lots."
-              action={<BtnLink href="/admin/auctions/new">Create your first auction</BtnLink>}
+              action={<BtnLink href="/admin/auctions/new">New auction</BtnLink>}
             />
           </div>
         ) : (
-          <AuctionsList live={live} upcoming={upcoming} closed={closed} archived={archived} />
+          <AuctionsList live={live} upcoming={upcoming} closed={closed} />
         )}
       </PageBody>
     </>

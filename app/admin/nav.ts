@@ -1,22 +1,21 @@
 /**
  * The admin information architecture — ONE place that says what the groups are,
  * which pages live in each, and who can see them. The sidebar, the phone tab bar,
- * the drawer and every page's section tabs all read from this, so moving a page
- * is a one-line change here.
+ * the drawer and every page's section tabs all read from this.
  *
- * Seven groups, down from twelve top-level links:
- *   Today · Auctions · Pickup · Money · People · Giveaways · Settings
+ * Daily work first (Today · Auctions · Pickup · Money), then people, then the
+ * growth tools, then setup. Creation actions (new auction, add a lot) are buttons
+ * on their pages, not tabs.
  */
 
 export type Role = "OWNER" | "ADMIN" | "STAFF";
 
-export type NavPage = { label: string; href: string; hint?: string; ownerOnly?: boolean };
+export type NavPage = { label: string; href: string; ownerOnly?: boolean };
 export type NavGroup = {
   key: string;
   label: string;
   icon: string;
   href: string; // where the group link lands
-  blurb: string; // one line under the title on the group's pages
   pages: NavPage[]; // section tabs (first = the group's home)
   ownerOnly?: boolean;
 };
@@ -27,7 +26,6 @@ export const ADMIN_GROUPS: NavGroup[] = [
     label: "Today",
     icon: "home",
     href: "/admin/dashboard",
-    blurb: "What needs you right now.",
     pages: [{ label: "Today", href: "/admin/dashboard" }],
   },
   {
@@ -35,12 +33,9 @@ export const ADMIN_GROUPS: NavGroup[] = [
     label: "Auctions",
     icon: "gavel",
     href: "/admin/auctions",
-    blurb: "Build, run and close auctions.",
     pages: [
-      { label: "All auctions", href: "/admin/auctions" },
-      { label: "New auction", href: "/admin/auctions/new" },
-      { label: "Add a lot", href: "/admin/items/new" },
-      { label: "Unsold & relist", href: "/admin/unsold", ownerOnly: true },
+      { label: "Auctions", href: "/admin/auctions" },
+      { label: "Unsold", href: "/admin/unsold" },
     ],
   },
   {
@@ -48,55 +43,53 @@ export const ADMIN_GROUPS: NavGroup[] = [
     label: "Pickup",
     icon: "package",
     href: "/admin/pickup",
-    blurb: "Appointments, transfers, warehouses.",
-    pages: [{ label: "Board", href: "/admin/pickup" }],
+    pages: [{ label: "Pickup", href: "/admin/pickup" }],
   },
   {
     key: "money",
     label: "Money",
     icon: "coin",
     href: "/admin/winners",
-    blurb: "Who owes, who paid, how it's going.",
     ownerOnly: true,
     pages: [
-      { label: "Winners & payments", href: "/admin/winners" },
+      { label: "Payments", href: "/admin/winners" },
       { label: "Reports", href: "/admin/reports" },
     ],
   },
   {
-    key: "people",
-    label: "People",
+    key: "bidders",
+    label: "Bidders",
     icon: "users",
     href: "/admin/bidders",
-    blurb: "Bidders, referrals, your team.",
     ownerOnly: true,
     pages: [
       { label: "Bidders", href: "/admin/bidders" },
-      { label: "Referrals", href: "/admin/referrals" },
-      { label: "Welcome codes", href: "/admin/promos" },
-      { label: "Team", href: "/admin/staff" },
       { label: "Text a group", href: "/admin/blast" },
     ],
   },
   {
-    key: "giveaways",
-    label: "Giveaways",
+    key: "grow",
+    label: "Grow",
     icon: "ticket",
     href: "/admin/giveaways",
-    blurb: "Free prizes that grow the crowd.",
     ownerOnly: true,
-    pages: [{ label: "Giveaways", href: "/admin/giveaways" }],
+    pages: [
+      { label: "Giveaways", href: "/admin/giveaways" },
+      { label: "Welcome codes", href: "/admin/promos" },
+      { label: "Bid Bucks", href: "/admin/referrals" },
+    ],
   },
   {
     key: "settings",
     label: "Settings",
     icon: "settings",
-    href: "/admin/settings/payments",
-    blurb: "Payments, doors and business setup.",
+    href: "/admin/settings/locations",
     ownerOnly: true,
     pages: [
+      { label: "Locations", href: "/admin/settings/locations" },
       { label: "Payments", href: "/admin/settings/payments" },
       { label: "Doors", href: "/admin/settings/doors" },
+      { label: "Team", href: "/admin/staff" },
     ],
   },
 ];
@@ -115,28 +108,23 @@ export function groupForPath(pathname: string): NavGroup | null {
   for (const g of ADMIN_GROUPS) {
     const hrefs = [g.href, ...g.pages.map((p) => p.href)];
     for (const h of hrefs) {
-      if (pathname === h || pathname.startsWith(h + "/") || (h === "/admin/auctions" && pathname.startsWith("/admin/items"))) {
+      if (pathname === h || pathname.startsWith(h + "/")) {
         if (!best || h.length > best.len) best = { g, len: h.length };
       }
     }
   }
-  // Item pages belong to Auctions; "/admin/settings" (the bare group path, which
-  // redirects to its first page) belongs to Settings.
-  if (!best && pathname.startsWith("/admin/items")) {
-    const auctions = ADMIN_GROUPS.find((g) => g.key === "auctions");
-    if (auctions) best = { g: auctions, len: 0 };
-  }
-  if (!best && pathname.startsWith("/admin/settings")) {
-    const settings = ADMIN_GROUPS.find((g) => g.key === "settings");
-    if (settings) best = { g: settings, len: 0 };
-  }
+  const byKey = (key: string) => ADMIN_GROUPS.find((g) => g.key === key) ?? null;
+  // Lot pages and the auction creator belong to Auctions; bare /admin/settings to Settings.
+  if (!best && (pathname.startsWith("/admin/items") || pathname.startsWith("/admin/auctions"))) return byKey("auctions");
+  if (!best && pathname.startsWith("/admin/settings")) return byKey("settings");
+  if (!best && pathname.startsWith("/admin/staff")) return byKey("settings");
   return best?.g ?? null;
 }
 
 export function isActivePage(pathname: string, href: string): boolean {
   if (pathname === href) return true;
-  // "/admin/auctions" must not light up for "/admin/auctions/new".
-  if (href === "/admin/auctions") return /^\/admin\/auctions\/[^/]+$/.test(pathname) && !pathname.endsWith("/new");
+  // "/admin/auctions" lights up for auction detail pages but not for /admin/unsold.
+  if (href === "/admin/auctions") return pathname.startsWith("/admin/auctions/") || pathname.startsWith("/admin/items");
   if (href === "/admin/reports") return pathname.startsWith("/admin/reports/");
   if (href === "/admin/giveaways") return pathname.startsWith("/admin/giveaways/");
   return false;

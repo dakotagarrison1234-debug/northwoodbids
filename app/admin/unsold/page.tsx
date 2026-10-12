@@ -2,10 +2,11 @@ export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import { requireUserOrg } from "@/lib/auth";
 import { IcoTrophy } from "@/app/components/BidIcons";
-import { PageHeader, PageBody, Empty, BtnLink } from "../ui";
+import { PageHeader, PageBody, Empty } from "../ui";
 import UnsoldList, { type UnsoldGroup } from "./UnsoldList";
 
-export default async function UnsoldPage() {
+export default async function UnsoldPage({ searchParams }: { searchParams: Promise<{ auction?: string }> }) {
+  const { auction: focusAuctionId } = await searchParams;
   const membership = await requireUserOrg();
   const orgId = membership.organization.id;
 
@@ -36,7 +37,7 @@ export default async function UnsoldPage() {
   ]);
 
   // Group by the auction the item didn't sell in, serializing to plain objects the
-  // client search component can filter (Decimal currentBid → number here).
+  // client search component can filter (Decimal currentBid to number here).
   const groupMap = new Map<string, UnsoldGroup>();
   for (const it of items) {
     const key = it.auction?.id ?? "none";
@@ -55,23 +56,15 @@ export default async function UnsoldPage() {
 
   return (
     <>
-      <PageHeader
-        title="Unsold & relist"
-        sub="Everything that didn't sell. Relist an item straight into another auction, or save it to drafts for later."
-      />
+      <PageHeader title="Unsold" />
 
       <PageBody>
         {items.length === 0 ? (
           <div className="bg-white border border-[#e6dac6] rounded-2xl">
-            <Empty
-              icon={<IcoTrophy className="w-10 h-10" />}
-              text="Nothing unsold right now."
-              sub="Every lot found a buyer."
-              action={<BtnLink href="/admin/auctions" size="sm" variant="outline">All auctions</BtnLink>}
-            />
+            <Empty icon={<IcoTrophy className="w-10 h-10" />} text="Nothing unsold right now." />
           </div>
         ) : (
-          <UnsoldList groups={grouped} relistTargets={relistTargets} locations={locations} total={items.length} />
+          <UnsoldList groups={grouped} relistTargets={relistTargets} locations={locations} total={items.length} focusAuctionId={focusAuctionId ?? null} />
         )}
       </PageBody>
     </>

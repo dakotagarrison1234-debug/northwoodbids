@@ -61,14 +61,14 @@ export function PageHeader({
       <div className="px-4 sm:px-8 pt-4 pb-3 sm:pt-5 flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
           {back && (
-            <Link href={back.href} className="inline-flex items-center gap-1 text-sm font-semibold text-[#8a7559] hover:text-[#241a12] mb-1">
+            <Link href={back.href} className="inline-flex items-center gap-1 text-[15px] font-semibold text-[#8a7559] hover:text-[#241a12] mb-1">
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3L5 8l5 5" /></svg>
               {back.label}
             </Link>
           )}
-          {eyebrow && <div className="text-[11px] font-black uppercase tracking-[0.18em] text-[#a85f28]">{eyebrow}</div>}
-          <h1 className="font-display text-2xl sm:text-3xl font-black tracking-tight text-[#241a12] leading-none">{title}</h1>
-          {sub && <p className="text-sm text-[#8a7559] mt-1.5">{sub}</p>}
+          {eyebrow && <div className="text-[13px] font-black uppercase tracking-[0.14em] text-[#a85f28]">{eyebrow}</div>}
+          <h1 className="font-display text-3xl sm:text-4xl font-black tracking-tight text-[#241a12] leading-none">{title}</h1>
+          {sub && <p className="text-[15px] text-[#8a7559] mt-1.5">{sub}</p>}
         </div>
         {actions && <div className="flex items-center gap-2 shrink-0 flex-wrap">{actions}</div>}
       </div>
@@ -90,7 +90,7 @@ export function SectionTabs() {
           <Link
             key={p.href}
             href={p.href}
-            className={`relative shrink-0 px-3.5 py-2.5 text-sm font-bold rounded-t-lg transition-colors ${
+            className={`relative shrink-0 px-3.5 py-2.5 text-[15px] font-bold rounded-t-lg transition-colors ${
               active ? "text-[#241a12]" : "text-[#8a7559] hover:text-[#241a12] hover:bg-[#f4ede1]"
             }`}
           >
@@ -114,7 +114,7 @@ export function PageBody({ children, wide = false, className = "" }: { children:
 export function Pill({ tone: t = "slate", children, dot }: { tone?: Tone; children: React.ReactNode; dot?: boolean }) {
   const c = TONE[t];
   return (
-    <span className={`inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full border whitespace-nowrap ${c.bg} ${c.text} ${c.border}`}>
+    <span className={`inline-flex items-center gap-1.5 text-[13px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full border whitespace-nowrap ${c.bg} ${c.text} ${c.border}`}>
       {dot && <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />}
       {children}
     </span>
@@ -123,7 +123,7 @@ export function Pill({ tone: t = "slate", children, dot }: { tone?: Tone; childr
 
 /** Small uppercase label for a group of things. */
 export function Eyebrow({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <div className={`text-[11px] font-black uppercase tracking-[0.16em] text-[#8a7559] ${className}`}>{children}</div>;
+  return <div className={`text-[13px] font-black uppercase tracking-[0.12em] text-[#8a7559] ${className}`}>{children}</div>;
 }
 
 /**
@@ -140,11 +140,11 @@ export function StatCard({
   const inner = (
     <>
       <div className="flex items-start justify-between gap-2">
-        <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#8a7559]">{label}</div>
+        <div className="text-[13px] font-black uppercase tracking-[0.12em] text-[#8a7559]">{label}</div>
         {icon ? <span className={`${c.text} opacity-80`}>{icon}</span> : urgent ? <span className={`w-2.5 h-2.5 rounded-full ${c.dot} shrink-0 mt-1`} /> : null}
       </div>
-      <div className={`font-display text-3xl font-black mt-1 tabular-nums leading-none ${t === "slate" ? "text-[#241a12]" : c.text}`}>{value}</div>
-      {sub && <div className="text-sm text-[#8a7559] mt-1.5 leading-snug">{sub}</div>}
+      <div className={`font-display text-4xl font-black mt-1 tabular-nums leading-none ${t === "slate" ? "text-[#241a12]" : c.text}`}>{value}</div>
+      {sub && <div className="text-[15px] text-[#8a7559] mt-1.5 leading-snug">{sub}</div>}
     </>
   );
   const cls = `block rounded-2xl border p-4 min-h-[44px] bg-white ${t === "slate" ? "border-[#e6dac6]" : c.border} ${href ? "nb-lift-sm hover:border-[#c47b3e]/50" : ""}`;
@@ -164,8 +164,8 @@ export function Panel({
       {(title || action) && (
         <div className="px-4 sm:px-5 py-3.5 border-b border-[#f0e6d6] flex items-center justify-between gap-3">
           <div className="min-w-0">
-            {title && <h2 className="font-display text-lg font-black text-[#241a12] truncate">{title}</h2>}
-            {sub && <p className="text-sm text-[#8a7559] truncate">{sub}</p>}
+            {title && <h2 className="font-display text-xl font-black text-[#241a12] truncate">{title}</h2>}
+            {sub && <p className="text-[15px] text-[#8a7559] truncate">{sub}</p>}
           </div>
           {action && <div className="shrink-0">{action}</div>}
         </div>
@@ -181,7 +181,7 @@ export function Btn({
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { tone?: Tone; variant?: "solid" | "outline" | "ghost"; full?: boolean; size?: "sm" | "md" }) {
   const c = TONE[t];
   const base = `inline-flex items-center justify-center gap-2 rounded-xl font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap ${
-    size === "sm" ? "min-h-[40px] px-3.5 text-sm" : "min-h-[48px] px-5 text-base"
+    size === "sm" ? "min-h-[44px] px-4 text-[15px]" : "min-h-[50px] px-5 text-[17px]"
   }`;
   const look =
     variant === "solid"
@@ -198,7 +198,7 @@ export function BtnLink({
 }: { href: string; tone?: Tone; variant?: "solid" | "outline" | "ghost"; size?: "sm" | "md"; className?: string; children: React.ReactNode }) {
   const c = TONE[t];
   const base = `inline-flex items-center justify-center gap-2 rounded-xl font-bold transition-colors whitespace-nowrap ${
-    size === "sm" ? "min-h-[40px] px-3.5 text-sm" : "min-h-[48px] px-5 text-base"
+    size === "sm" ? "min-h-[44px] px-4 text-[15px]" : "min-h-[50px] px-5 text-[17px]"
   }`;
   const look =
     variant === "solid" ? `${c.solid} text-white shadow-sm` : variant === "outline" ? `bg-white border-2 ${c.border} ${c.text} hover:bg-[#faf5ea]` : `bg-transparent ${c.text} hover:bg-[#f4ede1]`;
@@ -211,7 +211,7 @@ export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...rest}
-      className={`w-full min-h-[46px] bg-white border border-[#d9c7ab] focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 rounded-xl px-4 text-[#241a12] placeholder:text-[#b3a085] outline-none transition ${className}`}
+      className={`w-full min-h-[50px] text-[17px] bg-white border border-[#d9c7ab] focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 rounded-xl px-4 text-[#241a12] placeholder:text-[#b3a085] outline-none transition ${className}`}
     />
   );
 }
@@ -223,7 +223,7 @@ export function SearchBox(props: React.InputHTMLAttributes<HTMLInputElement>) {
       <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a3927b]" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
       <input
         {...rest}
-        className="w-full min-h-[46px] bg-white border border-[#d9c7ab] focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 rounded-xl pl-10 pr-4 text-[#241a12] placeholder:text-[#b3a085] outline-none transition"
+        className="w-full min-h-[50px] text-[17px] bg-white border border-[#d9c7ab] focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 rounded-xl pl-10 pr-4 text-[#241a12] placeholder:text-[#b3a085] outline-none transition"
       />
     </div>
   );
@@ -244,10 +244,10 @@ export function Segmented<T extends string>({
             role="tab"
             aria-selected={on}
             onClick={() => onChange(o.value)}
-            className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-bold transition-colors ${on ? "bg-[#241a12] text-[#f6ecda] shadow-sm" : "text-[#6f5b46] hover:bg-[#f4ede1]"}`}
+            className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[15px] font-bold transition-colors ${on ? "bg-[#241a12] text-[#f6ecda] shadow-sm" : "text-[#6f5b46] hover:bg-[#f4ede1]"}`}
           >
             {o.label}
-            {o.count != null && <span className={`text-[11px] tabular-nums rounded-full px-1.5 py-0.5 ${on ? "bg-white/15" : "bg-[#efe3d0] text-[#8a7559]"}`}>{o.count}</span>}
+            {o.count != null && <span className={`text-[13px] tabular-nums rounded-full px-1.5 py-0.5 ${on ? "bg-white/15" : "bg-[#efe3d0] text-[#8a7559]"}`}>{o.count}</span>}
           </button>
         );
       })}
@@ -265,8 +265,8 @@ export function Empty({ text, sub, action, icon }: { text: string; sub?: string;
   return (
     <div className="px-4 py-12 text-center">
       {icon && <div className="flex justify-center mb-3 text-[#cdbda3]">{icon}</div>}
-      <p className="font-display text-lg font-black text-[#241a12]">{text}</p>
-      {sub && <p className="text-sm text-[#8a7559] mt-1">{sub}</p>}
+      <p className="font-display text-xl font-black text-[#241a12]">{text}</p>
+      {sub && <p className="text-[15px] text-[#8a7559] mt-1">{sub}</p>}
       {action && <div className="mt-5 flex justify-center">{action}</div>}
     </div>
   );
@@ -282,8 +282,8 @@ export function Row({
     <>
       {leading && <div className="shrink-0">{leading}</div>}
       <div className="min-w-0 flex-1">
-        <div className="font-bold text-[#241a12] leading-tight truncate">{title}</div>
-        {sub && <div className="text-sm text-[#8a7559] mt-0.5 leading-snug truncate">{sub}</div>}
+        <div className="font-bold text-[17px] text-[#241a12] leading-tight truncate">{title}</div>
+        {sub && <div className="text-[15px] text-[#8a7559] mt-0.5 leading-snug truncate">{sub}</div>}
       </div>
       {trailing && <div className="shrink-0 text-right">{trailing}</div>}
       {(href || onClick) && (
@@ -307,8 +307,8 @@ export function ActionCard({
     <Link href={href} className={`flex items-center gap-4 px-4 py-4 border rounded-2xl bg-white ${t === "slate" ? "border-[#e6dac6]" : c.border} nb-lift-sm hover:border-[#c47b3e]/50`}>
       <div className={`font-display text-4xl font-black tabular-nums min-w-[4rem] text-center shrink-0 ${t === "slate" ? "text-[#cdbda3]" : c.text}`}>{count}</div>
       <div className="min-w-0 flex-1">
-        <div className="font-bold text-[#241a12] leading-tight">{label}</div>
-        <div className="text-sm text-[#8a7559] leading-snug mt-0.5">{sub}</div>
+        <div className="font-bold text-[17px] text-[#241a12] leading-tight">{label}</div>
+        <div className="text-[15px] text-[#8a7559] leading-snug mt-0.5">{sub}</div>
       </div>
       <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#cdbda3] shrink-0"><path d="M6 3l5 5-5 5" /></svg>
     </Link>
@@ -328,7 +328,7 @@ export function Progress({ value, tone: t = "green", className = "" }: { value: 
 /** Inline notice (success / error / info). */
 export function Notice({ tone: t = "slate", children, className = "" }: { tone?: Tone; children: React.ReactNode; className?: string }) {
   const c = TONE[t];
-  return <div className={`rounded-xl border px-4 py-3 text-sm font-semibold ${c.bg} ${c.text} ${c.border} ${className}`}>{children}</div>;
+  return <div className={`rounded-xl border px-4 py-3 text-[15px] font-semibold ${c.bg} ${c.text} ${c.border} ${className}`}>{children}</div>;
 }
 
 export function Money({ value, bold = true }: { value: number; bold?: boolean }) {
@@ -352,5 +352,32 @@ export function Initials({ name, size = 40, className = "" }: { name: string | n
     >
       {txt.toUpperCase()}
     </span>
+  );
+}
+
+/**
+ * Collapsed-by-default section for the uncommon stuff ("More", "Details"…).
+ * One tap opens it; nothing inside is needed for the daily job.
+ */
+export function Disclosure({
+  label = "More", open: openProp, onToggle, children, className = "", tone: t = "slate",
+}: { label?: React.ReactNode; open?: boolean; onToggle?: (open: boolean) => void; children: React.ReactNode; className?: string; tone?: Tone }) {
+  const [own, setOwn] = React.useState(false);
+  const open = openProp ?? own;
+  const toggle = () => { const next = !open; if (onToggle) onToggle(next); if (openProp === undefined) setOwn(next); };
+  const c = TONE[t];
+  return (
+    <div className={`rounded-2xl border bg-white ${t === "slate" ? "border-[#e6dac6]" : c.border} ${className}`}>
+      <button
+        type="button"
+        onClick={toggle}
+        aria-expanded={open}
+        className={`w-full flex items-center justify-between gap-3 px-4 sm:px-5 min-h-[50px] text-left font-bold text-[17px] ${t === "slate" ? "text-[#6f5b46]" : c.text}`}
+      >
+        <span>{label}</span>
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}><path d="M3 6l5 5 5-5" /></svg>
+      </button>
+      {open && <div className="border-t border-[#f0e6d6]">{children}</div>}
+    </div>
   );
 }

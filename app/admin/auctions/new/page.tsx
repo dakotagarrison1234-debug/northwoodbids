@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader, PageBody, Panel, Input, Btn, Notice, Eyebrow } from "../../ui";
 
@@ -9,30 +9,55 @@ function toLocalInput(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-// Sensible defaults: start tomorrow at 9:00 AM, run for 7 days.
-function defaultStart(): Date {
+const WEEK = 7 * 24 * 60 * 60 * 1000;
+
+// Fallback schedule when there's nothing to carry forward: tomorrow 9:00 AM, 7 days.
+function fallbackStart(): Date {
   const d = new Date();
   d.setDate(d.getDate() + 1);
   d.setHours(9, 0, 0, 0);
   return d;
 }
 
-const TEXTAREA =
-  "w-full bg-white border border-[#d9c7ab] focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 rounded-xl px-4 py-3 text-[#241a12] placeholder:text-[#b3a085] outline-none transition resize-none";
+/**
+ * Titles like "AMZ 12", "HD #3", "Estate 7" are a series + a number. We learn the
+ * series from what's already been run and offer the next number.
+ */
+const SERIES_RE = /^([A-Za-z][A-Za-z0-9&' ]{0,24}?)\s*#?\s*(\d+)$/;
+// A bare series with no number yet ("Estate") — offered as "<series> 1".
+const BARE_SERIES_RE = /^[A-Za-z][A-Za-z0-9&' ]{0,24}$/;
+
+type Series = { name: string; next: number };
+
+/** Most recent series first (input is newest-first), with the next number for each. */
+function learnSeries(titles: string[]): Series[] {
+  const byKey = new Map<string, Series>();
+  for (const raw of titles) {
+    const m = SERIES_RE.exec(raw.trim());
+    if (!m) continue;
+    const name = m[1].trim();
+    const n = parseInt(m[2], 10);
+    const key = name.toLowerCase();
+    const cur = byKey.get(key);
+    if (!cur) byKey.set(key, { name, next: n + 1 });
+    else if (n + 1 > cur.next) cur.next = n + 1;
+  }
+  return [...byKey.values()];
+}
+
+type ApiAuction = { title: string; startAt: string; endAt: string; archived?: boolean };
 
 export default function NewAuctionPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [orgId, setOrgId] = useState<string>("");
+  const [series, setSeries] = useState<Series[]>([]);
+  // Once the user edits a field we stop overwriting it with learned defaults.
+  const touched = useRef({ title: false, dates: false });
   const [formData, setFormData] = useState(() => {
-    const start = defaultStart();
-    const end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
-    return {
-      title: "", description: "",
-      startAt: toLocalInput(start),
-      endAt: toLocalInput(end),
-    };
+    const start = fallbackStart();
+    return { title: "", startAt: toLocalInput(start), endAt: toLocalInput(new Date(start.getTime() + WEEK)) };
   });
 
   useEffect(() => {
@@ -41,15 +66,59 @@ export default function NewAuctionPage() {
     }).catch(() => {});
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  // Learn naming + schedule from what's been run before. Archived (test/junk)
+  // auctions are ignored so they don't steer the defaults.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/auctions?take=200").then(r => r.json()).then((d: { auctions?: ApiAuction[] }) => {
+      if (cancelled) return;
+      const all = (d.auctions ?? []).filter((a) => !a.archived);
+      if (all.length === 0) return;
+
+      const learned = learnSeries(all.map((a) => a.title));
+      setSeries(learned);
+
+      // Name: the most recent series, next number up.
+      if (!touched.current.title && learned.length > 0) {
+        setFormData((f) => ({ ...f, title: `${learned[0].name} ${learned[0].next}` }));
+      }
+
+      // Schedule: the last auction's run, pushed forward a week at a time until it
+      // starts in the future.
+      const last = [...all].sort((a, b) => b.startAt.localeCompare(a.startAt))[0];
+      const now = Date.now();
+      const start = new Date(last.startAt);
+      const end = new Date(last.endAt);
+      if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end > start) {
+        // Step by calendar days (not milliseconds) so a 9:00 AM auction stays
+        // 9:00 AM across the daylight-saving switch.
+        let guard = 0;
+        do { start.setDate(start.getDate() + 7); end.setDate(end.getDate() + 7); } while (start.getTime() <= now && ++guard < 520);
+        if (!touched.current.dates) {
+          setFormData((f) => ({ ...f, startAt: toLocalInput(start), endAt: toLocalInput(end) }));
+        }
+      }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    if (name === "title") touched.current.title = true;
+    else touched.current.dates = true;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const pickName = (name: string) => {
+    touched.current.title = true;
+    setFormData((f) => ({ ...f, title: name }));
   };
 
   const handleSave = async () => {
     // Inline errors, not alert() — the button is already disabled for these cases,
     // so these are belt-and-braces rather than the primary feedback.
     setError(null);
-    if (!formData.title || !formData.startAt || !formData.endAt) {
+    if (!formData.title.trim() || !formData.startAt || !formData.endAt) {
       setError("Give it a name and both dates.");
       return;
     }
@@ -67,7 +136,7 @@ export default function NewAuctionPage() {
       const res = await fetch("/api/auctions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, startAt: startAtISO, endAt: endAtISO, organizationId: orgId }),
+        body: JSON.stringify({ title: formData.title.trim(), startAt: startAtISO, endAt: endAtISO, organizationId: orgId }),
       });
       const data = await res.json();
       if (data.success) {
@@ -89,40 +158,59 @@ export default function NewAuctionPage() {
   const fmt = (d: Date) =>
     d.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
+  // Chips: every known series at its next number, plus "<typed> 1" when they're
+  // starting a brand-new series.
+  const typed = formData.title.trim();
+  const typedKey = typed.toLowerCase();
+  const chips: string[] = series.map((s) => `${s.name} ${s.next}`);
+  if (typed && BARE_SERIES_RE.test(typed) && !series.some((s) => s.name.toLowerCase() === typedKey)) {
+    chips.unshift(`${typed} 1`);
+  }
+
   return (
     <>
-      <PageHeader
-        title="New auction"
-        sub="Name it, set when it runs, then add lots."
-        back={{ href: "/admin/auctions", label: "All auctions" }}
-      />
+      <PageHeader title="New auction" back={{ href: "/admin/auctions", label: "Auctions" }} />
 
       <PageBody>
         {error && <Notice tone="red">{error}</Notice>}
 
-        <Panel title="Set it up" sub="Shown to bidders on the auction page.">
+        <Panel>
           <div className="px-4 sm:px-5 py-5 space-y-5">
-            <label className="block">
-              <span className="block text-sm font-bold text-[#4a3a2b] mb-1.5">Name</span>
-              <Input name="title" value={formData.title} onChange={handleChange}
-                placeholder="e.g. Weekly Overstock — Sept 12" />
-            </label>
-            <label className="block">
-              <span className="block text-sm font-bold text-[#4a3a2b] mb-1.5">Description <span className="font-semibold text-[#b3a085]">(optional)</span></span>
-              <textarea name="description" value={formData.description} onChange={handleChange} rows={3}
-                placeholder="What's in this one? Shown to bidders."
-                className={TEXTAREA} />
-            </label>
+            <div>
+              <label className="block">
+                <span className="block text-[15px] font-bold text-[#4a3a2b] mb-1.5">Name</span>
+                <Input name="title" value={formData.title} onChange={handleChange} placeholder="AMZ 1" autoComplete="off" />
+              </label>
+              {chips.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2.5">
+                  {chips.map((c) => {
+                    const on = c.toLowerCase() === typedKey;
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => pickName(c)}
+                        className={`min-h-[44px] px-4 rounded-xl border-2 text-[15px] font-bold transition-colors ${
+                          on ? "bg-[#241a12] text-[#f6ecda] border-[#241a12]" : "bg-white text-[#563e2c] border-[#d9c7ab] hover:bg-[#faf5ea]"
+                        }`}
+                      >
+                        {c}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
             <div className="border-t border-[#f0e6d6] pt-5">
               <Eyebrow className="mb-3">When it runs</Eyebrow>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <label className="block">
-                  <span className="block text-sm font-bold text-[#4a3a2b] mb-1.5">Opens</span>
+                  <span className="block text-[15px] font-bold text-[#4a3a2b] mb-1.5">Opens</span>
                   <Input name="startAt" value={formData.startAt} onChange={handleChange} type="datetime-local" />
                 </label>
                 <label className="block">
-                  <span className="block text-sm font-bold text-[#4a3a2b] mb-1.5">Closes</span>
+                  <span className="block text-[15px] font-bold text-[#4a3a2b] mb-1.5">Closes</span>
                   <Input name="endAt" value={formData.endAt} onChange={handleChange} type="datetime-local" />
                 </label>
               </div>
@@ -130,17 +218,11 @@ export default function NewAuctionPage() {
               {start && end && !validRange ? (
                 <Notice tone="red" className="mt-4">The closing time has to be after the opening time.</Notice>
               ) : validRange ? (
-                <div className="mt-4 rounded-xl bg-[#241a12] text-[#fbf4e6] px-4 py-3">
-                  <Eyebrow className="!text-[#b9a688]">Runs for</Eyebrow>
-                  <div className="font-display text-2xl font-black mt-0.5">{days} day{days !== 1 ? "s" : ""}</div>
-                  <div className="text-sm text-[#d9c7ab] mt-1">{fmt(start)} to {fmt(end)}</div>
-                </div>
+                <p className="text-[15px] text-[#6f5b46] mt-4">
+                  <strong className="font-extrabold text-[#241a12]">Runs for {days} day{days !== 1 ? "s" : ""}</strong>
+                  {" · "}{fmt(start)} to {fmt(end)}
+                </p>
               ) : null}
-
-              <p className="text-sm text-[#8a7559] mt-4">
-                It opens and closes on its own at these times. Nothing is texted to bidders when it opens —
-                you send that yourself from the auction&apos;s controls when you&apos;re ready.
-              </p>
             </div>
 
             <Btn full onClick={handleSave} disabled={saving || !formData.title.trim() || !validRange}>

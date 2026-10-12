@@ -32,15 +32,15 @@ export default function DeleteAuctionButton({ auctionId }: { auctionId: string }
   return (
     <>
       <Btn tone="red" variant="outline" onClick={() => setAsking(true)} disabled={deleting}>
-        {deleting ? "Deleting…" : "Delete Auction"}
+        {deleting ? "Deleting…" : "Delete draft"}
       </Btn>
-      {error && <p className="text-sm font-semibold text-[#a1321f] mt-2">{error}</p>}
+      {error && <p className="text-[15px] font-semibold text-[#a1321f] mt-2">{error}</p>}
 
       {asking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setAsking(false)}>
           <div className="bg-white rounded-2xl border border-[#e6dac6] max-w-sm w-full p-6 shadow-xl text-left" onClick={(e) => e.stopPropagation()}>
-            <p className="text-base text-[#241a12]">
-              Delete this draft auction? Its items go back to your drafts. This can&apos;t be undone.
+            <p className="text-[#241a12]">
+              Delete this draft auction? Its lots go back to your drafts. This can&apos;t be undone.
             </p>
             <div className="mt-5 flex gap-3">
               <Btn tone="slate" variant="outline" full onClick={() => setAsking(false)}>

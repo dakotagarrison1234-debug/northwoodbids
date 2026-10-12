@@ -19,7 +19,7 @@ export type AuctionSummary = {
 
 const CLOSED_SHOWN = 6;
 
-type Group = "live" | "upcoming" | "closed" | "archived";
+type Group = "live" | "upcoming" | "closed";
 
 /** "3 hrs", "2 days", "12 min" — how long until a moment, in the fewest words. */
 function until(iso: string, now: number) {
@@ -31,10 +31,12 @@ function until(iso: string, now: number) {
   if (hrs < 48) return `${hrs} hr${hrs !== 1 ? "s" : ""}`;
   return `${Math.round(hrs / 24)} days`;
 }
-const fmtDay = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-function AuctionCard({ a, mode, now }: { a: AuctionSummary; mode: "live" | "upcoming" | "closed"; now: number }) {
+/** "Thu 9:00 AM" — when an upcoming auction opens. */
+const fmtOpens = (iso: string) =>
+  new Date(iso).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
+
+function AuctionCard({ a, mode, now }: { a: AuctionSummary; mode: Group; now: number }) {
   const hrsLeft = (new Date(a.endAtIso).getTime() - now) / 36e5;
   // Time pressure is the whole point of a live auction, so it's colour-coded:
   // under 6 hours is red, under a day amber, otherwise green.
@@ -48,7 +50,7 @@ function AuctionCard({ a, mode, now }: { a: AuctionSummary; mode: "live" | "upco
       href={`/admin/auctions/${a.id}`}
       className={`block bg-white border rounded-2xl p-4 nb-lift-sm hover:border-[#c47b3e]/50 ${
         mode === "live" && urgency === "red" ? "border-[#f0c4ba]" : "border-[#e6dac6]"
-      }`}
+      } ${a.archived ? "opacity-70" : ""}`}
     >
       <div className="flex items-start justify-between gap-3">
         <h3 className="font-display font-black text-lg text-[#241a12] leading-snug break-words min-w-0">{a.title}</h3>
@@ -56,35 +58,34 @@ function AuctionCard({ a, mode, now }: { a: AuctionSummary; mode: "live" | "upco
           <Pill tone={urgency} dot>{until(a.endAtIso, now)} left</Pill>
         ) : mode === "upcoming" ? (
           <Pill tone="slate">{a.isScheduled ? `opens ${until(a.startAtIso, now)}` : "ready"}</Pill>
+        ) : a.archived ? (
+          <Pill tone="slate">Archived</Pill>
         ) : (
-          <Pill tone="slate">{a.status.toLowerCase()}</Pill>
+          <Pill tone="slate">Closed</Pill>
         )}
       </div>
 
       {/* Three numbers, evenly weighted — lots, bids, money. */}
-      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mt-2.5 text-sm text-[#8a7559]">
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mt-2.5 text-[15px] text-[#8a7559]">
         <span><strong className="font-extrabold text-[#241a12] tabular-nums">{a.itemsCount}</strong> lot{a.itemsCount !== 1 ? "s" : ""}</span>
         <span><strong className="font-extrabold text-[#241a12] tabular-nums">{a.totalBids}</strong> bid{a.totalBids !== 1 ? "s" : ""}</span>
         <span>
           <strong className={`font-extrabold tabular-nums ${mode === "closed" ? "text-[#2f5d3a]" : "text-[#241a12]"}`}>{fmtMoney0(a.raised)}</strong>
           {" "}{mode === "closed" ? "sold" : "bid so far"}
         </span>
+        {mode === "upcoming" && <span>opens {fmtOpens(a.startAtIso)}</span>}
       </div>
 
       {mode === "live" && <Progress value={elapsed} tone={urgency} className="mt-3" />}
-
-      <div className="text-xs text-[#b3a085] mt-2.5">
-        {fmtDay(a.startAtIso)} to {fmtDay(a.endAtIso)}
-      </div>
     </Link>
   );
 }
 
 export default function AuctionsList({
-  live, upcoming, closed, archived = [],
-}: { live: AuctionSummary[]; upcoming: AuctionSummary[]; closed: AuctionSummary[]; archived?: AuctionSummary[] }) {
+  live, upcoming, closed,
+}: { live: AuctionSummary[]; upcoming: AuctionSummary[]; closed: AuctionSummary[] }) {
   // One group open at a time; live is the working set so it's the default.
-  const [group, setGroup] = useState<Group>("live");
+  const [group, setGroup] = useState<Group>(live.length > 0 ? "live" : "upcoming");
   const [closedLimit, setClosedLimit] = useState(CLOSED_SHOWN);
   // Snapshot the clock once per mount so render stays pure (the page re-renders on
   // every auction-updated Pusher event anyway).
@@ -94,20 +95,17 @@ export default function AuctionsList({
     { value: "live", label: "Live", count: live.length },
     { value: "upcoming", label: "Upcoming", count: upcoming.length },
     { value: "closed", label: "Closed", count: closed.length },
-    ...(archived.length > 0 ? [{ value: "archived" as Group, label: "Archived", count: archived.length }] : []),
   ];
 
   return (
     <div className="space-y-4">
       <Segmented value={group} onChange={setGroup} options={options} />
 
-      {/* ── Live: the working set ── */}
       {group === "live" && (
         live.length === 0 ? (
           <div className="bg-white border border-[#e6dac6] rounded-2xl">
             <Empty
               text="Nothing live right now."
-              sub={upcoming.length > 0 ? "Your next auction is on deck under Upcoming." : "Open an auction and it shows up here."}
               action={upcoming.length === 0 ? <BtnLink href="/admin/auctions/new" size="sm">New auction</BtnLink> : undefined}
             />
           </div>
@@ -121,7 +119,7 @@ export default function AuctionsList({
       {group === "upcoming" && (
         upcoming.length === 0 ? (
           <div className="bg-white border border-[#e6dac6] rounded-2xl">
-            <Empty text="Nothing upcoming." sub="Drafts and scheduled auctions land here." action={<BtnLink href="/admin/auctions/new" size="sm">New auction</BtnLink>} />
+            <Empty text="Nothing upcoming." action={<BtnLink href="/admin/auctions/new" size="sm">New auction</BtnLink>} />
           </div>
         ) : (
           <div className="space-y-2.5">
@@ -133,7 +131,7 @@ export default function AuctionsList({
       {group === "closed" && (
         closed.length === 0 ? (
           <div className="bg-white border border-[#e6dac6] rounded-2xl">
-            <Empty text="No closed auctions yet." sub="Once an auction ends it moves here." />
+            <Empty text="No closed auctions yet." />
           </div>
         ) : (
           <div className="space-y-2.5">
@@ -147,13 +145,6 @@ export default function AuctionsList({
             )}
           </div>
         )
-      )}
-
-      {group === "archived" && (
-        <div className="space-y-2.5">
-          <p className="text-sm text-[#8a7559] px-1">Hidden from reports, winners and the public site.</p>
-          {archived.map((a) => <AuctionCard key={a.id} a={a} mode="closed" now={now} />)}
-        </div>
       )}
     </div>
   );

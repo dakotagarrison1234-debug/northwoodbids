@@ -73,12 +73,11 @@ export default function PromosPage() {
     <>
       <PageHeader
         title="Welcome codes"
-        sub="The link behind a QR code: scan, sign up, get Bid Bucks. One claim per person — account and phone number both count."
         actions={!creating && <Btn size="sm" onClick={() => setCreating(true)}>New code</Btn>}
       />
       <PageBody>
         {creating && (
-          <Panel title="New welcome code" sub="Keep the code short — it's part of the link.">
+          <Panel title="New welcome code">
             <div className="p-4 sm:p-5 space-y-3">
               <div className="grid sm:grid-cols-2 gap-3">
                 <div>
@@ -90,15 +89,15 @@ export default function PromosPage() {
                   <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Business card" />
                 </div>
                 <div>
-                  <Eyebrow className="mb-1">Bid Bucks <span className="normal-case tracking-normal font-semibold text-[#b3a085]">(spent $5 per bill)</span></Eyebrow>
+                  <Eyebrow className="mb-1">Bid Bucks</Eyebrow>
                   <div className="flex gap-1.5 flex-wrap">
                     {["5", "10", "15", "20"].map((v) => (
-                      <button key={v} type="button" onClick={() => setAmount(v)} className={`min-h-[44px] px-4 rounded-xl border-2 font-black text-sm ${amount === v ? "border-[#6c4d39] bg-[#6c4d39] text-white" : "border-[#e6dac6] bg-white text-[#6c4d39]"}`}>${v}</button>
+                      <button key={v} type="button" onClick={() => setAmount(v)} className={`min-h-[44px] px-4 rounded-xl border-2 font-black text-[15px] ${amount === v ? "border-[#6c4d39] bg-[#6c4d39] text-white" : "border-[#e6dac6] bg-white text-[#6c4d39]"}`}>${v}</button>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <Eyebrow className="mb-1">Max claims <span className="normal-case tracking-normal font-semibold text-[#b3a085]">(blank = unlimited)</span></Eyebrow>
+                  <Eyebrow className="mb-1">Max claims</Eyebrow>
                   <Input value={maxClaims} onChange={(e) => setMaxClaims(e.target.value.replace(/\D/g, ""))} inputMode="numeric" placeholder="no cap" />
                 </div>
                 <div>
@@ -115,19 +114,10 @@ export default function PromosPage() {
           </Panel>
         )}
 
-        <Panel title="How it works" tone="leather">
-          <ol className="p-4 sm:p-5 text-sm text-[#4a3a2b] space-y-1.5 list-decimal list-inside">
-            <li>Create a code below and copy its link (it looks like <span className="font-mono">northwoodbids.com/go/CARD5</span>).</li>
-            <li>Paste the link into GoHighLevel&apos;s QR generator and put the QR on the card: <em>Scan me — sign up, get $5 to bid.</em></li>
-            <li>They scan, sign up (phone required), and the Bid Bucks land in their account with a little toast. It comes off their first winning bill of $5 or more.</li>
-            <li>A second scan on the same account or the same phone number gets nothing. The same code works forever (or until you turn it off / cap it).</li>
-          </ol>
-        </Panel>
-
         {rows === null ? (
           <div className="text-[#8a7559] py-10 text-center">Loading…</div>
         ) : rows.length === 0 ? (
-          <Panel><Empty text="No welcome codes yet." sub="Make one, print the QR, hand it out." action={<Btn size="sm" onClick={() => setCreating(true)}>New code</Btn>} /></Panel>
+          <Panel><Empty text="No welcome codes yet." action={<Btn size="sm" onClick={() => setCreating(true)}>New code</Btn>} /></Panel>
         ) : (
           <div className="space-y-3">
             {rows.map((p) => {
@@ -144,8 +134,8 @@ export default function PromosPage() {
                             {!p.active ? "Off" : expired ? "Expired" : capped ? "Cap reached" : "Live"}
                           </Pill>
                         </div>
-                        <div className="text-sm text-[#6f5b46] mt-0.5">{p.label} · ${p.amount.toFixed(0)} Bid Bucks{p.maxClaims != null ? ` · cap ${p.maxClaims}` : ""}{p.expiresAt ? ` · expires ${fmt(p.expiresAt)}` : ""}</div>
-                        <div className="mt-2 inline-flex items-center gap-2 bg-[#faf5ea] border border-[#e6dac6] rounded-lg px-3 py-1.5 text-sm font-mono text-[#241a12] max-w-full">
+                        <div className="text-[15px] text-[#6f5b46] mt-0.5">{p.label} · ${p.amount.toFixed(0)} Bid Bucks{p.maxClaims != null ? ` · cap ${p.maxClaims}` : ""}{p.expiresAt ? ` · expires ${fmt(p.expiresAt)}` : ""}</div>
+                        <div className="mt-2 inline-flex items-center gap-2 bg-[#faf5ea] border border-[#e6dac6] rounded-lg px-3 py-1.5 text-[15px] font-mono text-[#241a12] max-w-full">
                           <IcoLink className="w-4 h-4 text-[#8a7559] shrink-0" /><span className="truncate">{p.link}</span>
                         </div>
                       </div>
@@ -163,7 +153,7 @@ export default function PromosPage() {
 
                     {p.recent.length > 0 && (
                       <div className="mt-3">
-                        <button type="button" onClick={() => setOpen(open === p.id ? null : p.id)} className="text-sm font-bold text-[#6c4d39] underline underline-offset-2">
+                        <button type="button" onClick={() => setOpen(open === p.id ? null : p.id)} className="text-[15px] font-bold text-[#6c4d39] underline underline-offset-2 min-h-[44px]">
                           {open === p.id ? "Hide" : "See"} recent claims
                         </button>
                         {open === p.id && (
@@ -171,8 +161,8 @@ export default function PromosPage() {
                             {p.recent.map((r, i) => (
                               <li key={i} className="flex items-center gap-3 px-3 py-2 bg-white">
                                 <Initials name={r.name} size={30} />
-                                <span className="flex-1 min-w-0 truncate text-sm font-semibold text-[#241a12]">{r.name}</span>
-                                <span className="text-xs text-[#8a7559]">{fmt(r.at)}</span>
+                                <span className="flex-1 min-w-0 truncate text-[15px] font-semibold text-[#241a12]">{r.name}</span>
+                                <span className="text-[15px] text-[#8a7559]">{fmt(r.at)}</span>
                                 {r.paid ? <Pill tone="green">Bought</Pill> : <Pill tone="slate">Not yet</Pill>}
                               </li>
                             ))}

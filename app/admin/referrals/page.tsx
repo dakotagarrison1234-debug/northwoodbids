@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { Pill, Panel, Btn, Empty, StatCard, PageHeader, PageBody, SearchBox, Row, Initials, Input, Money, Eyebrow, type Tone } from "../ui";
+import { Pill, Panel, Btn, Empty, StatCard, PageHeader, PageBody, SearchBox, Row, Initials, Input, Money, Eyebrow, Disclosure, type Tone } from "../ui";
 import { fmtMoney } from "../format";
 
 type Person = { clerkUserId: string; name: string | null; email: string | null; phone: string | null };
@@ -39,28 +39,35 @@ export default function AdminReferralsPage() {
   const [q, setQ] = useState("");
   const [balLimit, setBalLimit] = useState(25);
   const [refLimit, setRefLimit] = useState(25);
-  const [showLog, setShowLog] = useState(false);
-  // In-app adjust dialog. window.prompt() is blocked in the installed PWA, which
+  // In-app adjust dialog. Native prompts are blocked in the installed PWA, which
   // meant the only money-adjustment control on this screen did nothing at all.
   const [adjusting, setAdjusting] = useState<Balance | null>(null);
   const [adjAmount, setAdjAmount] = useState("");
   const [adjReason, setAdjReason] = useState("");
   const [adjError, setAdjError] = useState<string | null>(null);
 
+  // The fetch runs whenever `tick` changes; `load()` bumps it (Try again, after an
+  // adjust). On mount `loading` already starts true, so nothing is set synchronously.
+  const [tick, setTick] = useState(0);
   const load = useCallback(() => {
     setLoading(true);
     setError(false);
+    setTick((t) => t + 1);
+  }, []);
+
+  useEffect(() => {
+    let live = true;
     fetch("/api/admin/referrals")
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((d) => {
+        if (!live) return;
         setReferrals(d.referrals ?? []);
         setBalances(d.balances ?? []);
       })
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
+      .catch(() => { if (live) setError(true); })
+      .finally(() => { if (live) setLoading(false); });
+    return () => { live = false; };
+  }, [tick]);
 
   const submitAdjust = async () => {
     if (!adjusting) return;
@@ -112,12 +119,12 @@ export default function AdminReferralsPage() {
 
   return (
     <>
-      <PageHeader title="Referrals" sub="Bid Bucks — who's earned credit, and what you owe." />
+      <PageHeader title="Bid Bucks" />
 
       <PageBody>
         {error && (
           <Panel tone="red">
-            <Empty text="Couldn't load referrals." sub="Check your connection and try again." action={<Btn tone="slate" variant="outline" onClick={load}>Try again</Btn>} />
+            <Empty text="Couldn't load Bid Bucks." action={<Btn tone="slate" variant="outline" onClick={load}>Try again</Btn>} />
           </Panel>
         )}
 
@@ -125,24 +132,22 @@ export default function AdminReferralsPage() {
           <p className="text-[#8a7559] py-8 text-center">Loading…</p>
         ) : (
           <>
-            {/* Headline: what this screen is actually for. */}
             <div className="grid grid-cols-2 gap-3">
               <StatCard
                 label="Credit outstanding"
                 value={fmtMoney(outstanding)}
-                sub="Bid Bucks people can still spend"
                 tone={outstanding > 0 ? "amber" : "green"}
               />
               <StatCard
                 label="Waiting to earn"
                 value={pendingCount}
-                sub={blockedCount > 0 ? `${blockedCount} blocked` : "No blocked referrals"}
+                sub={blockedCount > 0 ? `${blockedCount} blocked` : undefined}
                 tone={blockedCount > 0 ? "red" : "slate"}
               />
             </div>
 
             {owing.length > 0 && (
-              <Panel title="Negative balances" sub="These need correcting" tone="red">
+              <Panel title="Negative balances" tone="red">
                 <ul className="divide-y divide-[#f0e6d6]">
                   {owing.map((b) => (
                     <li key={b.clerkUserId}>
@@ -164,11 +169,9 @@ export default function AdminReferralsPage() {
               placeholder="Search name, email or code…"
             />
 
-            {/* Balances as rows — the old table was 560px wide on a 375px screen,
-                which pushed the Adjust button completely off the side. */}
             <Panel title="Balances" sub={`${filteredBalances.length} ${filteredBalances.length === 1 ? "person" : "people"}`}>
               {sortedBalances.length === 0 ? (
-                <Empty text="No balances yet." sub={ql ? "Nobody matches that search." : "Balances appear once someone earns or spends Bid Bucks."} />
+                <Empty text={ql ? "Nobody matches that search." : "No balances yet."} />
               ) : (
                 <>
                   <ul className="divide-y divide-[#f0e6d6]">
@@ -213,55 +216,41 @@ export default function AdminReferralsPage() {
             </Panel>
 
             {/* The full audit log is a lookup tool, not the main event — collapsed. */}
-            <Panel>
-              <button
-                type="button"
-                onClick={() => setShowLog((v) => !v)}
-                className="w-full px-4 sm:px-5 min-h-[56px] flex items-center justify-between gap-3 hover:bg-[#faf5ea] transition-colors"
-              >
-                <span className="font-display text-lg font-black text-[#241a12]">
-                  Referral history <span className="text-[#a3927b] font-semibold text-base">({filteredReferrals.length})</span>
-                </span>
-                <span className={`text-[#a3927b] transition-transform ${showLog ? "rotate-180" : ""}`}>
-                  <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4" /></svg>
-                </span>
-              </button>
-              {showLog && (
-                filteredReferrals.length === 0 ? (
-                  <Empty text="No referrals yet." sub="Every invite someone sends shows up here." />
-                ) : (
-                  <>
-                    <ul className="divide-y divide-[#f0e6d6] border-t border-[#f0e6d6]">
-                      {filteredReferrals.slice(0, refLimit).map((r) => (
-                        <li key={r.id}>
-                          <Row
-                            leading={<Initials name={nameOf(r.referrer)} size={36} />}
-                            title={nameOf(r.referrer)}
-                            sub={`invited ${nameOf(r.referred)} · ${fmtDate(r.createdAt)}${r.earnedAt ? ` · earned ${fmtDate(r.earnedAt)}` : ""}`}
-                            trailing={<Pill tone={STATUS[r.status].tone}>{STATUS[r.status].label}</Pill>}
-                          />
-                          {r.blockedReason && (
-                            <p className="px-4 pb-3 -mt-1 text-sm text-[#a1321f]">{r.blockedReason}</p>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                    {filteredReferrals.length > refLimit && (
-                      <div className="border-t border-[#f0e6d6]">
-                        <Btn tone="slate" variant="ghost" full className="rounded-none" onClick={() => setRefLimit((n) => n + 25)}>
-                          Show more ({filteredReferrals.length - refLimit} left)
-                        </Btn>
-                      </div>
-                    )}
-                  </>
-                )
+            <Disclosure label={`Referral history (${filteredReferrals.length})`}>
+              {filteredReferrals.length === 0 ? (
+                <Empty text="No referrals yet." />
+              ) : (
+                <>
+                  <ul className="divide-y divide-[#f0e6d6]">
+                    {filteredReferrals.slice(0, refLimit).map((r) => (
+                      <li key={r.id}>
+                        <Row
+                          leading={<Initials name={nameOf(r.referrer)} size={36} />}
+                          title={nameOf(r.referrer)}
+                          sub={`invited ${nameOf(r.referred)} · ${fmtDate(r.createdAt)}${r.earnedAt ? ` · earned ${fmtDate(r.earnedAt)}` : ""}`}
+                          trailing={<Pill tone={STATUS[r.status].tone}>{STATUS[r.status].label}</Pill>}
+                        />
+                        {r.blockedReason && (
+                          <p className="px-4 pb-3 -mt-1 text-[15px] text-[#a1321f]">{r.blockedReason}</p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                  {filteredReferrals.length > refLimit && (
+                    <div className="border-t border-[#f0e6d6]">
+                      <Btn tone="slate" variant="ghost" full className="rounded-none" onClick={() => setRefLimit((n) => n + 25)}>
+                        Show more ({filteredReferrals.length - refLimit} left)
+                      </Btn>
+                    </div>
+                  )}
+                </>
               )}
-            </Panel>
+            </Disclosure>
           </>
         )}
       </PageBody>
 
-      {/* Adjust dialog — replaces two stacked window.prompt() calls that silently
+      {/* Adjust dialog — replaces two stacked native prompts that silently
           did nothing in the installed app. Shows the resulting balance before you commit. */}
       {adjusting && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4" onClick={() => setAdjusting(null)}>
@@ -270,10 +259,10 @@ export default function AdminReferralsPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="font-display text-xl font-black text-[#241a12]">Adjust Bid Bucks</h3>
-            <p className="text-base text-[#8a7559] mt-0.5 truncate">{nameOf(adjusting)}</p>
+            <p className="text-[#8a7559] mt-0.5 truncate">{nameOf(adjusting)}</p>
 
             <div className="mt-4 flex items-center justify-between bg-[#f4ede1] border border-[#e6dac6] rounded-xl px-4 py-3">
-              <span className="text-base text-[#6f5b46]">Balance now</span>
+              <span className="text-[#6f5b46]">Balance now</span>
               <span className="text-xl"><Money value={adjusting.balance} /></span>
             </div>
 
@@ -318,7 +307,7 @@ export default function AdminReferralsPage() {
             {/* Show the outcome before committing — this is real money. */}
             {Number.isFinite(Number(adjAmount)) && Number(adjAmount) !== 0 && (
               <div className="mt-3 flex items-center justify-between bg-[#241a12] text-[#fbf4e6] rounded-xl px-4 py-3">
-                <span className="text-base">New balance</span>
+                <span>New balance</span>
                 <span className="font-display text-xl font-black tabular-nums">
                   {adjusting.balance + Number(adjAmount) < 0 ? "−" : ""}
                   {fmtMoney(adjusting.balance + Number(adjAmount))}
@@ -326,7 +315,7 @@ export default function AdminReferralsPage() {
               </div>
             )}
 
-            {adjError && <p className="text-base font-semibold text-[#a1321f] mt-3">{adjError}</p>}
+            {adjError && <p className="font-semibold text-[#a1321f] mt-3">{adjError}</p>}
 
             <div className="flex gap-3 mt-5">
               <Btn tone="slate" variant="outline" full onClick={() => setAdjusting(null)}>Cancel</Btn>
