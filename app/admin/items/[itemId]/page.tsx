@@ -4,6 +4,7 @@ import { useRouter, useParams } from "next/navigation";
 import Skeleton from "@/app/components/Skeleton";
 import { Pill, PageHeader, PageBody, Panel, Btn, Input, Notice, Eyebrow, Disclosure } from "../../ui";
 import { fmtMoney } from "../../format";
+import ShipControl, { SHIP_OFF, shipFromItem, shipPayload, shipProblem, type ShipFormValue } from "../ShipControl";
 
 // Select / textarea share the kit Input look (the kit only ships a text input).
 const fieldCls =
@@ -53,6 +54,8 @@ export default function EditItemPage() {
     taxDeductible: false, itemCode: "", storageLocation: "", locationId: "", notes: "", auctionId: "",
     isPremium: false, packSize: 0, transferable: true,
   });
+  // Shipping opt-in + preset (read-only once the lot is sold).
+  const [ship, setShip] = useState<ShipFormValue>(SHIP_OFF);
   // Meta used by the danger zone (delete / remove-from-auction gating).
   const [meta, setMeta] = useState<{
     status: string; inAuction: boolean; hasBids: boolean; sold: boolean;
@@ -82,6 +85,7 @@ export default function EditItemPage() {
           packSize: item.packSize || 0,
           transferable: item.transferable !== false,
         });
+        setShip(shipFromItem(item));
         if (item.photos) {
           // Show the current main photo first so it's displayed as main and preserved.
           const sorted = [...item.photos].sort(
@@ -200,17 +204,24 @@ export default function EditItemPage() {
     );
   };
 
+  // Shipping size is priced into bids (and into a winner's box): locked once the
+  // lot is live with bids, and for good once sold.
+  const shipLocked = !!meta && (meta.sold || (meta.status === "ACTIVE" && meta.hasBids));
+
   const handleSave = async () => {
     if (uploading || saving) return;
     if (!formData.title.trim()) { setError("Give the lot a title first."); scrollTop(); return; }
     if (!formData.locationId) { setError("Pick a warehouse."); scrollTop(); return; }
+    const shipErr = shipLocked ? null : shipProblem(ship);
+    if (shipErr) { setError(shipErr); scrollTop(); return; }
     setSaving(true);
     setError(null);
     try {
       const res = await fetch(`/api/items/${itemId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, photos }),
+        // Ship fields are locked once sold or live with bids, so don't even send them then.
+        body: JSON.stringify({ ...formData, ...(shipLocked ? {} : shipPayload(ship)), photos }),
       });
       const data = await res.json();
       if (data.success) {
@@ -404,7 +415,7 @@ export default function EditItemPage() {
 
           {/* ── Pricing ── */}
           <Panel title="Pricing">
-            <div className="p-3 sm:p-4">
+            <div className="p-3 sm:p-4 space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { label: "Retail", name: "retailValue", placeholder: "0" },
@@ -421,6 +432,9 @@ export default function EditItemPage() {
                   </div>
                 ))}
               </div>
+              {/* Shipping opt-in + size preset. Read-only once the lot is sold — the
+                  buyer's box was priced on these numbers. */}
+              <ShipControl value={ship} onChange={setShip} readOnly={shipLocked} lockedNote={meta?.sold ? "Locked once sold." : "Locked while the lot has bids."} />
             </div>
           </Panel>
 

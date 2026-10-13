@@ -63,15 +63,17 @@ export default async function AuctionReportPage({ params }: Props) {
   const paidAll = await prisma.payment.findMany({
     where: { status: "PAID", comped: false, item: { organizationId: orgId } },
     select: {
-      amount: true, applicationFeeAmount: true, taxAmount: true, creditApplied: true,
+      amount: true, applicationFeeAmount: true, taxAmount: true, creditApplied: true, shippingAmount: true,
       stripePaymentIntentId: true, paidInCash: true,
       item: { select: { auctionId: true, soldLocation: { select: { id: true, name: true } }, location: { select: { id: true, name: true } } } },
     },
     take: ROW_CAP,
   });
 
+  // Same gross as the main report: shipping was charged on the same PaymentIntent,
+  // so it has to be in the base the Stripe fee is split over.
   const grossOf = (p: (typeof paidAll)[number]) =>
-    num(p.amount) + num(p.applicationFeeAmount) + num(p.taxAmount) - num(p.creditApplied ?? 0);
+    num(p.amount) + num(p.applicationFeeAmount) + num(p.taxAmount) + num(p.shippingAmount ?? 0) - num(p.creditApplied ?? 0);
   const piGross = new Map<string, number>();
   for (const p of paidAll) {
     if (!p.stripePaymentIntentId) continue;

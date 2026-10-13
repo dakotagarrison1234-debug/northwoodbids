@@ -94,14 +94,16 @@ Sources: [Whatnot — shipping profiles](https://help.whatnot.com/hc/en-us/artic
 
 **Listing — 3 quick presets + custom.** One tap during item creation; product lookup pre-selects when it knows weight/dims.
 
-| Preset | Packed weight | Box it snaps to | Cubic tier | Typical stuff |
-|---|---|---|---|---|
-| **Small** | under 1 lb | padded mailer or 8×6×4 (0.11 cu ft) | 0.2 | phone cases, cables, cosmetics, small kitchen gadgets |
-| **Medium** | 1–5 lb | 12×9×6 (0.38 cu ft) | 0.4 | small appliances, shoes, toys, most Amazon-return-size items |
-| **Large** | 5–15 lb | 16×12×8 (0.89 cu ft) | 0.9 | tool sets, small electronics, multi-packs |
-| **Custom** | exact oz + L×W×H | computed | computed | anything odd; > 20 lb or > 22" is automatically pickup-only unless you flip the override |
+| Preset | Packed weight | Packed dims | Typical stuff (calibrated to what Northwood actually lists, Oct 2026) |
+|---|---|---|---|
+| **Small** | 6 oz ("under 8 oz") | 6×4×3 | phone case, charger, pens, hand towel, markers, makeup bag, headphones |
+| **Medium** | 1 lb (16 oz) | 8×8×6 | Nerf pistol, body towel, stuffed animal, small neck fan |
+| **Large** | 3.5 lb (56 oz, "2 to 5 lb") | 12×9×6 | bigger than a shoebox (rarely shipped) |
+| **Custom** | exact oz + L×W×H | typed in | anything odd; > 20 lb or > 22" is refused — pickup only, no override |
 
-Each preset stores `weightOz`, `lengthIn/widthIn/heightIn` (staff can nudge), plus `incrementalOz` (default: item weight + 2 oz fill, i.e. the box is only counted once per bundle).
+Each preset stores `weightOz` (the lister can nudge it) and `lengthIn/widthIn/heightIn` (always the preset's). Each further lot in a box adds its weight + 2 oz fill (`FILL_OZ`); the box is only counted once per bundle.
+
+**Typical fills (Michigan):** 6 Smalls = 46 oz → 1–5 lb band = $7.49. 4 Mediums = 70 oz → $7.49. 2 Larges = 114 oz → 5–10 lb band = $10.99. One Small or one Medium alone = $5.49.
 
 **Buyer-facing price = flat tier table (Whatnot-style), zone-aware, slightly under our expected cost on far zones and slightly over in-state so it averages out with a customer lean.** Shown as "Ships from $X" on the card, exact tier at checkout once we know the address.
 
@@ -163,7 +165,7 @@ Expected margin per label: in-state −$0.50 to +$1 (we're at or a hair under co
 
 ## 8. Decisions so far (Sept 11, 2026)
 
-- **Eligibility: off by default — Dakota opts items in** per listing (toggle next to the size preset). Over 20 lb / over 22" can't be opted in without the custom override.
+- **Eligibility: off by default — Dakota opts items in** per listing (toggle next to the size preset). Over 20 lb / over 22" can't be opted in at all — pickup only (no override; Custom is refused past the limits).
 - **Pricing: Whatnot-style tier estimates**, sizes/weights captured at listing via 3 presets + custom, with bundling that leans toward the customer (we'll eat small overages rather than lose a sale to scary shipping).
 - **Combining: hold up to 7 days** to bundle wins across auctions.
 - **Handling: ships within 3–5 business days** after the bundle closes.
@@ -173,7 +175,7 @@ Expected margin per label: in-state −$0.50 to +$1 (we're at or a hair under co
 
 **Buyer flow**
 1. **Item page shows two boxes before bidding: `Pickup` (free) and `Ship` (with the price).** Ship box shows the buyer's zone-exact tier if they have an address on file, otherwise "from $5.49". Items not opted in show Pickup only.
-2. **First tap on Ship:** modal asks for a shipping address (EasyPost-verified on save, lower 48 only) and explains how shipping works in three lines (one price per box, extra wins ride free until the box fills up, we hold 7 days to combine, ships 3–5 business days after). Choice is remembered per item and defaults to their last choice on the next item.
+2. **First tap on Ship:** modal asks for a shipping address (EasyPost-verified on save, lower 48 only) and explains how shipping works in four lines (one price per box; extra wins ride in the same box and only pay the difference when it moves up a weight band; ships 3–5 business days after the box closes, lower 48 only; Owosso and Gladwin ship separate boxes, non-refundable once the label is printed). Choice is remembered per item and defaults to their last choice on the next item.
 3. **The choice is tied to the lot when it ends.** Nothing is charged for shipping until they actually **win**. Lost lots never count toward anything.
 4. **Charging (delta model):** on a win with Ship selected, the item joins the buyer's open bundle. First win pays the tier for the bundle's weight band. Later wins recompute the bundle: same band → **$0**; band moves up → charge only the **difference**. Example: 4 lots, first = $7, lots 2–3 = free, lot 4 pushes the band = +$7. If they lose lot 4, they've only ever paid $7 for the 3. (Charge is attached to the win invoice, so it flows through the existing pay/retry/claim-lock path.)
 5. **Bundle life:** opens at first shipped win, **closes 7 days later** or when the buyer taps *Ship it now*. Day 6 text: "Your box ships tomorrow." Day 7: auto-close (nothing new to charge — deltas were already taken at each win), move to the pack queue, **ships within 3–5 business days**. Texts at label scan + delivery.
@@ -184,8 +186,8 @@ Expected margin per label: in-state −$0.50 to +$1 (we're at or a hair under co
 10. **Returns wording:** all sales final (already policy); shipping charges are non-refundable once the label is bought.
 
 **Operations**
-11. **Eligibility: opt-in per item** (default off). Toggle sits next to the size preset in item create/edit. > 20 lb or > 22" can't be toggled on without the Custom override.
-12. **Sizes: 3 presets + Custom** (Small < 1 lb / Medium 1–5 lb / Large 5–15 lb / Custom oz + L×W×H), each with packed weight, snap box, and incremental weight (§4c). Product lookup pre-selects when it knows weight/dims.
+11. **Eligibility: opt-in per item** (default off). Toggle sits next to the size preset in item create/edit. > 20 lb or > 22" can't be toggled on at all — pickup only (Custom past the limits is refused with "Over 20 lb or 22 in can't ship — pickup only.").
+12. **Sizes: 3 presets + Custom** (Small 6 oz 6×4×3 / Medium 1 lb 8×8×6 / Large 3.5 lb 12×9×6 / Custom oz + L×W×H), each with packed weight, packed dims, and incremental weight (§4c). A preset's weight can be nudged; its dims can't. Product lookup pre-selects when it knows weight/dims.
 13. **Price: the tier table in §4c is a hard ceiling.** Buyer always pays the tier; we buy the cheapest real label; we keep the spread when under, eat it when over. Admin ship queue shows charged vs. actual per box so the table can be tuned.
 14. **Mixed warehouses → consolidate at Owosso, always.** Gladwin wins in a Ship bundle auto-transfer to Owosso using the existing transfer flow (same mechanics as preferred-location pickup transfers). One shipping station, one box stock.
 15. **Transfer not landed at day 7:** bundle still closes on day 7; the 3–5 day handling clock starts when the last item reaches Owosso; buyer texted "waiting on transfer."

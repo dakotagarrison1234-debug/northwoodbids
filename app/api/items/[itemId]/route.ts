@@ -5,6 +5,23 @@ import { canAccessOrg } from "@/lib/auth";
 import { ensureItemCode } from "@/lib/itemCode";
 import { autoAttachPaidItems } from "@/lib/pickup";
 import { deleteR2ObjectsByUrl } from "@/lib/r2";
+import { parseShipInput } from "@/lib/shipping/tiers";
+
+/** Ship fields as plain numbers (Prisma Decimals would otherwise serialize as strings). */
+function shipFieldsOf(it: {
+  shipEligible: boolean; shipPreset: string | null; shipWeightOz: number | null;
+  shipLengthIn: { toString(): string } | null; shipWidthIn: { toString(): string } | null; shipHeightIn: { toString(): string } | null;
+}) {
+  const dec = (d: { toString(): string } | null) => (d == null ? null : Number(d.toString()));
+  return {
+    shipEligible: !!it.shipEligible,
+    shipPreset: it.shipPreset ?? null,
+    shipWeightOz: it.shipWeightOz ?? null,
+    shipLengthIn: dec(it.shipLengthIn),
+    shipWidthIn: dec(it.shipWidthIn),
+    shipHeightIn: dec(it.shipHeightIn),
+  };
+}
 
 // Accept only http(s) URLs for photos — blocks javascript:/data:/file: etc.
 function isHttpUrl(value: unknown): boolean {
@@ -56,6 +73,7 @@ export async function GET(
         startingBid: Number(item.startingBid),
         reservePrice: item.reservePrice != null ? Number(item.reservePrice) : null,
         currentBid: Number(item.currentBid),
+        ...shipFieldsOf(item),
         bids: item.bids.map((b) => ({ ...b, amount: Number(b.amount) })),
         // Include org Stripe info for staff too (needed if admin is also bidding)
         org: {
@@ -86,6 +104,7 @@ export async function GET(
         retailValue: publicItemFields.retailValue != null ? Number(publicItemFields.retailValue) : null,
         startingBid: Number(publicItemFields.startingBid),
         currentBid: Number(publicItemFields.currentBid),
+        ...shipFieldsOf(item),
         bids: publicBids,
         // Expose the org's Stripe info — stripeAccountId is needed by Stripe Elements
         // to initialize on the correct connected account. This is safe to expose publicly.
@@ -123,6 +142,7 @@ export async function PATCH(
         auctionId: true,
         itemCode: true,
         locationId: true,
+        shipEligible: true, shipPreset: true, shipWeightOz: true, shipLengthIn: true, shipWidthIn: true, shipHeightIn: true,
         _count: { select: { bids: true } },
       },
     });
@@ -137,6 +157,26 @@ export async function PATCH(
     // Pricing/auction fields are locked once an item is live or has bids —
     // changing them mid-auction would let staff move the goalposts.
     const pricingLocked = item.status === "ACTIVE" || item._count.bids > 0;
+
+    // Shipping size is locked once sold (the winner's box was priced on it) and,
+    // like pricing, while the lot is live with bids — bidders chose Ship on the
+    // price they saw. Live-with-bids: a CHANGE is refused; resending the same
+    // values (the edit form always sends them) is fine.
+    const shipLocked = ["SOLD", "PENDING_PICKUP", "PICKED_UP"].includes(item.status);
+    const shipLive = item.status === "ACTIVE" && item._count.bids > 0;
+    const shipSent = body.shipPreset !== undefined || body.shipEligible !== undefined;
+    let shipData: Record<string, unknown> = {};
+    if (shipSent && !shipLocked) {
+      const ship = parseShipInput(body);
+      if ("error" in ship) return NextResponse.json({ error: ship.error }, { status: 400 });
+      if (shipLive) {
+        const now = shipFieldsOf(item);
+        const changed = (Object.keys(ship.fields) as (keyof typeof ship.fields)[]).some((k) => (ship.fields[k] ?? null) !== (now[k] ?? null));
+        if (changed) return NextResponse.json({ error: "This lot has bids, so its shipping size is locked." }, { status: 400 });
+      } else {
+        shipData = ship.fields;
+      }
+    }
 
     // Validate numeric fields: must be finite and >= 0 when provided.
     const numericFields: Record<string, unknown> = {
@@ -194,6 +234,7 @@ export async function PATCH(
       ...(body.isPremium !== undefined && { isPremium: !!body.isPremium }),
       ...(body.transferable !== undefined && { transferable: body.transferable !== false }),
       ...(body.packSize !== undefined && { packSize: Number(body.packSize) > 1 ? Math.min(Math.floor(Number(body.packSize)), 12) : null }),
+      ...shipData,
       ...(autoActivate ? { status: "ACTIVE" } : {}),
     };
 

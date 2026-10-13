@@ -41,6 +41,7 @@ model Organization {
   pickupAppointments     PickupAppointment[]
   transferRequests       TransferRequest[]
   doorLocks              DoorLock[]
+  shippingBundles        ShippingBundle[]
 }
 
 model OrgMember {
@@ -168,6 +169,23 @@ enum AuctionStatus {
   giveaway            Giveaway?          @relation(fields: [giveawayId], references: [id], onDelete: SetNull)
   watchers            WatchlistItem[]
 
+  // ── Shipping (docs/shipping-research.md §9) ──
+  // Opt-in per lot. Preset gives packed weight + box dims; Custom = exact values.
+  shipEligible        Boolean            @default(false)
+  shipPreset          ShipPreset?
+  shipWeightOz        Int?
+  shipLengthIn        Decimal?           @db.Decimal(6, 2)
+  shipWidthIn         Decimal?           @db.Decimal(6, 2)
+  shipHeightIn        Decimal?           @db.Decimal(6, 2)
+  // What the winner chose, frozen at the moment the lot closed (null = pickup).
+  fulfillment         Fulfillment?
+  // The box this win rides in, and the shipping delta this win added to the
+  // buyer's bill (cents). Written once at close so every retry charges the same.
+  shippingBundleId    String?
+  shippingBundle      ShippingBundle?    @relation(fields: [shippingBundleId], references: [id], onDelete: SetNull)
+  shipChargeCents     Int                @default(0)
+  shipChoices         ItemShipChoice[]
+
   @@index([status, itemEndAt])
   @@index([auctionId, status])
   @@index([pickupAppointmentId])
@@ -176,6 +194,99 @@ enum AuctionStatus {
   @@index([organizationId, status])
   @@index([itemCode])
   @@index([giveawayId])
+  @@index([shippingBundleId])
+}
+
+enum ShipPreset {
+  SMALL
+  MEDIUM
+  LARGE
+  CUSTOM
+}
+
+enum Fulfillment {
+  PICKUP
+  SHIP
+}
+
+enum ShippingBundleStatus {
+  OPEN       // collecting wins; closes 7 days after it opened or on "Ship it now"
+  CLOSED     // no more wins join; waiting for items to land at the shipping station
+  PACKING    // in the pack queue (all items at the station)
+  SHIPPED    // label bought and scanned
+  DELIVERED
+  CANCELLED
+}
+
+/// The buyer's pre-win choice for a lot (Pickup or Ship). Copied onto the Item as
+/// `fulfillment` when the lot closes with them as the winner. Losing bids never count.
+model ItemShipChoice {
+  id          String      @id @default(cuid())
+  itemId      String
+  clerkUserId String
+  choice      Fulfillment
+  updatedAt   DateTime    @updatedAt
+  item        Item        @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, clerkUserId])
+  @@index([clerkUserId])
+}
+
+/// One box per buyer. Opens at their first shipped win, collects every shipped win
+/// for 7 days (free rides until the weight band moves up), then ships ground from
+/// the shipping-station location. Money: `chargedCents` is the sum of the deltas
+/// taken at each win; `labelCostCents` is what the label actually cost us.
+model ShippingBundle {
+  id                 String               @id @default(cuid())
+  organizationId     String
+  clerkUserId        String
+  // The warehouse this box ships from. One open box per buyer PER station — a
+  // buyer with lots at Owosso and Gladwin gets two boxes, no transfers.
+  locationId         String?
+  location           PickupLocation?      @relation("BundleStation", fields: [locationId], references: [id], onDelete: SetNull)
+  status             ShippingBundleStatus @default(OPEN)
+  openedAt           DateTime             @default(now())
+  closesAt           DateTime
+  closedAt           DateTime?
+  // Address frozen at open (EasyPost-verified). Lower 48 only.
+  shipName           String
+  shipStreet1        String
+  shipStreet2        String?
+  shipCity           String
+  shipState          String
+  shipZip            String
+  shipPhone          String?
+  zone               Int                  // 1 = Michigan, 2 = Midwest/East, 3 = West/Far
+  // Live snapshot so the dashboard can show "Your box: 6.2 lb, 12×9×6, $9.99".
+  weightOz           Int                  @default(0)
+  boxCode            String?
+  chargedCents       Int                  @default(0)
+  // Label
+  labelCostCents     Int?
+  carrier            String?
+  service            String?
+  trackingCode       String?
+  trackingUrl        String?
+  labelUrl           String?
+  easypostShipmentId String?
+  easypostTrackerId  String?
+  packedWeightOz     Int?
+  packedBoxCode      String?
+  packedBy           String?
+  shippedAt          DateTime?
+  deliveredAt        DateTime?
+  lastTrackingStatus String?
+  day6NotifiedAt     DateTime?
+  notes              String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  organization       Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  items              Item[]
+
+  @@index([organizationId, status])
+  @@index([clerkUserId, status])
+  @@index([status, closesAt])
+  @@index([locationId])
 }
 
 model PickupLocation {
@@ -185,6 +296,9 @@ model PickupLocation {
   address        String?
   instructions   String?
   isActive       Boolean         @default(true)
+  // This warehouse packs and ships its own boxes. Any number of locations can.
+  // A shipped lot at a non-station warehouse is transferred to the nearest station.
+  isShippingStation Boolean      @default(false)
   createdAt      DateTime        @default(now())
   organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   windows        PickupWindow[]
@@ -194,6 +308,7 @@ model PickupLocation {
   soldItems      Item[]             @relation("ItemSoldLocation")
   transfersTo    TransferRequest[]  @relation("TransferTo")
   doorLocks      DoorLock[]
+  shippingBundles ShippingBundle[]  @relation("BundleStation")
 
   @@index([organizationId])
 }
@@ -408,6 +523,8 @@ model Payment {
   applicationFeeAmount  Decimal?      @db.Decimal(10, 2)
   taxAmount             Decimal?      @db.Decimal(10, 2)
   creditApplied         Decimal?      @db.Decimal(10, 2)
+  // Shipping delta billed with this win (never covered by Bid Bucks, never taxed).
+  shippingAmount        Decimal?      @db.Decimal(10, 2)
   stripePaymentIntentId String?
   status                PaymentStatus @default(PENDING)
   // True when the winner was an org admin/owner: the win is honored (item goes to
@@ -471,6 +588,17 @@ model BidderProfile {
   blockedReason  String?
   // Last time we sent a "we miss you" win-back text, so we never re-text too soon.
   lastWinbackAt  DateTime?
+  // Shipping address (EasyPost-verified on save; lower 48 only) + the choice we
+  // default the next lot to.
+  shipName       String?
+  shipStreet1    String?
+  shipStreet2    String?
+  shipCity       String?
+  shipState      String?
+  shipZip        String?
+  shipPhone      String?
+  shipVerifiedAt DateTime?
+  lastFulfillment Fulfillment?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @default(now()) @updatedAt
 

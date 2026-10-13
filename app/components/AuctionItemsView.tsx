@@ -6,6 +6,16 @@ import Image from "next/image";
 import ItemCardTimer from "@/app/components/ItemCardTimer";
 import QuickBidModal from "@/app/components/QuickBidModal";
 import { WoodenCrate, PineMark } from "@/app/components/Illustrations";
+import { IcoTruck } from "@/app/components/BidIcons";
+
+/** Tiny "Ships" chip for ship-eligible lots (grid + list). */
+function ShipsChip({ className = "" }: { className?: string }) {
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold text-[#3c6449] bg-[#4a7c59]/12 border border-[#4a7c59]/30 rounded-md px-1.5 py-0.5 whitespace-nowrap ${className}`}>
+      <IcoTruck className="w-3 h-3" /> Ships
+    </span>
+  );
+}
 
 /**
  * A fully pre-computed, serializable view of one lot. All the branching (price
@@ -37,6 +47,8 @@ export interface ViewItem {
   isItemUnsold: boolean;
   isItemLive: boolean;
   itemEndAtIso: string;
+  /** Opted in to shipping (lower 48, flat tier per box). Shows a small "Ships" chip. */
+  ships?: boolean;
 }
 
 const VIEW_KEY = "nb-auction-view";
@@ -226,6 +238,7 @@ export default function AuctionItemsView({
                   </h3>
                   <div className="flex items-center gap-1.5 mt-1 text-[11px] text-[#8a7559]">
                     <span className="capitalize truncate min-w-0">{item.condition}</span>
+                    {item.ships && <ShipsChip className="shrink-0" />}
                     {item.isItemLive && (
                       <span className="shrink-0 flex items-center gap-1 whitespace-nowrap">
                         <span className="text-[#cdbda3]">·</span>
@@ -332,6 +345,7 @@ export default function AuctionItemsView({
                           Size <span className="font-extrabold">{item.size}</span>
                         </span>
                       )}
+                      {item.ships && <ShipsChip className="shrink-0" />}
                     </div>
                   </div>
 

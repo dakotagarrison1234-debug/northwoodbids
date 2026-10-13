@@ -55,7 +55,7 @@ function clip(text: string, font: PDFFont, size: number, maxW: number): string {
 }
 
 export type LabelOpts = {
-  type: "PICKUP" | "TRANSFER";
+  type: "PICKUP" | "TRANSFER" | "SHIP";
   state: LabelState;
   name: string;
   destination?: string | null;

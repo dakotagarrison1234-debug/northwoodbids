@@ -28,6 +28,7 @@ interface Location {
   address: string | null;
   instructions: string | null;
   isActive: boolean;
+  isShippingStation?: boolean;
   windows: Window[];
   blackouts: Blackout[];
 }
@@ -110,6 +111,22 @@ export default function LocationsSettingsPage() {
     }
   };
 
+  // Per-location toggle: every station packs and ships its own boxes.
+  const setShippingStation = async (loc: Location) => {
+    try {
+      const res = await fetch(`/api/admin/pickup/locations/${loc.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isShippingStation: !loc.isShippingStation }),
+      });
+      const d = await res.json();
+      if (d.success) loadLocations();
+      else flash(d.error || "Could not update.", false);
+    } catch {
+      flash("Something went wrong.", false);
+    }
+  };
+
   const deleteLocation = async (id: string) => {
     try {
       const res = await fetch(`/api/admin/pickup/locations/${id}`, { method: "DELETE" });
@@ -177,6 +194,7 @@ export default function LocationsSettingsPage() {
               key={loc.id}
               loc={loc}
               onToggle={() => toggleLocation(loc)}
+              onShippingStation={() => setShippingStation(loc)}
               onDelete={() => askConfirm(
                 "Delete this location and all its hours? You can only delete a location with no scheduled pickups or incoming transfers.",
                 () => deleteLocation(loc.id),
@@ -216,6 +234,7 @@ export default function LocationsSettingsPage() {
 function LocationCard({
   loc,
   onToggle,
+  onShippingStation,
   onDelete,
   onDeleteWindow,
   onWindowAdded,
@@ -223,6 +242,7 @@ function LocationCard({
 }: {
   loc: Location;
   onToggle: () => void;
+  onShippingStation: () => void;
   onDelete: () => void;
   onDeleteWindow: (wid: string) => void;
   onWindowAdded: () => void;
@@ -334,15 +354,20 @@ function LocationCard({
             <div className="flex flex-wrap items-center gap-2">
               <div className="font-display text-xl font-black text-[#241a12]">{loc.name}</div>
               {!loc.isActive && <Pill tone="amber" dot>Hidden from bidders</Pill>}
+              {loc.isShippingStation && <Pill tone="green" dot>Shipping station</Pill>}
             </div>
             {loc.address && <div className="text-[#6f5b46] mt-0.5">{loc.address}</div>}
             {loc.instructions && <div className="text-[15px] text-[#8a7559] mt-1">{loc.instructions}</div>}
+            {loc.isShippingStation && <div className="text-[15px] text-[#8a7559] mt-1">Ships its own boxes.</div>}
           </div>
         )}
         {!editing && (
           <div className="flex flex-wrap gap-2 shrink-0">
             <Btn onClick={startEdit} variant="outline" size="sm">Edit</Btn>
             <Btn onClick={onToggle} tone="slate" variant="outline" size="sm">{loc.isActive ? "Hide" : "Show"}</Btn>
+            <Btn onClick={onShippingStation} tone={loc.isShippingStation ? "green" : "slate"} variant={loc.isShippingStation ? "solid" : "outline"} size="sm" aria-pressed={!!loc.isShippingStation}>
+              Shipping station
+            </Btn>
           </div>
         )}
       </div>

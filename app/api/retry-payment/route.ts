@@ -5,6 +5,7 @@ import { autoAttachPaidItems } from "@/lib/pickup";
 import { notifyPaymentReceipt } from "@/lib/paymentNotify";
 import { vestReferralForPayer, reserveReferralCredit, releaseReferralCredit } from "@/lib/referral";
 import { claimItemsForCharge, releaseChargeClaims } from "@/lib/chargeGuard";
+import { shipCentsForItems } from "@/lib/shipping/bundle";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -99,18 +100,23 @@ export async function POST(request: NextRequest) {
     // same reservation instead of reserving a second $5 and stranding the first.
     // The Stripe IDEMPOTENCY key keeps the card id so a genuine new-card retry still
     // produces a fresh PaymentIntent while a double-click with the same card is safe.
+    // This lot's shipping delta (written when it was won; 0 for pickup). Added after
+    // Bid Bucks — credit never covers shipping — and never taxed.
+    const shipCents = await shipCentsForItems([itemId]);
+    const shippingAmount = shipCents > 0 ? shipCents / 100 : null;
+
     const redemptionKey = `retry-${itemId}-${userId}`;
     const idempotencyKey = `retry-${itemId}-${userId}-${bidderCustomer.defaultPaymentMethodId}`;
     const discountCents = await reserveReferralCredit(userId, chargeAmount, redemptionKey);
-    const netAmount = chargeAmount - discountCents;
+    const netAmount = chargeAmount - discountCents + shipCents;
     const creditApplied = discountCents > 0 ? discountCents / 100 : null;
 
-    // Fully covered by Bid Bucks — no card charge needed.
+    // Fully covered by Bid Bucks — no card charge needed (only when there's no shipping).
     if (discountCents > 0 && netAmount <= 0) {
       await prisma.payment.upsert({
         where: { itemId_clerkUserId: { itemId, clerkUserId: userId } },
-        update: { status: "PAID", failureReason: null, autoChargeAttemptedAt: new Date(), applicationFeeAmount: feeAmount / 100, taxAmount: taxAmount / 100, creditApplied },
-        create: { clerkUserId: userId, itemId, amount: bidAmount, applicationFeeAmount: feeAmount / 100, taxAmount: taxAmount / 100, creditApplied, status: "PAID", autoChargeAttemptedAt: new Date() },
+        update: { status: "PAID", failureReason: null, autoChargeAttemptedAt: new Date(), applicationFeeAmount: feeAmount / 100, taxAmount: taxAmount / 100, creditApplied, shippingAmount },
+        create: { clerkUserId: userId, itemId, amount: bidAmount, applicationFeeAmount: feeAmount / 100, taxAmount: taxAmount / 100, creditApplied, shippingAmount, status: "PAID", autoChargeAttemptedAt: new Date() },
       });
       await prisma.item.update({ where: { id: itemId }, data: { status: "PENDING_PICKUP" } });
       await autoAttachPaidItems(userId, org.id);
@@ -129,7 +135,7 @@ export async function POST(request: NextRequest) {
           payment_method: bidderCustomer.defaultPaymentMethodId,
           off_session: true,
           confirm: true,
-          metadata: { clerkUserId: userId, orgId: org.id, itemId, isRetry: "true", redemptionKey, creditAppliedCents: String(discountCents) },
+          metadata: { clerkUserId: userId, orgId: org.id, itemId, isRetry: "true", redemptionKey, creditAppliedCents: String(discountCents), shippingCents: String(shipCents) },
         },
         {
           // PM id is part of the key on purpose: a double-click with the SAME card
@@ -171,6 +177,7 @@ export async function POST(request: NextRequest) {
           applicationFeeAmount: feeAmount / 100,
           taxAmount: taxAmount / 100,
           creditApplied,
+          shippingAmount,
         },
         create: {
           clerkUserId: userId,
@@ -179,6 +186,7 @@ export async function POST(request: NextRequest) {
           applicationFeeAmount: feeAmount / 100,
           taxAmount: taxAmount / 100,
           creditApplied,
+          shippingAmount,
           stripePaymentIntentId: paymentIntent.id,
           status: "PAID",
           autoChargeAttemptedAt: new Date(),
@@ -212,6 +220,7 @@ export async function POST(request: NextRequest) {
           applicationFeeAmount: feeAmount / 100,
           taxAmount: taxAmount / 100,
           creditApplied,
+          shippingAmount,
         },
         create: {
           clerkUserId: userId,
@@ -220,6 +229,7 @@ export async function POST(request: NextRequest) {
           applicationFeeAmount: feeAmount / 100,
           taxAmount: taxAmount / 100,
           creditApplied,
+          shippingAmount,
           stripePaymentIntentId: paymentIntent.id,
           status: "PENDING",
           autoChargeAttemptedAt: new Date(),

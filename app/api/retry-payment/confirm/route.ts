@@ -88,6 +88,9 @@ export async function POST(request: NextRequest) {
     // Bid Bucks applied at retry-time, carried on the PI metadata.
     const creditAppliedCents = Number(paymentIntent.metadata?.creditAppliedCents ?? 0);
     const creditApplied = creditAppliedCents > 0 ? creditAppliedCents / 100 : null;
+    // Shipping delta for this lot, as charged on the PI (0 / absent for pickup).
+    const shippingCents = Number(paymentIntent.metadata?.shippingCents ?? 0);
+    const shippingAmount = shippingCents > 0 ? shippingCents / 100 : null;
 
     if (paymentIntent.status === "processing") {
       // Async settlement in progress — record PENDING and DON'T release the item.
@@ -102,6 +105,7 @@ export async function POST(request: NextRequest) {
           applicationFeeAmount: feeAmount / 100,
           taxAmount: taxAmount / 100,
           creditApplied,
+          shippingAmount,
         },
         create: {
           clerkUserId: userId,
@@ -110,6 +114,7 @@ export async function POST(request: NextRequest) {
           applicationFeeAmount: feeAmount / 100,
           taxAmount: taxAmount / 100,
           creditApplied,
+          shippingAmount,
           stripePaymentIntentId: paymentIntent.id,
           status: "PENDING",
           autoChargeAttemptedAt: new Date(),
@@ -130,6 +135,7 @@ export async function POST(request: NextRequest) {
         applicationFeeAmount: feeAmount / 100,
         taxAmount: taxAmount / 100,
         creditApplied,
+        shippingAmount,
       },
       create: {
         clerkUserId: userId,
@@ -138,6 +144,7 @@ export async function POST(request: NextRequest) {
         applicationFeeAmount: feeAmount / 100,
         taxAmount: taxAmount / 100,
         creditApplied,
+        shippingAmount,
         stripePaymentIntentId: paymentIntent.id,
         status: "PAID",
         autoChargeAttemptedAt: new Date(),
@@ -154,9 +161,10 @@ export async function POST(request: NextRequest) {
     // First successful payment by a referred bidder vests their inviter's reward.
     await vestReferralForPayer(userId);
 
+    // Receipt shows what the card was actually charged (items − Bid Bucks + shipping).
     notifyPaymentReceipt({
       clerkUserId: userId,
-      amount: Number(((chargeAmount - creditAppliedCents) / 100).toFixed(2)),
+      amount: Number(((chargeAmount - creditAppliedCents + shippingCents) / 100).toFixed(2)),
     }).catch((e) => console.error("notifyPaymentReceipt (retry-confirm) failed:", e));
 
     return NextResponse.json({ success: true });

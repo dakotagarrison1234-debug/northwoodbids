@@ -191,7 +191,7 @@ export default function HelpPage() {
               <p>We move it to your spot for free. Transfers usually take about five to six days, and we text you the moment it lands so you can book your pickup. A lot marked <strong>Pickup here only</strong> stays where it is; plan to collect those in person.</p>
             </Q>
             <Q q="Can you ship it?">
-              <p>Not right now. Everything is local pickup, which is a big part of how the prices stay where they are.</p>
+              <p>Some lots, yes. A lot that can ship shows a <strong>Ship</strong> box next to <strong>Pickup</strong> on its page, with the price. One flat price per box based on weight and where you are; keep winning for 7 days and extra lots ride in the same box, and you only pay the difference if it moves up a weight band. Owosso and Gladwin each ship their own box, so lots from both warehouses go out as two boxes. We hold your box 7 days (or tap <strong>Ship it now</strong> on your dashboard), then it ships ground within 3 to 5 business days. Lower 48 states only. Shipping is charged with the win and is non-refundable once the label is printed.</p>
             </Q>
             <Q q="How long do I have to collect?">
               <p>Book your pickup as soon as you can after the win; we&apos;ll remind you by text. If life gets in the way, call us at <a href="tel:+18108181772">(810) 818-1772</a> and we&apos;ll work something out.</p>

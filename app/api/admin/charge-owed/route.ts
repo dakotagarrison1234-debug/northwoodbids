@@ -8,6 +8,7 @@ import { notifyPaymentReceipt } from "@/lib/paymentNotify";
 import { vestReferralForPayer, reserveReferralCredit, releaseReferralCredit } from "@/lib/referral";
 import { settleItemsPaid } from "@/lib/settlePayments";
 import { claimItemsForCharge, releaseChargeClaims } from "@/lib/chargeGuard";
+import { shipCentsForItems } from "@/lib/shipping/bundle";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -79,10 +80,15 @@ export async function POST(request: NextRequest) {
     const taxCents = Math.round((totalBid * 100 + feeCents) * taxPct / 100);
     const chargeCents = Math.round(totalBid * 100) + feeCents + taxCents;
 
+    // Shipping deltas written on the lots when they were won — added after Bid
+    // Bucks (credit never covers shipping), never taxed. 0 for pickup lots.
+    const shipCents = await shipCentsForItems(items.map((i) => i.id));
+
     const redemptionKey = `retryall-${orgId}-${clerkUserId}`;
     const discountCents = await reserveReferralCredit(clerkUserId, chargeCents, redemptionKey);
-    const netCents = chargeCents - discountCents;
+    const netCents = chargeCents - discountCents + shipCents;
 
+    // Fully covered by Bid Bucks (only possible when there's no shipping to collect).
     if (discountCents > 0 && netCents <= 0) {
       await settleItemsPaid(clerkUserId, items, feePct, taxPct, null, discountCents);
       await autoAttachPaidItems(clerkUserId, orgId);
@@ -100,7 +106,7 @@ export async function POST(request: NextRequest) {
           payment_method: bidderCustomer.defaultPaymentMethodId,
           off_session: true,
           confirm: true,
-          metadata: { clerkUserId, orgId, isAdminCharge: "true", redemptionKey, creditAppliedCents: String(discountCents) },
+          metadata: { clerkUserId, orgId, isAdminCharge: "true", redemptionKey, creditAppliedCents: String(discountCents), shippingCents: String(shipCents) },
         },
         { idempotencyKey: `admincharge-${orgId}-${clerkUserId}-${bidderCustomer.defaultPaymentMethodId}` }
       );

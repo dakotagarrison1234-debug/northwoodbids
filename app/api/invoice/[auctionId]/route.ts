@@ -99,6 +99,8 @@ export async function GET(
       const bid = num(p.amount);
       const premium = num(p.applicationFeeAmount);
       const tax = num(p.taxAmount);
+      // That lot's own shipping delta (not taxed, not covered by Bid Bucks).
+      const shipping = num(p.shippingAmount);
       return {
         title: p.item.title,
         itemCode: p.item.itemCode ?? null,
@@ -106,7 +108,8 @@ export async function GET(
         bid,
         premium,
         tax,
-        total: bid + premium + tax,
+        shipping,
+        total: bid + premium + tax + shipping,
       };
     });
 
@@ -114,9 +117,10 @@ export async function GET(
     const subtotal = lines.reduce((s, l) => s + l.bid, 0);
     const premium = lines.reduce((s, l) => s + l.premium, 0);
     const tax = lines.reduce((s, l) => s + l.tax, 0);
+    const shipping = lines.reduce((s, l) => s + l.shipping, 0);
     // Bid Bucks applied across this auction's paid items (stored per-Payment row).
     const credit = payments.reduce((s, p) => s + num(p.creditApplied), 0);
-    const grandTotal = subtotal + premium + tax - credit;
+    const grandTotal = subtotal + premium + tax - credit + shipping;
 
     return NextResponse.json({
       business: { name: businessName },
@@ -131,6 +135,7 @@ export async function GET(
         premium: round(premium),
         tax: round(tax),
         credit: round(credit),
+        shipping: round(shipping),
         grandTotal: round(grandTotal),
       },
     });

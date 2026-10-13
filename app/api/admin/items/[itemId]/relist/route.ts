@@ -90,6 +90,10 @@ export async function POST(request: NextRequest, { params }: Props) {
           grabbedAt: null,
           pickupAppointmentId: null,
           transferRequestId: null,
+          // Shipping is decided fresh on the next win.
+          fulfillment: null,
+          shippingBundleId: null,
+          shipChargeCents: 0,
           // Move warehouses if a new location was chosen; otherwise leave it put.
           ...(locationId ? { locationId } : {}),
         },

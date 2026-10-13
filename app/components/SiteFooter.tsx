@@ -116,7 +116,7 @@ export default function SiteFooter() {
 
         <div className="mt-9 pt-5 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[#a08b6e]">
           <span>&copy; {new Date().getFullYear()} Northwood Bids. Mid-Michigan, born and raised.</span>
-          <span className="text-[#8a7559]">Real bids, real pickup, no shipping games.</span>
+          <span className="text-[#8a7559]">Real bids, real pickup, honest shipping.</span>
         </div>
       </div>
     </footer>

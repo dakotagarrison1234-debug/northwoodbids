@@ -11,7 +11,7 @@ interface Bucket {
 }
 interface Report {
   range: string;
-  totals: Bucket & { buyersPaid: number; chargeCount: number; tax: number; cashCollected: number };
+  totals: Bucket & { buyersPaid: number; chargeCount: number; tax: number; cashCollected: number; shipping?: number };
   trendTitle: string;
   trend: { label: string; net: number }[];
   auctions: Bucket[];
@@ -108,10 +108,13 @@ export default function ReportsPage() {
         </div>
 
         {/* Headline numbers */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className={`grid gap-3 ${(totals.shipping ?? 0) > 0 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
           <StatCard label="Buyers paid" value={fmtMoney0(totals.buyersPaid)} />
           <StatCard label="Sales tax held" value={fmtMoney0(totals.tax)} tone="amber" />
           <StatCard label="Cash taken" value={fmtMoney0(totals.cashCollected)} tone="green" />
+          {(totals.shipping ?? 0) > 0 && (
+            <StatCard label="Shipping collected" value={fmtMoney0(totals.shipping ?? 0)} />
+          )}
         </div>
 
         {/* By auction */}

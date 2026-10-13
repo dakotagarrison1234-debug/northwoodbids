@@ -83,7 +83,12 @@ export default function WinnersPage() {
       const data = await res.json();
       if (data.success) {
         setCashKey(null);
-        setCashMsg({ key: clerkUserId, text: "Marked paid in cash", ok: true });
+        const moved = Number(data.movedToPickup ?? 0);
+        setCashMsg({
+          key: clerkUserId,
+          text: moved > 0 ? `Marked paid in cash. ${moved} lot${moved !== 1 ? "s" : ""} moved out of shipping to pickup (no shipping charged).` : "Marked paid in cash",
+          ok: true,
+        });
         load(q.trim(), skip, filter);
       } else {
         setCashMsg({ key: clerkUserId, text: data.error || "Could not mark cash.", ok: false });

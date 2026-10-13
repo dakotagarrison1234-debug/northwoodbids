@@ -43,7 +43,10 @@ export const ADMIN_GROUPS: NavGroup[] = [
     label: "Pickup",
     icon: "package",
     href: "/admin/pickup",
-    pages: [{ label: "Pickup", href: "/admin/pickup" }],
+    pages: [
+      { label: "Pickup", href: "/admin/pickup" },
+      { label: "Ship", href: "/admin/shipping" },
+    ],
   },
   {
     key: "money",

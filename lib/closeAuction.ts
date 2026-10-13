@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import Stripe from "stripe";
 import { triggerAuctionUpdated, triggerItemClosed } from "@/lib/pusherServer";
-import { autoAttachPaidItems } from "@/lib/pickup";
+import { autoAttachPaidItems, attachItemsToTransfer } from "@/lib/pickup";
 import { notifyTransfersSummary } from "@/lib/transferNotify";
 import { notifyPaymentFailed, notifyPaymentReceipt } from "@/lib/paymentNotify";
 import {
@@ -10,6 +10,8 @@ import {
   releaseReferralCredit,
   vestReferralForPayer,
 } from "@/lib/referral";
+import { joinBundleOnWin, shipCentsByItem, stationForItem, shippingStation } from "@/lib/shipping/bundle";
+import { textBuyer, closedMessage } from "@/lib/shippingNotify";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -61,6 +63,7 @@ type ItemWithBidsAndOrg = {
   id: string;
   title: string;
   auctionId: string | null;
+  organizationId: string;
   reservePrice: Prisma.Decimal | null;
   locationId: string | null;
   bids: { id: string; clerkUserId: string; amount: Prisma.Decimal }[];
@@ -95,6 +98,77 @@ export async function runPooled<T>(
   for (let i = 0; i < items.length; i += concurrency) {
     const chunk = items.slice(i, i + concurrency);
     await Promise.all(chunk.map(worker));
+  }
+}
+
+/**
+ * Shipping, decided the moment a lot is won and BEFORE any charge is attempted:
+ * the lot joins (or opens) the winner's box and its delta is written on the item
+ * (`shipChargeCents`), so every charge path — auto-charge, retry, charge-owed —
+ * bills the same number. Every shipping station packs its own boxes (one open
+ * box per buyer per station), so a lot at a station stays put. If the lot ships
+ * from a warehouse that is NOT a station, it's put on a transfer to the default
+ * station the same way pickup transfers are made (one REQUESTED cart per buyer
+ * per destination). A lot flagged non-transferable can't make that trip, so it
+ * is pickup — decided BEFORE it touches a box.
+ *
+ * Nothing in here may stop a close or a charge: any failure is logged and the
+ * lot is treated as pickup (shipChargeCents stays 0, so the bill is unchanged).
+ */
+async function routeWonLot(item: { id: string; organizationId: string; locationId: string | null }, clerkUserId: string): Promise<void> {
+  try {
+    // Where it physically is NOW (fresh read: the close tx may have run a moment ago).
+    const fresh = await prisma.item.findUnique({ where: { id: item.id }, select: { locationId: true, transferRequestId: true, transferable: true, shippingBundleId: true } });
+    const at = fresh?.locationId ?? item.locationId;
+    // Its own warehouse when that warehouse ships (no transfer); otherwise the
+    // org's default station, which it has to be carried to.
+    const station = await stationForItem(item.organizationId, at);
+    if (station?.transfer && fresh?.transferable === false && !fresh.shippingBundleId) {
+      // Shipping would mean a transfer this lot isn't allowed to ride. Pickup.
+      await prisma.item.update({ where: { id: item.id }, data: { fulfillment: "PICKUP", shipChargeCents: 0 } });
+      return;
+    }
+    const r = await joinBundleOnWin(item.id, clerkUserId, item.organizationId);
+    if (r.sealedBundleId) await textSealedBox(r.sealedBundleId);
+    if (r.fulfillment !== "SHIP") return;
+    if (!station) {
+      console.warn(`[shipping] no shipping station for org ${item.organizationId} — lot ${item.id} will wait in its box`);
+      return;
+    }
+    if (!station.transfer || !at || at === station.id || fresh?.transferRequestId) return;
+    // Team text suppressed at close (same as pickup transfers) — the transfer
+    // board shows it; a big auction would otherwise fire one text per buyer.
+    await attachItemsToTransfer(clerkUserId, item.organizationId, station.id, [item.id], { notifyTeam: false });
+  } catch (e) {
+    console.error(`[shipping] routeWonLot failed for lot ${item.id} — treating as pickup:`, e);
+    // Best effort: pin it to pickup so dashboards don't show an undecided lot.
+    await prisma.item.updateMany({ where: { id: item.id, shippingBundleId: null }, data: { fulfillment: "PICKUP", shipChargeCents: 0 } }).catch(() => {});
+  }
+}
+
+/**
+ * A box joinBundleOnWin had to seal early (the next lot wouldn't fit): tell the
+ * buyer it's closed, the same text the day-7 cron sends. Fires once — the seal
+ * happens in exactly one joinBundleOnWin call. Never throws.
+ */
+async function textSealedBox(bundleId: string): Promise<void> {
+  try {
+    const b = await prisma.shippingBundle.findUnique({
+      where: { id: bundleId },
+      select: {
+        clerkUserId: true, organizationId: true,
+        location: { select: { id: true, name: true } },
+        items: { select: { id: true, locationId: true, transferRequestId: true } },
+      },
+    });
+    if (!b) return;
+    const station = b.location ?? (await shippingStation(b.organizationId));
+    const waiting = b.items.some((it) => !!it.transferRequestId || (station != null && it.locationId !== station.id));
+    await textBuyer(b.clerkUserId, "shipping_closed", closedMessage(waiting, station?.name), {
+      bundleId, lots: b.items.length, waitingOnTransfer: waiting, station: station?.name ?? null, sealedFull: true,
+    });
+  } catch (e) {
+    console.error(`[shipping] sealed-box text failed for ${bundleId}:`, e);
   }
 }
 
@@ -152,6 +226,9 @@ async function closeItem(
       prisma.proxyBid.updateMany({ where: { itemId: item.id, isActive: true }, data: { isActive: false } }),
     ]);
     triggerItemClosed(item.id).catch(() => {});
+    // Winner known → Pickup or Ship is decided NOW, before any charge is attempted,
+    // so the shipping delta is on the item by the time the bill is computed.
+    await routeWonLot(item, winningBid.clerkUserId);
     return { clerkUserId: winningBid.clerkUserId, amount: Number(winningBid.amount) };
   } else {
     await prisma.$transaction([
@@ -269,6 +346,23 @@ async function chargeOneWinner(
 
   const now = new Date();
 
+  // ── Shipping ───────────────────────────────────────────────────────────────
+  // Each lot's delta was written on the item when it was won (routeWonLot). It's
+  // added to the bill AFTER Bid Bucks (credit never touches shipping, §9.9) and
+  // is NOT taxed. Pickup lots carry 0, so a pickup-only bill is unchanged.
+  // If the lookup fails we must NOT charge (we'd silently under-bill a shipped
+  // lot): record FAILED so the retry paths pick it up, and move on to the next
+  // winner — a throw here would abort the whole charge pass.
+  let shipByItem: Map<string, number>;
+  try {
+    shipByItem = await shipCentsByItem(itemIds);
+  } catch (e) {
+    console.error(`[shipping] shipCentsByItem failed for ${clerkUserId} — recording FAILED for retry:`, e);
+    await recordWinnerStatus(chargingWinner, "FAILED", now, { failureReason: "shipping lookup failed" });
+    return;
+  }
+  const shipCents = itemIds.reduce((s, id) => s + (shipByItem.get(id) ?? 0), 0);
+
   // ── Admin comp ─────────────────────────────────────────────────────────────
   // If the winner is an OWNER/ADMIN of this org (or a super-admin), the bid was a
   // real bid in every way — it drove the price, outbid other people, and won — but
@@ -279,10 +373,29 @@ async function chargeOneWinner(
   // This is the ONLY place admin bids are treated differently. The bid path itself
   // is untouched, so normal bidding is completely unaffected.
   if (await isCompedWinner(clerkUserId, org.id)) {
+    // Shipping is comped too (recordWinnerStatus writes 0 for a comp). Zero the
+    // lots' deltas and the box's running total so the ship queue's "charged vs
+    // actual" column doesn't show money that was never collected.
     await recordWinnerStatus(chargingWinner, "PAID", now, {
       moveItemsToPendingPickup: true,
       comped: true,
     });
+    if (shipCents > 0) {
+      try {
+        const lots = await prisma.item.findMany({
+          where: { id: { in: itemIds }, shipChargeCents: { gt: 0 } },
+          select: { id: true, shipChargeCents: true, shippingBundleId: true },
+        });
+        for (const lot of lots) {
+          await prisma.item.update({ where: { id: lot.id }, data: { shipChargeCents: 0 } });
+          if (lot.shippingBundleId) {
+            await prisma.shippingBundle.update({ where: { id: lot.shippingBundleId }, data: { chargedCents: { decrement: lot.shipChargeCents } } });
+          }
+        }
+      } catch (e) {
+        console.error(`[shipping] comp zeroing failed for ${clerkUserId}:`, e);
+      }
+    }
     await autoAttachPaidItems(clerkUserId, org.id, { notifyTeam: false });
     console.log(`Auto-charge: COMPED admin win for ${clerkUserId} (${itemIds.length} item(s)) — no charge`);
     return;
@@ -291,7 +404,7 @@ async function chargeOneWinner(
   if (!bidderCustomer?.defaultPaymentMethodId) {
     // No card on file — mark all items as FAILED so bidder sees them on dashboard
     console.warn(`Auto-charge: no card on file for ${clerkUserId} in org ${org.id}`);
-    await recordWinnerStatus(chargingWinner, "FAILED", now, { failureReason: "No payment card on file" });
+    await recordWinnerStatus(chargingWinner, "FAILED", now, { failureReason: "No payment card on file", shipByItem });
     notifyPaymentFailed({
       clerkUserId,
       itemCount: itemIds.length,
@@ -316,15 +429,19 @@ async function chargeOneWinner(
   // partial charge gets its OWN key instead of clashing with the original attempt.
   const redemptionKey = chargeKeyFor(auctionId, clerkUserId, itemIds);
   const discountCents = await reserveReferralCredit(clerkUserId, chargeAmountCents, redemptionKey);
-  const netChargeCents = chargeAmountCents - discountCents;
+  // Shipping rides on top, after the credit — Bid Bucks only ever cover items.
+  const netChargeCents = chargeAmountCents - discountCents + shipCents;
 
-  // Bill fully covered by Bid Bucks — no card charge needed at all.
+  // Bill fully covered by Bid Bucks — no card charge needed at all. (When there IS
+  // shipping, net > 0 and the card is charged for the shipping even if the items
+  // themselves were fully covered.)
   if (discountCents > 0 && netChargeCents <= 0) {
     await recordWinnerStatus(chargingWinner, "PAID", now, {
       feeAmountCents,
       taxAmountCents,
       creditAppliedCents: discountCents,
       moveItemsToPendingPickup: true,
+      shipByItem,
     });
     await autoAttachPaidItems(clerkUserId, org.id, { notifyTeam: false });
     // NOTE: vesting the inviter's reward is deliberately done AFTER the whole
@@ -353,6 +470,7 @@ async function chargeOneWinner(
           auctionId,
           itemIds: itemIds.slice(0, 5).join(","), // Stripe metadata 500-char limit
           creditAppliedCents: String(discountCents),
+          shippingCents: String(shipCents),
           redemptionKey, // so the webhook can release the exact reservation on async failure
         },
       },
@@ -375,7 +493,7 @@ async function chargeOneWinner(
       failureReason = (err as { message: string }).message;
     }
     console.error(`Auto-charge FAILED for ${clerkUserId}:`, failureReason);
-    await recordWinnerStatus(chargingWinner, "FAILED", now, { failureReason });
+    await recordWinnerStatus(chargingWinner, "FAILED", now, { failureReason, shipByItem });
     notifyPaymentFailed({
       clerkUserId,
       itemCount: itemIds.length,
@@ -394,6 +512,7 @@ async function chargeOneWinner(
       creditAppliedCents: discountCents,
       stripePaymentIntentId: paymentIntent.id,
       moveItemsToPendingPickup: true,
+      shipByItem,
     });
     // Fold newly-won items into any upcoming pickup appointment.
     await autoAttachPaidItems(clerkUserId, org.id, { notifyTeam: false });
@@ -420,6 +539,7 @@ async function chargeOneWinner(
       taxAmountCents,
       creditAppliedCents: discountCents,
       stripePaymentIntentId: paymentIntent.id,
+      shipByItem,
     });
     console.log(`Auto-charge: PI ${paymentIntent.id} processing for ${clerkUserId} — pending webhook`);
     return;
@@ -432,6 +552,7 @@ async function chargeOneWinner(
   await recordWinnerStatus(chargingWinner, "FAILED", now, {
     failureReason: status,
     stripePaymentIntentId: paymentIntent.id,
+    shipByItem,
   });
   notifyPaymentFailed({
     clerkUserId,
@@ -446,8 +567,10 @@ async function chargeOneWinner(
  * crash can't leave items charged-but-unrecorded.
  *
  * Fee/tax are distributed across items in whole cents; the leftover cent goes to
- * item[0] so per-item rows sum back to the charged total. Idempotent: pre-checks
- * existing rows and ignores P2002.
+ * item[0] so per-item rows sum back to the charged total. Shipping is NOT split:
+ * each lot's row carries that lot's own delta (`shipByItem`), which is what the
+ * forfeit/refund paths give back. Idempotent: pre-checks existing rows and
+ * ignores P2002.
  */
 async function recordWinnerStatus(
   winner: WinnerEntry,
@@ -461,12 +584,15 @@ async function recordWinnerStatus(
     failureReason?: string;
     moveItemsToPendingPickup?: boolean;
     comped?: boolean;
+    /** itemId → that lot's shipping delta in cents (absent / 0 = pickup). */
+    shipByItem?: Map<string, number>;
   } = {}
 ): Promise<void> {
   const { clerkUserId } = winner;
   const itemIds = winner.items.map((i) => i.id);
   const feeAmountCents = opts.feeAmountCents ?? 0;
   const taxAmountCents = opts.taxAmountCents ?? 0;
+  const shipByItem = opts.shipByItem ?? new Map<string, number>();
   // Whole Bid Bucks discount is attributed to the first item's row (like the
   // fee/tax remainder) so per-item rows still sum back to what was charged.
   const creditAppliedCents = opts.creditAppliedCents ?? 0;
@@ -499,6 +625,8 @@ async function recordWinnerStatus(
     const itemFeeCents = baseFeeCents + (isFirstNew ? feeRemainderCents : 0);
     const itemTaxCents = baseTaxCents + (isFirstNew ? taxRemainderCents : 0);
     const itemCreditCents = isFirstNew ? creditAppliedCents : 0;
+    // Shipping is comped along with everything else for an admin win.
+    const itemShipCents = opts.comped ? 0 : shipByItem.get(item.id) ?? 0;
 
     ops.push(
       prisma.payment.create({
@@ -511,6 +639,7 @@ async function recordWinnerStatus(
           applicationFeeAmount: opts.comped ? 0 : itemFeeCents / 100,
           taxAmount: opts.comped ? 0 : itemTaxCents / 100,
           creditApplied: itemCreditCents > 0 ? itemCreditCents / 100 : null,
+          shippingAmount: itemShipCents > 0 ? itemShipCents / 100 : null,
           stripePaymentIntentId: opts.stripePaymentIntentId,
           status,
           comped: opts.comped ?? false,

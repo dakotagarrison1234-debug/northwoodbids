@@ -316,6 +316,7 @@ export default async function AuctionPage({ params }: Props) {
       isItemUnsold,
       isItemLive,
       itemEndAtIso,
+      ships: !!item.shipEligible,
     };
   });
 

@@ -12,10 +12,12 @@ import { IcoTrophy, IcoGift, IcoCheck, IcoBolt, IcoCoin, IcoTarget, IcoGavel as 
 import EmptyState from "@/app/components/EmptyState";
 import Skeleton from "@/app/components/Skeleton";
 import PickupStatusCard from "@/app/components/PickupStatusCard";
+import YourBoxCard, { useShippingBoxes, ACTIVE_BOX_STATUSES } from "@/app/components/YourBoxCard";
+import { ShippingTab } from "@/app/components/ShippingBoxFull";
 import ItemCardTimer from "@/app/components/ItemCardTimer";
 import { money } from "@/lib/format";
 
-type Tab = "overview" | "active" | "history" | "auctions" | "profile";
+type Tab = "overview" | "active" | "history" | "shipping" | "auctions" | "profile";
 
 interface BidBase {
   itemId: string;
@@ -32,9 +34,12 @@ interface BidBase {
 }
 interface WinningBid extends BidBase { myBid: number; currentBid: number; itemEndAt: string | null; }
 interface LosingBid extends BidBase { myBid: number; currentBid: number; itemEndAt: string | null; }
-interface PastBid extends BidBase { myBid: number; finalBid: number; outcome: "won" | "lost" | "unsold"; paid: boolean; pickedUp?: boolean; storageLocation?: string | null; giveaway?: boolean; }
+interface PastBid extends BidBase { myBid: number; finalBid: number; outcome: "won" | "lost" | "unsold"; paid: boolean; pickedUp?: boolean; storageLocation?: string | null; giveaway?: boolean; fulfillment?: "PICKUP" | "SHIP" | null; shippingBundleId?: string | null; shippingAmount?: number; }
 interface UnpaidWin extends BidBase {
   amountOwed: number;
+  fulfillment?: "PICKUP" | "SHIP" | null;
+  shippingBundleId?: string | null;
+  shippingAmount?: number;
   paymentFailed?: boolean;
   orgId?: string;
   orgStripeAccountId?: string | null;
@@ -221,7 +226,7 @@ function BidderDashboardInner() {
   const initialTab: Tab =
     rawTab === "winning" || rawTab === "losing" || rawTab === "active"
       ? "active"
-      : rawTab === "history" || rawTab === "auctions" || rawTab === "profile"
+      : rawTab === "history" || rawTab === "shipping" || rawTab === "auctions" || rawTab === "profile"
       ? rawTab
       : "overview";
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -334,6 +339,10 @@ function BidderDashboardInner() {
     if (tab === "auctions") loadLiveAuctions();
   }, [tab, loadPaymentMethods, loadLiveAuctions]);
 
+  // Shipping boxes — one fetch shared by the Overview "Your box" card and the Shipping tab.
+  const { boxes: shipBoxes, reload: reloadBoxes } = useShippingBoxes();
+  const shipBoxCount = (shipBoxes ?? []).filter((b) => ACTIVE_BOX_STATUSES.has(b.status)).length;
+
   // Live auction list updates — re-fetch when any auction opens or closes
   useEffect(() => {
     const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
@@ -365,9 +374,19 @@ function BidderDashboardInner() {
     finally { setSavingProfile(false); }
   };
 
+  // "Paid." plus where the lot is now: a pickup lot is ready for pickup, a ship lot is in their box.
+  const paidText = (ids: string[]) => {
+    const lots = (data?.unpaidWins ?? []).filter((w) => ids.includes(w.itemId));
+    const ship = lots.filter((w) => w.fulfillment === "SHIP").length;
+    if (ship === 0) return lots.length === 1 ? "Paid. Your item is ready for pickup." : "Paid. Your items are ready for pickup.";
+    if (ship === lots.length) return lots.length === 1 ? "Paid. It's in your box." : "Paid. They're in your box.";
+    return "Paid. Pickup lots are ready for pickup; the rest are in your box.";
+  };
+
   const retryPayment = async (itemId: string) => {
     setRetryingItemId(itemId);
     setRetryMsg(null);
+    const done = paidText([itemId]);
     try {
       const res = await fetch("/api/retry-payment", {
         method: "POST",
@@ -376,7 +395,7 @@ function BidderDashboardInner() {
       });
       const d = await res.json();
       if (d.success) {
-        setRetryMsg({ text: "Paid. Your item is ready for pickup.", ok: true });
+        setRetryMsg({ text: done, ok: true });
         load();
       } else if (d.requiresAction && d.clientSecret) {
         // Card requires 3DS authentication — confirm on-session in the browser.
@@ -401,7 +420,7 @@ function BidderDashboardInner() {
           });
           const cd = await c.json();
           if (cd.success) {
-            setRetryMsg({ text: "Paid. Your item is ready for pickup.", ok: true });
+            setRetryMsg({ text: done, ok: true });
             load();
           } else {
             setRetryMsg({ text: cd.error || "Payment went through but we couldn't confirm it. Refresh in a minute.", ok: false });
@@ -423,11 +442,12 @@ function BidderDashboardInner() {
   const retryAll = async () => {
     setRetryingAll(true);
     setRetryMsg(null);
+    const done = paidText((data?.unpaidWins ?? []).map((w) => w.itemId));
     try {
       const res = await fetch("/api/retry-payment/all", { method: "POST" });
       const d = await res.json();
       if (d.success) {
-        setRetryMsg({ text: "Paid. Your items are ready for pickup.", ok: true });
+        setRetryMsg({ text: done, ok: true });
         load();
       } else if (d.requiresAction && d.clientSecret) {
         const { loadStripe } = await import("@stripe/stripe-js");
@@ -449,7 +469,7 @@ function BidderDashboardInner() {
           });
           const cd = await c.json();
           if (cd.success) {
-            setRetryMsg({ text: "Paid. Your items are ready for pickup.", ok: true });
+            setRetryMsg({ text: done, ok: true });
             load();
           } else {
             setRetryMsg({ text: cd.error || "Payment went through but we couldn't confirm it. Refresh in a minute.", ok: false });
@@ -544,7 +564,7 @@ function BidderDashboardInner() {
   const pastWins = past.filter((b) => b.outcome === "won");
   const activeCount = winning.length + visibleLosing.length;
 
-  const myBidsTabs: Tab[] = ["overview", "active", "history"];
+  const myBidsTabs: Tab[] = ["overview", "active", "history", "shipping"];
   const inMyBids = myBidsTabs.includes(tab);
 
   const firstName = user?.firstName || data.profile?.name?.split(" ")[0] || null;
@@ -693,7 +713,7 @@ function BidderDashboardInner() {
                       <div className="text-xs text-[#8a7559] truncate">{w.auctionTitle} · {w.orgName}</div>
                       <div className="text-xs text-red-600 font-semibold mt-0.5">
                         Declined · {money(due)} due
-                        {(w.feeAmount ?? 0) + (w.taxAmount ?? 0) > 0 ? " (incl. fee & tax)" : ""}
+                        {(w.feeAmount ?? 0) + (w.taxAmount ?? 0) > 0 ? ((w.shippingAmount ?? 0) > 0 ? " (incl. fee, tax & shipping)" : " (incl. fee & tax)") : ""}
                       </div>
                     </div>
                     <button
@@ -716,7 +736,7 @@ function BidderDashboardInner() {
             <IcoCoin className="w-4 h-4 text-[#a85f28] shrink-0 mt-0.5" />
             <div className="text-sm min-w-0">
               <span className="text-[#8a4f1c] font-bold">{pendingWins.length} win{pendingWins.length !== 1 ? "s" : ""} settling</span>
-              <span className="text-[#6f5b46]"> · {money(pendingWins.reduce((s, i) => s + (i.totalDue ?? i.amountOwed), 0))}{pendingWins.some((i) => (i.feeAmount ?? 0) + (i.taxAmount ?? 0) > 0) ? " incl. fee & tax" : ""}</span>
+              <span className="text-[#6f5b46]"> · {money(pendingWins.reduce((s, i) => s + (i.totalDue ?? i.amountOwed), 0))}{pendingWins.some((i) => (i.feeAmount ?? 0) + (i.taxAmount ?? 0) > 0) ? (pendingWins.some((i) => (i.shippingAmount ?? 0) > 0) ? " incl. fee, tax & shipping" : " incl. fee & tax") : ""}</span>
               <p className="text-xs text-[#8a7559] mt-0.5">Nothing to do. Your card on file is charged a few minutes after the auction closes.</p>
             </div>
           </div>
@@ -736,6 +756,7 @@ function BidderDashboardInner() {
               { id: "overview", label: "Overview", icon: <IcoGrid /> },
               { id: "active",   label: "In play",  count: activeCount,     icon: <IcoUp /> },
               { id: "history",  label: "Won",      count: pastWins.length, icon: <IcoHistory /> },
+              { id: "shipping", label: "Shipping", count: shipBoxCount,    icon: <IcoTruck className="w-[18px] h-[18px]" /> },
             ];
             return (
               <div className="mb-5 sm:mb-6 -mx-1 px-1 overflow-x-auto">
@@ -777,6 +798,9 @@ function BidderDashboardInner() {
 
               {/* Pickup status — distinguishes ready vs being-transferred vs scheduled */}
               <PickupStatusCard />
+
+              {/* Shipping — the buyer's open / packing / shipped boxes (nothing when none) */}
+              <YourBoxCard boxes={shipBoxes} reload={reloadBoxes} />
 
               {/* Stat cards */}
               <div className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -1236,7 +1260,13 @@ function BidderDashboardInner() {
                               ) : (
                                 <Chip tone="amber"><IcoCoin className="w-3 h-3" /> Owed</Chip>
                               )}
-                              {b.pickedUp ? (
+                              {b.fulfillment === "SHIP" ? (
+                                b.pickedUp ? (
+                                  <Chip tone="tan"><IcoTruck className="w-3 h-3" /> Shipped</Chip>
+                                ) : (
+                                  <Chip tone="leather"><IcoTruck className="w-3 h-3" /> In your box</Chip>
+                                )
+                              ) : b.pickedUp ? (
                                 <Chip tone="tan"><IcoCheck className="w-3 h-3" /> Picked up</Chip>
                               ) : (
                                 <Chip tone="leather"><IcoTruck className="w-3 h-3" /> Ready for pickup</Chip>
@@ -1255,6 +1285,8 @@ function BidderDashboardInner() {
             );
           })()}
 
+          {/* ── Shipping (the buyer's boxes, full cards) ── */}
+          {tab === "shipping" && <ShippingTab boxes={shipBoxes} reload={reloadBoxes} />}
 
           {/* ── Account ── */}
           {tab === "profile" && (

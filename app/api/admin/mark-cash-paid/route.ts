@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { getUserOrg, requireRole } from "@/lib/auth";
 import { settleItemsPaid } from "@/lib/settlePayments";
 import { autoAttachPaidItems } from "@/lib/pickup";
+import { leaveBundle } from "@/lib/shipping/bundle";
+import { appendNote } from "@/app/api/admin/shipping/_lib";
 
 /**
  * POST /api/admin/mark-cash-paid
@@ -23,6 +25,9 @@ import { autoAttachPaidItems } from "@/lib/pickup";
  *    payment is never overwritten.
  *  - Undo only reverses rows WE marked cash-paid, and only while the item is still
  *    simply awaiting pickup (not on an appointment/transfer, not collected).
+ *  - Cash at the counter means they're picking up: a lot still sitting in a
+ *    shipping box with no label leaves the box (Move-to-pickup semantics) and
+ *    no shipping is collected for it. `movedToPickup` says how many.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -48,7 +53,12 @@ export async function POST(request: NextRequest) {
       where: { clerkUserId, status: "WON", item: { organizationId: orgId } },
       select: {
         amount: true,
-        item: { select: { id: true, status: true, pickupAppointmentId: true, transferRequestId: true } },
+        item: {
+          select: {
+            id: true, status: true, pickupAppointmentId: true, transferRequestId: true, itemCode: true,
+            shippingBundleId: true, shippingBundle: { select: { id: true, status: true, labelUrl: true, notes: true } },
+          },
+        },
       },
     });
     if (wonBids.length === 0) return NextResponse.json({ error: "This bidder has no wins." }, { status: 404 });
@@ -117,6 +127,32 @@ export async function POST(request: NextRequest) {
 
     const items = outstanding.map((b) => ({ id: b.item.id, bid: Number(b.amount) }));
 
+    // They're at the counter, so anything still in a label-less box is pickup
+    // now: out of the box (re-weighed, delta dropped), fulfillment PICKUP, no
+    // shipping on the bill. Done BEFORE settling so shipChargeCents is already 0
+    // when the Payment rows are written. A labelled box is physical — left alone.
+    let movedToPickup = 0;
+    for (const b of outstanding) {
+      const box = b.item.shippingBundle;
+      if (!b.item.shippingBundleId || !box || box.labelUrl || box.status === "SHIPPED" || box.status === "DELIVERED") continue;
+      try {
+        await leaveBundle(b.item.id);
+        await prisma.item.update({ where: { id: b.item.id }, data: { fulfillment: "PICKUP", shipChargeCents: 0 } });
+        await prisma.payment.updateMany({
+          where: { itemId: b.item.id, clerkUserId, status: { in: ["PENDING", "FAILED"] }, shippingAmount: { not: null } },
+          data: { shippingAmount: null },
+        });
+        const fresh = await prisma.shippingBundle.findUnique({ where: { id: box.id }, select: { notes: true } });
+        await prisma.shippingBundle.update({
+          where: { id: box.id },
+          data: { notes: appendNote(fresh?.notes ?? box.notes, `${b.item.itemCode ?? "Lot"} paid in cash at the counter — moved to pickup (no shipping collected).`) },
+        });
+        movedToPickup++;
+      } catch (e) {
+        console.error("[admin/mark-cash-paid] move to pickup failed:", e);
+      }
+    }
+
     // Settle with NO Stripe PaymentIntent and NO Bid Bucks credit — full cash — then
     // stamp the cash flags + audit fields on exactly those rows.
     await settleItemsPaid(clerkUserId, items, feePct, taxPct, null, 0, "PAID");
@@ -129,9 +165,15 @@ export async function POST(request: NextRequest) {
     await autoAttachPaidItems(clerkUserId, orgId);
 
     const hammerTotal = items.reduce((s, i) => s + i.bid, 0);
+    // Shipping deltas on the rows we just settled ride on top (not taxed).
+    const shipAgg = await prisma.payment.aggregate({
+      where: { itemId: { in: items.map((i) => i.id) }, clerkUserId },
+      _sum: { shippingAmount: true },
+    });
+    const shippingTotal = Number(shipAgg._sum.shippingAmount ?? 0);
     const cashCollected =
-      Math.round((hammerTotal * (1 + feePct / 100) * (1 + taxPct / 100)) * 100) / 100;
-    return NextResponse.json({ success: true, paid: items.length, hammerTotal, cashCollected });
+      Math.round((hammerTotal * (1 + feePct / 100) * (1 + taxPct / 100) + shippingTotal) * 100) / 100;
+    return NextResponse.json({ success: true, paid: items.length, hammerTotal, cashCollected, movedToPickup });
   } catch (error) {
     console.error("[admin/mark-cash-paid POST]:", error);
     return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });

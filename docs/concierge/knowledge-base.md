@@ -136,6 +136,21 @@ from here.
 
 ---
 
+## Shipping
+
+**Can you ship my item?**
+Some lots can ship — look for a Ship box next to Pickup on the lot's page, with the
+price. It's one flat price per box based on weight and where you live. Keep winning for
+7 days and extra lots ride in the same box; you only pay the difference if the box moves
+up a weight band. Owosso and Gladwin each ship their own box, so lots won at both
+warehouses go out as two separate boxes (two prices, two tracking numbers). We hold the
+box 7 days, or you can tap "Ship it now" on your dashboard, then it ships ground within
+3 to 5 business days. Lower 48 states only. Shipping is charged with the win and can't be
+refunded once the label is printed. Tracking shows on your dashboard and we text you when
+it ships and when it's delivered.
+
+---
+
 ## Transfers between spots
 
 **I won items at different locations — how does that work?**

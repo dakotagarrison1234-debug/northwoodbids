@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notifyTransferRequested } from "@/lib/transferNotify";
 import { revokeDoorCodesFor } from "@/lib/doorLock";
+import { shippingStation } from "@/lib/shipping/bundle";
 
 /**
  * Pickup scheduling helpers. All pickup times are interpreted in the business's
@@ -9,6 +10,64 @@ import { revokeDoorCodesFor } from "@/lib/doorLock";
 
 export const PICKUP_TZ = "America/Detroit";
 export type Slot = { startsAt: string; remaining: number };
+
+/**
+ * Shipped lots never take part in the pickup pipeline. A lot in a ShippingBundle
+ * (`shippingBundleId` set — that's what `fulfillment = SHIP` always comes with)
+ * is not "waiting to book", never rides onto an appointment, and is only ever
+ * transferred to the shipping station (see lib/closeAuction.ts). Every pickup
+ * query below carries this filter; `shippingBundleId: null` is used rather than
+ * `fulfillment: { not: "SHIP" }` because the latter would also drop NULL rows.
+ */
+const NOT_SHIPPED = { shippingBundleId: null } as const;
+
+/**
+ * THE single place a transfer is created / grown: put `itemIds` on the bidder's
+ * one still-gathering (REQUESTED) transfer to `toLocationId`, creating it if none
+ * exists. A transfer that was already staged gets un-staged (the spot no longer
+ * holds the whole set), and the team is texted unless `notifyTeam: false`.
+ * Used by the pickup magnet, the preferred-location auto-transfer, and shipping
+ * consolidation to the station — all three move items the same way.
+ */
+export async function attachItemsToTransfer(
+  clerkUserId: string,
+  organizationId: string,
+  toLocationId: string,
+  itemIds: string[],
+  opts: { notifyTeam?: boolean } = {}
+): Promise<{ transferId: string | null; created: boolean }> {
+  if (itemIds.length === 0) return { transferId: null, created: false };
+  let transfer = await prisma.transferRequest.findFirst({
+    where: { clerkUserId, organizationId, toLocationId, status: "REQUESTED" },
+    select: { id: true },
+  });
+  let created = false;
+  if (!transfer) {
+    transfer = await prisma.transferRequest.create({
+      data: { organizationId, clerkUserId, toLocationId, status: "REQUESTED" },
+      select: { id: true },
+    });
+    created = true;
+  }
+  await prisma.item.updateMany({
+    where: { id: { in: itemIds } },
+    data: { transferRequestId: transfer.id },
+  });
+  // More items just joined a transfer that was already staged — the staged spot no
+  // longer holds the whole set, so un-stage it for re-gathering.
+  if (!created) {
+    await prisma.transferRequest.updateMany({
+      where: { id: transfer.id, stagedSpot: { not: null } },
+      data: { stagedSpot: null, stagedAt: null },
+    });
+  }
+  if (opts.notifyTeam !== false) {
+    notifyTransferRequested(transfer.id).catch((e) =>
+      console.error("notifyTransferRequested (attach) failed:", e)
+    );
+  }
+  return { transferId: transfer.id, created };
+}
 
 /**
  * Reconcile a bidder's pickup pipeline when they (or an admin) switch preferred
@@ -28,11 +87,44 @@ export async function switchPreferredCascade(
   previous: string,
   next: string
 ): Promise<void> {
+  // Shipped lots ride a transfer to the SHIPPING STATION, never to a pickup
+  // location. If the old preferred warehouse happens to be the station, those lots
+  // share a cart with pickup items headed there — pull them off before we re-point
+  // the cart, and put them back on a station-bound cart afterwards.
+  const shippedOnOld = await prisma.item.findMany({
+    where: {
+      shippingBundleId: { not: null },
+      transferRequest: { clerkUserId, organizationId, status: "REQUESTED", toLocationId: previous },
+    },
+    select: { id: true, shippingBundle: { select: { locationId: true } } },
+  });
+  if (shippedOnOld.length > 0) {
+    await prisma.item.updateMany({
+      where: { id: { in: shippedOnOld.map((i) => i.id) } },
+      data: { transferRequestId: null },
+    });
+  }
+
   // Re-point only OLD-location transfers.
   await prisma.transferRequest.updateMany({
     where: { clerkUserId, organizationId, status: "REQUESTED", toLocationId: previous },
     data: { toLocationId: next },
   });
+
+  if (shippedOnOld.length > 0) {
+    // Each shipped lot rides to ITS BOX's station (every station packs its own
+    // boxes); a box with no station yet goes to the org default.
+    const fallback = await shippingStation(organizationId);
+    const byStation = new Map<string, string[]>();
+    for (const i of shippedOnOld) {
+      const st = i.shippingBundle?.locationId ?? fallback?.id;
+      if (!st) continue;
+      byStation.set(st, [...(byStation.get(st) ?? []), i.id]);
+    }
+    for (const [stationId, ids] of byStation) {
+      await attachItemsToTransfer(clerkUserId, organizationId, stationId, ids, { notifyTeam: false });
+    }
+  }
 
   // Cancel the stale appointment(s) at the old location only.
   const staleAppts = await prisma.pickupAppointment.findMany({
@@ -116,7 +208,8 @@ export async function getUnscheduledPickupItemIds(
   if (ids.length === 0) return [];
   const items = await prisma.item.findMany({
     // Not on an appointment AND not riding a transfer — those are handled elsewhere.
-    where: { id: { in: ids }, status: "PENDING_PICKUP", pickupAppointmentId: null, transferRequestId: null },
+    // Shipped lots are never "waiting to book".
+    where: { id: { in: ids }, status: "PENDING_PICKUP", pickupAppointmentId: null, transferRequestId: null, ...NOT_SHIPPED },
     select: { id: true },
   });
   return items.map((i) => i.id);
@@ -233,6 +326,7 @@ export async function attachToPendingTransfers(
       transferRequestId: null,
       locationId: { not: null },
       NOT: { locationId: target.toLocationId },
+      ...NOT_SHIPPED,
     },
     select: { id: true },
   });
@@ -295,44 +389,15 @@ export async function autoTransferToPreferred(
       transferRequestId: null,
       locationId: { not: null },
       NOT: { locationId: preferred.id },
+      ...NOT_SHIPPED,
     },
     select: { id: true },
   });
   if (elsewhere.length === 0) return { added: 0, toLocationName: preferred.name };
 
-  // One still-gathering (REQUESTED) transfer per bidder to the preferred location.
-  let transfer = await prisma.transferRequest.findFirst({
-    where: { clerkUserId, organizationId, toLocationId: preferred.id, status: "REQUESTED" },
-    select: { id: true },
-  });
-  let created = false;
-  if (!transfer) {
-    transfer = await prisma.transferRequest.create({
-      data: { organizationId, clerkUserId, toLocationId: preferred.id, status: "REQUESTED" },
-      select: { id: true },
-    });
-    created = true;
-  }
-  await prisma.item.updateMany({
-    where: { id: { in: elsewhere.map((i) => i.id) } },
-    data: { transferRequestId: transfer.id },
-  });
-  // If more items just joined a transfer that was already staged, the staged spot no
-  // longer holds the whole bundle — un-stage so it's re-gathered and re-staged.
-  if (!created) {
-    await prisma.transferRequest.updateMany({
-      where: { id: transfer.id, stagedSpot: { not: null } },
-      data: { stagedSpot: null, stagedAt: null },
-    });
-  }
-
-  // Team alert (fire-and-forget) — only worth pinging when it's a fresh transfer
-  // or items were added.
-  if (notifyTeam && (created || elsewhere.length > 0)) {
-    notifyTransferRequested(transfer.id).catch((e) =>
-      console.error("notifyTransferRequested (auto) failed:", e)
-    );
-  }
+  // One still-gathering (REQUESTED) transfer per bidder to the preferred location;
+  // the team alert fires only when something was actually created/added.
+  await attachItemsToTransfer(clerkUserId, organizationId, preferred.id, elsewhere.map((i) => i.id), { notifyTeam });
 
   return { added: elsewhere.length, toLocationName: preferred.name };
 }
@@ -404,9 +469,11 @@ export async function consolidatePickup(
   if (ids.length === 0) return { ...none, locationName };
 
   // A. Loose paid items already here (or with no home warehouse) → on the appointment.
+  //    (Shipped lots are excluded from every step here — they only ever move to
+  //    the shipping station, and never onto an appointment.)
   const readyLoose = await prisma.item.findMany({
     where: {
-      id: { in: ids }, status: "PENDING_PICKUP", pickupAppointmentId: null, transferRequestId: null,
+      id: { in: ids }, status: "PENDING_PICKUP", pickupAppointmentId: null, transferRequestId: null, ...NOT_SHIPPED,
       OR: [{ locationId: X }, { locationId: null }],
     },
     select: { id: true },
@@ -416,7 +483,7 @@ export async function consolidatePickup(
   const readyOnCart = isHome
     ? await prisma.item.findMany({
         where: {
-          id: { in: ids }, status: "PENDING_PICKUP", pickupAppointmentId: null, locationId: X,
+          id: { in: ids }, status: "PENDING_PICKUP", pickupAppointmentId: null, locationId: X, ...NOT_SHIPPED,
           transferRequest: { status: "REQUESTED" },
         },
         select: { id: true },
@@ -440,7 +507,7 @@ export async function consolidatePickup(
     //    still-gathering cart pointed somewhere else — → one REQUESTED transfer here.
     const elsewhere = await prisma.item.findMany({
       where: {
-        id: { in: ids }, status: "PENDING_PICKUP", transferable: true, pickupAppointmentId: null,
+        id: { in: ids }, status: "PENDING_PICKUP", transferable: true, pickupAppointmentId: null, ...NOT_SHIPPED,
         locationId: { not: null }, NOT: { locationId: X },
         OR: [
           { transferRequestId: null },
@@ -450,34 +517,8 @@ export async function consolidatePickup(
       select: { id: true },
     });
     if (elsewhere.length > 0) {
-      let transfer = await prisma.transferRequest.findFirst({
-        where: { clerkUserId, organizationId, toLocationId: X, status: "REQUESTED" },
-        select: { id: true },
-      });
-      let created = false;
-      if (!transfer) {
-        transfer = await prisma.transferRequest.create({
-          data: { organizationId, clerkUserId, toLocationId: X, status: "REQUESTED" },
-          select: { id: true },
-        });
-        created = true;
-      }
-      await prisma.item.updateMany({
-        where: { id: { in: elsewhere.map((i) => i.id) } },
-        data: { transferRequestId: transfer.id },
-      });
-      if (!created) {
-        await prisma.transferRequest.updateMany({
-          where: { id: transfer.id, stagedSpot: { not: null } },
-          data: { stagedSpot: null, stagedAt: null },
-        });
-      }
+      await attachItemsToTransfer(clerkUserId, organizationId, X, elsewhere.map((i) => i.id), { notifyTeam: opts.notifyTeam });
       transferred = elsewhere.length;
-      if (opts.notifyTeam !== false) {
-        notifyTransferRequested(transfer.id).catch((e) =>
-          console.error("notifyTransferRequested (consolidate) failed:", e)
-        );
-      }
     }
 
     // D. Carts we emptied by re-pointing → cancel so they don't linger on the board.
@@ -518,7 +559,7 @@ export async function consolidateAllPickups(organizationId: string): Promise<{ b
 
   // Paid items not on any appointment, owned by someone who has one booked.
   const strays = await prisma.item.findMany({
-    where: { organizationId, status: "PENDING_PICKUP", pickupAppointmentId: null },
+    where: { organizationId, status: "PENDING_PICKUP", pickupAppointmentId: null, ...NOT_SHIPPED },
     select: { id: true },
   });
   if (strays.length === 0) return { bidders: 0 };

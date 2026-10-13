@@ -19,7 +19,9 @@ export async function GET() {
     // Exclude items out on an active transfer — they live on the Transfers board and
     // the customer waits for them to arrive before booking. Showing them here too is
     // just noise. (transferRequestId is non-null only while REQUESTED/LOADED.)
-    where: { organizationId: orgId, status: "PENDING_PICKUP", pickupAppointmentId: null, transferRequestId: null },
+    // Shipped lots (in a ShippingBundle) aren't waiting to book either — they live
+    // on the shipping queue once they reach the station.
+    where: { organizationId: orgId, status: "PENDING_PICKUP", pickupAppointmentId: null, transferRequestId: null, shippingBundleId: null },
     select: {
       id: true,
       title: true,

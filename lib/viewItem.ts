@@ -22,6 +22,8 @@ export type SourceItem = {
   packSize: number | null;
   isPremium: boolean;
   itemEndAt: Date | null;
+  /** Shipping opt-in (optional so older selects still type-check). */
+  shipEligible?: boolean;
   photos: { url: string; isPrimary: boolean }[];
   /** At most the single highest ACTIVE bid (fetched with take: 1). */
   bids: { clerkUserId: string | null }[];
@@ -136,5 +138,6 @@ export function toViewItem(
     isItemUnsold,
     isItemLive,
     itemEndAtIso,
+    ships: !!item.shipEligible,
   };
 }

@@ -14,6 +14,7 @@ interface Line {
   bid: number;
   premium: number;
   tax: number;
+  shipping?: number;
   total: number;
 }
 interface Totals {
@@ -21,6 +22,7 @@ interface Totals {
   premium: number;
   tax: number;
   credit?: number;
+  shipping?: number;
   grandTotal: number;
 }
 interface Invoice {
@@ -272,14 +274,20 @@ function InvoiceInner() {
                     <span className="text-[#6f5b46]">Buyer&apos;s premium ({data.feePercent ?? 15}%)</span>
                     <span>{money(data.totals.premium)}</span>
                   </div>
-                  <div className={`flex justify-between py-1.5 ${data.totals.credit ? "" : "border-b border-[#e3d6bf]"}`}>
+                  <div className={`flex justify-between py-1.5 ${data.totals.credit || data.totals.shipping ? "" : "border-b border-[#e3d6bf]"}`}>
                     <span className="text-[#6f5b46]">Sales tax ({data.taxPercent ?? 6}%)</span>
                     <span>{money(data.totals.tax)}</span>
                   </div>
                   {!!data.totals.credit && data.totals.credit > 0 && (
-                    <div className="flex justify-between py-1.5 border-b border-[#e3d6bf] text-green-700">
+                    <div className={`flex justify-between py-1.5 text-green-700 ${data.totals.shipping ? "" : "border-b border-[#e3d6bf]"}`}>
                       <span>Bid Bucks credit</span>
                       <span>−{money(data.totals.credit)}</span>
+                    </div>
+                  )}
+                  {!!data.totals.shipping && data.totals.shipping > 0 && (
+                    <div className="flex justify-between py-1.5 border-b border-[#e3d6bf]">
+                      <span className="text-[#6f5b46]">Shipping</span>
+                      <span>{money(data.totals.shipping)}</span>
                     </div>
                   )}
                   <div className="flex justify-between py-2.5 font-display font-black text-base">

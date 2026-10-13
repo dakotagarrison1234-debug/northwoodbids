@@ -67,7 +67,7 @@ export async function GET() {
   const payments = wonItemIds.length
     ? await prisma.payment.findMany({
         where: { itemId: { in: wonItemIds }, clerkUserId: userId },
-        select: { itemId: true, status: true },
+        select: { itemId: true, status: true, shippingAmount: true },
       })
     : [];
 
@@ -77,6 +77,8 @@ export async function GET() {
   const failedItemIds = new Set(
     payments.filter((p) => p.status === "FAILED").map((p) => p.itemId)
   );
+  // Shipping on the row (what was / will be billed); falls back to the lot's delta.
+  const shippingByItem = new Map(payments.map((p) => [p.itemId, p.shippingAmount == null ? null : Number(p.shippingAmount)]));
 
   const winning = [];    // Active bids I'm currently leading in an open auction
   const losing = [];     // Bids I've been outbid on in a still-open auction
@@ -102,6 +104,14 @@ export async function GET() {
       auctionStatus: auction.status,
       orgName: auction.organization.name,
       orgSlug: auction.organization.slug,
+    };
+
+    // Ship vs pickup for a won lot. Shipping is NOT taxed and rides on top of the bill.
+    const shippingAmount = shippingByItem.get(item.id) ?? (item.shipChargeCents > 0 ? item.shipChargeCents / 100 : 0);
+    const won = {
+      fulfillment: item.fulfillment ?? null,
+      shippingBundleId: item.shippingBundleId ?? null,
+      shippingAmount,
     };
 
     const itemActive  = item.status === "ACTIVE";
@@ -140,6 +150,7 @@ export async function GET() {
           // No confirmed payment — still owed (includes failed auto-charge)
           unpaidWins.push({
             ...base,
+            ...won,
             amountOwed: Number(item.currentBid),
             // Fee/tax disclosure — same cent math as the auto-charge in chargeWinners
             ...(() => {
@@ -153,7 +164,7 @@ export async function GET() {
                 taxPercent,
                 feeAmount: feeCents / 100,
                 taxAmount: taxCents / 100,
-                totalDue: (bidCents + feeCents + taxCents) / 100,
+                totalDue: (bidCents + feeCents + taxCents + Math.round(shippingAmount * 100)) / 100,
               };
             })(),
             paymentFailed: failedItemIds.has(item.id),
@@ -164,6 +175,7 @@ export async function GET() {
           // Confirmed paid (Payment.status = PAID) or already picked up
           past.push({
             ...base,
+            ...won,
             myBid: Number(bid.amount),
             finalBid: Number(item.currentBid),
             outcome: "won" as const,
@@ -203,6 +215,7 @@ export async function GET() {
         if (!isPaid) {
           unpaidWins.push({
             ...base,
+            ...won,
             amountOwed: Number(item.currentBid),
             // Fee/tax disclosure — same cent math as the auto-charge in chargeWinners
             ...(() => {
@@ -216,7 +229,7 @@ export async function GET() {
                 taxPercent,
                 feeAmount: feeCents / 100,
                 taxAmount: taxCents / 100,
-                totalDue: (bidCents + feeCents + taxCents) / 100,
+                totalDue: (bidCents + feeCents + taxCents + Math.round(shippingAmount * 100)) / 100,
               };
             })(),
             paymentFailed: failedItemIds.has(item.id),
@@ -226,6 +239,7 @@ export async function GET() {
         } else {
           past.push({
             ...base,
+            ...won,
             myBid: Number(bid.amount),
             finalBid: Number(item.currentBid),
             outcome: "won" as const,

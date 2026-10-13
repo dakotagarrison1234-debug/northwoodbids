@@ -66,6 +66,10 @@ export async function POST(request: NextRequest) {
             grabbedAt: null,
             pickupAppointmentId: null,
             transferRequestId: null,
+            // Shipping is decided fresh on the next win.
+            fulfillment: null,
+            shippingBundleId: null,
+            shipChargeCents: 0,
           },
         })
       ),

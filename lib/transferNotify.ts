@@ -108,17 +108,19 @@ export async function notifyTransfersSummary(pendingCount: number): Promise<void
  * the fetch (wrapped in try/catch) so the payload is built and sent while the
  * items still belong to the transfer.
  */
-export async function notifyTransferArrived(transferId: string): Promise<void> {
+export async function notifyTransferArrived(transferId: string, opts: { onlyItemIds?: string[] } = {}): Promise<void> {
   if (!process.env.GHL_TRANSFER_ARRIVED_WEBHOOK) return;
 
   const transfer = await prisma.transferRequest.findUnique({
     where: { id: transferId },
     include: {
       toLocation: { select: { name: true } },
-      items: { select: { title: true } },
+      // A shipping-station transfer can carry lots bound for a box; the caller
+      // passes only the pickup lots so the "schedule your pickup" text is honest.
+      items: { select: { title: true }, ...(opts.onlyItemIds ? { where: { id: { in: opts.onlyItemIds } } } : {}) },
     },
   });
-  if (!transfer) return;
+  if (!transfer || transfer.items.length === 0) return;
 
   const profile = await prisma.bidderProfile.findUnique({
     where: { clerkUserId: transfer.clerkUserId },

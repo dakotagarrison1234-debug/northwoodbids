@@ -4,6 +4,7 @@ import { Prisma, type OrgRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg, requireRole } from "@/lib/auth";
 import { releaseReferralCredit, creditReturnReason } from "@/lib/referral";
+import { leaveBundle, shippingRefundableForItem } from "@/lib/shipping/bundle";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -61,14 +62,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ite
     const paidInCash = !!payment?.paidInCash;
 
     if (payment && payment.status === "PAID") {
-      // This item's exact share of the (possibly multi-item) charge.
-      refundedCents = Math.round(
-        (Number(payment.amount) +
-          Number(payment.applicationFeeAmount ?? 0) +
-          Number(payment.taxAmount ?? 0) -
-          Number(payment.creditApplied ?? 0)) *
-          100
-      );
+      // This item's exact share of the (possibly multi-item) charge. Its shipping
+      // delta comes back too — unless the label is already bought (§9.10).
+      const shipRefundCents = (await shippingRefundableForItem(itemId))
+        ? Math.round(Number(payment.shippingAmount ?? 0) * 100)
+        : 0;
+      refundedCents =
+        Math.round(
+          (Number(payment.amount) +
+            Number(payment.applicationFeeAmount ?? 0) +
+            Number(payment.taxAmount ?? 0) -
+            Number(payment.creditApplied ?? 0)) *
+            100
+        ) + shipRefundCents;
 
       if (refundedCents > 0) {
         if (payment.stripePaymentIntentId) {
@@ -145,6 +151,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ite
     );
 
     await prisma.$transaction(ops);
+
+    // A forfeited lot leaves its shipping box (re-weighed; its delta comes off the
+    // box's running total). Never blocks the forfeit — the money side is done.
+    try {
+      await leaveBundle(itemId);
+    } catch (e) {
+      console.error("[forfeit] leaveBundle failed:", e);
+    }
 
     const refunded = refundedCents / 100;
     const message =

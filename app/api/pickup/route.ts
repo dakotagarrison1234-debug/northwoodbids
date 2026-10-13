@@ -144,22 +144,26 @@ export async function GET() {
       include: {
         toLocation: { select: { id: true, name: true } },
         items: {
+          // Lots riding to the shipping station for a box aren't pickup — hide them.
+          where: { shippingBundleId: null },
           select: { id: true, title: true, location: { select: { name: true } } },
         },
       },
     });
-    const pendingTransfers = transferRows.map((t) => ({
-      id: t.id,
-      status: t.status,
-      toLocationId: t.toLocationId,
-      toLocationName: t.toLocation.name,
-      createdAt: t.createdAt.toISOString(),
-      items: t.items.map((it) => ({
-        id: it.id,
-        title: it.title,
-        fromLocationName: it.location?.name ?? "Unassigned",
-      })),
-    }));
+    const pendingTransfers = transferRows
+      .filter((t) => t.items.length > 0)
+      .map((t) => ({
+        id: t.id,
+        status: t.status,
+        toLocationId: t.toLocationId,
+        toLocationName: t.toLocation.name,
+        createdAt: t.createdAt.toISOString(),
+        items: t.items.map((it) => ({
+          id: it.id,
+          title: it.title,
+          fromLocationName: it.location?.name ?? "Unassigned",
+        })),
+      }));
 
     // Active locations with their available slots
     const activeLocations = await prisma.pickupLocation.findMany({

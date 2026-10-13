@@ -3,6 +3,7 @@ import { Prisma, type OrgRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg, requireRole } from "@/lib/auth";
 import { releaseReferralCredit, returnCreditFallback } from "@/lib/referral";
+import { leaveBundle, shippingRefundableForItem } from "@/lib/shipping/bundle";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -45,14 +46,19 @@ export async function POST(
   // A PaymentIntent is shared across ALL of a winner's items in an auction (we
   // charge in one batch). So we must refund the EXACT amount charged for THIS
   // item — bid + buyer's premium + tax − any Bid Bucks applied — as a PARTIAL
-  // refund, never the whole PaymentIntent.
-  const refundCents = Math.round(
-    (Number(payment.amount) +
-      Number(payment.applicationFeeAmount ?? 0) +
-      Number(payment.taxAmount ?? 0) -
-      Number(payment.creditApplied ?? 0)) *
-      100
-  );
+  // refund, never the whole PaymentIntent. The lot's shipping delta is refunded
+  // too — unless its label is already bought (§9.10).
+  const shipRefundCents = (await shippingRefundableForItem(payment.item.id))
+    ? Math.round(Number(payment.shippingAmount ?? 0) * 100)
+    : 0;
+  const refundCents =
+    Math.round(
+      (Number(payment.amount) +
+        Number(payment.applicationFeeAmount ?? 0) +
+        Number(payment.taxAmount ?? 0) -
+        Number(payment.creditApplied ?? 0)) *
+        100
+    ) + shipRefundCents;
 
   if (refundCents > 0) {
     if (!payment.stripePaymentIntentId) {
@@ -118,6 +124,13 @@ export async function POST(
   }
 
   await prisma.$transaction(ops);
+
+  // A refunded lot leaves its shipping box (no-op for pickup lots).
+  try {
+    await leaveBundle(payment.item.id);
+  } catch (e) {
+    console.error("[admin refund] leaveBundle failed:", e);
+  }
 
   return NextResponse.json({ success: true });
 }

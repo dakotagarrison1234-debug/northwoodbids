@@ -14,6 +14,7 @@ import CardSetupModal from "@/app/components/CardSetupModal";
 import MaxBidExplainerModal from "@/app/components/MaxBidExplainerModal";
 import ExpandableDescription from "@/app/components/ExpandableDescription";
 import Skeleton from "@/app/components/Skeleton";
+import ShipChoice from "@/app/components/ShipChoice";
 
 /* ── Presentation helpers (display only) ─────────────────────────────────── */
 
@@ -78,6 +79,7 @@ interface Item {
   packSize?: number | null;
   transferable?: boolean;
   locationName?: string | null;
+  shipEligible?: boolean;
   photos: { url: string; isPrimary: boolean }[];
   bids: { id: string; amount: number; clerkUserId?: string; bidder?: string; placedAt: string; isProxy?: boolean }[];
   auction: { title: string; endAt: string; status: string } | null;
@@ -942,6 +944,18 @@ export default function ItemPage() {
               one tool and both bid methods sit right under the price. ── */}
           <div className="border-t border-[#e3d6bf] p-2.5">
 
+            {/* ── Pickup / Ship ── decided before bidding; charged only on a win.
+                Renders nothing for pickup-only lots. Signed-out tap on Ship goes
+                through the same sign-in redirect as a bid. */}
+            {!biddingLocked && isLoaded && item.shipEligible && (
+              <ShipChoice
+                itemId={itemId}
+                locationName={item.locationName}
+                className="mb-2.5"
+                onRequireSignIn={() => router.push(`/sign-in?redirect_url=${encodeURIComponent(window.location.pathname)}`)}
+              />
+            )}
+
             {/* ── Persistent standing banner ──
                 Always tells a signed-in bidder where they actually stand, so nobody
                 assumes they're still winning after missing the outbid alert. Winning
@@ -1267,6 +1281,15 @@ export default function ItemPage() {
                     <IcoTruck className="w-3 h-3" /> Free transfer to your spot
                   </Chip>
                 )}
+                {/* Ship-eligible lots say so; the rest get one quiet "Pickup only" chip
+                    (skipped when "Pickup here only" already says it). */}
+                {item.shipEligible ? (
+                  <Chip tone="leather">
+                    <IcoTruck className="w-3 h-3" /> Ships
+                  </Chip>
+                ) : item.transferable !== false ? (
+                  <Chip tone="cream">Pickup only</Chip>
+                ) : null}
                 {item.taxDeductible && <Chip tone="cream">Tax deductible</Chip>}
               </div>
               <p className="text-[11px] text-[#8a7559] mt-2.5 leading-snug">

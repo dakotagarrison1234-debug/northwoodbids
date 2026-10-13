@@ -12,6 +12,7 @@ import CardSetupModal from "@/app/components/CardSetupModal";
 import { getNextValidBid, getProxySuggestions } from "@/lib/bidIncrements";
 import { IcoBolt, IcoGavel } from "@/app/components/BidIcons";
 import { WoodenCrate } from "@/app/components/Illustrations";
+import ShipChoice from "@/app/components/ShipChoice";
 
 type Item = {
   id: string;
@@ -24,6 +25,8 @@ type Item = {
   status: string;
   itemEndAt: string | null;
   packSize?: number | null;
+  locationName?: string | null;
+  shipEligible?: boolean;
   photos: { url: string; isPrimary: boolean }[];
   bids: { id: string; amount: number; placedAt: string }[];
   auction: { title: string; endAt: string; status: string } | null;
@@ -367,6 +370,10 @@ export default function QuickBidModal({ itemId, href, onClose }: { itemId: strin
               {/* Actions */}
               {!ended && (
                 <div className="mt-3">
+                  {/* Pickup / Ship — compact pills; same API + address modal as the item page. */}
+                  {item.shipEligible && (
+                    <ShipChoice itemId={itemId} locationName={item.locationName} compact className="mb-2" onRequireSignIn={goSignIn} />
+                  )}
                   <button
                     onClick={quickBid}
                     disabled={placing}

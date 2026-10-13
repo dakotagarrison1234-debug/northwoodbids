@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
     prisma.payment.groupBy({
       by: ["clerkUserId"],
       where: { ...itemScope, status: { in: ["PENDING", "FAILED"] }, comped: false },
-      _sum: { amount: true, applicationFeeAmount: true, taxAmount: true },
+      _sum: { amount: true, applicationFeeAmount: true, taxAmount: true, shippingAmount: true },
       _count: true,
     }),
     // ── Leaderboards ──
@@ -187,8 +187,9 @@ export async function GET(req: NextRequest) {
       phone: pmap.get(o.clerkUserId)?.phone ?? "",
       email: pmap.get(o.clerkUserId)?.email ?? "",
       itemCount: o._count,
+      // What they owe = items + premium + tax + their shipping deltas (not taxed).
       amount:
-        n(o._sum.amount) + n(o._sum.applicationFeeAmount) + n(o._sum.taxAmount),
+        n(o._sum.amount) + n(o._sum.applicationFeeAmount) + n(o._sum.taxAmount) + n(o._sum.shippingAmount),
     }))
     .sort((a, b) => b.amount - a.amount);
 

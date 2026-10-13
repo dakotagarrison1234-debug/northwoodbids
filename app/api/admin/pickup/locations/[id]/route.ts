@@ -19,17 +19,19 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    const { name, address, instructions, isActive } = await request.json();
-    const updated = await prisma.pickupLocation.update({
-      where: { id },
-      data: {
-        ...(name !== undefined && { name: String(name).trim() }),
-        ...(address !== undefined && { address: address ? String(address).trim() : null }),
-        ...(instructions !== undefined && { instructions: instructions ? String(instructions).trim() : null }),
-        ...(isActive !== undefined && { isActive: !!isActive }),
-      },
-      include: { windows: { orderBy: [{ weekday: "asc" }, { startMinutes: "asc" }] } },
-    });
+    const { name, address, instructions, isActive, isShippingStation } = await request.json();
+    const data = {
+      ...(name !== undefined && { name: String(name).trim() }),
+      ...(address !== undefined && { address: address ? String(address).trim() : null }),
+      ...(instructions !== undefined && { instructions: instructions ? String(instructions).trim() : null }),
+      ...(isActive !== undefined && { isActive: !!isActive }),
+      ...(isShippingStation !== undefined && { isShippingStation: !!isShippingStation }),
+    };
+    const include = { windows: { orderBy: [{ weekday: "asc" as const }, { startMinutes: "asc" as const }] } };
+
+    // isShippingStation is a plain per-location toggle: any number of warehouses
+    // can ship their own boxes (a buyer gets one open box per station).
+    const updated = await prisma.pickupLocation.update({ where: { id }, data, include });
 
     return NextResponse.json({ success: true, location: updated });
   } catch (err) {

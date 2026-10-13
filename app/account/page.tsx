@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import CardSetupModal from "@/app/components/CardSetupModal";
+import ShippingAddressModal, { type ShipAddress } from "@/app/components/ShippingAddressModal";
+import { HOW_IT_WORKS } from "@/lib/shipping/tiers";
 import { AVATARS, Avatar } from "@/app/components/Avatars";
 import { IcoUsers, IcoLock, IcoTruck, IcoSpark, IcoCheck, IcoGavel } from "@/app/components/BidIcons";
 import { PineMark } from "@/app/components/Illustrations";
@@ -88,6 +90,12 @@ export default function AccountPage() {
   const [cardModal, setCardModal] = useState<{ orgId: string; stripeAccountId: string } | null>(null);
   const [pmMsg, setPmMsg] = useState<string | null>(null);
 
+  // Shipping address: saved on the profile; a box freezes it when it opens, so
+  // a change here only applies to the buyer's NEXT box (the modal says so).
+  const [shipAddress, setShipAddress] = useState<ShipAddress | null | undefined>(undefined);
+  const [shipModal, setShipModal] = useState(false);
+  const [shipMsg, setShipMsg] = useState<string | null>(null);
+
   useEffect(() => {
     if (!isLoaded) return;
     if (!isSignedIn) { router.push("/sign-in?redirect_url=/account"); return; }
@@ -107,6 +115,11 @@ export default function AccountPage() {
       .then(r => r.json())
       .then(d => setAvatarKey(d.profile?.avatarKey ?? null))
       .catch(() => {});
+
+    fetch("/api/shipping/address")
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => setShipAddress((d?.address as ShipAddress | null) ?? null))
+      .catch(() => setShipAddress(null));
   }, [isLoaded, isSignedIn, router, user]);
 
   const persistAvatar = async (next: string | null) => {
@@ -121,8 +134,9 @@ export default function AccountPage() {
   };
   const selectAvatar = (key: string) => { persistAvatar(key); setSwitchingAvatar(false); };
 
+  // No synchronous setState here (react-hooks/set-state-in-effect): loadingPMs
+  // starts true, and a reload after a card update just swaps the list in place.
   const loadPaymentMethods = useCallback(() => {
-    setLoadingPMs(true);
     fetch("/api/payment-methods")
       .then(r => r.json())
       .then(d => setPaymentMethods(d.paymentMethods ?? []))
@@ -382,6 +396,39 @@ export default function AccountPage() {
           </Link>
         </Section>
 
+        {/* Shipping address */}
+        <Section
+          icon={<IcoTruck className="w-[18px] h-[18px]" />}
+          title="Shipping address"
+          hint="Where your boxes go. A box that's already open keeps the address it opened with."
+        >
+          {shipMsg && (
+            <p className="text-sm px-4 py-3 rounded-xl font-semibold bg-[#4a7c59]/10 text-[#2f5d3a] border border-[#4a7c59]/25 flex items-center gap-2 mb-2.5">
+              <IcoCheck className="w-4 h-4" /> {shipMsg}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => setShipModal(true)}
+            className="w-full flex items-center justify-between gap-3 rounded-xl border border-[#e3d6bf] bg-[#faf5ea] hover:bg-[#f1e7d5] px-4 py-3.5 transition-colors group text-left"
+          >
+            <div className="text-sm min-w-0">
+              {shipAddress ? (
+                <>
+                  <p className="font-semibold text-[#241a12] truncate">{shipAddress.street1}{shipAddress.street2 ? `, ${shipAddress.street2}` : ""}</p>
+                  <p className="text-[#8a7559] text-xs mt-0.5">{shipAddress.city}, {shipAddress.state} {shipAddress.zip} · applies to your next box</p>
+                </>
+              ) : (
+                <>
+                  <p className="font-semibold text-[#241a12]">{shipAddress === undefined ? "Checking your address" : "No shipping address yet"}</p>
+                  <p className="text-[#8a7559] text-xs mt-0.5">Add one to have wins shipped instead of picked up. Lower 48 only.</p>
+                </>
+              )}
+            </div>
+            <span className="text-[#6c4d39] group-hover:translate-x-0.5 transition-transform shrink-0"><IcoArrow /></span>
+          </button>
+        </Section>
+
         {/* Quick links */}
         <div className="flex flex-wrap gap-2.5 pb-8">
           <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#6f5b46] hover:text-[#241a12] bg-white border border-[#e3d6bf] hover:border-[#cdbda3] px-4 py-2 rounded-xl transition-colors">
@@ -392,6 +439,21 @@ export default function AccountPage() {
           </Link>
         </div>
       </main>
+
+      {/* Shipping address modal */}
+      {shipModal && (
+        <ShippingAddressModal
+          initial={shipAddress ?? null}
+          howItWorks={HOW_IT_WORKS}
+          onClose={() => setShipModal(false)}
+          onSaved={(a) => {
+            setShipAddress(a);
+            setShipModal(false);
+            setShipMsg("Address saved.");
+            setTimeout(() => setShipMsg(null), 5000);
+          }}
+        />
+      )}
 
       {/* Card modal */}
       {cardModal && (

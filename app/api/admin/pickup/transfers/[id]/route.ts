@@ -112,12 +112,17 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       }
       // We own the completion. Items still carry transferRequestId, so notify + snapshot
       // read correct data before we move them.
-      try {
-        await notifyTransferArrived(id);
-      } catch (e) {
-        console.error("notifyTransferArrived failed (continuing):", e);
+      const moving = await prisma.item.findMany({ where: { transferRequestId: id }, select: { id: true, locationId: true, shippingBundleId: true } });
+      // Lots in a shipping box don't get picked up — only text about the pickup lots
+      // (and not at all when the whole transfer was a shipping-station run).
+      const pickupLots = moving.filter((m) => !m.shippingBundleId);
+      if (pickupLots.length > 0) {
+        try {
+          await notifyTransferArrived(id, pickupLots.length === moving.length ? {} : { onlyItemIds: pickupLots.map((m) => m.id) });
+        } catch (e) {
+          console.error("notifyTransferArrived failed (continuing):", e);
+        }
       }
-      const moving = await prisma.item.findMany({ where: { transferRequestId: id }, select: { id: true, locationId: true } });
       const snapshot = moving.map((m) => ({ itemId: m.id, locationId: m.locationId }));
       await prisma.item.updateMany({
         where: { transferRequestId: id },

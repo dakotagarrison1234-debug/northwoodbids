@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { canAccessOrg } from "@/lib/auth";
 import { ensureItemCode } from "@/lib/itemCode";
+import { parseShipInput } from "@/lib/shipping/tiers";
 
 // Accept only http(s) URLs for photos — blocks javascript:/data:/file: etc.
 function isHttpUrl(value: unknown): boolean {
@@ -90,6 +91,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Shipping opt-in + size (off unless the form says otherwise).
+    const ship = parseShipInput(body);
+    if ("error" in ship) return NextResponse.json({ error: ship.error }, { status: 400 });
+
     // Validate the chosen auction and decide the new item's status.
     let itemStatus: "DRAFT" | "ACTIVE" = "DRAFT";
     if (auctionId) {
@@ -136,6 +141,7 @@ export async function POST(request: NextRequest) {
       isPremium: !!isPremium,
       transferable: transferable === false ? false : true,
       packSize: Number(packSize) > 1 ? Math.min(Math.floor(Number(packSize)), 12) : null,
+      ...ship.fields,
       photos: photos && photos.length > 0 ? {
         create: photos.map((url: string, index: number) => ({
           url,

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { autoAttachPaidItems } from "@/lib/pickup";
 import { notifyPaymentFailed, notifyPaymentReceipt } from "@/lib/paymentNotify";
 import { vestReferralForPayer, releaseReferralCredit, returnCreditFallback } from "@/lib/referral";
+import { leaveBundle } from "@/lib/shipping/bundle";
 import Stripe from "stripe";
 
 // App Router route handlers expose the raw body via request.text(), so no
@@ -173,12 +174,13 @@ async function markPaymentsPaid(
       }),
     ]);
     await autoAttachPaidItems(payment.clerkUserId, await orgIdForItem(payment.itemId));
-    // Amount actually charged for this row = bid + premium + tax − any Bid Bucks
-    // applied, so the receipt matches what hit the card.
+    // Amount actually charged for this row = bid + premium + tax + shipping − any
+    // Bid Bucks applied, so the receipt matches what hit the card.
     const rowTotal =
       Number(payment.amount) +
       Number(payment.applicationFeeAmount ?? 0) +
-      Number(payment.taxAmount ?? 0) -
+      Number(payment.taxAmount ?? 0) +
+      Number(payment.shippingAmount ?? 0) -
       Number(payment.creditApplied ?? 0);
     transitioned.push({ clerkUserId: payment.clerkUserId, total: rowTotal });
   }
@@ -242,6 +244,12 @@ async function markPaymentsRefunded(paymentIntentId: string): Promise<void> {
           data: { status: "CANCELLED", stagedSpot: null, stagedAt: null },
         });
       }
+    }
+    // A fully-refunded lot leaves its shipping box (no-op for pickup lots).
+    try {
+      await leaveBundle(p.itemId);
+    } catch (e) {
+      console.error("[stripe-webhook] leaveBundle failed:", e);
     }
   }
 }

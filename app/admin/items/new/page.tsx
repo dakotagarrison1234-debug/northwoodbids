@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Skeleton from "@/app/components/Skeleton";
 import { PageHeader, PageBody, Panel, Btn, Input, Notice, Eyebrow, Disclosure, Pill } from "../../ui";
+import ShipControl, { SHIP_OFF, shipPayload, shipProblem, type ShipFormValue } from "../ShipControl";
 
 // Select / textarea share the kit Input look (the kit only ships a text input).
 const fieldCls =
@@ -692,6 +693,8 @@ function NewItemForm() {
     packSize: 0,
     transferable: true,
   });
+  // Shipping: off by default; preset or custom weight/size (docs/shipping-research.md §9).
+  const [ship, setShip] = useState<ShipFormValue>(SHIP_OFF);
   // Combo lot builder: sell several items as ONE lot with a photo collage.
   const [combo, setCombo] = useState(false);
   const toggleCombo = () => {
@@ -898,6 +901,8 @@ function NewItemForm() {
     if (!formData.title) { setBanner("Give the lot a title first."); scrollTop(); return; }
     if (!formData.locationId) { setBanner("Pick a warehouse."); return; }
     if (!orgId) { setBanner("Business not loaded — pull down to refresh."); return; }
+    const shipErr = shipProblem(ship);
+    if (shipErr) { setBanner(shipErr); return; }
     setSaving(true);
     setBanner(null);
     const savedCode = formData.itemCode;
@@ -906,7 +911,7 @@ function NewItemForm() {
       const res = await fetch("/api/items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, photos, organizationId: orgId }),
+        body: JSON.stringify({ ...formData, ...shipPayload(ship), photos, organizationId: orgId }),
       });
       const data = await res.json();
       if (data.success) {
@@ -925,6 +930,7 @@ function NewItemForm() {
             transferable: true,
             // preserved: condition, storageLocation (spot), locationId (warehouse), auctionId
           }));
+          setShip(SHIP_OFF);
           setCombo(false);
           setPhotos([]);
           setLastCode(savedCode || null);
@@ -1048,7 +1054,7 @@ function NewItemForm() {
 
           {/* ── Pricing ── */}
           <Panel title="Pricing">
-            <div className="p-3 sm:p-4">
+            <div className="p-3 sm:p-4 space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { label: "Retail", name: "retailValue", placeholder: "0" },
@@ -1065,6 +1071,8 @@ function NewItemForm() {
                   </div>
                 ))}
               </div>
+              {/* Shipping opt-in + size preset (off by default). */}
+              <ShipControl value={ship} onChange={setShip} />
             </div>
           </Panel>
 
