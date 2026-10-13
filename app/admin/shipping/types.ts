@@ -72,6 +72,25 @@ export type Board = {
 };
 
 export type Rate = { id: string; carrier: string; service: string; label: string; cents: number; days: number | null };
+/** A rate next to what the buyer paid — what a card shows after Get rate / Rate all. */
+export type RateView = Rate & { chargedCents: number; spreadCents: number };
+/** What's typed in a card's Box / Pounds / Ounces right now (sent with Rate all). */
+export type PackInput = { boxCode: string; weightOz: number };
+/** Per-card rate + error, held by the page so Rate all / Buy all can fill them in. */
+export type CardState = { rate: RateView | null; err: string | null };
+/** One row of POST /api/admin/shipping/bulk's `results`. */
+export type BulkResult = {
+  id: string;
+  ok: boolean;
+  error?: string;
+  rate?: Rate;
+  chargedCents?: number;
+  spreadCents?: number;
+  packedBoxCode?: string;
+  packedWeightOz?: number;
+  texted?: boolean;
+  bundle?: Box | null;
+};
 
 export const fmtCents = (c: number) => `$${(Math.abs(c) / 100).toFixed(2)}`;
 export const signedCents = (c: number) => `${c < 0 ? "-" : "+"}${fmtCents(c)}`;

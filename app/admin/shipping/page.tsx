@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { PageHeader, PageBody, Btn, Segmented, Empty, Notice } from "../ui";
 import BoxCard from "./BoxCard";
-import type { Board, Box } from "./types";
+import { type Board, type Box, type BulkResult, type CardState, type PackInput, type RateView, fmtCents } from "./types";
 
 /**
  * /admin/shipping — the Ship board (docs/shipping-research.md §9 P3/P4).
@@ -15,9 +15,19 @@ import type { Board, Box } from "./types";
  * Every warehouse that's a shipping station packs its own boxes, so the header
  * carries the same warehouse scope the Pickup board has (All / Owosso /
  * Gladwin, remembered per device in localStorage `nb-ship-warehouse`).
+ *
+ * Bulk (To pack + Shipped): tick boxes, then Print pull lists / Rate all /
+ * Buy all labels / Print all labels act on the ticked set. The selection is a
+ * set of box ids held here, so it survives a reload and boxes moving between
+ * tabs (a box bought on To pack stays ticked on Shipped for Print all labels).
+ * The rate each card shows and its inline error also live here, so a bulk
+ * run can fill them in for cards that were never opened.
  */
 
 const WAREHOUSE_KEY = "nb-ship-warehouse";
+// POST /api/admin/shipping/bulk takes up to 25 ids; smaller chunks so cards
+// fill in as the run goes rather than all at the end.
+const BULK_CHUNK = 5;
 
 type Tab = "packing" | "closed" | "open" | "shipped";
 const TAB_LABEL: Record<Tab, string> = { packing: "To pack", closed: "Waiting", open: "Collecting", shipped: "Shipped" };
@@ -28,6 +38,12 @@ const EMPTY: Record<Tab, string> = {
   shipped: "Nothing shipped in the last 14 days",
 };
 
+// PrintLabelButton-style anchor (PDF viewer in a new tab), kit outline look.
+const printLinkCls =
+  "inline-flex items-center justify-center gap-2 rounded-xl font-bold transition-colors whitespace-nowrap min-h-[44px] px-4 text-[15px] bg-white border-2 border-[#d9c7ab] text-[#563e2c] hover:bg-[#faf5ea]";
+
+const isShipped = (b: Box) => b.status === "SHIPPED" || b.status === "DELIVERED";
+
 export default function AdminShippingPage() {
   const [board, setBoard] = useState<Board | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,6 +52,11 @@ export default function AdminShippingPage() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ text: string; confirmLabel: string; danger?: boolean; onConfirm: () => void } | null>(null);
+  // Bulk selection + per-card state (see the header comment).
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [cards, setCards] = useState<Record<string, CardState>>({});
+  const [packInputs, setPackInputs] = useState<Record<string, PackInput>>({});
+  const [bulk, setBulk] = useState<{ action: "rate" | "buy"; done: number; total: number } | null>(null);
   // Which warehouse's boxes to show ("all" = every station). You pack one
   // building at a time, so it's remembered per device. The server render says
   // "all"; the saved choice is restored once on the client, off the render path.
@@ -100,7 +121,12 @@ export default function AdminShippingPage() {
       const strip = (list: Box[]) => list.filter((x) => x.id !== id);
       return { ...prev, packing: strip(prev.packing), closed: strip(prev.closed), open: strip(prev.open), shipped: strip(prev.shipped) };
     });
+    setSelected((prev) => { if (!prev.has(id)) return prev; const n = new Set(prev); n.delete(id); return n; });
   };
+
+  // Per-card rate / error, keyed by box id.
+  const cardOf = (id: string): CardState => cards[id] ?? { rate: null, err: null };
+  const setCard = (id: string, patch: Partial<CardState>) => setCards((prev) => ({ ...prev, [id]: { ...(prev[id] ?? { rate: null, err: null }), ...patch } }));
 
   // Scope chips: every station, plus any warehouse a box on the board still
   // points at (a station that was toggled off keeps its boxes visible).
@@ -122,6 +148,120 @@ export default function AdminShippingPage() {
 
   const toPack = scoped(board?.packing ?? []).length;
   const list: Box[] = board ? scoped(board[tab]) : [];
+  const configured = !!board?.configured && !board?.configMessage;
+
+  // ── Bulk ────────────────────────────────────────────────────────────────
+  // The selection resolves against every list, so a ticked box that just
+  // moved to Shipped still counts (and ids that vanished on reload drop out).
+  const allBoxes = board ? [...board.packing, ...board.closed, ...board.open, ...board.shipped] : [];
+  const selectedBoxes = allBoxes.filter((b) => selected.has(b.id));
+  const selectedPacking = selectedBoxes.filter((b) => b.status === "PACKING");
+  const selectedRated = selectedPacking.filter((b) => b.hasShipment);
+  const allSelectedShipped = selectedBoxes.length > 0 && selectedBoxes.every((b) => isShipped(b) && !!b.labelUrl);
+  const allVisibleSelected = list.length > 0 && list.every((b) => selected.has(b.id));
+  const toggleOne = (id: string) => setSelected((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const toggleAllVisible = () => setSelected((prev) => {
+    const n = new Set(prev);
+    if (allVisibleSelected) list.forEach((b) => n.delete(b.id));
+    else list.forEach((b) => n.add(b.id));
+    return n;
+  });
+  const clearSelection = () => setSelected(new Set());
+  const idsParam = (boxes: Box[]) => boxes.map((b) => b.id).join(",");
+
+  /** POST /bulk in chunks, applying each chunk's results as it lands. */
+  const runBulk = async (action: "rate" | "buy", boxes: Box[]) => {
+    const ids = boxes.map((b) => b.id);
+    setBulk({ action, done: 0, total: ids.length });
+    const results: BulkResult[] = [];
+    try {
+      for (let i = 0; i < ids.length; i += BULK_CHUNK) {
+        const chunk = ids.slice(i, i + BULK_CHUNK);
+        let got: BulkResult[];
+        try {
+          const pack = action === "rate" ? Object.fromEntries(chunk.filter((id) => packInputs[id]).map((id) => [id, packInputs[id]])) : undefined;
+          const res = await fetch("/api/admin/shipping/bulk", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ids: chunk, pack }) });
+          const data = (await res.json().catch(() => ({}))) as { results?: BulkResult[]; error?: string };
+          got = res.ok && data.results ? data.results : chunk.map((id) => ({ id, ok: false, error: data.error || "Something went wrong." }));
+        } catch {
+          got = chunk.map((id) => ({ id, ok: false, error: "Something went wrong." }));
+        }
+        for (const r of got) {
+          const box = boxes.find((b) => b.id === r.id);
+          if (!r.ok) { setCard(r.id, { err: r.error || "Something went wrong." }); continue; }
+          if (action === "rate" && r.rate && box) {
+            const rate: RateView = { ...r.rate, chargedCents: r.chargedCents ?? box.chargedCents, spreadCents: r.spreadCents ?? box.chargedCents - r.rate.cents };
+            setCard(r.id, { rate, err: null });
+            replaceBox({ ...box, packedBoxCode: r.packedBoxCode ?? box.packedBoxCode, packedWeightOz: r.packedWeightOz ?? box.packedWeightOz, hasShipment: true });
+          } else if (action === "buy") {
+            setCard(r.id, { rate: null, err: null });
+            if (r.bundle) replaceBox(r.bundle);
+          }
+        }
+        results.push(...got);
+        setBulk({ action, done: Math.min(ids.length, i + chunk.length), total: ids.length });
+      }
+    } finally {
+      setBulk(null);
+    }
+    const okCount = results.filter((r) => r.ok).length;
+    const n = ids.length;
+    if (action === "rate") flash(`Rated ${okCount} of ${n} box${n !== 1 ? "es" : ""}.${okCount < n ? " Problems are on the cards." : ""}`, okCount === n);
+    else flash(`Bought ${okCount} of ${n} label${n !== 1 ? "s" : ""}.${okCount < n ? " Problems are on the cards." : ""}`, okCount === n);
+  };
+
+  const rateAll = () => { if (selectedPacking.length) runBulk("rate", selectedPacking); };
+  const buyAll = () => {
+    const boxes = selectedRated;
+    if (boxes.length === 0) return;
+    const known = boxes.map((b) => cardOf(b.id).rate).filter((r): r is RateView => !!r);
+    const total = known.reduce((s, r) => s + r.cents, 0);
+    const n = boxes.length;
+    const about = known.length === n ? ` for about ${fmtCents(total)} total` : known.length > 0 ? ` for about ${fmtCents(total)} plus ${n - known.length} without a rate shown` : "";
+    askConfirm(
+      `Buy ${n} label${n !== 1 ? "s" : ""}${about}? Boxes without a scale weight use the estimated weight.`,
+      () => runBulk("buy", boxes),
+      { confirmLabel: "Buy labels" },
+    );
+  };
+
+  // Stays up while something is still ticked even if the tab emptied (every
+  // box just bought → Print all labels from To pack).
+  const bulkBar = (tab === "packing" || tab === "shipped") && (list.length > 0 || selectedBoxes.length > 0) && (
+    <div className="bg-white border border-[#e6dac6] rounded-2xl px-3 py-2 flex flex-wrap items-center gap-2">
+      <label className="inline-flex items-center gap-2 min-h-[44px] px-2 cursor-pointer select-none">
+        <input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible} disabled={list.length === 0} aria-label="Select all" className="w-6 h-6 accent-[#6c4d39] cursor-pointer" />
+        <span className="font-bold text-[15px] text-[#563e2c]">Select all</span>
+      </label>
+      <span className="text-[15px] text-[#8a7559] tabular-nums">{selectedBoxes.length} selected</span>
+      {selectedBoxes.length > 0 && (
+        <Btn onClick={clearSelection} tone="slate" variant="ghost" size="sm" disabled={!!bulk}>Clear</Btn>
+      )}
+      <span className="flex-1" />
+      {tab === "packing" && (
+        <>
+          {selectedBoxes.length > 0 ? (
+            <a href={`/api/admin/shipping/pull-list.pdf?ids=${idsParam(selectedBoxes)}`} target="_blank" rel="noopener noreferrer" className={printLinkCls}>Print pull lists</a>
+          ) : (
+            <Btn tone="slate" variant="outline" size="sm" disabled>Print pull lists</Btn>
+          )}
+          <Btn onClick={rateAll} tone="leather" size="sm" disabled={!configured || !!bulk || selectedPacking.length === 0}>
+            {bulk?.action === "rate" ? `Rating ${bulk.done} of ${bulk.total}…` : `Rate all${selectedPacking.length ? ` (${selectedPacking.length})` : ""}`}
+          </Btn>
+          <Btn onClick={buyAll} tone="green" size="sm" disabled={!configured || !!bulk || selectedRated.length === 0}>
+            {bulk?.action === "buy" ? `Buying ${bulk.done} of ${bulk.total}…` : `Buy all labels${selectedRated.length ? ` (${selectedRated.length})` : ""}`}
+          </Btn>
+        </>
+      )}
+      {allSelectedShipped ? (
+        <a href={`/api/admin/shipping/labels.pdf?ids=${idsParam(selectedBoxes)}`} target="_blank" rel="noopener noreferrer" className={`${printLinkCls} border-[#4a7c59] text-[#2f5d3a]`}>
+          Print all labels ({selectedBoxes.length})
+        </a>
+      ) : (
+        <Btn tone="green" variant="outline" size="sm" disabled>Print all labels</Btn>
+      )}
+    </div>
+  );
 
   const warehouseScope = stationList.length > 1 ? (
     <Segmented
@@ -156,6 +296,8 @@ export default function AdminShippingPage() {
           options={(["packing", "closed", "open", "shipped"] as Tab[]).map((t) => ({ value: t, label: TAB_LABEL[t], count: board ? scoped(board[t]).length : undefined }))}
         />
 
+        {bulkBar}
+
         {loading && !board ? (
           <div className="text-center py-20 text-[#8a7559]">Loading…</div>
         ) : list.length === 0 ? (
@@ -167,13 +309,21 @@ export default function AdminShippingPage() {
                 key={b.id}
                 box={b}
                 boxes={board?.boxes ?? []}
-                configured={!!board?.configured && !board?.configMessage}
+                configured={configured}
                 open={openId === b.id}
                 onToggle={() => setOpenId((cur) => (cur === b.id ? null : b.id))}
                 onChange={replaceBox}
                 onRemove={removeBox}
                 flash={flash}
                 askConfirm={askConfirm}
+                rate={cardOf(b.id).rate}
+                setRate={(r) => setCard(b.id, { rate: r })}
+                err={cardOf(b.id).err}
+                setErr={(e) => setCard(b.id, { err: e })}
+                pack={packInputs[b.id]}
+                onPackChange={(p) => setPackInputs((prev) => ({ ...prev, [b.id]: p }))}
+                selected={tab === "packing" || tab === "shipped" ? selected.has(b.id) : undefined}
+                onSelect={tab === "packing" || tab === "shipped" ? () => toggleOne(b.id) : undefined}
               />
             ))}
           </div>

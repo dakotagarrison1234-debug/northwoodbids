@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { getUserOrg } from "@/lib/auth";
 import { BOXES, tierCents } from "@/lib/shipping/tiers";
 import { serviceLabel } from "@/lib/easypost";
@@ -30,12 +31,12 @@ export const bundleInclude = {
       shipChargeCents: true,
       location: { select: { name: true } },
       transferRequest: { select: { status: true, toLocation: { select: { name: true } } } },
-      photos: { orderBy: [{ isPrimary: "desc" as const }, { order: "asc" as const }], take: 1, select: { url: true } },
+      photos: { orderBy: [{ isPrimary: "desc" }, { order: "asc" }], take: 1, select: { url: true } },
       payments: { select: { status: true } },
     },
-    orderBy: { itemCode: "asc" as const },
+    orderBy: { itemCode: "asc" },
   },
-} as const;
+} satisfies Prisma.ShippingBundleInclude;
 
 export async function loadBundle(id: string, organizationId: string) {
   const b = await prisma.shippingBundle.findFirst({ where: { id, organizationId }, include: bundleInclude });

@@ -200,6 +200,31 @@ function drawLabelPage(pdf: PDFDocument, fonts: Fonts, opts: LabelOpts) {
   }
 }
 
+/**
+ * A 4x6 page that carries only a short message — used by the merged
+ * "Print all labels" PDF when one box's label couldn't be fetched, so the
+ * stack stays one page per box and the gap is obvious at the printer.
+ */
+export async function addMessagePage(pdf: PDFDocument, title: string, body: string) {
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const reg = await pdf.embedFont(StandardFonts.Helvetica);
+  const page = pdf.addPage([W, H]);
+  const innerW = W - PAD * 2;
+  let cur = H - PAD * 3;
+  for (const ln of wrapText(title, bold, 16, innerW)) {
+    page.drawText(ln, { x: PAD, y: cur - 16, size: 16, font: bold, color: rgb(0, 0, 0) });
+    cur -= 20;
+  }
+  cur -= 8;
+  for (const ln of wrapText(body, reg, 12, innerW)) {
+    page.drawText(ln, { x: PAD, y: cur - 12, size: 12, font: reg, color: rgb(0, 0, 0) });
+    cur -= 16;
+  }
+}
+
+/** Page size every label here uses (4x6 in at 72pt/in). */
+export const LABEL_PAGE: [number, number] = [W, H];
+
 export async function buildLabel(opts: LabelOpts): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   const fonts = await embedFonts(pdf);

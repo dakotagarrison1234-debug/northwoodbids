@@ -261,6 +261,26 @@ Tabs:
   PENDING_PICKUP. A refunded shipment can't be re-bought, so Get rate creates
   a fresh one.
 
+**Bulk** (To pack and Shipped): tick the boxes (checkbox on each card, or
+**Select all** for the tab), then work the bar left to right — **Print pull
+lists** (`/api/admin/shipping/pull-list.pdf?ids=` — every ticked box's pull
+list in one PDF, one 4×6 page per box), pack and weigh them, **Rate all**
+(`POST /api/admin/shipping/bulk { action: "rate", ids }` — each card fills in
+with its rate and spread, and a problem shows on the card instead of stopping
+the run), **Buy all labels** (confirm modal with the count and the total of the
+rates shown → `{ action: "buy", ids }`; only boxes that already have a rate are
+bought, the rest are skipped with a reason), then **Print all labels**
+(`/api/admin/shipping/labels.pdf?ids=` — the carrier labels merged into one
+4×6-per-page PDF in the order ticked; lights up once every ticked box is
+SHIPPED, and a label that can't be fetched becomes a page that says so, so the
+stack still lines up). The selection is a set of box ids on the page, so it
+survives a Refresh and follows a box from To pack to Shipped. The bulk route
+runs the boxes one at a time (EasyPost rate limits) and takes at most 25 ids
+per call; the page sends 5 at a time so cards fill in as it goes. Rate all uses
+whatever is typed in a card's Box / Pounds / Ounces; a box nobody opened uses
+its last rated box + weight, else the engine's estimate — so put the box on the
+scale first if the estimate is likely off.
+
 **Move to pickup** (under More, one button per lot, only while the box has no
 label): pulls that one lot out of the box and hands it to the normal pickup
 pipeline — the fix for a box stuck in Waiting on a lot the buyer never paid
@@ -319,6 +339,9 @@ tracking codes are ignored.
 | `POST /api/admin/shipping/[id]/mark-shipped` | `{ carrier?, trackingCode?, labelCostCents? }` | manual fallback → SHIPPED, lots PICKED_UP, text only if a tracking code was given |
 | `POST /api/admin/shipping/[id]/remove-lot` | `{ itemId }` | one lot out of a label-less box → PICKUP (paid: shipping refunded + buyer texted; re-weigh, delta off `chargedCents`, unpaid rows lose `shippingAmount`); returns `refundedCents` + the fresh box (`status: "CANCELLED"` if it emptied) |
 | `PATCH /api/admin/shipping/[id]` | `{ notes?, status?: "CANCELLED" }` | notes; cancel only while there's no label (paid lots refunded, PENDING/FAILED rows lose `shippingAmount`, one text) |
+| `POST /api/admin/shipping/bulk` | `{ action: "rate" \| "buy", ids: string[] (≤25), pack?: { [id]: { boxCode, weightOz } } }` | the two above, one box at a time, never failing the call for one box → `{ results: [{ id, ok, error?, rate?, chargedCents?, spreadCents?, packedBoxCode?, packedWeightOz?, label?, texted?, bundle? }] }`. `rate` uses `pack[id]`, else the box's `packedBoxCode/packedWeightOz`, else the engine's `boxCode/weightOz`; `buy` skips boxes with no shipment ("No rate yet") |
+| `GET /api/admin/shipping/pull-list.pdf?ids=a,b,c` | — | every box's `type=bundle` pull list in one PDF, one 4×6 page per box, in the order given (≤100) |
+| `GET /api/admin/shipping/labels.pdf?ids=a,b,c` | — | every SHIPPED box's carrier label merged into one PDF (`labels-<date>.pdf`), one 4×6 page per box in the order given; a label that can't be fetched (20 s timeout) or isn't bought yet becomes a page that says so (≤100) |
 | `GET /api/admin/label?type=bundle&bundle=<id>` | — | the 4×6 pull-list PDF for a box |
 | `POST /api/webhooks/easypost` | EasyPost Event | tracking → status + texts (public route, HMAC-checked when the secret is set) |
 

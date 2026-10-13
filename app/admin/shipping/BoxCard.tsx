@@ -2,7 +2,7 @@
 import { useState } from "react";
 import PrintLabelButton from "../PrintLabelButton";
 import { Btn, Pill, Eyebrow, Input, Initials, Notice, Disclosure } from "../ui";
-import { type Box, type BoxOption, type Rate, fmtCents, signedCents, fmtWeight, dimsLabel, trackingPill, UNPAID_NUDGE_DAYS } from "./types";
+import { type Box, type BoxOption, type Rate, type RateView, type PackInput, fmtCents, signedCents, fmtWeight, dimsLabel, trackingPill, UNPAID_NUDGE_DAYS } from "./types";
 
 // PrintLabelButton is an <a target="_blank"> (PDF viewer), so it borrows the
 // kit's outline-button look rather than being a Btn.
@@ -21,8 +21,6 @@ const Chevron = ({ open }: { open: boolean }) => (
 const fmtDay = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("en-US", { timeZone: "America/Detroit", weekday: "short", month: "short", day: "numeric" }) : "";
 
-type RateView = Rate & { chargedCents: number; spreadCents: number };
-
 export type BoxCardProps = {
   box: Box;
   boxes: BoxOption[];
@@ -33,6 +31,18 @@ export type BoxCardProps = {
   onRemove: (id: string) => void;
   flash: (text: string, ok: boolean) => void;
   askConfirm: (text: string, onConfirm: () => void, opts?: { confirmLabel?: string; danger?: boolean }) => void;
+  // The rate shown and the inline error live on the page, so Rate all / Buy all
+  // can fill them in for cards they never opened.
+  rate: RateView | null;
+  setRate: (r: RateView | null) => void;
+  err: string | null;
+  setErr: (e: string | null) => void;
+  /** What was typed in Box / Pounds / Ounces before this card last unmounted (tab switch). */
+  pack?: PackInput;
+  onPackChange?: (p: PackInput) => void;
+  /** Checkbox for the bulk bar — only on tabs that have one. */
+  selected?: boolean;
+  onSelect?: () => void;
 };
 
 async function call(url: string, method: string, body?: unknown): Promise<{ ok: boolean; data: Record<string, unknown> & { error?: string; bundle?: Box } }> {
@@ -41,7 +51,9 @@ async function call(url: string, method: string, body?: unknown): Promise<{ ok: 
   return { ok: res.ok, data };
 }
 
-export default function BoxCard({ box, boxes, configured, open, onToggle, onChange, onRemove, flash, askConfirm }: BoxCardProps) {
+export default function BoxCard({
+  box, boxes, configured, open, onToggle, onChange, onRemove, flash, askConfirm, rate, setRate, err, setErr, pack, onPackChange, selected, onSelect,
+}: BoxCardProps) {
   const name = box.buyer.name || box.ship.name || "Bidder";
   const packing = box.status === "PACKING";
   const waiting = box.status === "CLOSED";
@@ -49,21 +61,31 @@ export default function BoxCard({ box, boxes, configured, open, onToggle, onChan
   const shipped = box.status === "SHIPPED" || box.status === "DELIVERED";
   const lotsTotal = box.lots.length;
 
-  // Pack controls (prefilled from the engine's guess, or what was last rated).
-  const startOz = box.packedWeightOz ?? box.weightOz;
-  const [boxCode, setBoxCode] = useState<string>(box.packedBoxCode ?? box.boxCode ?? boxes[0]?.code ?? "");
+  // Pack controls (prefilled from what was typed before, the last rate, or the engine's guess).
+  const startOz = pack?.weightOz ?? box.packedWeightOz ?? box.weightOz;
+  const [boxCode, setBoxCode] = useState<string>(pack?.boxCode ?? box.packedBoxCode ?? box.boxCode ?? boxes[0]?.code ?? "");
   const [lb, setLb] = useState<string>(String(Math.floor(startOz / 16)));
   const [oz, setOz] = useState<string>(String(startOz % 16));
-  const [rate, setRate] = useState<RateView | null>(null);
   const [busy, setBusy] = useState<null | "rate" | "buy" | "refund" | "manual" | "notes" | "cancel" | `lot:${string}`>(null);
-  const [err, setErr] = useState<string | null>(null);
   // Manual fallback
   const [mCarrier, setMCarrier] = useState("USPS");
   const [mTracking, setMTracking] = useState("");
   const [notes, setNotes] = useState(box.notes ?? "");
 
-  const totalOz = Math.max(0, Math.round((Number(lb) || 0) * 16 + (Number(oz) || 0)));
+  const ozOf = (lbv: string, ozv: string) => Math.max(0, Math.round((Number(lbv) || 0) * 16 + (Number(ozv) || 0)));
+  const totalOz = ozOf(lb, oz);
   const chosenBox = boxes.find((b) => b.code === boxCode) ?? null;
+  // Any edit to the pack inputs drops the rate shown and tells the page what's typed (Rate all uses it).
+  const editPack = (next: { boxCode?: string; lb?: string; oz?: string }) => {
+    const bc = next.boxCode ?? boxCode;
+    const lbv = next.lb ?? lb;
+    const ozv = next.oz ?? oz;
+    if (next.boxCode !== undefined) setBoxCode(bc);
+    if (next.lb !== undefined) setLb(lbv);
+    if (next.oz !== undefined) setOz(ozv);
+    setRate(null);
+    onPackChange?.({ boxCode: bc, weightOz: ozOf(lbv, ozv) });
+  };
 
   const getRate = async () => {
     setBusy("rate"); setErr(null);
@@ -191,25 +213,34 @@ export default function BoxCard({ box, boxes, configured, open, onToggle, onChan
   ].filter(Boolean).join(" · ");
 
   return (
-    <div id={`box-${box.id}`} className="bg-white border border-[#e6dac6] rounded-2xl overflow-hidden shadow-[0_6px_18px_-14px_rgba(60,40,25,0.35)]">
-      <button type="button" onClick={onToggle} aria-expanded={open} className="w-full text-left flex items-center gap-3 px-4 py-4 min-h-[72px] hover:bg-[#faf5ea] active:bg-[#f4ede1] transition-colors">
-        <Initials name={name} size={44} />
-        <div className="min-w-0 flex-1">
-          <div className="font-display text-2xl font-black text-[#241a12] leading-none truncate">{name}</div>
-          <div className="text-[15px] text-[#8a7559] mt-1 sm:truncate">{box.ship.city}, {box.ship.state} · {meta}</div>
-        </div>
-        <div className="shrink-0 flex items-center gap-2">
-          {waiting && <Pill tone={box.lotsHere === lotsTotal ? "green" : "amber"}>{box.lotsHere} of {lotsTotal} here</Pill>}
-          {collecting && <Pill tone="blue">Closes {fmtDay(box.closesAt)}</Pill>}
-          {shipped && <Pill tone={track.tone} dot>{track.label}</Pill>}
-          <Chevron open={open} />
-        </div>
-      </button>
+    <div id={`box-${box.id}`} className={`bg-white border rounded-2xl overflow-hidden shadow-[0_6px_18px_-14px_rgba(60,40,25,0.35)] ${selected ? "border-[#6c4d39]" : "border-[#e6dac6]"}`}>
+      <div className="flex items-stretch">
+        {onSelect && (
+          <label className="flex items-center justify-center min-w-[44px] pl-3 pr-1 cursor-pointer hover:bg-[#faf5ea]">
+            <input type="checkbox" checked={!!selected} onChange={onSelect} aria-label={`Select ${name}`} className="w-6 h-6 accent-[#6c4d39] cursor-pointer" />
+          </label>
+        )}
+        <button type="button" onClick={onToggle} aria-expanded={open} className={`flex-1 min-w-0 text-left flex items-center gap-3 ${onSelect ? "pl-2 pr-4" : "px-4"} py-4 min-h-[72px] hover:bg-[#faf5ea] active:bg-[#f4ede1] transition-colors`}>
+          <Initials name={name} size={44} />
+          <div className="min-w-0 flex-1">
+            <div className="font-display text-2xl font-black text-[#241a12] leading-none truncate">{name}</div>
+            <div className="text-[15px] text-[#8a7559] mt-1 sm:truncate">{box.ship.city}, {box.ship.state} · {meta}</div>
+          </div>
+          <div className="shrink-0 flex items-center gap-2">
+            {waiting && <Pill tone={box.lotsHere === lotsTotal ? "green" : "amber"}>{box.lotsHere} of {lotsTotal} here</Pill>}
+            {collecting && <Pill tone="blue">Closes {fmtDay(box.closesAt)}</Pill>}
+            {packing && rate && <Pill tone={rate.spreadCents >= 0 ? "green" : "red"}>{fmtCents(rate.cents)} · {signedCents(rate.spreadCents)}</Pill>}
+            {shipped && <Pill tone={track.tone} dot>{track.label}</Pill>}
+            <Chevron open={open} />
+          </div>
+        </button>
+      </div>
+
+      {/* Inline problem — shown whether or not the card is open, so Rate all / Buy all failures are visible on a collapsed card. */}
+      {err && <div className="px-4 pb-3"><Notice tone="red">{err}</Notice></div>}
 
       {open && (
         <div className="border-t border-[#f0e6d6] px-4 py-4 space-y-4">
-          {err && <Notice tone="red">{err}</Notice>}
-
           {/* Ship-to + ship-from */}
           <div className="text-[15px] text-[#4a3a2b]">
             {box.ship.name} · {box.ship.street1}{box.ship.street2 ? `, ${box.ship.street2}` : ""}, {box.ship.city}, {box.ship.state} {box.ship.zip}
@@ -261,7 +292,7 @@ export default function BoxCard({ box, boxes, configured, open, onToggle, onChan
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div className="col-span-2">
                   <label className={labelCls} htmlFor={`box-${box.id}-size`}>Box</label>
-                  <select id={`box-${box.id}-size`} value={boxCode} onChange={(e) => { setBoxCode(e.target.value); setRate(null); }} className={fieldCls}>
+                  <select id={`box-${box.id}-size`} value={boxCode} onChange={(e) => editPack({ boxCode: e.target.value })} className={fieldCls}>
                     {boxes.map((b) => (
                       <option key={b.code} value={b.code}>{dimsLabel(b.dims)}</option>
                     ))}
@@ -269,11 +300,11 @@ export default function BoxCard({ box, boxes, configured, open, onToggle, onChan
                 </div>
                 <div>
                   <label className={labelCls} htmlFor={`box-${box.id}-lb`}>Pounds</label>
-                  <Input id={`box-${box.id}-lb`} type="number" inputMode="numeric" min={0} max={70} value={lb} onChange={(e) => { setLb(e.target.value); setRate(null); }} />
+                  <Input id={`box-${box.id}-lb`} type="number" inputMode="numeric" min={0} max={70} value={lb} onChange={(e) => editPack({ lb: e.target.value })} />
                 </div>
                 <div>
                   <label className={labelCls} htmlFor={`box-${box.id}-oz`}>Ounces</label>
-                  <Input id={`box-${box.id}-oz`} type="number" inputMode="numeric" min={0} max={15} value={oz} onChange={(e) => { setOz(e.target.value); setRate(null); }} />
+                  <Input id={`box-${box.id}-oz`} type="number" inputMode="numeric" min={0} max={15} value={oz} onChange={(e) => editPack({ oz: e.target.value })} />
                 </div>
               </div>
 
