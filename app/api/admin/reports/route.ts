@@ -28,13 +28,17 @@ type Bucket = {
   credit: number;
   fees: number;
   net: number;
+  /** Shipping the buyers paid for lots in this bucket (not part of net). */
+  shipping: number;
+  /** Postage we actually bought for boxes shipped from this warehouse (warehouse buckets only). */
+  postage: number;
   /** Cross-split: for an auction this is its warehouses, and vice versa. */
   split: Map<string, number>;
 };
 
 const newBucket = (key: string, label: string, when: string | null = null): Bucket => ({
   key, label, when,
-  itemsSold: 0, hammer: 0, premium: 0, tax: 0, credit: 0, fees: 0, net: 0,
+  itemsSold: 0, hammer: 0, premium: 0, tax: 0, credit: 0, fees: 0, net: 0, shipping: 0, postage: 0,
   split: new Map(),
 });
 
@@ -220,6 +224,7 @@ export async function GET(req: NextRequest) {
     b.credit += credit;
     b.fees += fee;
     b.net += sale + prem - credit - fee;
+    b.shipping += num(p.shippingAmount ?? 0);
   };
 
   let cashCollected = 0; // what buyers physically handed over in cash (hammer+premium+tax+shipping)
@@ -352,6 +357,20 @@ export async function GET(req: NextRequest) {
     }))
     .sort((a, b) => b.amountDue - a.amountDue);
 
+  // Postage actually bought in the range, by the warehouse the box shipped from.
+  // This is the number the warehouse owes whoever's card is on EasyPost.
+  const labels = await prisma.shippingBundle.findMany({
+    where: { organizationId: orgId, labelCostCents: { not: null }, shippedAt: from ? { gte: from } : { not: null } },
+    select: { locationId: true, labelCostCents: true, location: { select: { name: true } } },
+  });
+  for (const l of labels) {
+    const wKey = l.locationId ?? "none";
+    if (!byWarehouse.has(wKey)) byWarehouse.set(wKey, newBucket(wKey, l.location?.name ?? "Unassigned"));
+    const cost = (l.labelCostCents ?? 0) / 100;
+    byWarehouse.get(wKey)!.postage += cost;
+    totals.postage += cost;
+  }
+
   const out = (b: Bucket) => ({
     key: b.key,
     label: b.label,
@@ -363,6 +382,10 @@ export async function GET(req: NextRequest) {
     credit: r2(b.credit),
     fees: r2(b.fees),
     net: r2(b.net),
+    shipping: r2(b.shipping),
+    postage: r2(b.postage),
+    // What this warehouse is actually owed: net sales + shipping collected − postage bought.
+    payout: r2(b.net + b.shipping - b.postage),
     avgItem: b.itemsSold > 0 ? r2(b.hammer / b.itemsSold) : 0,
     split: [...b.split.entries()]
       .map(([label, net]) => ({ label, net: r2(net) }))

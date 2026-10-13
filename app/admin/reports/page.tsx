@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { fmtMoney0 } from "../format";
+import { fmtMoney, fmtMoney0 } from "../format";
 import { AreaTrend } from "./Charts";
 import { PageHeader, PageBody, Panel, StatCard, Segmented, Btn, Empty, Eyebrow, Progress, Row } from "../ui";
 
@@ -8,6 +8,8 @@ import { PageHeader, PageBody, Panel, StatCard, Segmented, Btn, Empty, Eyebrow, 
 interface Bucket {
   key: string; label: string; when: string | null;
   itemsSold: number; net: number; avgItem: number;
+  hammer: number; premium: number; tax: number; credit: number; fees: number;
+  shipping: number; postage: number; payout: number;
 }
 interface Report {
   range: string;
@@ -151,19 +153,38 @@ export default function ReportsPage() {
           )}
         </Panel>
 
-        {/* By warehouse */}
+        {/* By warehouse — the payout sheet. Every line a warehouse is owed or owes. */}
         {warehouses.length > 0 && (
-          <Panel title="By warehouse">
-            <ul className="px-4 sm:px-5 py-4 space-y-3">
-              {warehouses.map((w) => (
-                <li key={w.key}>
-                  <div className="flex items-center justify-between gap-3 mb-1.5">
-                    <span className="font-bold text-[#241a12] min-w-0 truncate">{w.label}</span>
-                    <span className="font-extrabold text-[#241a12] tabular-nums shrink-0">{fmtMoney0(w.net)}</span>
+          <Panel title="Payout by warehouse" sub="Payout = bids + premium − Bid Bucks − Stripe + shipping collected − postage bought">
+            <ul className="divide-y divide-[#f0e6d6]">
+              {warehouses.map((w) => {
+                const line = (label: string, v: number, tone: "plus" | "minus" | "pass" = "plus") => (
+                  <div className="flex items-center justify-between gap-3 text-[15px]">
+                    <span className="text-[#6f5b46]">{label}</span>
+                    <span className={`tabular-nums font-semibold ${tone === "minus" ? "text-[#a1321f]" : tone === "pass" ? "text-[#8a7559]" : "text-[#241a12]"}`}>
+                      {tone === "minus" ? "−" : ""}{fmtMoney(Math.abs(v))}
+                    </span>
                   </div>
-                  <Progress value={w.net / topWhNet} tone="leather" />
-                </li>
-              ))}
+                );
+                return (
+                  <li key={w.key} className="px-4 sm:px-5 py-4">
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <span className="font-display text-xl font-black text-[#241a12] min-w-0 truncate">{w.label}</span>
+                      <span className="font-display text-2xl font-black text-[#2f5d3a] tabular-nums shrink-0">{fmtMoney(w.payout)}</span>
+                    </div>
+                    <Progress value={w.net / topWhNet} tone="leather" className="mb-3" />
+                    <div className="grid sm:grid-cols-2 gap-x-8 gap-y-1">
+                      {line(`Bids (${w.itemsSold} lots)`, w.hammer)}
+                      {line("Buyer's premium", w.premium)}
+                      {line("Bid Bucks used", w.credit, "minus")}
+                      {line("Stripe fees", w.fees, "minus")}
+                      {line("Shipping collected", w.shipping)}
+                      {line("Postage bought", w.postage, "minus")}
+                      {line("Sales tax held (passes to Michigan)", w.tax, "pass")}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           </Panel>
         )}
