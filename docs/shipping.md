@@ -205,7 +205,7 @@ and **Mark shipped** with a tracking number bought elsewhere.
 3. **USPS is built in** — nothing to add. **UPS (optional):** Carrier Accounts → add UPS → sign in with the UPS.com account; EasyPost's own UPS discounts apply with no setup. FedEx is never rate-shopped (ground only, §9.7).
 4. **API Keys → Production → create** and paste it into Vercel as `EASYPOST_API_KEY`. (A **Test** key creates fake labels with fake tracking — handy for trying the board; never use it in production.)
 5. **Webhooks → Add webhook:** URL `https://northwoodbids.com/api/webhooks/easypost`, mode Production, and set a **webhook secret** — paste the same string into Vercel as `EASYPOST_WEBHOOK_SECRET`. Subscribe to `tracker.updated` (and `tracker.created`, harmless).
-6. The return address on a label is **the box's own warehouse's** `PickupLocation.address` (Settings → Locations) — an Owosso box ships from Owosso, a Gladwin box from Gladwin — so both must read `street, city, ST zip` (an optional suite goes between street and city). `fromAddressFor(orgId, bundle.locationId)`: the box's location, else the default station, else the `SHIP_FROM_*` env vars; the board says which station's address is missing.
+6. The return address on a label is **the box's own warehouse's** `PickupLocation.address` (Settings → Locations) — an Owosso box ships from Owosso, a Gladwin box from Gladwin — so each needs street, city, state and zip — commas optional; a multi-word city is recognised when it matches the location name. `fromAddressFor(orgId, bundle.locationId)`: the box's location, else the default station, else the `SHIP_FROM_*` env vars; the board says which station's address is missing.
 
 ### Env
 

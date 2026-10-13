@@ -315,16 +315,51 @@ export async function refundShipment(shipmentId: string): Promise<{ refundStatus
  * "123 Main St, Owosso, MI 48867" (street2 may sit before the city, e.g.
  * "123 Main St, Suite B, Owosso, MI 48867").
  */
-export function parseStationAddress(text: string | null | undefined): { street1: string; street2: string | null; city: string; state: string; zip: string } | null {
+export function parseStationAddress(text: string | null | undefined, hintCity?: string | null): { street1: string; street2: string | null; city: string; state: string; zip: string } | null {
   if (!text) return null;
-  const parts = text.split(",").map((s) => s.trim()).filter(Boolean);
-  if (parts.length < 3) return null;
-  const last = parts[parts.length - 1].match(/^([A-Za-z]{2})\s+(\d{5})(?:-\d{4})?$/);
-  if (!last) return null;
-  const city = parts[parts.length - 2];
-  const streetParts = parts.slice(0, -2);
-  if (streetParts.length === 0 || !city) return null;
-  return { street1: streetParts[0], street2: streetParts.length > 1 ? streetParts.slice(1).join(", ") : null, city, state: last[1].toUpperCase(), zip: last[2] };
+  const clean = text.replace(/\s+/g, " ").trim();
+
+  // 1. With commas: "street[, suite], city, ST zip" or "street, city, ST, zip".
+  const parts = clean.split(",").map((x) => x.trim()).filter(Boolean);
+  if (parts.length >= 3) {
+    let tail = parts[parts.length - 1];
+    let rest = parts.slice(0, -1);
+    // "ST, 48817" split across two parts → join them.
+    if (/^\d{5}(-\d{4})?$/.test(tail) && rest.length >= 3 && /^[A-Za-z]{2}\.?$/.test(rest[rest.length - 1])) {
+      tail = `${rest[rest.length - 1]} ${tail}`;
+      rest = rest.slice(0, -1);
+    }
+    const last = tail.match(/^([A-Za-z]{2})\.?\s+(\d{5})(?:-\d{4})?$/);
+    if (last && rest.length >= 2) {
+      const city = rest[rest.length - 1];
+      const streetParts = rest.slice(0, -1);
+      return { street1: streetParts[0], street2: streetParts.length > 1 ? streetParts.slice(1).join(", ") : null, city, state: last[1].toUpperCase(), zip: last[2] };
+    }
+  }
+
+  // 2. No commas: "301 N Shiawassee St Corunna MI 48817". Read zip + state off
+  //    the end, then the city: the warehouse's own name if it appears right
+  //    before the state (it usually does), else the last single word.
+  const m = clean.replace(/,/g, " ").replace(/\s+/g, " ").match(/^(.*?)\s+([A-Za-z]{2})\.?\s+(\d{5})(?:-\d{4})?$/);
+  if (!m) return null;
+  const before = m[1].trim();
+  const state = m[2].toUpperCase();
+  const zip = m[3];
+  const hint = (hintCity ?? "").trim();
+  let city: string | null = null;
+  let street: string | null = null;
+  if (hint && before.toLowerCase().endsWith(hint.toLowerCase())) {
+    city = hint;
+    street = before.slice(0, before.length - hint.length).trim();
+  } else {
+    const words = before.split(" ");
+    if (words.length >= 3) {
+      city = words[words.length - 1];
+      street = words.slice(0, -1).join(" ");
+    }
+  }
+  if (!city || !street) return null;
+  return { street1: street, street2: null, city, state, zip };
 }
 
 /**
@@ -350,7 +385,7 @@ export async function fromAddressFor(organizationId: string, locationId: string 
   // Same fallback as shippingStation() in lib/shipping/bundle.ts: the box's own
   // warehouse, else the flagged default station, else the oldest active warehouse.
   const station = own ?? fallback;
-  const parsed = parseStationAddress(station?.address);
+  const parsed = parseStationAddress(station?.address, station?.name);
   if (parsed) {
     return { address: { name: company, company, ...parsed, country: "US", phone }, error: null };
   }
@@ -362,7 +397,7 @@ export async function fromAddressFor(organizationId: string, locationId: string 
     return { address: { name: company, company, street1, street2: null, city, state: state.toUpperCase(), zip, country: "US", phone }, error: null };
   }
   const why = station
-    ? `The ${station.name} address needs to read "street, city, ST zip" (Settings > Locations), or set SHIP_FROM_STREET/CITY/STATE/ZIP.`
+    ? `The ${station.name} address needs a street, city, state and zip (Settings > Locations), e.g. "301 N Shiawassee St, Corunna, MI 48817".`
     : "No warehouse is set up (Settings > Locations), and SHIP_FROM_STREET/CITY/STATE/ZIP aren't set.";
   return { address: null, error: why };
 }
