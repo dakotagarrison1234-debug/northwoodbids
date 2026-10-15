@@ -11,8 +11,8 @@ import { bundleSummaryFor } from "@/lib/shipping/bundle";
  * chargedCents, tierCents, zone, carrier, service, trackingCode, trackingUrl,
  * shippedAt, deliveredAt, lastTrackingStatus, shipCity, shipState,
  * location { name }, headroom { ozLeft, bandLabel, nextCents, stepCents,
- * fits[{ key, label, count }] }, items[{ id, title, shipChargeCents, paid,
- * atStation, photos[{ url }] }].
+ * fits[{ key, label, count }] }, items[{ id, title, shipChargeCents, shipPreset,
+ * paid, atStation, photos[{ url }] }].
  */
 export async function GET(request: NextRequest) {
   const { userId } = await auth();

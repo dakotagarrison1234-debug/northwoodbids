@@ -1,220 +1,243 @@
 "use client";
+import { useState } from "react";
 import Link from "next/link";
-import { IcoTruck, IcoCheck, IcoBox } from "./BidIcons";
-import BandMeter from "./BandMeter";
-import {
-  type Box, ACTIVE_BOX_STATUSES, ShipNowControls, Thumb, TrackingLine,
-  closesIn, fmtDate, money, statusPill, trackingLabel,
-} from "./YourBoxCard";
-import { TIERS, bandIndex, headroomState, plural } from "@/lib/shipping/tiers";
+import { IcoBox, IcoCoin, IcoPlus, IcoTruck } from "./BidIcons";
+import FillBar from "./FillBar";
+import FreeBlocks from "./FreeBlocks";
+import SizeBadge from "./SizeBadge";
+import { type Box, closesIn, money, trackingLabel } from "./YourBoxCard";
+import { sizeKeyOf } from "@/lib/shipping/sizes";
+import { TIERS, headroom, headroomState } from "@/lib/shipping/tiers";
 
 /**
- * The full box cards, shared by /shipping and the dashboard's Shipping tab:
+ * The box, the way the buyer sees it — shared by /shipping and the dashboard's
+ * Shipping tab:
  *
- *   OpenBoxCard    — OPEN / CLOSED / PACKING: warehouse, countdown, lots, the
- *                    band meter with room-left lines, Ship it now.
- *   ShippedBoxCard — SHIPPED / DELIVERED: tracking, status, weight, box, paid.
- *   ShippingTab    — the dashboard's short version: open-box cards + a link.
+ *   BoxCard       — one OPEN box: paid / everything else free, the fill bar,
+ *                   the free blocks, the lot tiles, Fill it + Ship it now.
+ *   EmptyBoxCard  — no open box: a first box's free blocks + one line + Fill it.
+ *   PastBoxRow    — a closed / packing / shipped / delivered box, one line.
+ *   IconTiles     — Pay once · Fill it · Ships, the whole pitch in three tiles.
+ *   ClosesPill    — "Closes in 4 days", ink on gold.
+ *   ShippingTab   — the dashboard tab: the box card(s) + "See all shipping".
  */
 
-const lots = (n: number) => `${n} ${n === 1 ? "lot" : "lots"}`;
+/** Where "Fill it: lots that ship" goes: the home page's live grid. */
+export const FILL_IT_HREF = "/#live-auctions";
+export const FILL_IT_LABEL = "Fill it: lots that ship";
 
-/** Shipping collected so far: the deltas of the PAID lots (chargedCents also counts unpaid rows). */
+const lots = (n: number) => `${n} ${n === 1 ? "lot" : "lots"}`;
+const zoneOf = (b: Box) => (b.zone >= 1 && b.zone <= 3 ? b.zone : 1) as 1 | 2 | 3;
+
+const fmtShort = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-US", { timeZone: "America/Detroit", month: "short", day: "numeric" });
+
+/** Shipping settled so far: the deltas of the PAID lots (chargedCents also counts unpaid rows). */
 const shippingPaid = (b: Box) =>
   b.items.some((it) => typeof it.paid === "boolean")
     ? b.items.reduce((s, it) => s + (it.paid ? it.shipChargeCents : 0), 0)
     : b.chargedCents;
 
-/** "about 3 Smalls or 1 Medium" — Small and Medium only; the presets are alternatives, not a sum. */
-function fitsSentence(fits: { key: string; label: string; count: number }[]): string {
-  const parts = fits.filter((f) => f.key !== "LARGE").map((f) => plural(f.label, f.count));
-  if (parts.length === 0) parts.push(...fits.map((f) => plural(f.label, f.count)));
-  if (parts.length === 1) return `about ${parts[0]}`;
-  return `about ${parts.slice(0, -1).join(", ")} or ${parts[parts.length - 1]}`;
-}
+const btnInk = "inline-flex items-center justify-center rounded-xl bg-[#241a12] hover:bg-[#3a2a1b] text-[#f0a35a] font-bold text-sm px-3 min-h-[44px] text-center transition-colors nb-focus";
+const btnOutline = "inline-flex items-center justify-center rounded-xl border border-[#6c4d39] text-[#6c4d39] hover:bg-[#6c4d39] hover:text-white font-bold text-sm px-3 min-h-[44px] transition-colors disabled:opacity-50 nb-focus";
 
-/** The two short lines under the meter. */
-function RoomLines({ b }: { b: Box }) {
-  const st = headroomState(b.headroom);
-  const i = bandIndex(Math.max(1, b.weightOz));
-  const nextTop = TIERS[i + 1] ? `${TIERS[i + 1].maxOz / 16} lb` : null;
-  if (st.kind === "room") {
-    return (
-      <>
-        <p className="text-sm font-semibold text-[#2f5d3a]">Room: {fitsSentence(st.fits)} ride free</p>
-        <p className="text-[13px] text-[#6f5b46]">Over that: <span className="font-bold text-[#241a12] tabular-nums">+{money(st.stepCents)}</span>{nextTop ? ` (up to ${nextTop})` : ""}</p>
-      </>
-    );
-  }
-  if (st.kind === "full") {
-    return (
-      <>
-        <p className="text-sm font-semibold text-[#8a4f1c]">Full for this price</p>
-        <p className="text-[13px] text-[#6f5b46]">Next lot: <span className="font-bold text-[#241a12] tabular-nums">+{money(st.stepCents)}</span>{nextTop ? ` (up to ${nextTop})` : ""}</p>
-      </>
-    );
-  }
-  if (st.kind === "top-room") {
-    return (
-      <>
-        <p className="text-sm font-semibold text-[#2f5d3a]">Room: {fitsSentence(st.fits)} ride free</p>
-        <p className="text-[13px] text-[#6f5b46]">Nothing more to pay up to 20 lb.</p>
-      </>
-    );
-  }
-  return <p className="text-sm font-semibold text-[#8a4f1c]">Full — the next lot starts a new box</p>;
-}
-
-export function OpenBoxCard({ box: b, reload }: { box: Box; reload: () => Promise<void> }) {
-  const open = b.status === "OPEN";
-  // The countdown is the card's title while open, so the pill just says Open.
-  const pill = open ? { text: "Open", cls: "bg-[#4a7c59]/12 text-[#2f5d3a] border-[#4a7c59]/25" } : statusPill(b);
-  const holding = b.status === "CLOSED";
-  const from = b.location?.name ?? null;
-  const zone = (b.zone >= 1 && b.zone <= 3 ? b.zone : 1) as 1 | 2 | 3;
+export function ClosesPill({ box, className = "" }: { box: Box; className?: string }) {
   return (
-    <section className="bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden">
-      {/* Header */}
-      <div className="px-4 sm:px-5 pt-4 pb-3 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.16em] text-[#6c4d39]">
-            <IcoBox className="w-4 h-4" /> {from ?? "Your box"}
-          </div>
-          <div className="font-display text-lg font-black text-[#241a12] mt-0.5 tabular-nums">
-            {open ? closesIn(b.closesAt) : `${lots(b.items.length)} · ${b.weightLb} lb`}
-          </div>
-          <div className="text-[13px] text-[#6f5b46] mt-0.5 tabular-nums">
-            {open ? `${lots(b.items.length)} · ${b.weightLb} lb · ` : ""}to {b.shipCity}, {b.shipState}
-          </div>
-        </div>
-        <span className={`inline-flex items-center gap-1.5 text-[12px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap shrink-0 ${pill.cls}`}>
-          <IcoTruck className="w-3.5 h-3.5" /> {pill.text}
-        </span>
+    <span className={`inline-flex items-center rounded-full bg-[#241a12] text-[#f0a35a] text-[12px] font-bold px-3 py-1.5 whitespace-nowrap tabular-nums ${className}`}>
+      {closesIn(box.closesAt)}
+    </span>
+  );
+}
+
+function Eyebrow({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <div className={`text-[11px] font-bold uppercase tracking-[0.12em] text-[#8a7559] ${className}`}>{children}</div>;
+}
+
+/** Ship-it-now: one outline button; tap → inline confirm under the button row. */
+function ShipNow({ box, reload, confirming, setConfirming }: { box: Box; reload: () => Promise<void>; confirming: boolean; setConfirming: (v: boolean) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const shipNow = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/shipping/box/${box.id}/ship-now`, { method: "POST" });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || !d.success) { setError(d.error || "Couldn't close the box."); return; }
+      setConfirming(false);
+      await reload();
+    } catch {
+      setError("Something went wrong.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (!confirming) return null;
+  return (
+    <div className="rounded-xl bg-[#f6ecda] border border-[#6c4d39]/30 px-3.5 py-3">
+      <p className="text-sm text-[#241a12] font-semibold">Close this box today?</p>
+      <p className="text-[13px] text-[#6f5b46] mt-0.5">Wins after this start a new box. Ships 3 to 5 business days after every lot is paid.</p>
+      {error && <p className="text-[13px] text-red-700 font-semibold mt-1.5">{error}</p>}
+      <div className="flex gap-2 mt-2.5">
+        <button type="button" onClick={() => setConfirming(false)} disabled={busy} className="flex-1 rounded-xl border border-[#cdbda3] text-[#4a3a2b] font-bold text-sm py-2.5 min-h-[44px] hover:bg-white transition-colors disabled:opacity-50 nb-focus">
+          Keep it open
+        </button>
+        <button type="button" onClick={shipNow} disabled={busy} className="flex-1 rounded-xl bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold text-sm py-2.5 min-h-[44px] transition-colors disabled:opacity-50 nb-focus">
+          {busy ? "Closing…" : "Yes, ship it"}
+        </button>
       </div>
+    </div>
+  );
+}
 
-      {/* Lots */}
-      <ul className="px-4 sm:px-5 pb-3 flex flex-wrap gap-2">
-        {b.items.map((it) => {
-          const hold = holding && (!it.paid || !it.atStation);
-          return (
-            <li key={it.id} className="flex items-center gap-2 bg-[#faf5ea] border border-[#e3d6bf] rounded-xl pl-1 pr-2.5 py-1 max-w-full">
-              <Thumb url={it.photos[0]?.url ?? null} title={it.title} />
-              <div className="min-w-0">
-                <div className="text-xs font-semibold text-[#241a12] truncate max-w-[200px]">{it.title}</div>
-                <div className={`text-[11px] tabular-nums ${hold ? "text-[#8a4f1c]" : it.shipChargeCents > 0 ? "text-[#8a7559]" : "text-[#4a7c59] font-semibold"}`}>
-                  {hold ? (!it.paid ? "Waiting on payment" : `On its way to ${from ?? "the warehouse"}`) : it.shipChargeCents > 0 ? `+${money(it.shipChargeCents)}` : "Free"}
-                </div>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-
-      {/* Band meter — only while the box is still taking wins */}
-      {open && (
-        <div className="mx-4 sm:mx-5 mb-3 rounded-xl bg-[#f4ede1] border border-[#e3d6bf] px-4 pt-3 pb-3">
-          <BandMeter weightOz={b.weightOz} zone={zone} />
-          <div className="mt-2 space-y-0.5">
-            <RoomLines b={b} />
-          </div>
+/** One OPEN box. `header` puts the warehouse name + closes pill inside the card (two boxes, or the dashboard). */
+export function BoxCard({ box: b, reload, header = false }: { box: Box; reload: () => Promise<void>; header?: boolean }) {
+  const [confirming, setConfirming] = useState(false);
+  const zone = zoneOf(b);
+  const st = headroomState(b.headroom);
+  const paid = shippingPaid(b);
+  const allPaid = b.chargedCents === 0 || paid >= b.chargedCents;
+  // Right stat: what the next lot costs. Free until the band is full; then the step up.
+  const right =
+    st.kind === "full"
+      ? { eyebrow: "Next size", value: `+${money(st.stepCents)}`, cls: "text-[#c47b3e]" }
+      : st.kind === "top-full"
+      ? { eyebrow: "Next box", value: money(TIERS[0].cents[zone - 1]), cls: "text-[#c47b3e]" }
+      : { eyebrow: "Everything else", value: "FREE", cls: "text-[#4a7c59]" };
+  return (
+    <section className="bg-white border border-[#e3d6bf] rounded-[18px] p-4 space-y-3">
+      {header && (
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-[13px] font-semibold text-[#8a7559] truncate">{b.location?.name ?? "Your box"}</div>
+          <ClosesPill box={b} />
         </div>
       )}
 
-      {/* Money */}
-      <div className="px-4 sm:px-5 pb-3 text-sm text-[#241a12]">
-        Shipping <span className="font-extrabold tabular-nums">{money(shippingPaid(b))}</span>
+      {/* Paid · everything else */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="min-w-0">
+          <Eyebrow>{allPaid ? "Paid" : "Due"}</Eyebrow>
+          <div className="font-display text-[30px] font-black leading-none text-[#241a12] tabular-nums mt-1">{money(b.chargedCents)}</div>
+        </div>
+        <div className="min-w-0 text-right">
+          <Eyebrow>{right.eyebrow}</Eyebrow>
+          <div className={`font-display text-[30px] font-black leading-none tabular-nums mt-1 ${right.cls}`}>{right.value}</div>
+        </div>
       </div>
 
-      {/* Footer */}
-      <div className="border-t border-[#efe3d0] px-4 sm:px-5 py-3 space-y-2">
-        {open && <ShipNowControls box={b} reload={reload} />}
-        {!open && (
-          <p className="text-[13px] text-[#8a7559]">
-            Closed {b.closedAt ? fmtDate(b.closedAt) : fmtDate(b.closesAt)}. Ships 3 to 5 business days after your box closes and every lot is paid.
-          </p>
+      <FillBar weightOz={b.weightOz} zone={zone} height={14} labels />
+
+      <FreeBlocks fits={b.headroom.fits} size="large" />
+
+      {/* Lots in the box + the empty slot */}
+      <ul className="flex flex-wrap gap-2">
+        {b.items.map((it) => {
+          const url = it.photos[0]?.url ?? null;
+          return (
+            <li key={it.id} className="relative w-[52px] h-[52px] rounded-xl overflow-hidden border border-[#e3d6bf] bg-[#efe3d0] shrink-0" title={it.title}>
+              {url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={url} alt={it.title} className="w-full h-full object-cover" />
+              )}
+              {it.shipPreset && <SizeBadge size={sizeKeyOf(it.shipPreset)} px={20} className="absolute bottom-0.5 right-0.5" />}
+            </li>
+          );
+        })}
+        <li className="shrink-0">
+          <Link
+            href={FILL_IT_HREF}
+            aria-label={FILL_IT_LABEL}
+            className="w-[52px] h-[52px] rounded-xl border-2 border-dashed border-[#cdbda3] text-[#a3927b] hover:border-[#6c4d39] hover:text-[#6c4d39] flex items-center justify-center transition-colors nb-focus"
+          >
+            <IcoPlus className="w-5 h-5" />
+          </Link>
+        </li>
+      </ul>
+
+      {/* Actions */}
+      <div className="grid grid-cols-[1fr_auto] gap-2">
+        <Link href={FILL_IT_HREF} className={btnInk}>{FILL_IT_LABEL}</Link>
+        <button type="button" onClick={() => setConfirming(true)} disabled={confirming} className={btnOutline}>Ship it now</button>
+      </div>
+      <ShipNow box={b} reload={reload} confirming={confirming} setConfirming={setConfirming} />
+    </section>
+  );
+}
+
+/** No open box: what a first box holds, one line, and the way to fill it. */
+export function EmptyBoxCard({ zone }: { zone: 1 | 2 | 3 }) {
+  return (
+    <section className="bg-white border border-[#e3d6bf] rounded-[18px] p-4 space-y-3">
+      <FreeBlocks fits={headroom(1, zone).fits} size="large" />
+      <p className="text-sm text-[#6f5b46]">Pick Ship on a lot and your first win opens a box.</p>
+      <Link href={FILL_IT_HREF} className={`${btnInk} w-full`}>{FILL_IT_LABEL}</Link>
+    </section>
+  );
+}
+
+/** A box that's past taking wins: "Oct 9 box · 2 lots · $7.49" + where it is. */
+export function PastBoxRow({ box: b }: { box: Box }) {
+  const shipped = b.status === "SHIPPED" || b.status === "DELIVERED";
+  const label = shipped ? trackingLabel(b) : "Packing";
+  const done = label === "Delivered";
+  const pill = done
+    ? "bg-[#241a12] text-[#f6ecda]"
+    : shipped
+    ? "bg-[#6c4d39]/10 text-[#6c4d39]"
+    : "bg-[#f0a35a]/18 text-[#8a4f1c]";
+  const when = b.closedAt ?? b.closesAt;
+  return (
+    <li className="flex items-center justify-between gap-3 px-4 py-3">
+      <div className="min-w-0 text-sm text-[#241a12] tabular-nums">
+        <span className="font-semibold">{fmtShort(when)} box</span>
+        <span className="text-[#8a7559]"> · {lots(b.items.length)} · {money(b.chargedCents)}</span>
+      </div>
+      <div className="shrink-0 flex flex-col items-end gap-1">
+        <span className={`inline-flex items-center rounded-full text-[12px] font-bold px-2.5 py-1 whitespace-nowrap ${pill}`}>{label}</span>
+        {shipped && b.trackingUrl && (
+          <a href={b.trackingUrl} target="_blank" rel="noopener noreferrer" className="text-[13px] font-bold text-[#6c4d39] hover:text-[#c47b3e] underline underline-offset-2 nb-focus rounded">
+            Track
+          </a>
         )}
       </div>
-    </section>
+    </li>
   );
 }
 
-export function ShippedBoxCard({ box: b }: { box: Box }) {
-  const label = trackingLabel(b);
-  const done = label === "Delivered";
-  const dims = b.boxCode ? b.boxCode.replace(/x/g, "×") : null;
-  const from = b.location?.name ?? null;
-  const pill = statusPill(b);
+/** Pay once · Fill it · Ships — the whole model in three tiles. */
+export function IconTiles() {
+  const tiles = [
+    { Icon: IcoCoin, title: "Pay once", sub: "per box" },
+    { Icon: IcoBox, title: "Fill it", sub: "free" },
+    { Icon: IcoTruck, title: "Ships", sub: "in 7 days" },
+  ];
   return (
-    <section className="bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden">
-      <div className="px-4 sm:px-5 pt-4 pb-3 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.16em] text-[#6c4d39]">
-            <IcoBox className="w-4 h-4" /> {from ? `From ${from}` : "Your box"}
-          </div>
-          <div className="font-display text-lg font-black text-[#241a12] mt-0.5 tabular-nums">
-            {done && b.deliveredAt ? `Delivered ${fmtDate(b.deliveredAt)}` : b.shippedAt ? `Shipped ${fmtDate(b.shippedAt)}` : "Shipped"}
-          </div>
-          <div className="text-[13px] text-[#6f5b46] mt-0.5 tabular-nums">
-            {lots(b.items.length)} · {b.weightLb} lb{dims ? ` · ${dims} box` : ""} · to {b.shipCity}, {b.shipState}
-          </div>
+    <div className="grid grid-cols-3 gap-3">
+      {tiles.map(({ Icon, title, sub }) => (
+        <div key={title} className="bg-white border border-[#e3d6bf] rounded-[18px] px-2 py-3 text-center">
+          <Icon className="w-6 h-6 text-[#6c4d39] mx-auto" />
+          <div className="text-[13px] font-bold text-[#241a12] mt-1.5">{title}</div>
+          <div className="text-[12px] text-[#8a7559]">{sub}</div>
         </div>
-        <span className={`inline-flex items-center gap-1.5 text-[12px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap shrink-0 ${pill.cls}`}>
-          {done ? <IcoCheck className="w-3.5 h-3.5" /> : <IcoTruck className="w-3.5 h-3.5" />} {label}
-        </span>
-      </div>
-      <ul className="px-4 sm:px-5 pb-3 flex flex-wrap gap-1.5">
-        {b.items.map((it) => (
-          <li key={it.id} className="flex items-center gap-1.5 bg-[#faf5ea] border border-[#e3d6bf] rounded-lg pl-0.5 pr-2 py-0.5 max-w-full">
-            <Thumb url={it.photos[0]?.url ?? null} title={it.title} size="w-7 h-7" />
-            <span className="text-[11px] font-semibold text-[#241a12] truncate max-w-[160px]">{it.title}</span>
-          </li>
-        ))}
-      </ul>
-      <div className="border-t border-[#efe3d0] px-4 sm:px-5 py-3 space-y-1.5">
-        <div className="text-sm text-[#241a12]">Shipping <span className="font-extrabold tabular-nums">{money(shippingPaid(b))}</span></div>
-        <TrackingLine box={b} />
-      </div>
-    </section>
+      ))}
+    </div>
   );
 }
 
-/**
- * The dashboard's Shipping tab: the open-box cards and a link to /shipping,
- * where the shipped boxes, every charge and the price table live.
- */
+/** The dashboard's Shipping tab: the open box card(s), or the empty card, plus a link to /shipping. */
 export function ShippingTab({ boxes, reload }: { boxes: Box[] | null; reload: () => Promise<void> }) {
   if (boxes === null) {
-    return <div className="max-w-3xl h-24 rounded-2xl bg-white border border-[#e3d6bf] animate-pulse" aria-hidden="true" />;
+    return <div className="max-w-[560px] h-40 rounded-[18px] bg-white border border-[#e3d6bf] animate-pulse" aria-hidden="true" />;
   }
-  const open = boxes.filter((b) => b.status === "OPEN" || b.status === "CLOSED" || b.status === "PACKING");
-  const onTheWay = boxes.filter((b) => b.status === "SHIPPED").length;
-  const link = (
-    <Link href="/shipping" className="inline-flex items-center gap-1.5 rounded-xl border border-[#6c4d39] text-[#6c4d39] hover:bg-[#6c4d39] hover:text-white font-bold text-sm px-4 py-2.5 min-h-[44px] transition-colors nb-focus">
-      <IcoTruck className="w-4 h-4" /> See all shipping
-    </Link>
-  );
-  if (open.length === 0) {
-    const any = boxes.some((b) => ACTIVE_BOX_STATUSES.has(b.status) || b.status === "DELIVERED");
-    return (
-      <div className="max-w-3xl bg-white border border-[#e3d6bf] rounded-2xl px-5 py-5 space-y-3">
-        <p className="text-sm text-[#6f5b46]">
-          {onTheWay > 0
-            ? `${onTheWay} ${onTheWay === 1 ? "box is" : "boxes are"} on the way. No box is open right now.`
-            : any
-            ? "No box is open right now. Your next shipped win opens one."
-            : "No boxes yet. Pick Ship on a lot that can ship and your first win opens a box."}
-        </p>
-        {link}
-      </div>
-    );
-  }
+  const open = boxes.filter((b) => b.status === "OPEN");
+  const zone = boxes[0] ? zoneOf(boxes[0]) : 1;
   return (
-    <div className="max-w-3xl space-y-4">
-      {open.map((b) => <OpenBoxCard key={b.id} box={b} reload={reload} />)}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-[13px] text-[#8a7559]">{onTheWay > 0 ? `${onTheWay} ${onTheWay === 1 ? "box" : "boxes"} on the way. ` : ""}Charges, tracking and the price table are on the Shipping page.</p>
-        {link}
-      </div>
+    <div className="max-w-[560px] space-y-3">
+      {open.length === 0 ? <EmptyBoxCard zone={zone} /> : open.map((b) => <BoxCard key={b.id} box={b} reload={reload} header />)}
+      <Link href="/shipping" className="inline-flex items-center min-h-[44px] text-sm font-semibold text-[#6c4d39] hover:text-[#563e2c] underline underline-offset-2 nb-focus rounded">
+        See all shipping
+      </Link>
     </div>
   );
 }

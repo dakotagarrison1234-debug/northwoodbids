@@ -15,6 +15,8 @@ import MaxBidExplainerModal from "@/app/components/MaxBidExplainerModal";
 import ExpandableDescription from "@/app/components/ExpandableDescription";
 import Skeleton from "@/app/components/Skeleton";
 import ShipChoice from "@/app/components/ShipChoice";
+import SizeBadge from "@/app/components/SizeBadge";
+import { sizeKeyOf } from "@/lib/shipping/sizes";
 
 /* ── Presentation helpers (display only) ─────────────────────────────────── */
 
@@ -80,6 +82,7 @@ interface Item {
   transferable?: boolean;
   locationName?: string | null;
   shipEligible?: boolean;
+  shipPreset?: string | null;
   photos: { url: string; isPrimary: boolean }[];
   bids: { id: string; amount: number; clerkUserId?: string; bidder?: string; placedAt: string; isProxy?: boolean }[];
   auction: { title: string; endAt: string; status: string } | null;
@@ -751,11 +754,16 @@ export default function ItemPage() {
               </div>
             )}
 
-            {/* Corner tag: how far under retail the bidding sits right now. */}
-            {item.retailValue && currentBid > 0 && item.retailValue > currentBid && (
-              <span className="absolute top-2.5 left-2.5 z-10 inline-flex items-center gap-1 bg-[#c47b3e] text-white text-[11px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full shadow-sm">
-                {Math.round((1 - currentBid / item.retailValue) * 100)}% off retail
-              </span>
+            {/* Top-left corner: the size badge (ships, and how big) + how far under retail the bidding sits. */}
+            {(item.shipEligible || (item.retailValue && currentBid > 0 && item.retailValue > currentBid)) && (
+              <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5">
+                {item.shipEligible && <SizeBadge size={sizeKeyOf(item.shipPreset)} px={30} className="shadow-sm" />}
+                {item.retailValue && currentBid > 0 && item.retailValue > currentBid ? (
+                  <span className="inline-flex items-center gap-1 bg-[#c47b3e] text-white text-[11px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full shadow-sm">
+                    {Math.round((1 - currentBid / item.retailValue) * 100)}% off retail
+                  </span>
+                ) : null}
+              </div>
             )}
             {(item.packSize ?? 0) > 1 && (
               <span className="absolute top-2.5 right-2.5 z-10 inline-flex items-center bg-[#241a12]/85 text-[#f6ecda] text-[11px] font-bold px-2.5 py-1 rounded-full backdrop-blur-sm">

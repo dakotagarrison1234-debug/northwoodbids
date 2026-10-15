@@ -35,6 +35,10 @@ export default function ShipModeSwitch({
     `${h} flex items-center justify-center gap-1.5 rounded-xl font-bold transition-colors disabled:opacity-70 nb-focus ` +
     (on ? "bg-[#6c4d39] text-[#faf5ea]" : "bg-white text-[#241a12] hover:bg-[#faf5ea]");
   const price = (on: boolean) => `tabular-nums font-semibold whitespace-nowrap ${on ? "text-[#f6ecda]/85" : "text-[#8a7559]"}`;
+  // "FREE" rides at the same size and weight as "Ship", in gold. Gold on the
+  // white (unselected) segment is unreadable, so that side uses amber.
+  const free = shipPrice === "FREE";
+  const freeCls = (on: boolean) => `text-[15px] font-bold whitespace-nowrap ${on ? "text-[#f0a35a]" : "text-[#c47b3e]"}`;
   return (
     <div
       role="radiogroup"
@@ -47,7 +51,7 @@ export default function ShipModeSwitch({
       </button>
       <button type="button" role="radio" aria-checked={mode === "SHIP"} disabled={busy} onClick={() => onPick("SHIP")} className={seg(mode === "SHIP")}>
         <span className="text-[15px]">Ship</span>
-        <span className={`text-[13px] ${price(mode === "SHIP")}`}>{shipPrice}</span>
+        <span className={free ? freeCls(mode === "SHIP") : `text-[13px] ${price(mode === "SHIP")}`}>{shipPrice}</span>
       </button>
     </div>
   );

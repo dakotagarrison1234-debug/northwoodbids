@@ -66,6 +66,15 @@ export function IcoBox({ className = "w-5 h-5" }: P) {
   );
 }
 
+/** A plain plus — the "add a lot" tile in a box. */
+export function IcoPlus({ className = "w-5 h-5" }: P) {
+  return (
+    <svg {...base(className)}>
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
 export function IcoGift({ className = "w-5 h-5" }: P) {
   return (
     <svg {...base(className)}>

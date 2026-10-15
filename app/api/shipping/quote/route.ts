@@ -13,6 +13,7 @@ import { HOW_IT_WORKS } from "@/lib/shipping/tiers";
  * { eligible: false, signedIn, mode } | {
  *   eligible: true, fromCents, exactCents: number|null, joinsOpenBox, zone, needsAddress,
  *   box: { id, weightOz, zone, headroom } | null   (the open box it would join)
+ *   lot: { preset, weightOz }                       (this lot's size + packed weight)
  *   signedIn, mode: "PICKUP"|"SHIP"|null, howItWorks: string[]
  * }
  */

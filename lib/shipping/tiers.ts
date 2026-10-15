@@ -221,8 +221,6 @@ export const HOW_IT_WORKS = [
   "Ships 3 to 5 business days after your box closes and every lot is paid.",
 ];
 
-/** The one-line footer under the price table. */
-export const SHIP_FINE_PRINT = "Lower 48 only · ground · 3 to 5 business days after your box closes and every lot is paid · no refunds once the label prints";
 
 /**
  * "Room left in your box": how much more weight fits before the price goes up,
@@ -245,8 +243,6 @@ export function headroom(weightOz: number, zone: 1 | 2 | 3): {
 
 export type Headroom = ReturnType<typeof headroom>;
 
-/** "4 Smalls", "1 Medium", "2 Larges". */
-export const plural = (label: string, n: number) => `${n} ${label}${n === 1 ? "" : "s"}`;
 
 /** The smallest thing that can still join a box: a Small plus its fill. */
 export const SMALLEST_ADD_OZ = PRESETS.SMALL.weightOz + FILL_OZ;
@@ -285,18 +281,4 @@ export function roomLine(fits: { key: string; label: string; count: number }[]):
   const pick = roomPick(fits);
   if (!pick) return null;
   return `${pick.count} more ${pick.label}${pick.count === 1 ? "" : "s"} ride${pick.count === 1 ? "s" : ""} free`;
-}
-
-/**
- * Where a weight sits on the four-band meter, 0..1. Each band is a quarter of
- * the bar (an "under 1 lb" band drawn to scale would be a sliver), and the fill
- * moves through its band in proportion to the weight.
- */
-export function bandPosition(weightOz: number): number {
-  if (weightOz <= 0) return 0;
-  const i = bandIndex(weightOz);
-  const lo = i === 0 ? 0 : TIERS[i - 1].maxOz;
-  const hi = TIERS[i].maxOz;
-  const frac = Math.min(1, Math.max(0, (weightOz - lo) / (hi - lo)));
-  return (i + frac) / TIERS.length;
 }

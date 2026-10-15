@@ -8,6 +8,7 @@ import LocalDate from "@/app/components/LocalDate";
 import PusherRefresh from "@/app/components/PusherRefresh";
 import NotFoundCard from "@/app/components/NotFoundCard";
 import AuctionItemsView, { type ViewItem } from "@/app/components/AuctionItemsView";
+import { sizeKeyOf } from "@/lib/shipping/sizes";
 import { PineMark, WoodenCrate, PineRidge, BranchDivider } from "@/app/components/Illustrations";
 import { IcoLock, IcoBolt, IcoMagnifier, BidCritter } from "@/app/components/BidIcons";
 
@@ -316,7 +317,7 @@ export default async function AuctionPage({ params }: Props) {
       isItemUnsold,
       isItemLive,
       itemEndAtIso,
-      ships: !!item.shipEligible,
+      shipSize: item.shipEligible ? sizeKeyOf(item.shipPreset) : null,
     };
   });
 

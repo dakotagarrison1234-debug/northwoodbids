@@ -80,14 +80,18 @@ export type OpenBoxPeek = { id: string; weightOz: number; zone: 1 | 2 | 3; headr
  */
 export async function quoteForViewer(it: ItemShipRow & { locationId?: string | null; organizationId?: string; transferable?: boolean }, clerkUserId: string | null): Promise<
   | { eligible: false }
-  | { eligible: true; fromCents: number; exactCents: number | null; joinsOpenBox: boolean; zone: 1 | 2 | 3 | null; needsAddress: boolean; box: OpenBoxPeek | null }
+  | {
+      eligible: true; fromCents: number; exactCents: number | null; joinsOpenBox: boolean; zone: 1 | 2 | 3 | null; needsAddress: boolean; box: OpenBoxPeek | null;
+      /** This lot's size and packed weight — the item page draws a fresh box from it when there's none to join. */
+      lot: { preset: ShipPresetKey; weightOz: number };
+    }
 > {
   const fp = itemFootprint(it);
   if (!fp) return { eligible: false };
   const station = it.organizationId ? await stationForItem(it.organizationId, it.locationId ?? null) : null;
   // Shipping would mean a transfer this lot isn't allowed to ride (same rule as routeWonLot).
   if (station?.transfer && it.transferable === false) return { eligible: false };
-  const base = { eligible: true as const, fromCents: fromCents(fp.weightOz), box: null };
+  const base = { eligible: true as const, fromCents: fromCents(fp.weightOz), box: null, lot: { preset: it.shipPreset ?? "CUSTOM", weightOz: fp.weightOz } };
   if (!clerkUserId) return { ...base, exactCents: null, joinsOpenBox: false, zone: null, needsAddress: true };
   const profile = await getShipProfile(clerkUserId);
   if (!profile) return { ...base, exactCents: null, joinsOpenBox: false, zone: null, needsAddress: true };
@@ -402,7 +406,7 @@ export async function bundleSummaryFor(clerkUserId: string, opts: { all?: boolea
       location: { select: { name: true } },
       items: {
         select: {
-          id: true, title: true, shipChargeCents: true, locationId: true, transferRequestId: true,
+          id: true, title: true, shipChargeCents: true, shipPreset: true, locationId: true, transferRequestId: true,
           payments: { select: { status: true } },
           photos: { where: { isPrimary: true }, take: 1, select: { url: true } },
         },

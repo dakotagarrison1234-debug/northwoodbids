@@ -37,6 +37,7 @@ export default async function WatchlistPage() {
           isPremium: true,
           itemEndAt: true,
           shipEligible: true,
+          shipPreset: true,
           photos: { select: { url: true, isPrimary: true } },
           bids: { where: { status: "ACTIVE" }, orderBy: { amount: "desc" }, take: 1, select: { clerkUserId: true } },
           auction: {

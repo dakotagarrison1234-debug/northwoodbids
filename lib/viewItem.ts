@@ -1,4 +1,5 @@
 import type { ViewItem } from "@/app/components/AuctionItemsView";
+import { sizeKeyOf } from "@/lib/shipping/sizes";
 
 /**
  * Builds the pre-computed card model (`ViewItem`) the auction grid renders — the
@@ -22,8 +23,9 @@ export type SourceItem = {
   packSize: number | null;
   isPremium: boolean;
   itemEndAt: Date | null;
-  /** Shipping opt-in (optional so older selects still type-check). */
+  /** Shipping opt-in + size (optional so older selects still type-check). */
   shipEligible?: boolean;
+  shipPreset?: string | null;
   photos: { url: string; isPrimary: boolean }[];
   /** At most the single highest ACTIVE bid (fetched with take: 1). */
   bids: { clerkUserId: string | null }[];
@@ -138,6 +140,6 @@ export function toViewItem(
     isItemUnsold,
     isItemLive,
     itemEndAtIso,
-    ships: !!item.shipEligible,
+    shipSize: item.shipEligible ? sizeKeyOf(item.shipPreset) : null,
   };
 }

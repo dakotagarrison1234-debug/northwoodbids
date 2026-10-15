@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import ShipModeSwitch, { type ShipMode } from "./ShipModeSwitch";
 import ShippingAddressModal from "./ShippingAddressModal";
-import BandMeter from "./BandMeter";
-import { fmtCents, headroomState, roomLine, type Headroom } from "@/lib/shipping/tiers";
+import FreeBlocks from "./FreeBlocks";
+import FillBar from "./FillBar";
+import { fmtCents, headroom, type Headroom, type ShipPresetKey } from "@/lib/shipping/tiers";
 
 type Quote =
   | { eligible: false; signedIn: boolean; mode: ShipMode | null }
@@ -18,6 +19,7 @@ type Quote =
       zone: 1 | 2 | 3 | null;
       needsAddress: boolean;
       box: { id: string; weightOz: number; zone: 1 | 2 | 3; headroom: Headroom } | null;
+      lot: { preset: ShipPresetKey; weightOz: number };
       signedIn: boolean;
       mode: ShipMode | null;
       howItWorks: string[];
@@ -32,9 +34,12 @@ type Quote =
  *   GET  /api/shipping/quote?itemId=   → this lot's price + the buyer's mode
  *   POST /api/shipping/choice          → set the mode
  *
- * The Ship segment carries the live number for THIS lot. Under the switch,
- * one optional line about the open box it would join — and nothing else.
- * First tap on Ship without an address opens ShippingAddressModal.
+ * The Ship segment carries the live number for THIS lot (FREE when it rides in
+ * the open box). With Ship selected, the free blocks say how many more of each
+ * size ride free and the fill bar shows how full the box is — the size badge
+ * on the photo plus those blocks are the whole explanation. Quick Bid (compact)
+ * gets the switch and the blocks only. First tap on Ship without an address
+ * opens ShippingAddressModal.
  */
 export default function ShipChoice({
   itemId,
@@ -136,44 +141,38 @@ export default function ShipChoice({
     );
   }
 
-  // The live number for THIS lot: exact, delta, Free (rides in the open box), or "from".
+  // The live number for THIS lot: exact, delta, FREE (rides in the open box), or "from".
   const shipPrice =
     quote.exactCents == null
       ? `from ${fmtCents(quote.fromCents)}`
       : quote.joinsOpenBox
-      ? quote.exactCents === 0 ? "Free" : `+${fmtCents(quote.exactCents)}`
+      ? quote.exactCents === 0 ? "FREE" : `+${fmtCents(quote.exactCents)}`
       : fmtCents(quote.exactCents);
 
-  // One optional line under the switch, only with Ship selected and an open box to join.
-  let room: React.ReactNode = null;
-  if (mode === "SHIP" && quote.box) {
-    const st = headroomState(quote.box.headroom);
-    const small = compact ? "text-[12px]" : "text-[13px]";
-    if (st.kind === "room" || st.kind === "top-room") {
-      const line = roomLine(st.fits);
-      room = (
-        <div className="flex items-center gap-2.5 min-w-0">
-          <BandMeter weightOz={quote.box.weightOz} zone={quote.box.zone} slim className="flex-1 min-w-[56px]" />
-          {line && <span className={`${small} font-semibold text-[#2f5d3a] whitespace-nowrap`}>{line}</span>}
-        </div>
-      );
-    } else if (st.kind === "full") {
-      room = <p className={`${small} text-[#6f5b46]`}>Next lot: <span className="font-bold text-[#241a12] tabular-nums">+{fmtCents(st.stepCents)}</span></p>;
-    } else {
-      room = <p className={`${small} text-[#6f5b46]`}>Full — the next lot starts a new box</p>;
-    }
-  }
+  // What the blocks and bar draw: the open box this lot would join, or — with
+  // no box to join — a fresh box holding just this lot.
+  const zone = quote.box?.zone ?? quote.zone ?? 1;
+  const weightOz = quote.box ? quote.box.weightOz : quote.lot.weightOz;
+  const fits = quote.box ? quote.box.headroom.fits : headroom(quote.lot.weightOz, zone).fits;
+  // This lot is the one that tips the box into the next price: its own block says so.
+  const step =
+    quote.box && quote.joinsOpenBox && (quote.exactCents ?? 0) > 0 && quote.lot.preset !== "CUSTOM"
+      ? { key: quote.lot.preset, cents: quote.exactCents as number }
+      : null;
 
   return (
     <div className={className}>
       <ShipModeSwitch mode={mode} onPick={pick} shipPrice={shipPrice} busy={busy} size={compact ? "sm" : "md"} />
-      {(room || !compact) && (
-        <div className={`flex items-center justify-between gap-3 ${compact ? "mt-1.5" : "mt-2"}`}>
-          <div className="min-w-0 flex-1">{room}</div>
+      {mode === "SHIP" && (
+        <div className="mt-2 space-y-2">
+          <FreeBlocks fits={fits} step={step} />
           {!compact && (
-            <Link href="/shipping#how" className="shrink-0 inline-flex items-center min-h-[44px] text-[13px] text-[#8a7559] hover:text-[#6c4d39] underline underline-offset-2 nb-focus rounded">
-              How shipping works
-            </Link>
+            <div className="flex items-center gap-3">
+              <FillBar weightOz={weightOz} zone={zone} height={6} className="flex-1 min-w-0" />
+              <Link href="/shipping" className="shrink-0 inline-flex items-center min-h-[44px] text-[13px] text-[#8a7559] hover:text-[#6c4d39] underline underline-offset-2 nb-focus rounded">
+                Shipping
+              </Link>
+            </div>
           )}
         </div>
       )}

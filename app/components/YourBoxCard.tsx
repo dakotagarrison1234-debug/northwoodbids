@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { IcoTruck, IcoCheck, IcoBox } from "./BidIcons";
-import { fmtCents, headroomState, roomLine, type Headroom } from "@/lib/shipping/tiers";
+import FreeBlocks from "./FreeBlocks";
+import { fmtCents, headroomState, roomLine, type Headroom, type ShipPresetKey } from "@/lib/shipping/tiers";
 
 // Mirrors GET /api/shipping/box (bundleSummaryFor), dates as ISO strings.
 export type BoxHeadroom = Headroom;
@@ -32,7 +33,7 @@ export type Box = {
   location: { name: string } | null;
   /** How much more fits before the price moves up a band. */
   headroom: BoxHeadroom;
-  items: { id: string; title: string; shipChargeCents: number; paid: boolean; atStation: boolean; photos: { url: string }[] }[];
+  items: { id: string; title: string; shipChargeCents: number; shipPreset: ShipPresetKey | null; paid: boolean; atStation: boolean; photos: { url: string }[] }[];
 };
 
 export const money = (c: number) => fmtCents(c);
@@ -220,7 +221,8 @@ export default function YourBoxCard({ boxes, reload }: { boxes: Box[] | null; re
         const open = b.status === "OPEN";
         const dims = b.boxCode ? b.boxCode.replace(/x/g, "×") : null;
         const from = b.location?.name ?? null;
-        const room = open ? roomSummary(b.headroom) : null;
+        const st = open ? headroomState(b.headroom) : null;
+        const step = st && st.kind === "full" ? { key: "SMALL" as const, cents: st.stepCents } : null;
         return (
           <section key={b.id} className="bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden">
             {/* Header */}
@@ -236,15 +238,19 @@ export default function YourBoxCard({ boxes, reload }: { boxes: Box[] | null; re
                   Shipping <span className="font-extrabold tabular-nums">{money(b.chargedCents)}</span>
                   <span className="text-[#8a7559]"> · to {b.shipCity}, {b.shipState}</span>
                 </div>
-                {room && (
-                  <div className={`text-[13px] font-semibold mt-0.5 ${room.tone === "moss" ? "text-[#2f5d3a]" : "text-[#8a4f1c]"}`}>{room.text}</div>
-                )}
               </div>
               <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap ${pill.cls}`}>
                 {pill.text === "Delivered" ? <IcoCheck className="w-3 h-3" /> : <IcoTruck className="w-3 h-3" />}
                 {pill.text}
               </span>
             </div>
+
+            {/* Room left — the same three blocks as the Shipping page */}
+            {open && (
+              <div className="px-4 sm:px-5 pb-3">
+                <FreeBlocks fits={b.headroom.fits} size="compact" step={step} />
+              </div>
+            )}
 
             {/* Lots */}
             <ul className="px-4 sm:px-5 pb-3 flex flex-wrap gap-2">
