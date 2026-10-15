@@ -525,6 +525,10 @@ model Payment {
   creditApplied         Decimal?      @db.Decimal(10, 2)
   // Shipping delta billed with this win (never covered by Bid Bucks, never taxed).
   shippingAmount        Decimal?      @db.Decimal(10, 2)
+  // Set when that shipping was given back (lot left its box before the label).
+  // shippingAmount is kept so the charge still shows, struck through; every
+  // money total treats the row's shipping as 0 once this is set.
+  shippingRefundedAt    DateTime?
   stripePaymentIntentId String?
   status                PaymentStatus @default(PENDING)
   // True when the winner was an org admin/owner: the win is honored (item goes to

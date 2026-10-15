@@ -8,11 +8,12 @@ import { HOW_IT_WORKS } from "@/lib/shipping/tiers";
 /**
  * GET /api/shipping/quote?itemId= — what the Pickup / Ship boxes show for this lot.
  * Anonymous viewers get "from $X"; signed-in bidders with an address get their
- * exact price (a new box, or the delta if it joins their open box) + their choice.
+ * exact price (a new box, or the delta if it joins their open box) + their mode.
  *
- * { eligible: false } | {
+ * { eligible: false, signedIn, mode } | {
  *   eligible: true, fromCents, exactCents: number|null, joinsOpenBox, zone, needsAddress,
- *   signedIn, choice: "PICKUP"|"SHIP"|null, howItWorks: string[]
+ *   box: { id, weightOz, zone, headroom } | null   (the open box it would join)
+ *   signedIn, mode: "PICKUP"|"SHIP"|null, howItWorks: string[]
  * }
  */
 export async function GET(request: NextRequest) {
@@ -21,13 +22,14 @@ export async function GET(request: NextRequest) {
 
   // locationId + organizationId: "joins your open box" is per shipping station
   // (an Owosso lot joins the Owosso box, a Gladwin lot the Gladwin box).
-  const item = await prisma.item.findUnique({ where: { id: itemId }, select: { ...itemShipSelect, locationId: true, organizationId: true } });
+  const item = await prisma.item.findUnique({ where: { id: itemId }, select: { ...itemShipSelect, locationId: true, organizationId: true, transferable: true } });
   if (!item) return NextResponse.json({ error: "Item not found" }, { status: 404 });
 
   const { userId } = await auth();
   const quote = await quoteForViewer(item, userId ?? null);
-  if (!quote.eligible) return NextResponse.json({ eligible: false, signedIn: !!userId });
+  const mode = userId ? await choiceFor(userId) : null;
+  // Ineligible still carries the mode: a Ship-mode buyer is told this one is pickup.
+  if (!quote.eligible) return NextResponse.json({ eligible: false, signedIn: !!userId, mode });
 
-  const choice = userId ? await choiceFor(userId, itemId) : null;
-  return NextResponse.json({ ...quote, signedIn: !!userId, choice, howItWorks: HOW_IT_WORKS });
+  return NextResponse.json({ ...quote, signedIn: !!userId, mode, howItWorks: HOW_IT_WORKS });
 }

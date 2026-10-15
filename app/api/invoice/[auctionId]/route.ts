@@ -99,8 +99,8 @@ export async function GET(
       const bid = num(p.amount);
       const premium = num(p.applicationFeeAmount);
       const tax = num(p.taxAmount);
-      // That lot's own shipping delta (not taxed, not covered by Bid Bucks).
-      const shipping = num(p.shippingAmount);
+      // That lot's own shipping delta (not taxed, not covered by Bid Bucks); 0 once refunded.
+      const shipping = p.shippingRefundedAt ? 0 : num(p.shippingAmount);
       return {
         title: p.item.title,
         itemCode: p.item.itemCode ?? null,

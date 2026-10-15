@@ -400,7 +400,7 @@ export default function AccountPage() {
         <Section
           icon={<IcoTruck className="w-[18px] h-[18px]" />}
           title="Shipping address"
-          hint="Where your boxes go. A box that's already open keeps the address it opened with."
+          hint="Where your boxes go. An open box keeps the address it opened with."
         >
           {shipMsg && (
             <p className="text-sm px-4 py-3 rounded-xl font-semibold bg-[#4a7c59]/10 text-[#2f5d3a] border border-[#4a7c59]/25 flex items-center gap-2 mb-2.5">
@@ -421,7 +421,7 @@ export default function AccountPage() {
               ) : (
                 <>
                   <p className="font-semibold text-[#241a12]">{shipAddress === undefined ? "Checking your address" : "No shipping address yet"}</p>
-                  <p className="text-[#8a7559] text-xs mt-0.5">Add one to have wins shipped instead of picked up. Lower 48 only.</p>
+                  <p className="text-[#8a7559] text-xs mt-0.5">Add one, then pick Ship on any lot. Lower 48 only.</p>
                 </>
               )}
             </div>

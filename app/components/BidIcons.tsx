@@ -55,6 +55,17 @@ export function IcoTruck({ className = "w-5 h-5" }: P) {
   );
 }
 
+/** A shipping box — the /shipping page and "Your box". */
+export function IcoBox({ className = "w-5 h-5" }: P) {
+  return (
+    <svg {...base(className)}>
+      <path d="M12 2.8 3.5 7.2v9.6L12 21.2l8.5-4.4V7.2z" />
+      <path d="M3.5 7.2 12 11.6l8.5-4.4M12 11.6v9.6" />
+      <path d="M7.8 5 16.2 9.4" />
+    </svg>
+  );
+}
+
 export function IcoGift({ className = "w-5 h-5" }: P) {
   return (
     <svg {...base(className)}>

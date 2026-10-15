@@ -69,23 +69,30 @@ export function itemFootprint(it: ItemShipRow): { weightOz: number; dims: Dims }
   return fp;
 }
 
+/** What the item page's Ship segment shows about the buyer's open box at this lot's station. */
+export type OpenBoxPeek = { id: string; weightOz: number; zone: 1 | 2 | 3; headroom: ReturnType<typeof headroom> };
+
 /**
- * What the item page shows: "Ships from $5.49" for anonymous/no-address viewers,
- * or the buyer's exact price for this lot (as a NEW box, or the delta if they
- * already have an open box it would join).
+ * What the item page shows: "from $5.49" for anonymous/no-address viewers, or
+ * the buyer's exact price for this lot (as a NEW box, or the delta if it joins
+ * their open box). `box` is the open box it would join (so the switch can draw
+ * the room left), null when it wouldn't join one.
  */
-export async function quoteForViewer(it: ItemShipRow & { locationId?: string | null; organizationId?: string }, clerkUserId: string | null): Promise<
+export async function quoteForViewer(it: ItemShipRow & { locationId?: string | null; organizationId?: string; transferable?: boolean }, clerkUserId: string | null): Promise<
   | { eligible: false }
-  | { eligible: true; fromCents: number; exactCents: number | null; joinsOpenBox: boolean; zone: 1 | 2 | 3 | null; needsAddress: boolean }
+  | { eligible: true; fromCents: number; exactCents: number | null; joinsOpenBox: boolean; zone: 1 | 2 | 3 | null; needsAddress: boolean; box: OpenBoxPeek | null }
 > {
   const fp = itemFootprint(it);
   if (!fp) return { eligible: false };
-  const base = { eligible: true as const, fromCents: fromCents(fp.weightOz) };
+  const station = it.organizationId ? await stationForItem(it.organizationId, it.locationId ?? null) : null;
+  // Shipping would mean a transfer this lot isn't allowed to ride (same rule as routeWonLot).
+  if (station?.transfer && it.transferable === false) return { eligible: false };
+  const base = { eligible: true as const, fromCents: fromCents(fp.weightOz), box: null };
   if (!clerkUserId) return { ...base, exactCents: null, joinsOpenBox: false, zone: null, needsAddress: true };
   const profile = await getShipProfile(clerkUserId);
   if (!profile) return { ...base, exactCents: null, joinsOpenBox: false, zone: null, needsAddress: true };
-  const station = it.organizationId ? await stationForItem(it.organizationId, it.locationId ?? null) : null;
-  const open = await openBundleFor(clerkUserId, station?.id ?? null);
+  // No station = no box to join here; never match a box at another station.
+  const open = station && it.organizationId ? await openBundleFor(clerkUserId, it.organizationId, station.id) : null;
   if (!open) return { ...base, exactCents: tierCents(fp.weightOz, profile.zone), joinsOpenBox: false, zone: profile.zone, needsAddress: false };
   const current = open.items.map(itemFootprint).filter((x): x is NonNullable<typeof x> => !!x);
   const after = packBundle([...current, fp]);
@@ -98,32 +105,43 @@ export async function quoteForViewer(it: ItemShipRow & { locationId?: string | n
   // the box opened with, not whatever the profile says today.
   const zone = open.zone as 1 | 2 | 3;
   const before = packBundle(current).weightOz;
-  return { ...base, exactCents: deltaCents(before, after.weightOz, zone), joinsOpenBox: true, zone, needsAddress: false };
+  return {
+    ...base, exactCents: deltaCents(before, after.weightOz, zone), joinsOpenBox: true, zone, needsAddress: false,
+    box: { id: open.id, weightOz: before, zone, headroom: headroom(before, zone) },
+  };
 }
 
-/** Save the buyer's choice for a lot before it closes. Also becomes their default. */
-export async function setChoice(clerkUserId: string, itemId: string, choice: Fulfillment): Promise<void> {
-  await prisma.$transaction([
-    prisma.itemShipChoice.upsert({
+/**
+ * The buyer's mode — Ship or Pickup — is ONE setting, not per lot. Picking Ship
+ * on any lot (or on /shipping) makes every lot they win ship until they pick
+ * Pickup. A lot that can't ship is pickup regardless (joinBundleOnWin checks
+ * the footprint first). `itemId` just stamps where the switch was flipped.
+ */
+export async function setChoice(clerkUserId: string, choice: Fulfillment, itemId?: string | null): Promise<void> {
+  await prisma.bidderProfile.upsert({
+    where: { clerkUserId },
+    update: { lastFulfillment: choice },
+    create: { clerkUserId, lastFulfillment: choice },
+  });
+  if (itemId) {
+    // Audit only: which lot the buyer was on when they flipped it. Never read back.
+    await prisma.itemShipChoice.upsert({
       where: { itemId_clerkUserId: { itemId, clerkUserId } },
       update: { choice },
       create: { itemId, clerkUserId, choice },
-    }),
-    prisma.bidderProfile.updateMany({ where: { clerkUserId }, data: { lastFulfillment: choice } }),
-  ]);
+    }).catch(() => {});
+  }
 }
 
-/** The choice to show for a lot: explicit per-lot choice, else their last choice, else Pickup. */
-export async function choiceFor(clerkUserId: string, itemId: string): Promise<Fulfillment> {
-  const row = await prisma.itemShipChoice.findUnique({ where: { itemId_clerkUserId: { itemId, clerkUserId } }, select: { choice: true } });
-  if (row) return row.choice;
+/** The buyer's current mode. Pickup until they ever pick Ship. */
+export async function choiceFor(clerkUserId: string): Promise<Fulfillment> {
   const p = await prisma.bidderProfile.findUnique({ where: { clerkUserId }, select: { lastFulfillment: true } });
   return p?.lastFulfillment ?? "PICKUP";
 }
 
-async function openBundleFor(clerkUserId: string, locationId: string | null) {
+async function openBundleFor(clerkUserId: string, organizationId: string, locationId: string) {
   return prisma.shippingBundle.findFirst({
-    where: { clerkUserId, status: "OPEN", closesAt: { gt: new Date() }, ...(locationId ? { locationId } : {}) },
+    where: { clerkUserId, organizationId, status: "OPEN", closesAt: { gt: new Date() }, locationId },
     include: { items: { select: itemShipSelect } },
     orderBy: { openedAt: "desc" },
   });
@@ -166,7 +184,7 @@ export async function joinBundleOnWin(itemId: string, clerkUserId: string, organ
   // itemFootprint returns null for a lot that's over the hard limits on its own
   // (Custom included) — so that lot is pickup.
   const fp = itemFootprint(item);
-  const choice = fp ? await choiceFor(clerkUserId, itemId) : "PICKUP";
+  const choice = fp ? await choiceFor(clerkUserId) : "PICKUP";
   const profile = choice === "SHIP" ? await getShipProfile(clerkUserId) : null;
   const station = choice === "SHIP" ? await stationForItem(organizationId, item.locationId) : null;
   if (choice !== "SHIP" || !fp || !profile || !station) {
@@ -360,21 +378,23 @@ export async function shippingRefundableForItem(itemId: string): Promise<boolean
 }
 
 /**
- * Everything the buyer's dashboard "Your box" card and Shipping tab need.
- * Delivered boxes stay for a week. `headroom` = how much more fits in the box
- * before the price moves up a band (priced in the box's frozen zone).
+ * Everything the buyer's dashboard "Your box" card and /shipping need.
+ * Default (dashboard): the 5 newest, delivered boxes only for a week.
+ * `{ all: true }` (/shipping): up to 50, delivered boxes kept.
+ * `headroom` = how much more fits in the box before the price moves up a band
+ * (priced in the box's frozen zone).
  */
-export async function bundleSummaryFor(clerkUserId: string) {
+export async function bundleSummaryFor(clerkUserId: string, opts: { all?: boolean } = {}) {
   const bundles = await prisma.shippingBundle.findMany({
     where: {
       clerkUserId,
       OR: [
         { status: { in: ["OPEN", "CLOSED", "PACKING", "SHIPPED"] } },
-        { status: "DELIVERED", deliveredAt: { gte: new Date(Date.now() - 7 * 86_400_000) } },
+        opts.all ? { status: "DELIVERED" } : { status: "DELIVERED", deliveredAt: { gte: new Date(Date.now() - 7 * 86_400_000) } },
       ],
     },
     orderBy: { openedAt: "desc" },
-    take: 5,
+    take: opts.all ? 50 : 5,
     select: {
       id: true, status: true, openedAt: true, closesAt: true, closedAt: true, weightOz: true, boxCode: true, chargedCents: true, zone: true,
       carrier: true, service: true, trackingCode: true, trackingUrl: true, shippedAt: true, deliveredAt: true, lastTrackingStatus: true,

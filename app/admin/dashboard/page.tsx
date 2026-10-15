@@ -49,7 +49,7 @@ export default async function AdminDashboard() {
     ownerish
       ? prisma.payment.findMany({
           where: { item: { organizationId: orgId }, status: { in: ["PENDING", "FAILED"] }, comped: false },
-          select: { amount: true, applicationFeeAmount: true, taxAmount: true, shippingAmount: true, clerkUserId: true },
+          select: { amount: true, applicationFeeAmount: true, taxAmount: true, shippingAmount: true, shippingRefundedAt: true, clerkUserId: true },
         })
       : Promise.resolve([]),
     prisma.item.count({ where: { organizationId: orgId, status: "PENDING_PICKUP", pickupAppointmentId: null, transferRequestId: null, shippingBundleId: null } }),
@@ -67,7 +67,7 @@ export default async function AdminDashboard() {
   const late = scheduled.filter((a) => a.startsAt.getTime() < now.getTime() - 3600_000).length;
   const todayStaged = today.filter((a) => !!a.stagedSpot).length;
 
-  const unpaidTotal = unpaidRows.reduce((s, p) => s + Number(p.amount) + Number(p.applicationFeeAmount ?? 0) + Number(p.taxAmount ?? 0) + Number(p.shippingAmount ?? 0), 0);
+  const unpaidTotal = unpaidRows.reduce((s, p) => s + Number(p.amount) + Number(p.applicationFeeAmount ?? 0) + Number(p.taxAmount ?? 0) + (p.shippingRefundedAt ? 0 : Number(p.shippingAmount ?? 0)), 0);
   const unpaidPeople = new Set(unpaidRows.map((p) => p.clerkUserId)).size;
   const weekSales = Number(weekAgg?._sum.amount ?? 0);
 

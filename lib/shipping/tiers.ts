@@ -207,13 +207,22 @@ export function parseShipInput(body: {
   return { fields: { shipEligible: true, shipPreset: "CUSTOM", shipWeightOz: Math.round(weightOz), shipLengthIn: r2(l), shipWidthIn: r2(w), shipHeightIn: r2(h) } };
 }
 
-/** How we explain it on the item page / address modal, in four lines. */
+/**
+ * How we explain it — the address modal, /shipping and the help page all read
+ * these same lines so the story never drifts. Short sentences, one idea each.
+ */
 export const HOW_IT_WORKS = [
-  "One flat price per box, based on weight and where you are.",
-  "Keep winning for 7 days — extra lots ride in the same box; you only pay the difference when it moves up a weight band.",
-  "Ships ground 3 to 5 business days after your box closes. Lower 48 only.",
-  "Lots at Owosso and Gladwin ship as separate boxes. Shipping is non-refundable once the label is printed.",
+  "Pick Ship or Pickup once. It sticks for every lot until you change it.",
+  "One flat price per box, by weight and where you live.",
+  "Your box stays open 7 days. Every lot you win in that time rides in it.",
+  "Extra lots ride free until the box steps up a weight range; then you pay only the difference.",
+  "One box per warehouse. Owosso and Gladwin each pack their own.",
+  "Ground to the lower 48. No refunds once the label prints.",
+  "Ships 3 to 5 business days after your box closes and every lot is paid.",
 ];
+
+/** The one-line footer under the price table. */
+export const SHIP_FINE_PRINT = "Lower 48 only · ground · 3 to 5 business days after your box closes and every lot is paid · no refunds once the label prints";
 
 /**
  * "Room left in your box": how much more weight fits before the price goes up,
@@ -232,4 +241,62 @@ export function headroom(weightOz: number, zone: 1 | 2 | 3): {
     key, label: PRESETS[key].label, count: weightOz <= 0 ? 0 : Math.floor(ozLeft / (PRESETS[key].weightOz + FILL_OZ)),
   }));
   return { ozLeft, bandLabel: band.label, nextCents: next ? next.cents[zone - 1] : null, stepCents, fits };
+}
+
+export type Headroom = ReturnType<typeof headroom>;
+
+/** "4 Smalls", "1 Medium", "2 Larges". */
+export const plural = (label: string, n: number) => `${n} ${label}${n === 1 ? "" : "s"}`;
+
+/** The smallest thing that can still join a box: a Small plus its fill. */
+export const SMALLEST_ADD_OZ = PRESETS.SMALL.weightOz + FILL_OZ;
+
+/**
+ * What an OPEN box can still take, in one of four shapes:
+ *   room      — more fits at this price (fits = which presets, how many)
+ *   full      — the next lot pushes the box into the next band (+stepCents)
+ *   top-room  — top band, still under 20 lb: more fits, and nothing costs more
+ *   top-full  — top band and no room: the next lot starts a new box
+ */
+export function headroomState(h: Headroom):
+  | { kind: "room"; fits: { key: "SMALL" | "MEDIUM" | "LARGE"; label: string; count: number }[]; stepCents: number; nextCents: number }
+  | { kind: "full"; stepCents: number; nextCents: number }
+  | { kind: "top-room"; fits: { key: "SMALL" | "MEDIUM" | "LARGE"; label: string; count: number }[] }
+  | { kind: "top-full" } {
+  const fits = h.fits.filter((f) => f.count > 0);
+  const room = h.ozLeft >= SMALLEST_ADD_OZ && fits.length > 0;
+  if (h.nextCents === null) return room ? { kind: "top-room", fits } : { kind: "top-full" };
+  return room ? { kind: "room", fits, stepCents: h.stepCents, nextCents: h.nextCents } : { kind: "full", stepCents: h.stepCents, nextCents: h.nextCents };
+}
+
+/**
+ * The ONE preset to name when there's only room for a few words: Medium when at
+ * least one fits, else Small. ("3 more Smalls ride free".)
+ */
+export function roomPick(fits: { key: string; label: string; count: number }[]): { label: string; count: number } | null {
+  const med = fits.find((f) => f.key === "MEDIUM" && f.count > 0);
+  if (med) return { label: med.label, count: med.count };
+  const sm = fits.find((f) => f.key === "SMALL" && f.count > 0);
+  return sm ? { label: sm.label, count: sm.count } : null;
+}
+
+/** "3 more Smalls ride free" / "1 more Medium rides free" — the item-page room line. */
+export function roomLine(fits: { key: string; label: string; count: number }[]): string | null {
+  const pick = roomPick(fits);
+  if (!pick) return null;
+  return `${pick.count} more ${pick.label}${pick.count === 1 ? "" : "s"} ride${pick.count === 1 ? "s" : ""} free`;
+}
+
+/**
+ * Where a weight sits on the four-band meter, 0..1. Each band is a quarter of
+ * the bar (an "under 1 lb" band drawn to scale would be a sliver), and the fill
+ * moves through its band in proportion to the weight.
+ */
+export function bandPosition(weightOz: number): number {
+  if (weightOz <= 0) return 0;
+  const i = bandIndex(weightOz);
+  const lo = i === 0 ? 0 : TIERS[i - 1].maxOz;
+  const hi = TIERS[i].maxOz;
+  const frac = Math.min(1, Math.max(0, (weightOz - lo) / (hi - lo)));
+  return (i + frac) / TIERS.length;
 }

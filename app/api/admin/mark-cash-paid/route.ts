@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
     const hammerTotal = items.reduce((s, i) => s + i.bid, 0);
     // Shipping deltas on the rows we just settled ride on top (not taxed).
     const shipAgg = await prisma.payment.aggregate({
-      where: { itemId: { in: items.map((i) => i.id) }, clerkUserId },
+      where: { itemId: { in: items.map((i) => i.id) }, clerkUserId, shippingRefundedAt: null },
       _sum: { shippingAmount: true },
     });
     const shippingTotal = Number(shipAgg._sum.shippingAmount ?? 0);

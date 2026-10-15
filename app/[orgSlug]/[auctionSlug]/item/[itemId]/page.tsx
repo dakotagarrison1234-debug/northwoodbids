@@ -46,7 +46,7 @@ function SectionLabel({ children, aside }: { children: React.ReactNode; aside?: 
 }
 
 /** Meta chip — one look for condition / size / pack / category / collection. */
-function Chip({ tone = "cream", children }: { tone?: "cream" | "ink" | "leather" | "moss" | "amber"; children: React.ReactNode }) {
+function Chip({ tone = "cream", title, children }: { tone?: "cream" | "ink" | "leather" | "moss" | "amber"; title?: string; children: React.ReactNode }) {
   const tones = {
     cream: "bg-[#efe3d0] border-[#e3d6bf] text-[#6f5b46]",
     ink: "bg-[#241a12] border-[#241a12] text-[#f6ecda]",
@@ -55,7 +55,7 @@ function Chip({ tone = "cream", children }: { tone?: "cream" | "ink" | "leather"
     amber: "bg-[#f0a35a]/20 border-[#c47b3e]/40 text-[#8a4f1c]",
   }[tone];
   return (
-    <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full border whitespace-nowrap ${tones}`}>
+    <span title={title} className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full border whitespace-nowrap ${tones}`}>
       {children}
     </span>
   );
@@ -1282,14 +1282,14 @@ export default function ItemPage() {
                   </Chip>
                 )}
                 {/* Ship-eligible lots say so; the rest get one quiet "Pickup only" chip
-                    (skipped when "Pickup here only" already says it). */}
-                {item.shipEligible ? (
+                    (both skipped when "Pickup here only" already says it). */}
+                {item.transferable === false ? null : item.shipEligible ? (
                   <Chip tone="leather">
                     <IcoTruck className="w-3 h-3" /> Ships
                   </Chip>
-                ) : item.transferable !== false ? (
-                  <Chip tone="cream">Pickup only</Chip>
-                ) : null}
+                ) : (
+                  <Chip tone="cream" title="Over 20 lb or 22 in">Pickup only</Chip>
+                )}
                 {item.taxDeductible && <Chip tone="cream">Tax deductible</Chip>}
               </div>
               <p className="text-[11px] text-[#8a7559] mt-2.5 leading-snug">

@@ -180,7 +180,7 @@ async function markPaymentsPaid(
       Number(payment.amount) +
       Number(payment.applicationFeeAmount ?? 0) +
       Number(payment.taxAmount ?? 0) +
-      Number(payment.shippingAmount ?? 0) -
+      (payment.shippingRefundedAt ? 0 : Number(payment.shippingAmount ?? 0)) -
       Number(payment.creditApplied ?? 0);
     transitioned.push({ clerkUserId: payment.clerkUserId, total: rowTotal });
   }

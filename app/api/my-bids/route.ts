@@ -67,7 +67,7 @@ export async function GET() {
   const payments = wonItemIds.length
     ? await prisma.payment.findMany({
         where: { itemId: { in: wonItemIds }, clerkUserId: userId },
-        select: { itemId: true, status: true, shippingAmount: true },
+        select: { itemId: true, status: true, shippingAmount: true, shippingRefundedAt: true },
       })
     : [];
 
@@ -77,8 +77,8 @@ export async function GET() {
   const failedItemIds = new Set(
     payments.filter((p) => p.status === "FAILED").map((p) => p.itemId)
   );
-  // Shipping on the row (what was / will be billed); falls back to the lot's delta.
-  const shippingByItem = new Map(payments.map((p) => [p.itemId, p.shippingAmount == null ? null : Number(p.shippingAmount)]));
+  // Shipping on the row (what was / will be billed; 0 once refunded); falls back to the lot's delta.
+  const shippingByItem = new Map(payments.map((p) => [p.itemId, p.shippingRefundedAt ? 0 : p.shippingAmount == null ? null : Number(p.shippingAmount)]));
 
   const winning = [];    // Active bids I'm currently leading in an open auction
   const losing = [];     // Bids I've been outbid on in a still-open auction

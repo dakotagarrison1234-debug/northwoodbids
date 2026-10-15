@@ -11,7 +11,7 @@ import {
   vestReferralForPayer,
 } from "@/lib/referral";
 import { joinBundleOnWin, shipCentsByItem, stationForItem, shippingStation } from "@/lib/shipping/bundle";
-import { textBuyer, closedMessage } from "@/lib/shippingNotify";
+import { textBuyer, sealedFullMessage } from "@/lib/shippingNotify";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -129,7 +129,7 @@ async function routeWonLot(item: { id: string; organizationId: string; locationI
       return;
     }
     const r = await joinBundleOnWin(item.id, clerkUserId, item.organizationId);
-    if (r.sealedBundleId) await textSealedBox(r.sealedBundleId);
+    if (r.sealedBundleId) await textSealedBox(r.sealedBundleId, r.deltaCents);
     if (r.fulfillment !== "SHIP") return;
     if (!station) {
       console.warn(`[shipping] no shipping station for org ${item.organizationId} — lot ${item.id} will wait in its box`);
@@ -148,10 +148,10 @@ async function routeWonLot(item: { id: string; organizationId: string; locationI
 
 /**
  * A box joinBundleOnWin had to seal early (the next lot wouldn't fit): tell the
- * buyer it's closed, the same text the day-7 cron sends. Fires once — the seal
- * happens in exactly one joinBundleOnWin call. Never throws.
+ * buyer it sealed and a new box opened for that lot (`newLotCents` = its delta).
+ * Fires once — the seal happens in exactly one joinBundleOnWin call. Never throws.
  */
-async function textSealedBox(bundleId: string): Promise<void> {
+async function textSealedBox(bundleId: string, newLotCents: number): Promise<void> {
   try {
     const b = await prisma.shippingBundle.findUnique({
       where: { id: bundleId },
@@ -164,8 +164,8 @@ async function textSealedBox(bundleId: string): Promise<void> {
     if (!b) return;
     const station = b.location ?? (await shippingStation(b.organizationId));
     const waiting = b.items.some((it) => !!it.transferRequestId || (station != null && it.locationId !== station.id));
-    await textBuyer(b.clerkUserId, "shipping_closed", closedMessage(waiting, station?.name), {
-      bundleId, lots: b.items.length, waitingOnTransfer: waiting, station: station?.name ?? null, sealedFull: true,
+    await textBuyer(b.clerkUserId, "shipping_closed", sealedFullMessage(newLotCents), {
+      bundleId, lots: b.items.length, waitingOnTransfer: waiting, station: station?.name ?? null, sealedFull: true, newLotCents,
     });
   } catch (e) {
     console.error(`[shipping] sealed-box text failed for ${bundleId}:`, e);

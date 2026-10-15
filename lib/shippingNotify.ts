@@ -73,26 +73,34 @@ export async function textBuyer(
 /**
  * Day 7 / Ship it now. `waiting` = a lot is still on its way to the box's
  * station (§9.15). `stationName` is the box's warehouse ("Owosso") when known —
- * every station ships its own boxes, so name it rather than "our shipping station".
+ * every station ships its own boxes, so name it rather than "our warehouse".
  */
 export function closedMessage(waiting: boolean, stationName?: string | null): string {
-  const where = stationName ? `our ${stationName} warehouse` : "our shipping station";
+  const where = stationName ? `our ${stationName} warehouse` : "our warehouse";
   return waiting
-    ? `Your box is closed. One of your lots is still on its way to ${where} — it ships 3 to 5 business days after it lands.`
-    : "Your box is closed and heading to packing — ships in 3 to 5 business days.";
+    ? `Your box is closed. One of your lots is still on its way to ${where}. It ships 3 to 5 business days after your box closes and every lot is paid.`
+    : "Your box is closed and heading to packing. It ships 3 to 5 business days after your box closes and every lot is paid.";
+}
+
+/**
+ * A win that wouldn't fit sealed the open box and started a new one for that
+ * lot. `newLotCents` = what the new box's first lot cost (its delta).
+ */
+export function sealedFullMessage(newLotCents: number): string {
+  return `Northwood Bids: that last win was too much for one box, so it sealed your box and started a new one ($${(newLotCents / 100).toFixed(2)}). Details: northwoodbids.com/shipping`;
 }
 
 /** "Your box shipped — USPS Ground Advantage, tracking 9400… https://…" */
 export function shippedMessage(b: { carrier: string | null; service?: string | null; trackingCode: string | null; trackingUrl: string | null }): string {
   const who = [b.carrier, b.service ? prettyService(b.service) : null].filter(Boolean).join(" ");
-  const parts = [`Your box shipped${who ? ` — ${who}` : ""}.`];
+  const parts = [`Your box shipped${who ? ` (${who})` : ""}.`];
   if (b.trackingCode) parts.push(`Tracking ${b.trackingCode}`);
   if (b.trackingUrl) parts.push(b.trackingUrl);
   return parts.join(" ");
 }
 
 export const OUT_FOR_DELIVERY_MESSAGE = "Your box is out for delivery today.";
-export const DELIVERED_MESSAGE = "Your box was delivered — enjoy!";
+export const DELIVERED_MESSAGE = "Your box was delivered. Enjoy!";
 
 function prettyService(s: string): string {
   return s.replace(/SurePostUnder1Lb|SurePostOver1Lb/, "Ground Saver").replace(/([a-z])([A-Z])/g, "$1 $2");

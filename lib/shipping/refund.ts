@@ -15,9 +15,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
  *  - Cash: nothing to send through Stripe — the counter hands it back; the
  *    caller appends "cash shipping to hand back $X" to the box notes.
  *
- * Either way `shippingAmount` is nulled on the row afterwards, so a second call
- * finds nothing to refund ("none"). Throws on a Stripe failure — the caller
- * must stop before it touches the box.
+ * Either way `shippingRefundedAt` is stamped on the row afterwards (the amount
+ * stays, struck through on /shipping), so a second call finds nothing to refund
+ * ("none"). Throws on a Stripe failure — the caller must stop before it touches
+ * the box.
  */
 export type ShippingRefund =
   | { status: "refunded"; cents: number; paymentId: string }
@@ -29,13 +30,13 @@ export async function refundShippingForItem(itemId: string): Promise<ShippingRef
   const payment = await prisma.payment.findFirst({
     where: { itemId, status: "PAID" },
     orderBy: { createdAt: "desc" },
-    select: { id: true, shippingAmount: true, stripePaymentIntentId: true, paidInCash: true },
+    select: { id: true, shippingAmount: true, shippingRefundedAt: true, stripePaymentIntentId: true, paidInCash: true },
   });
   const cents = Math.round(Number(payment?.shippingAmount ?? 0) * 100);
-  if (!payment || cents <= 0) return { status: "none", cents: 0, paymentId: payment?.id ?? null };
+  if (!payment || cents <= 0 || payment.shippingRefundedAt) return { status: "none", cents: 0, paymentId: payment?.id ?? null };
 
   if (payment.paidInCash) {
-    await prisma.payment.update({ where: { id: payment.id }, data: { shippingAmount: null } });
+    await prisma.payment.update({ where: { id: payment.id }, data: { shippingRefundedAt: new Date() } });
     return { status: "cash", cents, paymentId: payment.id };
   }
   if (!payment.stripePaymentIntentId) {
@@ -47,7 +48,7 @@ export async function refundShippingForItem(itemId: string): Promise<ShippingRef
     { payment_intent: payment.stripePaymentIntentId, amount: cents },
     { idempotencyKey: `shipref:${payment.id}` },
   );
-  await prisma.payment.update({ where: { id: payment.id }, data: { shippingAmount: null } });
+  await prisma.payment.update({ where: { id: payment.id }, data: { shippingRefundedAt: new Date() } });
   return { status: "refunded", cents, paymentId: payment.id };
 }
 

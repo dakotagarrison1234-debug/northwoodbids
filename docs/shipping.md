@@ -28,9 +28,13 @@ operational wiring: what runs when, and what the money does.
 
 ## Lifecycle
 
-1. **Bid.** The item page offers Pickup (free) or Ship (price). The choice is
-   saved per lot (`ItemShipChoice`) and remembered as the buyer's default.
-   Nothing is charged for shipping until the buyer actually wins.
+1. **Bid.** The item page offers a Pickup / Ship switch with this lot's price.
+   The mode is **one setting per buyer** (`BidderProfile.lastFulfillment`,
+   PICKUP by default): pick Ship on any lot (or on `/shipping`) and every lot
+   they win ships until they pick Pickup. `ItemShipChoice` is written only as an
+   audit of where the switch was flipped — nothing reads it. A lot that can't
+   ship is pickup regardless of the mode. Nothing is charged for shipping until
+   the buyer actually wins.
 2. **Win → box.** The instant a lot's winner is known (`closeItem` in
    `lib/closeAuction.ts`, used by both the cron close and the manual close),
    `routeWonLot` runs **before any charge**:
@@ -76,27 +80,53 @@ A lot leaves that pipeline only through **Move to pickup** on the ship queue
 
 ## What the buyer sees
 
-- **Item page** — "joins your open box" / the delta is worked out against the
-  buyer's open box **at that lot's station** (`quoteForViewer` gets the lot's
-  `locationId` + `organizationId`). A Gladwin lot shows the full first-lot tier
-  even if they have an open Owosso box.
+- **Item page / Quick Bid** (`app/components/ShipChoice.tsx` →
+  `ShipModeSwitch`) — `[ Pickup  Free ] [ Ship  $5.49 ]`. The Ship segment is
+  the live number for this lot: the exact first-lot tier, the delta (`+$2.00`),
+  **Free** when it rides in the open box at this lot's station, or `from $5.49`
+  with no address. Under it, one optional line only with Ship selected and an
+  open box to join: a slim band meter + "3 more Smalls ride free" (`roomLine`:
+  Medium if one fits, else Small), "Next lot opens the next band (+$3.50)", or
+  "Full — the next lot starts a new box". "How shipping works" → `/shipping#how`.
+  The delta is worked out against the buyer's open box **at that lot's
+  station** (`quoteForViewer` gets the lot's `locationId` + `organizationId`
+  and returns `box` = that open box's weight + headroom). A Gladwin lot shows
+  the full first-lot tier even if they have an open Owosso box.
+- **`/shipping`** (`app/shipping/page.tsx`, client) — the one page: the global
+  mode switch + address (Change opens the address modal; "Open boxes keep their
+  address" while one is open), one card per open / closed / packing box
+  (`OpenBoxCard`: warehouse, "Closes in 3 days", lots with `+$X` / Free, the
+  **band meter** (`BandMeter`: four equal segments, the fill moves through the
+  current band, this band's price over it, the next band's price at the next
+  breakpoint; breakpoint labels hidden under 400px), "Room: about 3 Smalls or 1
+  Medium ride free" / "Over that: +$3.50 (up to 10 lb)", Ship it now, and a
+  Waiting on payment / Waiting on a transfer / Packing pill), shipped boxes
+  (`ShippedBoxCard`: Shipped / Out for delivery / Delivered, tracking link,
+  weight, box, paid), every shipping charge (`GET /api/shipping/charges`), and
+  How it works (`HOW_IT_WORKS` + the price table). Signed out it shows the
+  explainer and a Sign in button.
 - **Dashboard "Your box"** (`app/components/YourBoxCard.tsx`) — one compact
-  card per box on Overview, "Ships from Owosso" on each; a buyer with two open
-  boxes sees both, each with its own *Ship it now*. Under the address while the
-  box is open: "Address locked for this box — change it for your next box in
-  Account." An open box also says "Room for about 4 more Smalls."
-- **Dashboard "Shipping" tab** (`app/components/ShippingBoxFull.tsx`, the 4th
-  Your-bids sub-tab, `?tab=shipping`) — "Shipping so far: $X across N boxes",
-  then one full card per box: station, status, the headroom line ("Room to
-  add: about 4 Smalls or 1 Medium before the price goes up (+$2.00)" / "Full —
-  the next lot opens the next band" / "Top band — the next lot starts a new
-  box"), a band progress bar, paid-so-far, the lots with their +$X / rode free,
-  closes-on, Ship it now, tracking. Headroom comes from `headroom(weightOz,
-  zone)` in `lib/shipping/tiers.ts`, exposed per box by `GET /api/shipping/box`.
-- **Account → Shipping address** — opens the same address modal the item page
-  uses. `POST /api/shipping/address` returns `appliesToNextBox: true` whenever
-  the buyer has an OPEN box, and the modal then says the change applies to
-  their next box before closing. The open box's frozen address is never edited.
+  card per box on Overview; the **Shipping** tab (`ShippingTab` in
+  `ShippingBoxFull.tsx`) is the short version: the open-box cards + "See all
+  shipping" → `/shipping`. Headroom comes from `headroom(weightOz, zone)` in
+  `lib/shipping/tiers.ts`, exposed per box by `GET /api/shipping/box`
+  (`?all=1` → up to 50 boxes incl. every delivered one, for `/shipping`).
+- **Account → Shipping address** — opens the same address modal. `POST
+  /api/shipping/address` returns `appliesToNextBox: true` whenever the buyer
+  has an OPEN box, and the modal then says the change applies to their next
+  box before closing. The open box's frozen address is never edited.
+
+### Customer routes
+
+| Route | Does |
+|---|---|
+| `GET /api/shipping/quote?itemId=` | `{ eligible, fromCents, exactCents, joinsOpenBox, zone, needsAddress, box: { id, weightOz, zone, headroom } \| null, signedIn, mode, howItWorks }` |
+| `GET /api/shipping/choice` | `{ mode: "PICKUP" \| "SHIP" }` |
+| `POST /api/shipping/choice { choice, itemId? }` | sets the mode; SHIP without an address → 422 `{ needsAddress: true }` |
+| `GET /api/shipping/box[?all=1]` | the buyer's boxes with headroom |
+| `POST /api/shipping/box/[id]/ship-now` | close an OPEN box today |
+| `GET /api/shipping/charges` | `{ charges: [{ id, itemId, title, cents, createdAt, status, refunded, box }] }` — every Payment with `shippingAmount > 0` (refunded ones included, `refunded: true`), newest first, 50 max |
+| `GET` / `POST /api/shipping/address` | the saved address + zone |
 
 ## The cron — `/api/cron/shipping`, every 15 minutes
 
@@ -292,7 +322,8 @@ board and the buyer's pickup list. Money: a **paid** lot's shipping is
 refunded automatically (`refundShippingForItem`, `lib/shipping/refund.ts`):
 card → Stripe partial refund of `Payment.shippingAmount` (idempotency key
 `shipref:<paymentId>`); cash → no Stripe call, the box notes say "cash shipping
-to hand back $X". Either way `shippingAmount` is nulled and the buyer gets one
+to hand back $X". Either way `shippingRefundedAt` is stamped (the amount stays
+so /shipping shows it struck through; every money total treats it as 0) and the buyer gets one
 text (event `shipping_moved_to_pickup`: "We moved your lot NB-123 to pickup
 and refunded $X shipping."). A Stripe failure stops the move with the box
 untouched. An **unpaid** lot keeps its PENDING / FAILED Payment row (they

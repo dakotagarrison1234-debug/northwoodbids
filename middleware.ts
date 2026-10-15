@@ -15,6 +15,7 @@ const isPublicRoute = createRouteMatcher([
   "/search(.*)",
   "/api/search(.*)",
   "/help(.*)",             // public help / FAQ
+  "/shipping",             // public explainer; boxes need sign-in (API checks)
   "/play(.*)",             // public mini-game
   "/terms(.*)",            // public legal
   "/privacy(.*)",          // public legal

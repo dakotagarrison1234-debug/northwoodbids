@@ -8,7 +8,7 @@ export type ShipAddress = {
 };
 
 /**
- * First tap on "Ship": where it's going, plus how shipping works in three lines.
+ * First tap on "Ship": where it's going, plus how shipping works (HOW_IT_WORKS).
  * Save → POST /api/shipping/address (lower 48 only, EasyPost-verified when the
  * key is set) → onSaved. If the buyer already has an OPEN box (its address is
  * frozen), the modal says the change applies to their next box before closing.
@@ -97,7 +97,7 @@ export default function ShippingAddressModal({
             <button
               onClick={onClose}
               aria-label="Close"
-              className="w-9 h-9 rounded-full grid place-items-center text-[#f6ecda]/70 hover:text-[#f6ecda] hover:bg-white/10 transition-colors shrink-0 -mr-1 -mt-1"
+              className="w-11 h-11 rounded-full grid place-items-center text-[#f6ecda]/70 hover:text-[#f6ecda] hover:bg-white/10 transition-colors shrink-0 -mr-2 -mt-2"
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
                 <line x1="2" y1="2" x2="12" y2="12" /><line x1="12" y1="2" x2="2" y2="12" />
@@ -110,7 +110,7 @@ export default function ShippingAddressModal({
           <div className="px-5 pt-4 pb-5 space-y-3">
             <p className="text-sm font-semibold text-[#241a12]">Address saved.</p>
             <p className="text-sm text-[#4a3a2b] leading-snug">
-              Your open box keeps the address it opened with — this one applies to your next box.
+              Your open box keeps the address it opened with. This one applies to your next box.
             </p>
             <button
               onClick={() => onSaved(savedForNext)}
@@ -121,7 +121,7 @@ export default function ShippingAddressModal({
           </div>
         ) : (
         <div className="overflow-y-auto px-5 pt-4 pb-5 space-y-3">
-          {/* How it works — three lines, nothing more. */}
+          {/* How it works — the same lines as /shipping, nothing more. */}
           <ol className="space-y-1.5 text-sm text-[#4a3a2b]">
             {howItWorks.map((line, i) => (
               <li key={i} className="flex items-start gap-2.5">
@@ -175,7 +175,7 @@ export default function ShippingAddressModal({
           >
             {saving ? "Saving…" : "Save address"}
           </button>
-          <p className="text-[11px] text-[#8a7559] text-center">Lower 48 only. Nothing is charged until you win a lot with Ship selected.</p>
+          <p className="text-[12px] text-[#8a7559] text-center">Lower 48 only. Nothing is charged until you win.</p>
         </div>
         )}
       </div>

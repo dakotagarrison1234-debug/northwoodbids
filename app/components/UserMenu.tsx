@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useUser, useClerk } from "@clerk/nextjs";
 import { useRouter, usePathname } from "next/navigation";
 import { Avatar, hasAvatar } from "./Avatars";
-import { IcoStar, IcoGavel, IcoMagnifier, IcoTruck, IcoGift, IcoTrophy, IcoTicket } from "./BidIcons";
+import { IcoStar, IcoGavel, IcoMagnifier, IcoTruck, IcoGift, IcoTrophy, IcoTicket, IcoBox } from "./BidIcons";
 import { PineMark } from "./Illustrations";
 
 interface MeData {
@@ -228,12 +228,13 @@ export default function UserMenu() {
           <NavLink href="/dashboard" iconEl={<IcoTrophy className="w-[18px] h-[18px]" />} label="My Bids" sublabel="Standing, wins and invoices" onClick={close} active={on("/dashboard", "/my-bids", "/invoice")} accent />
           <NavLink href="/watchlist" iconEl={<IcoStar className="w-[18px] h-[18px]" filled />} label="Watchlist" sublabel="Lots you have your eye on" onClick={close} active={on("/watchlist")} />
           <NavLink href="/pickup" iconEl={<IcoTruck className="w-[18px] h-[18px]" />} label="Pickup" sublabel="Owosso or Gladwin, your call" onClick={close} active={on("/pickup")} />
+          <NavLink href="/shipping" iconEl={<IcoBox className="w-[18px] h-[18px]" />} label="Shipping" sublabel="Boxes, room left, tracking" onClick={close} active={on("/shipping")} />
           <NavLink href="/refer" iconEl={<IcoGift className="w-[18px] h-[18px]" />} label="Bid Bucks" sublabel="Invite a friend, earn $5 tickets" onClick={close} active={on("/refer")} />
           <NavLink href="/giveaways" iconEl={<IcoTicket className="w-[18px] h-[18px]" />} label="Giveaways" sublabel="Free prizes, every bid's a ticket" onClick={close} active={on("/giveaways")} />
 
           <SectionLabel>Account</SectionLabel>
           <NavLink href="/account" iconEl={<IcoUser />} label="Profile" sublabel="Name, phone, payment cards" onClick={close} active={on("/account")} />
-          <NavLink href="/help" iconEl={<IcoHelp />} label="Help" sublabel="How bidding, max bids and pickup work" onClick={close} active={on("/help")} />
+          <NavLink href="/help" iconEl={<IcoHelp />} label="Help" sublabel="How bidding, pickup and shipping work" onClick={close} active={on("/help")} />
           <NavLink href="/play" iconEl={<IcoTicket className="w-[18px] h-[18px]" />} label="Auction Arcade" sublabel="Going once, going twice" onClick={close} active={on("/play")} />
 
           {(me?.orgId || me?.isSuperAdmin) && (

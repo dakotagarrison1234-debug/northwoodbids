@@ -41,8 +41,8 @@ export async function GET(request: NextRequest) {
       const lots = b.items.length;
       const lb = Math.max(1, Math.round(b.weightOz / 16));
       const sms =
-        `Northwood Bids: your box ships tomorrow — ${lots} lot${lots === 1 ? "" : "s"}, about ${lb} lb. ` +
-        `Anything you win today rides in the same box (you only pay a difference if it moves up a weight band).`;
+        `Northwood Bids: your box closes tomorrow. ${lots} lot${lots === 1 ? "" : "s"}, about ${lb} lb. ` +
+        `Win more today and it rides free unless it tips the box up a step. Room left: northwoodbids.com/shipping`;
       const ok = await textBuyer(b.clerkUserId, "shipping_closing", sms, {
         bundleId: b.id, lots, weightLb: lb, closesAt: b.closesAt.toISOString(),
       });

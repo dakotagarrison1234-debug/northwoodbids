@@ -1,37 +1,40 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { prisma } from "@/lib/prisma";
-import { getShipProfile, itemFootprint, itemShipSelect, setChoice } from "@/lib/shipping/bundle";
+import { choiceFor, getShipProfile, setChoice } from "@/lib/shipping/bundle";
 
 /**
- * POST /api/shipping/choice { itemId, choice: "PICKUP" | "SHIP" }
- * Remembers how the bidder wants this lot if they win (and becomes their default
- * for the next lot). SHIP needs an address on file: 422 { needsAddress: true }.
+ * The buyer's ONE mode: Ship or Pickup. It sticks — every lot they win follows
+ * it until they flip it again. (A lot that can't ship is pickup regardless.)
+ *
+ * GET  /api/shipping/choice                    → { mode: "PICKUP" | "SHIP" }
+ * POST /api/shipping/choice { choice, itemId? } → { success, mode }
+ *   SHIP needs an address on file: 422 { needsAddress: true }.
+ *   `itemId` is optional — just records which lot the switch was flipped on.
  */
+export async function GET() {
+  const { userId } = await auth();
+  if (!userId) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  let mode = await choiceFor(userId);
+  // Ship with no address on file can't actually ship — report Pickup (same rule ShipChoice applies).
+  if (mode === "SHIP" && !(await getShipProfile(userId))) mode = "PICKUP";
+  return NextResponse.json({ mode });
+}
+
 export async function POST(request: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
 
   const body = await request.json().catch(() => ({}));
-  const itemId = String(body.itemId ?? "").trim();
   const choice = body.choice === "SHIP" ? "SHIP" : body.choice === "PICKUP" ? "PICKUP" : null;
-  if (!itemId || !choice) return NextResponse.json({ error: "itemId and choice required" }, { status: 400 });
-
-  const item = await prisma.item.findUnique({ where: { id: itemId }, select: { ...itemShipSelect, status: true, itemEndAt: true } });
-  if (!item) return NextResponse.json({ error: "Item not found" }, { status: 404 });
+  if (!choice) return NextResponse.json({ error: "choice must be SHIP or PICKUP" }, { status: 400 });
+  const itemId = typeof body.itemId === "string" && body.itemId.trim() ? body.itemId.trim() : null;
 
   if (choice === "SHIP") {
-    if (!itemFootprint(item)) return NextResponse.json({ error: "This lot is pickup only." }, { status: 422 });
-    // Still open: status says so AND the clock hasn't run out (the close cron may
-    // not have flipped the status yet).
-    if ((item.status !== "ACTIVE" && item.status !== "DRAFT") || (item.itemEndAt != null && item.itemEndAt.getTime() <= Date.now())) {
-      return NextResponse.json({ error: "Bidding on this lot has ended." }, { status: 422 });
-    }
     const profile = await getShipProfile(userId);
     if (!profile) return NextResponse.json({ error: "Add a shipping address first.", needsAddress: true }, { status: 422 });
   }
 
-  await setChoice(userId, itemId, choice);
-  return NextResponse.json({ success: true, choice });
+  await setChoice(userId, choice, itemId);
+  return NextResponse.json({ success: true, mode: choice });
 }

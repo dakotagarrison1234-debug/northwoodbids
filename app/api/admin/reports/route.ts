@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
     },
     select: {
       id: true,
-      amount: true, applicationFeeAmount: true, taxAmount: true, creditApplied: true, shippingAmount: true,
+      amount: true, applicationFeeAmount: true, taxAmount: true, creditApplied: true, shippingAmount: true, shippingRefundedAt: true,
       stripePaymentIntentId: true, createdAt: true, paidInCash: true,
       item: {
         select: {
@@ -122,7 +122,7 @@ export async function GET(req: NextRequest) {
       },
       select: {
         id: true,
-        amount: true, applicationFeeAmount: true, taxAmount: true, creditApplied: true, shippingAmount: true,
+        amount: true, applicationFeeAmount: true, taxAmount: true, creditApplied: true, shippingAmount: true, shippingRefundedAt: true,
         stripePaymentIntentId: true, createdAt: true, paidInCash: true,
         item: {
           select: {
@@ -145,8 +145,10 @@ export async function GET(req: NextRequest) {
   // ── Allocate each Stripe charge across the rows that shared it ───────────────
   // Gross = what actually hit the card for this row, shipping included (Stripe's
   // fee is on the whole charge). Shipping is NOT folded into hammer/net below.
+  // Shipping that was given back (lot left its box) no longer counts.
+  const shipOf = (p: { shippingAmount: unknown; shippingRefundedAt: Date | null }) => (p.shippingRefundedAt ? 0 : num(p.shippingAmount ?? 0));
   const grossOf = (p: (typeof paidRows)[number]) =>
-    num(p.amount) + num(p.applicationFeeAmount) + num(p.taxAmount) + num(p.shippingAmount ?? 0) - num(p.creditApplied ?? 0);
+    num(p.amount) + num(p.applicationFeeAmount) + num(p.taxAmount) + shipOf(p) - num(p.creditApplied ?? 0);
 
   const piGross = new Map<string, number>();
   for (const p of paidRows) {
@@ -224,7 +226,7 @@ export async function GET(req: NextRequest) {
     b.credit += credit;
     b.fees += fee;
     b.net += sale + prem - credit - fee;
-    b.shipping += num(p.shippingAmount ?? 0);
+    b.shipping += shipOf(p);
   };
 
   let cashCollected = 0; // what buyers physically handed over in cash (hammer+premium+tax+shipping)
@@ -233,7 +235,7 @@ export async function GET(req: NextRequest) {
   for (const p of paidRows) {
     const fee = feeForRow(p);
     if (p.paidInCash) { cashCollected += grossOf(p); cashItems += 1; }
-    shippingCollected += num(p.shippingAmount ?? 0);
+    shippingCollected += shipOf(p);
     // Card charges only: cash never counts toward the Stripe charge tally.
     if (p.stripePaymentIntentId) uniqueCharges.add(p.stripePaymentIntentId);
     else if (!p.paidInCash && grossOf(p) > 0) soloCharges++;
@@ -319,7 +321,7 @@ export async function GET(req: NextRequest) {
     item: { organizationId: orgId, OR: [{ auction: { archived: false } }, { auctionId: null }] },
   } satisfies Prisma.PaymentWhereInput;
   const owedSelect = {
-    id: true, clerkUserId: true, amount: true, applicationFeeAmount: true, taxAmount: true, shippingAmount: true,
+    id: true, clerkUserId: true, amount: true, applicationFeeAmount: true, taxAmount: true, shippingAmount: true, shippingRefundedAt: true,
     item: { select: { title: true } },
   } satisfies Prisma.PaymentSelect;
   let owedCursor: string | undefined;
@@ -335,7 +337,7 @@ export async function GET(req: NextRequest) {
   const owedBy = new Map<string, { amountDue: number; items: string[] }>();
   for (const p of owedRows) {
     const cur = owedBy.get(p.clerkUserId) ?? { amountDue: 0, items: [] };
-    cur.amountDue += num(p.amount) + num(p.applicationFeeAmount) + num(p.taxAmount) + num(p.shippingAmount);
+    cur.amountDue += num(p.amount) + num(p.applicationFeeAmount) + num(p.taxAmount) + shipOf(p);
     if (p.item?.title) cur.items.push(p.item.title);
     owedBy.set(p.clerkUserId, cur);
   }

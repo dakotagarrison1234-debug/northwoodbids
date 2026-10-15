@@ -1,17 +1,11 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { IcoTruck, IcoCheck } from "./BidIcons";
-import { PRESETS, FILL_OZ, fmtCents } from "@/lib/shipping/tiers";
+import { IcoTruck, IcoCheck, IcoBox } from "./BidIcons";
+import { fmtCents, headroomState, roomLine, type Headroom } from "@/lib/shipping/tiers";
 
 // Mirrors GET /api/shipping/box (bundleSummaryFor), dates as ISO strings.
-export type BoxHeadroom = {
-  ozLeft: number;
-  bandLabel: string;
-  nextCents: number | null;
-  stepCents: number;
-  fits: { key: "SMALL" | "MEDIUM" | "LARGE"; label: string; count: number }[];
-};
+export type BoxHeadroom = Headroom;
 
 export type Box = {
   id: string;
@@ -45,28 +39,44 @@ export const money = (c: number) => fmtCents(c);
 export const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { timeZone: "America/Detroit", weekday: "short", month: "short", day: "numeric" });
 
+/** Calendar days from today to `iso`, both read in Detroit time. */
+function daysUntil(iso: string): number {
+  const key = (d: Date) => {
+    const p = new Intl.DateTimeFormat("en-US", { timeZone: "America/Detroit", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(d);
+    const g = (t: string) => Number(p.find((x) => x.type === t)?.value ?? 0);
+    return Date.UTC(g("year"), g("month") - 1, g("day"));
+  };
+  return Math.round((key(new Date(iso)) - key(new Date())) / 86_400_000);
+}
+
+/** "Closes today" / "Closes tomorrow" / "Closes in 3 days" / "Closing now". */
+export function closesIn(iso: string): string {
+  if (new Date(iso).getTime() <= Date.now()) return "Closing now";
+  const d = daysUntil(iso);
+  if (d <= 0) return "Closes today";
+  if (d === 1) return "Closes tomorrow";
+  return `Closes in ${d} days`;
+}
+
 /** Boxes that still count as "in flight" for the Shipping tab badge. */
 export const ACTIVE_BOX_STATUSES: ReadonlySet<Box["status"]> = new Set(["OPEN", "CLOSED", "PACKING", "SHIPPED"]);
 
-/** One fetch of the buyer's boxes, shared by the Overview card and the Shipping tab. */
-export function useShippingBoxes(): { boxes: Box[] | null; reload: () => Promise<void> } {
+/**
+ * One fetch of the buyer's boxes, shared by the Overview card, the Shipping tab
+ * and /shipping. `enabled: false` (signed out / Clerk not loaded yet) skips the
+ * fetch so a public visit never fires a 401.
+ */
+export function useShippingBoxes(all = false, enabled = true): { boxes: Box[] | null; reload: () => Promise<void> } {
   const [boxes, setBoxes] = useState<Box[] | null>(null);
   const reload = useCallback(() => {
-    return fetch("/api/shipping/box")
+    if (!enabled) return Promise.resolve();
+    return fetch(all ? "/api/shipping/box?all=1" : "/api/shipping/box")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (d && Array.isArray(d.boxes)) setBoxes(d.boxes); })
       .catch(() => {});
-  }, []);
+  }, [all, enabled]);
   useEffect(() => { reload(); }, [reload]);
   return { boxes, reload };
-}
-
-export function IcoBox({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" /><path d="M3 7l9 5 9-5M12 12v10" />
-    </svg>
-  );
 }
 
 export function Thumb({ url, title, size = "w-10 h-10" }: { url: string | null; title: string; size?: string }) {
@@ -78,39 +88,33 @@ export function Thumb({ url, title, size = "w-10 h-10" }: { url: string | null; 
   );
 }
 
+/** Shipped / Out for delivery / Delivered, from the carrier's last scan. */
+export function trackingLabel(b: Box): "Shipped" | "Out for delivery" | "Delivered" {
+  if (b.status === "DELIVERED" || b.deliveredAt || b.lastTrackingStatus === "delivered") return "Delivered";
+  if (b.lastTrackingStatus === "out_for_delivery") return "Out for delivery";
+  return "Shipped";
+}
+
 export function statusPill(b: Box): { text: string; cls: string } {
-  if (b.status === "OPEN") return { text: `Open until ${fmtDate(b.closesAt)}`, cls: "bg-[#4a7c59]/12 text-[#2f5d3a] border-[#4a7c59]/25" };
+  const moss = "bg-[#4a7c59]/12 text-[#2f5d3a] border-[#4a7c59]/25";
+  const amber = "bg-[#f0a35a]/18 text-[#8a4f1c] border-[#c47b3e]/30";
+  if (b.status === "OPEN") return { text: closesIn(b.closesAt), cls: moss };
   if (b.status === "CLOSED") {
     // What's holding the box: an unpaid lot, or one still on its way to the warehouse.
     if (b.items.some((it) => !it.paid)) return { text: "Waiting on payment", cls: "bg-red-50 text-red-700 border-red-300" };
-    if (b.items.some((it) => !it.atStation)) return { text: "Waiting on a transfer", cls: "bg-[#f0a35a]/18 text-[#8a4f1c] border-[#c47b3e]/30" };
+    if (b.items.some((it) => !it.atStation)) return { text: "Waiting on a transfer", cls: amber };
   }
-  if (b.status === "CLOSED" || b.status === "PACKING") return { text: "Closed — packing", cls: "bg-[#f0a35a]/18 text-[#8a4f1c] border-[#c47b3e]/30" };
-  if (b.status === "SHIPPED") return { text: b.deliveredAt ? "Delivered" : "Shipped", cls: "bg-[#6c4d39]/10 text-[#6c4d39] border-[#6c4d39]/25" };
-  if (b.status === "DELIVERED") return { text: "Delivered", cls: "bg-[#241a12] text-[#f6ecda] border-[#241a12]" };
+  if (b.status === "CLOSED" || b.status === "PACKING") return { text: "Packing", cls: amber };
+  if (b.status === "SHIPPED" || b.status === "DELIVERED") {
+    const t = trackingLabel(b);
+    return { text: t, cls: t === "Delivered" ? "bg-[#241a12] text-[#f6ecda] border-[#241a12]" : "bg-[#6c4d39]/10 text-[#6c4d39] border-[#6c4d39]/25" };
+  }
   return { text: b.status.toLowerCase(), cls: "bg-[#f1e7d5] text-[#6f5b46] border-[#e3d6bf]" };
-}
-
-/** "4 Smalls", "1 Medium", "2 Larges". */
-export const plural = (label: string, n: number) => `${n} ${label}${n === 1 ? "" : "s"}`;
-
-/** The smallest thing that can still join a box: a Small plus its fill. */
-const SMALLEST_ADD_OZ = PRESETS.SMALL.weightOz + FILL_OZ;
-
-/**
- * What an OPEN box can still take before the price moves. Three shapes:
- * room (with a list of what fits), full (next lot bumps the band), top band
- * (the next lot that doesn't fit starts a new box).
- */
-export function headroomState(h: BoxHeadroom): { kind: "room"; fits: { label: string; count: number }[]; stepCents: number } | { kind: "full"; stepCents: number } | { kind: "top" } {
-  if (h.nextCents === null) return { kind: "top" };
-  if (h.ozLeft < SMALLEST_ADD_OZ || !h.fits.some((f) => f.count > 0)) return { kind: "full", stepCents: h.stepCents };
-  return { kind: "room", fits: h.fits.filter((f) => f.count > 0), stepCents: h.stepCents };
 }
 
 /**
  * Ship-it-now with its inline confirm, shared by the compact card and the full
- * Shipping-tab card. Only rendered for OPEN boxes.
+ * box card. Only rendered for OPEN boxes.
  */
 export function ShipNowControls({ box, reload, compact = false }: { box: Box; reload: () => Promise<void>; compact?: boolean }) {
   const [confirming, setConfirming] = useState(false);
@@ -138,11 +142,11 @@ export function ShipNowControls({ box, reload, compact = false }: { box: Box; re
     return (
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className={`${compact ? "text-xs" : "text-[13px]"} text-[#8a7559] leading-snug min-w-0`}>
-          Keep winning until {fmtDate(box.closesAt)} and new lots ride in this box. Or send it today.
+          Open until {fmtDate(box.closesAt)}. Win more and it rides in this box.
         </p>
         <button
           onClick={() => { setConfirming(true); setError(null); }}
-          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-[#6c4d39] text-[#6c4d39] hover:bg-[#6c4d39] hover:text-white font-bold text-sm px-4 py-2 transition-colors"
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-[#6c4d39] text-[#6c4d39] hover:bg-[#6c4d39] hover:text-white font-bold text-sm px-4 py-2 min-h-[44px] transition-colors nb-focus"
         >
           <IcoTruck className="w-4 h-4" /> Ship it now
         </button>
@@ -152,20 +156,20 @@ export function ShipNowControls({ box, reload, compact = false }: { box: Box; re
   return (
     <div className="rounded-xl bg-[#f6ecda] border border-[#6c4d39]/30 px-3.5 py-3">
       <p className="text-sm text-[#241a12] font-semibold">Close this box today?</p>
-      <p className={`${compact ? "text-xs" : "text-[13px]"} text-[#6f5b46] mt-0.5`}>New wins after this start a new box. Ships in 3 to 5 business days.</p>
+      <p className={`${compact ? "text-xs" : "text-[13px]"} text-[#6f5b46] mt-0.5`}>Wins after this start a new box. Ships 3 to 5 business days after your box closes and every lot is paid.</p>
       {error && <p className={`${compact ? "text-xs" : "text-[13px]"} text-red-700 font-semibold mt-1.5`}>{error}</p>}
       <div className="flex gap-2 mt-2.5">
         <button
           onClick={() => setConfirming(false)}
           disabled={busy}
-          className="flex-1 rounded-xl border border-[#cdbda3] text-[#4a3a2b] font-bold text-sm py-2 hover:bg-white transition-colors disabled:opacity-50"
+          className="flex-1 rounded-xl border border-[#cdbda3] text-[#4a3a2b] font-bold text-sm py-2.5 min-h-[44px] hover:bg-white transition-colors disabled:opacity-50 nb-focus"
         >
           Keep it open
         </button>
         <button
           onClick={shipNow}
           disabled={busy}
-          className="flex-1 rounded-xl bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold text-sm py-2 transition-colors disabled:opacity-50"
+          className="flex-1 rounded-xl bg-[#6c4d39] hover:bg-[#563e2c] text-white font-bold text-sm py-2.5 min-h-[44px] transition-colors disabled:opacity-50 nb-focus"
         >
           {busy ? "Closing…" : "Yes, ship it"}
         </button>
@@ -181,10 +185,9 @@ export function TrackingLine({ box }: { box: Box }) {
     <div className="flex items-center justify-between gap-3 flex-wrap text-sm">
       <span className="text-[#6f5b46] min-w-0 truncate">
         {box.carrier ? `${box.carrier} ` : ""}<span className="tabular-nums text-[#241a12] font-semibold">{box.trackingCode}</span>
-        {box.lastTrackingStatus ? <span className="text-[#8a7559]"> · {box.lastTrackingStatus.replace(/_/g, " ").toLowerCase()}</span> : null}
       </span>
       {box.trackingUrl && (
-        <a href={box.trackingUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 font-bold text-[#6c4d39] hover:text-[#c47b3e] underline underline-offset-2">
+        <a href={box.trackingUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 font-bold text-[#6c4d39] hover:text-[#c47b3e] underline underline-offset-2 nb-focus rounded">
           Track package
         </a>
       )}
@@ -192,13 +195,20 @@ export function TrackingLine({ box }: { box: Box }) {
   );
 }
 
+/** The one-line room summary for an open box (Overview card + item page share the shape). */
+export function roomSummary(h: BoxHeadroom): { text: string; tone: "moss" | "amber" } {
+  const st = headroomState(h);
+  if (st.kind === "room" || st.kind === "top-room") return { text: roomLine(st.fits) ?? "Room for more", tone: "moss" };
+  if (st.kind === "full") return { text: `Next lot: +${money(st.stepCents)}`, tone: "amber" };
+  return { text: "Full — the next lot starts a new box", tone: "amber" };
+}
+
 /**
  * "Your box" — one compact card per shipping bundle on the bidder overview.
- * Shows what's in it, what it weighs, what's been paid, where it ships from,
- * and (while OPEN) a Ship-it-now button with an inline confirm. A buyer with
- * lots at both warehouses has two open boxes (one per warehouse) — both show.
- * Renders nothing when there's no box. The page owns the fetch
- * (useShippingBoxes) so the Overview card and the Shipping tab share one copy.
+ * What's in it, what it weighs, what's been paid, where it ships from, how much
+ * more rides free, and (while OPEN) Ship it now. A buyer with lots at both
+ * warehouses has two open boxes (one per warehouse) — both show. Renders
+ * nothing when there's no box. The page owns the fetch (useShippingBoxes).
  */
 export default function YourBoxCard({ boxes, reload }: { boxes: Box[] | null; reload: () => Promise<void> }) {
   if (!boxes || boxes.length === 0) return null;
@@ -210,7 +220,7 @@ export default function YourBoxCard({ boxes, reload }: { boxes: Box[] | null; re
         const open = b.status === "OPEN";
         const dims = b.boxCode ? b.boxCode.replace(/x/g, "×") : null;
         const from = b.location?.name ?? null;
-        const room = open ? headroomState(b.headroom) : null;
+        const room = open ? roomSummary(b.headroom) : null;
         return (
           <section key={b.id} className="bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden">
             {/* Header */}
@@ -225,26 +235,13 @@ export default function YourBoxCard({ boxes, reload }: { boxes: Box[] | null; re
                 <div className="text-sm text-[#241a12] mt-0.5">
                   Shipping <span className="font-extrabold tabular-nums">{money(b.chargedCents)}</span>
                   <span className="text-[#8a7559]"> · to {b.shipCity}, {b.shipState}</span>
-                  {from && <span className="text-[#8a7559]"> · ships from {from}</span>}
                 </div>
                 {room && (
-                  <div className="text-[13px] text-[#2f5d3a] font-semibold mt-0.5">
-                    {room.kind === "room"
-                      ? `Room for about ${room.fits[0].count} more ${room.fits[0].label}${room.fits[0].count === 1 ? "" : "s"} before the price goes up`
-                      : room.kind === "full"
-                      ? `Full — the next lot opens the next band (+${money(room.stepCents)})`
-                      : "Top band — the next lot starts a new box"}
-                  </div>
-                )}
-                {open && (
-                  <div className="text-[11px] text-[#8a7559] mt-0.5">
-                    Address locked for this box — change it for your next box in{" "}
-                    <Link href="/account" className="underline underline-offset-2 hover:text-[#6c4d39]">Account</Link>.
-                  </div>
+                  <div className={`text-[13px] font-semibold mt-0.5 ${room.tone === "moss" ? "text-[#2f5d3a]" : "text-[#8a4f1c]"}`}>{room.text}</div>
                 )}
               </div>
               <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap ${pill.cls}`}>
-                {b.status === "DELIVERED" || b.deliveredAt ? <IcoCheck className="w-3 h-3" /> : <IcoTruck className="w-3 h-3" />}
+                {pill.text === "Delivered" ? <IcoCheck className="w-3 h-3" /> : <IcoTruck className="w-3 h-3" />}
                 {pill.text}
               </span>
             </div>
@@ -256,7 +253,7 @@ export default function YourBoxCard({ boxes, reload }: { boxes: Box[] | null; re
                   <Thumb url={it.photos[0]?.url ?? null} title={it.title} />
                   <div className="min-w-0">
                     <div className="text-xs font-semibold text-[#241a12] truncate max-w-[180px]">{it.title}</div>
-                    <div className="text-[11px] text-[#8a7559] tabular-nums">{it.shipChargeCents > 0 ? `+${money(it.shipChargeCents)}` : "rode free"}</div>
+                    <div className={`text-[11px] tabular-nums ${it.shipChargeCents > 0 ? "text-[#8a7559]" : "text-[#4a7c59] font-semibold"}`}>{it.shipChargeCents > 0 ? `+${money(it.shipChargeCents)}` : "Free"}</div>
                   </div>
                 </li>
               ))}
@@ -272,6 +269,9 @@ export default function YourBoxCard({ boxes, reload }: { boxes: Box[] | null; re
           </section>
         );
       })}
+      <Link href="/shipping" className="inline-flex items-center min-h-[44px] text-xs font-semibold text-[#8a7559] hover:text-[#6c4d39] underline underline-offset-2 nb-focus rounded">
+        See all shipping
+      </Link>
     </div>
   );
 }
