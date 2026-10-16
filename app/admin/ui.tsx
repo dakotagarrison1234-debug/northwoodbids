@@ -374,7 +374,7 @@ export function Disclosure({
         aria-expanded={open}
         className={`w-full flex items-center justify-between gap-3 px-4 sm:px-5 min-h-[50px] text-left font-bold text-[17px] ${t === "slate" ? "text-[#6f5b46]" : c.text}`}
       >
-        <span>{label}</span>
+        <span className="flex-1 min-w-0">{label}</span>
         <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}><path d="M3 6l5 5 5-5" /></svg>
       </button>
       {open && <div className="border-t border-[#f0e6d6]">{children}</div>}

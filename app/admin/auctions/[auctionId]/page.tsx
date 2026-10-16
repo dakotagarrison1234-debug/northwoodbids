@@ -1,6 +1,8 @@
 export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { getUserOrg } from "@/lib/auth";
+import ProxyBidsPanel, { type ActiveProxy } from "./ProxyBidsPanel";
 import RecentBidsPanel, { type RecentBid } from "./RecentBidsPanel";
 import LocalDate from "@/app/components/LocalDate";
 import { money } from "@/lib/format";
@@ -104,6 +106,37 @@ export default async function ManageAuctionPage({ params }: Props) {
       isProxy: b.isProxy,
       isTop: b.status === "ACTIVE",
     }));
+  }
+
+  // Owner/admin only: the active Max Bids (proxy bids) on this auction's lots.
+  // Max amounts are competitive info, so staff below admin don't see them.
+  let activeProxies: ActiveProxy[] | null = null;
+  if (!isEnded) {
+    const membership = await getUserOrg();
+    const isOwnerOrAdmin = membership?.role === "OWNER" || membership?.role === "ADMIN";
+    if (isOwnerOrAdmin) {
+      const rows = await prisma.proxyBid.findMany({
+        where: { isActive: true, item: { auctionId } },
+        orderBy: { maxAmount: "desc" },
+        include: { item: { select: { id: true, title: true, currentBid: true } } },
+      });
+      const ids = [...new Set(rows.map((r) => r.clerkUserId))];
+      const profiles = ids.length
+        ? await prisma.bidderProfile.findMany({
+            where: { clerkUserId: { in: ids } },
+            select: { clerkUserId: true, name: true, email: true },
+          })
+        : [];
+      const nameById = new Map(profiles.map((p) => [p.clerkUserId, p.name || p.email || "Bidder"]));
+      activeProxies = rows.map((r) => ({
+        id: r.id,
+        itemId: r.item.id,
+        itemTitle: r.item.title,
+        currentBid: Number(r.item.currentBid),
+        bidderName: nameById.get(r.clerkUserId) || "Bidder",
+        maxAmount: Number(r.maxAmount),
+      }));
+    }
   }
 
   // ── Ended-auction data: who won what, paid or not, picked up or not. Only
@@ -301,6 +334,7 @@ export default async function ManageAuctionPage({ params }: Props) {
                       title: item.title,
                       photoUrl: photo?.url ?? null,
                       storageLocation: item.storageLocation ?? null,
+                      locationName: item.location?.name ?? null,
                       bids: item._count.bids,
                       currentBid: Number(item.currentBid),
                       status: item.status,
@@ -309,6 +343,9 @@ export default async function ManageAuctionPage({ params }: Props) {
                 />
               )}
             </Panel>
+
+            {/* Owner/admin only — null means the viewer isn't allowed to see maxes. */}
+            {activeProxies && <ProxyBidsPanel proxies={activeProxies} />}
 
             <Disclosure label="Details">
               <EditAuction

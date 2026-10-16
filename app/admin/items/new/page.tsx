@@ -999,16 +999,6 @@ function NewItemForm() {
             );
           })()}
 
-          {/* ── Big tag # ── */}
-          <div className="rounded-2xl bg-[#241a12] text-[#fbf4e6] px-4 py-3.5 flex items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <Eyebrow className="!text-[#b9a688]">Write this # on the item</Eyebrow>
-              <div className="font-mono font-black tracking-wider leading-none text-5xl sm:text-6xl mt-1">#{nextCode || "…"}</div>
-              {lastCode && <div className="text-[13px] text-[#b9a688] mt-1.5 truncate">Last saved #{lastCode}{lastTitle ? ` · ${lastTitle}` : ""}</div>}
-            </div>
-            {combo && <Pill tone="amber">Combo of {formData.packSize}</Pill>}
-          </div>
-
           {/* Scanner (collapsed until you tap it — fills the fields below). */}
           <BarcodeScanner
             key={scannerKey}
@@ -1217,14 +1207,24 @@ function NewItemForm() {
         </PageBody>
       </div>
 
-      {/* ── Sticky action bar ── */}
-      <footer className="bar-safe-bottom safe-x border-t border-[#e6dac6] bg-white/85 backdrop-blur px-3 sm:px-8 pt-2.5 flex items-center gap-2">
-        <Btn onClick={() => handleSave(true)} disabled={saving || uploading} variant="outline" className="flex-1">
-          {saving ? "Saving…" : "Save + next"}
-        </Btn>
-        <Btn onClick={() => handleSave(false)} disabled={saving || uploading} className="flex-1">
-          {saving ? "Saving…" : uploading ? "Uploading…" : "Save & done"}
-        </Btn>
+      {/* ── Sticky action bar — tag # strip on top, Save buttons under it ── */}
+      <footer className="bar-safe-bottom safe-x border-t border-[#e6dac6] bg-white/85 backdrop-blur">
+        <div className="bg-[#241a12] text-[#fbf4e6] px-4 sm:px-8 py-2.5 flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <Eyebrow className="!text-[#b9a688]">Write this # on the item</Eyebrow>
+            <div className="font-mono font-black tracking-wider leading-none text-4xl mt-0.5">#{nextCode || "…"}</div>
+            {lastCode && <div className="text-[13px] text-[#b9a688] mt-1 truncate">Last saved #{lastCode}{lastTitle ? ` · ${lastTitle}` : ""}</div>}
+          </div>
+          {combo && <Pill tone="amber">Combo of {formData.packSize}</Pill>}
+        </div>
+        <div className="px-3 sm:px-8 pt-2.5 flex items-center gap-2">
+          <Btn onClick={() => handleSave(true)} disabled={saving || uploading} variant="outline" className="flex-1">
+            {saving ? "Saving…" : "Save + next"}
+          </Btn>
+          <Btn onClick={() => handleSave(false)} disabled={saving || uploading} className="flex-1">
+            {saving ? "Saving…" : uploading ? "Uploading…" : "Save & done"}
+          </Btn>
+        </div>
       </footer>
     </>
   );
