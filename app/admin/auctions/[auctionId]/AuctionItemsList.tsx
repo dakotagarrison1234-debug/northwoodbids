@@ -89,7 +89,9 @@ export default function AuctionItemsList({ items }: { items: AuctionListItem[] }
     groupNames.splice(groupNames.indexOf(NO_WAREHOUSE), 1);
     groupNames.push(NO_WAREHOUSE);
   }
-  const grouped = groupNames.length > 1;
+  // Always grouped and collapsed, even with a single warehouse — the list is
+  // the long part of the page and the owner wants it folded until opened.
+  const grouped = groupNames.length > 0;
 
   const groups = grouped
     ? groupNames
