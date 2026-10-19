@@ -20,12 +20,12 @@ function fallbackStart(): Date {
 }
 
 /**
- * Titles like "AMZ 12", "HD #3", "Estate 7" are a series + a number. We learn the
- * series from what's already been run and offer the next number.
+ * Every auction is a series name + a number, shown as "Auction #12",
+ * "Christmas #1". Old titles were typed by hand in every shape — "Auction 16",
+ * "Auction #16", "AMZ12" — so the learner reads them loosely (optional "#",
+ * optional space) and the next one is always written the one right way.
  */
-const SERIES_RE = /^([A-Za-z][A-Za-z0-9&' ]{0,24}?)\s*#?\s*(\d+)$/;
-// A bare series with no number yet ("Estate") — offered as "<series> 1".
-const BARE_SERIES_RE = /^[A-Za-z][A-Za-z0-9&' ]{0,24}$/;
+const SERIES_RE = /^(.*?)\s*#?\s*(\d+)\s*$/;
 
 type Series = { name: string; next: number };
 
@@ -35,7 +35,10 @@ function learnSeries(titles: string[]): Series[] {
   for (const raw of titles) {
     const m = SERIES_RE.exec(raw.trim());
     if (!m) continue;
-    const name = m[1].trim();
+    // "Auction 16#16" (an old typo) must still mean series "Auction": drop any
+    // number that got stuck on the end of the name.
+    const name = m[1].trim().replace(/[\s#-]+$/, "").replace(/\s*#?\s*\d+$/, "").trim();
+    if (!name) continue;
     const n = parseInt(m[2], 10);
     const key = name.toLowerCase();
     const cur = byKey.get(key);
@@ -44,6 +47,9 @@ function learnSeries(titles: string[]): Series[] {
   }
   return [...byKey.values()];
 }
+
+/** The one true format. */
+const buildTitle = (name: string, num: string) => `${name.trim()} #${num.trim()}`;
 
 type ApiAuction = { title: string; startAt: string; endAt: string; archived?: boolean };
 
@@ -57,7 +63,7 @@ export default function NewAuctionPage() {
   const touched = useRef({ title: false, dates: false });
   const [formData, setFormData] = useState(() => {
     const start = fallbackStart();
-    return { title: "", startAt: toLocalInput(start), endAt: toLocalInput(new Date(start.getTime() + WEEK)) };
+    return { name: "Auction", num: "1", startAt: toLocalInput(start), endAt: toLocalInput(new Date(start.getTime() + WEEK)) };
   });
 
   useEffect(() => {
@@ -80,7 +86,7 @@ export default function NewAuctionPage() {
 
       // Name: the most recent series, next number up.
       if (!touched.current.title && learned.length > 0) {
-        setFormData((f) => ({ ...f, title: `${learned[0].name} ${learned[0].next}` }));
+        setFormData((f) => ({ ...f, name: learned[0].name, num: String(learned[0].next) }));
       }
 
       // Schedule: the last auction's run, pushed forward a week at a time until it
@@ -104,22 +110,36 @@ export default function NewAuctionPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    if (name === "title") touched.current.title = true;
-    else touched.current.dates = true;
+    if (name === "name") {
+      touched.current.title = true;
+      // Picking a known series by typing its name snaps the number to its next.
+      const known = series.find((s) => s.name.toLowerCase() === value.trim().toLowerCase());
+      setFormData((f) => ({ ...f, name: value, num: known ? String(known.next) : f.num }));
+      return;
+    }
+    if (name === "num") {
+      touched.current.title = true;
+      setFormData((f) => ({ ...f, num: value.replace(/\D/g, "") }));
+      return;
+    }
+    touched.current.dates = true;
     setFormData({ ...formData, [name]: value });
   };
 
-  const pickName = (name: string) => {
+  const pickSeries = (sr: Series) => {
     touched.current.title = true;
-    setFormData((f) => ({ ...f, title: name }));
+    setFormData((f) => ({ ...f, name: sr.name, num: String(sr.next) }));
   };
+
+  const title = buildTitle(formData.name, formData.num);
+  const titleOk = formData.name.trim().length > 0 && /^\d+$/.test(formData.num.trim());
 
   const handleSave = async () => {
     // Inline errors, not alert() — the button is already disabled for these cases,
     // so these are belt-and-braces rather than the primary feedback.
     setError(null);
-    if (!formData.title.trim() || !formData.startAt || !formData.endAt) {
-      setError("Give it a name and both dates.");
+    if (!titleOk || !formData.startAt || !formData.endAt) {
+      setError("Give it a name, a number and both dates.");
       return;
     }
     if (new Date(formData.endAt) <= new Date(formData.startAt)) {
@@ -136,7 +156,7 @@ export default function NewAuctionPage() {
       const res = await fetch("/api/auctions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: formData.title.trim(), startAt: startAtISO, endAt: endAtISO, organizationId: orgId }),
+        body: JSON.stringify({ title, startAt: startAtISO, endAt: endAtISO, organizationId: orgId }),
       });
       const data = await res.json();
       if (data.success) {
@@ -158,14 +178,8 @@ export default function NewAuctionPage() {
   const fmt = (d: Date) =>
     d.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
-  // Chips: every known series at its next number, plus "<typed> 1" when they're
-  // starting a brand-new series.
-  const typed = formData.title.trim();
-  const typedKey = typed.toLowerCase();
-  const chips: string[] = series.map((s) => `${s.name} ${s.next}`);
-  if (typed && BARE_SERIES_RE.test(typed) && !series.some((s) => s.name.toLowerCase() === typedKey)) {
-    chips.unshift(`${typed} 1`);
-  }
+  // One chip per known series at its next number. Tapping fills both fields.
+  const activeKey = formData.name.trim().toLowerCase();
 
   return (
     <>
@@ -177,24 +191,36 @@ export default function NewAuctionPage() {
         <Panel>
           <div className="px-4 sm:px-5 py-5 space-y-5">
             <div>
-              <label className="block">
-                <span className="block text-[15px] font-bold text-[#4a3a2b] mb-1.5">Name</span>
-                <Input name="title" value={formData.title} onChange={handleChange} placeholder="AMZ 1" autoComplete="off" />
-              </label>
-              {chips.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2.5">
-                  {chips.map((c) => {
-                    const on = c.toLowerCase() === typedKey;
+              <div className="grid grid-cols-[1fr_7.5rem] gap-3">
+                <label className="block">
+                  <span className="block text-[15px] font-bold text-[#4a3a2b] mb-1.5">Name</span>
+                  <Input name="name" value={formData.name} onChange={handleChange} placeholder="Auction" autoComplete="off" />
+                </label>
+                <label className="block">
+                  <span className="block text-[15px] font-bold text-[#4a3a2b] mb-1.5">Number</span>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8a7559] font-bold text-[17px]">#</span>
+                    <Input name="num" value={formData.num} onChange={handleChange} inputMode="numeric" className="!pl-8 tabular-nums" autoComplete="off" />
+                  </div>
+                </label>
+              </div>
+              <p className="text-[15px] text-[#6f5b46] mt-2">
+                Bidders will see <strong className="font-extrabold text-[#241a12]">{titleOk ? title : "…"}</strong>
+              </p>
+              {series.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {series.map((sr) => {
+                    const on = sr.name.toLowerCase() === activeKey;
                     return (
                       <button
-                        key={c}
+                        key={sr.name}
                         type="button"
-                        onClick={() => pickName(c)}
+                        onClick={() => pickSeries(sr)}
                         className={`min-h-[44px] px-4 rounded-xl border-2 text-[15px] font-bold transition-colors ${
                           on ? "bg-[#241a12] text-[#f6ecda] border-[#241a12]" : "bg-white text-[#563e2c] border-[#d9c7ab] hover:bg-[#faf5ea]"
                         }`}
                       >
-                        {c}
+                        {sr.name} #{sr.next}
                       </button>
                     );
                   })}
@@ -225,7 +251,7 @@ export default function NewAuctionPage() {
               ) : null}
             </div>
 
-            <Btn full onClick={handleSave} disabled={saving || !formData.title.trim() || !validRange}>
+            <Btn full onClick={handleSave} disabled={saving || !titleOk || !validRange}>
               {saving ? "Creating…" : "Create auction"}
             </Btn>
           </div>
