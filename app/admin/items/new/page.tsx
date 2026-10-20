@@ -13,6 +13,17 @@ const labelCls = "text-[13px] font-black uppercase tracking-[0.14em] text-[#8a75
 
 // The warehouse picked last time on this device — preselected on the next lot.
 const WAREHOUSE_KEY = "nb_admin_warehouse";
+// The spot (shelf/box) last saved on this device, per warehouse — so a run of
+// lots keeps landing in the same spot even across a reload or a fresh visit.
+const SPOT_KEY = "nb_admin_spot";
+function readSpot(): { locationId: string; spot: string } | null {
+  try {
+    const raw = localStorage.getItem(SPOT_KEY);
+    if (!raw) return null;
+    const v = JSON.parse(raw);
+    return v && typeof v.locationId === "string" && typeof v.spot === "string" ? v : null;
+  } catch { return null; }
+}
 
 /** Chip button — the kit's Segmented look as a standalone toggle (44px tall). */
 function Chip({
@@ -740,6 +751,16 @@ function NewItemForm() {
       if (remembered && active.some((l) => l.id === remembered)) {
         setFormData((prev) => (prev.locationId ? prev : { ...prev, locationId: remembered }));
       }
+      // Bring back the spot last saved at that warehouse (only when the field is
+      // empty, so a spot passed in the URL or typed already always wins).
+      setFormData((prev) => {
+        const last = readSpot();
+        const loc = prev.locationId || remembered;
+        if (!prev.storageLocation && last && last.spot && loc && last.locationId === loc) {
+          return { ...prev, storageLocation: last.spot };
+        }
+        return prev;
+      });
     }).catch(() => {});
   }, [preselectedAuctionId]);
 
@@ -748,6 +769,8 @@ function NewItemForm() {
     if (!formData.locationId) return;
     try { localStorage.setItem(WAREHOUSE_KEY, formData.locationId); } catch { /* ignore */ }
   }, [formData.locationId]);
+
+
 
   // Load the spot names already used for this auction + warehouse whenever either
   // changes, so the spot field can suggest them.
@@ -926,6 +949,13 @@ function NewItemForm() {
       });
       const data = await res.json();
       if (data.success) {
+        // The spot just used is now the default for the next lot — on this screen
+        // and the next time Add a lot opens on this device — and shows as a chip.
+        const spot = formData.storageLocation.trim();
+        if (spot) {
+          try { localStorage.setItem(SPOT_KEY, JSON.stringify({ locationId: formData.locationId, spot })); } catch { /* ignore */ }
+          setSpotOptions((prev) => (prev.includes(spot) ? prev : [spot, ...prev]));
+        }
         if (addAnother) {
           setFormData((prev) => ({
             ...prev,
