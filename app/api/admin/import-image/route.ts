@@ -121,17 +121,20 @@ export async function GET(req: NextRequest) {
       redirect: "manual",
       signal: AbortSignal.timeout(10_000),
     });
-  } catch {
-    return NextResponse.json({ error: "Failed to fetch image" }, { status: 502 });
+  } catch (e) {
+    console.error("[import-image] fetch failed", host, e instanceof Error ? e.message : e);
+    return NextResponse.json({ error: "Couldn't reach the image host" }, { status: 502 });
   }
 
   // Reject redirects rather than auto-following them into a possibly-internal host.
   if (imgRes.status >= 300 && imgRes.status < 400 && imgRes.headers.get("location")) {
-    return NextResponse.json({ error: "Redirects not allowed" }, { status: 400 });
+    console.error("[import-image] redirect refused", host, "->", imgRes.headers.get("location"));
+    return NextResponse.json({ error: "Image host redirected" }, { status: 400 });
   }
 
   if (!imgRes.ok) {
-    return NextResponse.json({ error: "Image not available" }, { status: 502 });
+    console.error("[import-image] upstream", imgRes.status, host);
+    return NextResponse.json({ error: `Image host answered ${imgRes.status}` }, { status: 502 });
   }
 
   const rawType = imgRes.headers.get("content-type")?.split(";")[0].trim().toLowerCase() ?? "";

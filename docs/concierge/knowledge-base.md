@@ -14,7 +14,7 @@ Items marked **[CONFIRM]** need Dakota to verify or fill before they're fully tr
 **What is Northwood Bids?**
 Northwood Bids is a local online auction business in Michigan. You bid on items
 online; if you win, you pay, then pick up your items at one of our two pickup spots
-(in Owosso and Gladwin).
+(our Corunna storefront and our Gladwin warehouse) — or have some lots shipped.
 
 **Do I need an account to bid?**
 Yes. You have to create an account to place bids — there's no guest bidding.
@@ -107,9 +107,11 @@ through, go to your Pickup page (My Bids → Pickups), choose your location, and
 day and time.
 
 **Where are the pickup spots?**
-We have two — one in Owosso and one in Gladwin. The exact street address for your
-pickup shows on your own Pickup page once you've won and paid (that's also where you
-book your time). We don't post the street addresses publicly.
+Two spots. Our Corunna storefront is at 301 N Shiawassee St, Corunna, MI 48817 —
+use the side door or the back door; the keypad code you get when you book opens
+either one. The Gladwin warehouse address shows on your own Pickup page once you've
+won and paid (that's also where you book your time). Owosso pickups have moved to
+Corunna.
 
 **How soon can I pick up?**
 You can book any open slot within the next 28 days. Same-day pickups close at 8:00 AM
@@ -125,14 +127,15 @@ Yes — you can reschedule or cancel on your Pickup page, and mark "I picked up 
 when you've got it.
 
 **What's a door code? / How do I get in at Corunna?**
-Our Corunna storefront has keypad locks on the pickup doors. When you book a pickup
-there, you get a door code by text (it's also on your Pickup page). It works
-all day on your pickup date, on every pickup door. Touch the keypad to wake it, enter
-your code, and the door unlocks. Press the Schlage button on the way out to lock up.
-Your order is in the spot shown on your Pickup page. If you reschedule, the code
-follows your new date. Codes stop working the moment an order is collected or
-cancelled. If the keypad won't take your code, text us and we can unlock the door
-from here.
+The Corunna storefront has keypad locks on the side door and the back door. When you
+book a pickup there you get a door code by text, and it's on your Pickup page (My Bids
+> Pickups). It works all day on your pickup date on both doors. Touch the keypad to
+wake it, enter your code, and the door unlocks. Press the Schlage button on the way
+out to lock up. Your order is in the spot shown on your Pickup page. If you
+reschedule, the code follows your new date. Codes stop working once an order is
+collected or cancelled. Woody never reads a code out in chat — it's in the customer's
+text and on their Pickup page. If the keypad won't take the code, a team member can
+unlock the door remotely.
 
 ---
 
@@ -144,7 +147,7 @@ price. Ship or Pickup is one setting: pick Ship once and every lot you win ships
 you switch back to Pickup (on any lot's page or on the Shipping page). It's one flat
 price per box, by weight and where you live. Your box stays open 7 days, and every lot
 you win in that time rides in it. Extra lots ride free until the box steps up a weight
-range; then you pay only the difference. One box per warehouse: Owosso and Gladwin each
+range; then you pay only the difference. One box per warehouse: Corunna and Gladwin each
 pack their own, so wins at both go out as two boxes (two prices, two tracking numbers).
 We hold the box 7 days, or you can tap "Ship it now" on the Shipping page. It ships
 ground 3 to 5 business days after your box closes and every lot is paid. Lower 48 states

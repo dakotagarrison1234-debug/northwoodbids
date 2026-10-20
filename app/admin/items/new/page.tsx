@@ -803,38 +803,49 @@ function NewItemForm() {
       retailValue: result.retailValue != null ? String(result.retailValue) : prev.retailValue,
     }));
 
+    // Photos: import every product image; if NONE land, say why in the banner so a
+    // dead image host or storage hiccup isn't silent.
+    let photoNote = "";
     try {
-      const urls = await Promise.all((result.images ?? []).map(fetchImageUrl));
-      const good = urls.filter((u): u is string => !!u);
+      const wanted = result.images ?? [];
+      const results = await Promise.all(wanted.map(fetchImageUrl));
+      const good = results.map((r) => r.url).filter((u): u is string => !!u);
       if (good.length) {
         setPhotos(prev => {
           const merged = [...prev];
           for (const u of good) if (!merged.includes(u)) merged.push(u);
           return merged.slice(0, 10);
         });
+      } else if (wanted.length === 0) {
+        photoNote = "Filled, but the lookup had no photos for this one — add your own.";
+      } else {
+        const why = results.find((r) => r.error)?.error ?? "unknown error";
+        photoNote = `Filled, but the photos didn't import (${why}). Add your own or try again.`;
+        console.error("[add-lot] photo import failed:", results);
       }
     } catch { /* non-critical — text fields still filled */ }
 
-    setBanner("");        // no "filled from scan" notice — the ready form is the signal
+    setBanner(photoNote);
     setFilling(false);
   };
 
   // Import one remote image, returning the hosted URL (or null). Used by the batch
   // fill above so we can await them all and add photos in one go.
-  const fetchImageUrl = async (url: string): Promise<string | null> => {
+  const fetchImageUrl = async (url: string): Promise<{ url: string | null; error?: string }> => {
     try {
       const res = await fetch(`/api/admin/import-image?url=${encodeURIComponent(url)}`);
-      if (!res.ok) return null;
-      const { publicUrl } = await res.json();
-      return publicUrl || null;
-    } catch { return null; }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { url: null, error: data.error || `HTTP ${res.status}` };
+      return { url: data.publicUrl || null, error: data.publicUrl ? undefined : "no URL returned" };
+    } catch (e) { return { url: null, error: e instanceof Error ? e.message : "network error" }; }
   };
 
   // Single-image import that adds straight to the grid — used by combo mode, which
   // adds photos one tap at a time (no bulk fill).
   const importImageFromUrl = async (url: string) => {
-    const publicUrl = await fetchImageUrl(url);
+    const { url: publicUrl, error } = await fetchImageUrl(url);
     if (publicUrl) setPhotos(prev => prev.includes(publicUrl) ? prev : [...prev, publicUrl]);
+    else if (error) setBanner(`Photo didn't import (${error}).`);
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -988,7 +999,7 @@ function NewItemForm() {
 
           {/* Status banner (scan landed / item saved). */}
           {banner && (() => {
-            const good = /saved|filled|ready/i.test(banner);
+            const good = /saved|filled|ready/i.test(banner) && !/didn't|failed|no photos/i.test(banner);
             return (
               <Notice tone={good ? "green" : "red"} className="flex items-center gap-2">
                 <svg width="20" height="20" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
