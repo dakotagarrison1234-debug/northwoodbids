@@ -122,7 +122,22 @@ type Product = {
   retailValue: number | null;
   images: string[];
   asin?: string;
+  /** Came from the search fallback (one photo, no description) — re-fetched sooner. */
+  partial?: boolean;
 };
+
+// Partial (search-fallback) results get a short cache life so the full details
+// are picked up once the provider is healthy again.
+const PARTIAL_TTL_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Amazon image URLs carry a size modifier (`._AC_UL960_FMwebp_QL65_.jpg` is a
+ * 960px search thumbnail). Swapping it for `_AC_SL1500_` gives the same photo
+ * at up to 1500px, which is what the listing deserves.
+ */
+function fullRes(url: string): string {
+  return url.replace(/^(https:\/\/m\.media-amazon\.com\/images\/I\/[A-Za-z0-9+%-]+)\.[^/]*\.(jpg|jpeg|png|webp)$/i, "$1._AC_SL1500_.$2");
+}
 
 // Fetch product details for an ASIN from OpenWeb Ninja (Realtime Amazon Data).
 // The product payload is wrapped in a `data` key.
@@ -161,9 +176,9 @@ async function fetchAmazonProduct(asin: string): Promise<Product | null> {
   // Images (up to 3)
   let images: string[] = [];
   if (Array.isArray(d.product_photos)) {
-    images = (d.product_photos as unknown[]).filter((x): x is string => typeof x === "string").slice(0, 3);
+    images = (d.product_photos as unknown[]).filter((x): x is string => typeof x === "string").slice(0, 3).map(fullRes);
   } else if (typeof d.product_photo === "string") {
-    images = [d.product_photo];
+    images = [fullRes(d.product_photo)];
   }
 
   // Category
@@ -222,8 +237,9 @@ async function searchFallback(asin: string): Promise<Product | null> {
       brand: (typeof hit.product_brand === "string" && hit.product_brand) || (typeof hit.brand === "string" && hit.brand) || "",
       category: "",
       retailValue: parsePrice(hit.product_price),
-      images: typeof hit.product_photo === "string" ? [hit.product_photo] : [],
+      images: typeof hit.product_photo === "string" ? [fullRes(hit.product_photo)] : [],
       asin,
+      partial: true,
     };
   } catch {
     return null;
@@ -248,8 +264,10 @@ export async function GET(req: NextRequest) {
     const cached = await prisma.productLookupCache
       .findUnique({ where: { code: cacheKey } })
       .catch(() => null);
-    const cachedJunk = !!(cached?.found && cached.product && looksLikeJunk(cached.product as unknown as Product));
-    if (cached && !cachedJunk && Date.now() - cached.updatedAt.getTime() < CACHE_TTL_MS) {
+    const cachedProduct = cached?.found && cached.product ? (cached.product as unknown as Product) : null;
+    const cachedJunk = !!cachedProduct && looksLikeJunk(cachedProduct);
+    const ttl = cachedProduct?.partial ? PARTIAL_TTL_MS : CACHE_TTL_MS;
+    if (cached && !cachedJunk && Date.now() - cached.updatedAt.getTime() < ttl) {
       if (cached.found && cached.product) {
         return NextResponse.json({ found: true, product: cached.product, cached: true });
       }
