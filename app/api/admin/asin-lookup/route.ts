@@ -188,6 +188,48 @@ async function fetchAmazonProduct(asin: string): Promise<Product | null> {
   };
 }
 
+/**
+ * Amazon sometimes hands the data provider a bot-check page instead of the
+ * product. It comes back looking like a product whose title is "Amazon.com"
+ * (or "Robot Check" / "Sorry!") with no photos. Treat that as a failed fetch,
+ * never as a real product — and never cache it.
+ */
+function looksLikeJunk(p: Product | null): boolean {
+  if (!p) return true;
+  const t = p.title.trim().toLowerCase();
+  if (!t) return true;
+  if (/^amazon\.com\b/.test(t) || /robot check|^sorry!?$|something went wrong/.test(t)) return true;
+  if (p.images.length === 0 && t.length < 12) return true;
+  return false;
+}
+
+/** Second chance: the search endpoint by ASIN usually still returns a clean title + photo. */
+async function searchFallback(asin: string): Promise<Product | null> {
+  const key = process.env.OPENWEBNINJA_API_KEY;
+  if (!key) return null;
+  try {
+    const url = `https://api.openwebninja.com/realtime-amazon-data/search?query=${encodeURIComponent(asin)}&country=US&page=1`;
+    const res = await fetch(url, { headers: { "X-API-Key": key, Accept: "application/json" }, cache: "no-store" });
+    if (!res.ok) return null;
+    const raw = await res.json().catch(() => null);
+    const products = raw?.data?.products;
+    if (!Array.isArray(products)) return null;
+    const hit = (products as Record<string, unknown>[]).find((x) => typeof x.asin === "string" && x.asin.toUpperCase() === asin.toUpperCase()) ?? products[0];
+    if (!hit || typeof hit.product_title !== "string") return null;
+    return {
+      title: hit.product_title,
+      description: "",
+      brand: (typeof hit.product_brand === "string" && hit.product_brand) || (typeof hit.brand === "string" && hit.brand) || "",
+      category: "",
+      retailValue: parsePrice(hit.product_price),
+      images: typeof hit.product_photo === "string" ? [hit.product_photo] : [],
+      asin,
+    };
+  } catch {
+    return null;
+  }
+}
+
 // ── Route ──────────────────────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
   const { userId } = await auth();
@@ -206,7 +248,8 @@ export async function GET(req: NextRequest) {
     const cached = await prisma.productLookupCache
       .findUnique({ where: { code: cacheKey } })
       .catch(() => null);
-    if (cached && Date.now() - cached.updatedAt.getTime() < CACHE_TTL_MS) {
+    const cachedJunk = !!(cached?.found && cached.product && looksLikeJunk(cached.product as unknown as Product));
+    if (cached && !cachedJunk && Date.now() - cached.updatedAt.getTime() < CACHE_TTL_MS) {
       if (cached.found && cached.product) {
         return NextResponse.json({ found: true, product: cached.product, cached: true });
       }
@@ -246,12 +289,20 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const product = await fetchAmazonProduct(asin);
-    if (!product || !product.title) {
-      await writeCache(cacheKey, asin, false, null);
+    let product = await fetchAmazonProduct(asin);
+    if (looksLikeJunk(product)) {
+      // Bot-check page or empty: try the details call once more, then the search
+      // endpoint, which tends to still have the title + main photo.
+      await delay(800);
+      product = await fetchAmazonProduct(asin);
+      if (looksLikeJunk(product)) product = await searchFallback(asin);
+    }
+    if (looksLikeJunk(product) || !product) {
+      // Don't cache a bad answer as a miss — the next scan may well succeed.
+      console.warn("[asin-lookup] junk/empty product for", asin);
       return NextResponse.json({
         found: false,
-        message: "No product details found for that code — try a name search or fill it in manually.",
+        message: "Amazon didn't give us the product this time — scan it again in a second, or search by name.",
       });
     }
 
