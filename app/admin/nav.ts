@@ -67,6 +67,7 @@ export const ADMIN_GROUPS: NavGroup[] = [
     ownerOnly: true,
     pages: [
       { label: "Bidders", href: "/admin/bidders" },
+      { label: "Report", href: "/admin/bidders/report" },
       { label: "Text a group", href: "/admin/blast" },
     ],
   },

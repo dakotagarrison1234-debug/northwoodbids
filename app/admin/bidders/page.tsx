@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Pill, PageHeader, PageBody, SearchBox, Segmented, Panel, Row, Initials, Btn, Empty, Notice, Eyebrow } from "../ui";
 import MessageSheet, { type MessageTarget } from "../MessageSheet";
 
@@ -19,9 +20,19 @@ interface Bidder {
 type Filter = "all" | "blocked";
 
 export default function BiddersPage() {
+  return (
+    <Suspense fallback={null}>
+      <BiddersPageInner />
+    </Suspense>
+  );
+}
+
+function BiddersPageInner() {
+  const searchParams = useSearchParams();
   const [bidders, setBidders] = useState<Bidder[]>([]);
   const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
-  const [q, setQ] = useState("");
+  // ?q= lets the report (and anything else) deep-link straight to one bidder.
+  const [q, setQ] = useState(() => searchParams.get("q") ?? "");
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [busyLoc, setBusyLoc] = useState<string | null>(null);

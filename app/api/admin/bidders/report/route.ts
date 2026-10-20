@@ -60,8 +60,27 @@ export async function GET() {
       where: { status: "PAID", comped: false, ...itemScope },
       _sum: { amount: true, applicationFeeAmount: true },
       _count: { id: true },
+      _max: { paidAt: true, createdAt: true },
     }),
   ]);
+
+  // How each bidder got here: invited by another bidder (referral link), or a
+  // welcome code (QR card / poster). Both are small tables — read whole.
+  const [referrals, claims] = await Promise.all([
+    prisma.referral.findMany({
+      select: { referredUserId: true, referrerUserId: true, code: true, status: true, createdAt: true },
+    }),
+    prisma.promoClaim.findMany({
+      where: { promoCode: { organizationId: orgId } },
+      select: { clerkUserId: true, createdAt: true, promoCode: { select: { code: true, label: true } } },
+    }),
+  ]);
+  const referralBy = new Map(referrals.map((r) => [r.referredUserId, r]));
+  const claimBy = new Map<string, (typeof claims)[number]>();
+  for (const c of claims) if (!claimBy.has(c.clerkUserId)) claimBy.set(c.clerkUserId, c);
+  // Invites sent per inviter, for the "brought in N bidders" line.
+  const invitedCountBy = new Map<string, number>();
+  for (const r of referrals) invitedCountBy.set(r.referrerUserId, (invitedCountBy.get(r.referrerUserId) ?? 0) + 1);
 
   const bidCountBy = new Map(bidAgg.map((b) => [b.clerkUserId, b._count.id]));
   const lastBidBy = new Map(bidAgg.map((b) => [b.clerkUserId, b._max.placedAt]));
@@ -72,6 +91,8 @@ export async function GET() {
     spendAgg.map((s) => [s.clerkUserId, num(s._sum.amount) + num(s._sum.applicationFeeAmount)])
   );
   const paidItemsBy = new Map(spendAgg.map((s) => [s.clerkUserId, s._count.id]));
+  // Most recent purchase: paidAt when recorded, else the payment row's createdAt.
+  const lastPaidBy = new Map(spendAgg.map((s) => [s.clerkUserId, s._max.paidAt ?? s._max.createdAt ?? null]));
 
   // Single-business site: every signed-up customer is one of our bidders, so the
   // universe is all profiles (matches the Bidders page). Spend/bids are still
@@ -94,9 +115,18 @@ export async function GET() {
   }
 
   // ── Per-bidder rows ─────────────────────────────────────────────────────────
+  const nameOf = (id: string) => {
+    const pr = profById.get(id);
+    return pr ? pr.name || pr.email || "Bidder" : "Bidder";
+  };
   const rows = [...profById.values()].map((p) => {
     const bids = bidCountBy.get(p.clerkUserId) ?? 0;
     const lastBid = lastBidBy.get(p.clerkUserId) ?? null;
+    const lastPaid = lastPaidBy.get(p.clerkUserId) ?? null;
+    const ref = referralBy.get(p.clerkUserId);
+    const claim = claimBy.get(p.clerkUserId);
+    // Where they came from, in one word: "invite", "code", or "direct".
+    const source: "invite" | "code" | "direct" = ref ? "invite" : claim ? "code" : "direct";
     const daysSinceSignup = daysBetween(now, p.createdAt);
     const daysSinceLastBid = lastBid ? daysBetween(now, lastBid) : null;
     const isNew = daysSinceSignup <= 30;
@@ -126,6 +156,14 @@ export async function GET() {
       spend: r2(spendBy.get(p.clerkUserId) ?? 0),
       lastBidAt: lastBid ? lastBid.toISOString() : null,
       daysSinceLastBid,
+      lastPaidAt: lastPaid ? lastPaid.toISOString() : null,
+      daysSinceLastPaid: lastPaid ? daysBetween(now, lastPaid) : null,
+      source,
+      invitedBy: ref
+        ? { clerkUserId: ref.referrerUserId, name: nameOf(ref.referrerUserId), code: ref.code, link: `/r/${ref.code}`, status: ref.status }
+        : null,
+      welcomeCode: claim ? { code: claim.promoCode.code, label: claim.promoCode.label, claimedAt: claim.createdAt.toISOString() } : null,
+      invited: invitedCountBy.get(p.clerkUserId) ?? 0,
       isNew, neverBid, active30: inA30, active60: inA60, stale,
     };
   });
@@ -149,7 +187,29 @@ export async function GET() {
     payers: payers.length,
     avgSpendPerPayer: payers.length ? r2(totalRevenue / payers.length) : 0,
     avgSpendPerBidder: totalBidders ? r2(totalRevenue / totalBidders) : 0,
+    // Where bidders came from.
+    viaInvite: rows.filter((r) => r.source === "invite").length,
+    viaCode: rows.filter((r) => r.source === "code").length,
+    direct: rows.filter((r) => r.source === "direct").length,
+    signups7: rows.filter((r) => r.daysSinceSignup <= 7).length,
+    bought30: rows.filter((r) => r.daysSinceLastPaid != null && r.daysSinceLastPaid <= 30).length,
   };
+
+  // Best inviters — who's bringing people in.
+  const topInviters = [...rows]
+    .filter((r) => r.invited > 0)
+    .sort((a, b) => b.invited - a.invited)
+    .slice(0, 8)
+    .map((r) => ({ name: r.name, invited: r.invited }));
+  // Welcome codes by claims.
+  const codeCounts = new Map<string, { code: string; label: string; count: number }>();
+  for (const c of claims) {
+    const k = c.promoCode.code;
+    const cur = codeCounts.get(k) ?? { code: k, label: c.promoCode.label, count: 0 };
+    cur.count += 1;
+    codeCounts.set(k, cur);
+  }
+  const topCodes = [...codeCounts.values()].sort((a, b) => b.count - a.count).slice(0, 8);
 
   // ── Weekly signup trend (last 12 rolling weeks, oldest → newest) ─────────────
   const signupTrend: { label: string; count: number }[] = [];
@@ -173,5 +233,5 @@ export async function GET() {
     .slice(0, 10)
     .map((r) => ({ name: r.name, spend: r.spend, won: r.won }));
 
-  return NextResponse.json({ summary, signupTrend, topSpenders, bidders: rows });
+  return NextResponse.json({ summary, signupTrend, topSpenders, topInviters, topCodes, bidders: rows });
 }
