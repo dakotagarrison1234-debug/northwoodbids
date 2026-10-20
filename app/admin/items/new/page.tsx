@@ -24,6 +24,41 @@ function readSpot(): { locationId: string; spot: string } | null {
     return v && typeof v.locationId === "string" && typeof v.spot === "string" ? v : null;
   } catch { return null; }
 }
+// Spot chips hidden on this device (press-and-hold a chip to hide it). Items keep
+// their spot — this only trims the suggestion row.
+const HIDDEN_SPOTS_KEY = "nb_admin_hidden_spots";
+function readHiddenSpots(): string[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(HIDDEN_SPOTS_KEY) || "[]");
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+  } catch { return []; }
+}
+function writeHiddenSpots(list: string[]) {
+  try { localStorage.setItem(HIDDEN_SPOTS_KEY, JSON.stringify(list)); } catch { /* ignore */ }
+}
+
+/** A chip that also fires `onHold` after a press-and-hold (600ms), for hiding. */
+function HoldChip({ onHold, onClick, ...rest }: React.ComponentProps<typeof Chip> & { onHold: () => void }) {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const held = useRef(false);
+  const start = () => {
+    held.current = false;
+    timer.current = setTimeout(() => { held.current = true; onHold(); }, 600);
+  };
+  const stop = () => { if (timer.current) { clearTimeout(timer.current); timer.current = null; } };
+  return (
+    <Chip
+      {...rest}
+      onPointerDown={start}
+      onPointerUp={stop}
+      onPointerLeave={stop}
+      onPointerCancel={stop}
+      onContextMenu={(e) => e.preventDefault()}
+      onClick={(e) => { if (held.current) { held.current = false; return; } onClick?.(e); }}
+      style={{ WebkitTouchCallout: "none", userSelect: "none" }}
+    />
+  );
+}
 
 /** Chip button — the kit's Segmented look as a standalone toggle (44px tall). */
 function Chip({
@@ -672,6 +707,14 @@ function NewItemForm() {
   // Spot names already used for the chosen auction + warehouse — powers the
   // spot chips so a run of items lands in consistent spots.
   const [spotOptions, setSpotOptions] = useState<string[]>([]);
+  const [hiddenSpots, setHiddenSpots] = useState<string[]>([]);
+  // Press-and-hold on a spot chip asks before hiding it (no native confirm()).
+  const [spotToHide, setSpotToHide] = useState<string | null>(null);
+  const hideSpot = (spot: string) => {
+    setHiddenSpots((prev) => { const next = prev.includes(spot) ? prev : [...prev, spot]; writeHiddenSpots(next); return next; });
+    setSpotToHide(null);
+  };
+  const unhideAll = () => { setHiddenSpots([]); writeHiddenSpots([]); };
   // Covers the form with a spinner while a scan/search auto-fills it, so the fields
   // and photos don't visibly pop in one at a time — then reveals the filled form.
   const [filling, setFilling] = useState(false);
@@ -745,6 +788,8 @@ function NewItemForm() {
         .filter((l: { isActive: boolean }) => l.isActive)
         .map((l: { id: string; name: string }) => ({ id: l.id, name: l.name })) as { id: string; name: string }[];
       setPickupLocations(active);
+      // Device-level prefs are read here (after load) so the first paint matches the server.
+      setHiddenSpots(readHiddenSpots());
       // Preselect the warehouse used last time on this device.
       let remembered = "";
       try { remembered = localStorage.getItem(WAREHOUSE_KEY) || ""; } catch { /* ignore */ }
@@ -786,7 +831,8 @@ function NewItemForm() {
     return () => { live = false; };
   }, [formData.locationId, formData.auctionId]);
   // No warehouse → no spot chips (don't show another warehouse's spots).
-  const visibleSpots = formData.locationId ? spotOptions : [];
+  const visibleSpots = formData.locationId ? spotOptions.filter((s) => !hiddenSpots.includes(s)) : [];
+  const hiddenHere = formData.locationId ? spotOptions.filter((s) => hiddenSpots.includes(s)).length : 0;
 
   // Mint a random code so staff can tag the item before saving.
   const applyCode = (d: { code?: string }) => {
@@ -1132,14 +1178,33 @@ function NewItemForm() {
               {/* Spots already used for this auction + warehouse — tap to reuse.
                   (A tappable chip row, not a native <datalist>, which doesn't render
                   reliably on mobile.) */}
-              {visibleSpots.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {visibleSpots.slice(0, 12).map((s) => (
-                    <Chip key={s} on={formData.storageLocation === s}
-                      onClick={() => setFormData((prev) => ({ ...prev, storageLocation: s }))}>
-                      {s}
-                    </Chip>
-                  ))}
+              {(visibleSpots.length > 0 || hiddenHere > 0) && (
+                <div className="space-y-2">
+                  {spotToHide && (
+                    <div className="flex flex-wrap items-center gap-2 rounded-xl bg-[#faf5ea] border border-[#e6dac6] px-3 py-2">
+                      <span className="text-[15px] text-[#4a3a2b]">Hide <strong className="font-bold">{spotToHide}</strong> from this list?</span>
+                      <Btn size="sm" onClick={() => hideSpot(spotToHide)}>Hide</Btn>
+                      <Btn size="sm" variant="outline" onClick={() => setSpotToHide(null)}>Keep</Btn>
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-1.5">
+                    {visibleSpots.slice(0, 12).map((s) => (
+                      <HoldChip key={s} on={formData.storageLocation === s}
+                        onHold={() => setSpotToHide(s)}
+                        onClick={() => setFormData((prev) => ({ ...prev, storageLocation: s }))}>
+                        {s}
+                      </HoldChip>
+                    ))}
+                    {hiddenHere > 0 && (
+                      <button type="button" onClick={unhideAll}
+                        className="min-h-[44px] px-3 rounded-xl text-[15px] font-bold text-[#8a7559] underline underline-offset-2">
+                        Show {hiddenHere} hidden
+                      </button>
+                    )}
+                  </div>
+                  {visibleSpots.length > 0 && !spotToHide && (
+                    <p className="text-[13px] text-[#8a7559]">Tap to use a spot. Press and hold to hide one.</p>
+                  )}
                 </div>
               )}
 
