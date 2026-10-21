@@ -214,11 +214,11 @@ export function parseShipInput(body: {
 export const HOW_IT_WORKS = [
   "Pick Ship or Pickup once. It sticks for every lot until you change it.",
   "One flat price per box, by weight and where you live.",
-  "Your box stays open 7 days. Every lot you win in that time rides in it.",
+  "Everything you win in one auction rides in one box.",
   "Extra lots ride free until the box steps up a weight range; then you pay only the difference.",
   "One box per warehouse. Corunna and Gladwin each pack their own.",
   "Ground to the lower 48. No refunds once the label prints.",
-  "Ships 3 to 5 business days after your box closes and every lot is paid.",
+  "Ships 3 to 5 business days after the auction closes and every lot is paid.",
 ];
 
 

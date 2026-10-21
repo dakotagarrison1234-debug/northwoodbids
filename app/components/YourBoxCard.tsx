@@ -143,7 +143,7 @@ export function ShipNowControls({ box, reload, compact = false }: { box: Box; re
     return (
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className={`${compact ? "text-xs" : "text-[13px]"} text-[#8a7559] leading-snug min-w-0`}>
-          Open until {fmtDate(box.closesAt)}. Win more and it rides in this box.
+          Everything you win tonight rides in this box.
         </p>
         <button
           onClick={() => { setConfirming(true); setError(null); }}
@@ -157,7 +157,7 @@ export function ShipNowControls({ box, reload, compact = false }: { box: Box; re
   return (
     <div className="rounded-xl bg-[#f6ecda] border border-[#6c4d39]/30 px-3.5 py-3">
       <p className="text-sm text-[#241a12] font-semibold">Close this box today?</p>
-      <p className={`${compact ? "text-xs" : "text-[13px]"} text-[#6f5b46] mt-0.5`}>Wins after this start a new box. Ships 3 to 5 business days after your box closes and every lot is paid.</p>
+      <p className={`${compact ? "text-xs" : "text-[13px]"} text-[#6f5b46] mt-0.5`}>Ships 3 to 5 business days after the auction closes and every lot is paid.</p>
       {error && <p className={`${compact ? "text-xs" : "text-[13px]"} text-red-700 font-semibold mt-1.5`}>{error}</p>}
       <div className="flex gap-2 mt-2.5">
         <button

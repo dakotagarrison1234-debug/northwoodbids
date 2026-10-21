@@ -145,12 +145,11 @@ unlock the door remotely.
 Some lots can ship — those show a Pickup / Ship switch on the lot's page, with the
 price. Ship or Pickup is one setting: pick Ship once and every lot you win ships until
 you switch back to Pickup (on any lot's page or on the Shipping page). It's one flat
-price per box, by weight and where you live. Your box stays open 7 days, and every lot
-you win in that time rides in it. Extra lots ride free until the box steps up a weight
+price per box, by weight and where you live. Everything you win in one auction rides in
+one box. Extra lots ride free until the box steps up a weight
 range; then you pay only the difference. One box per warehouse: Corunna and Gladwin each
 pack their own, so wins at both go out as two boxes (two prices, two tracking numbers).
-We hold the box 7 days, or you can tap "Ship it now" on the Shipping page. It ships
-ground 3 to 5 business days after your box closes and every lot is paid. Lower 48 states
+It ships ground 3 to 5 business days after the auction closes and every lot is paid. Lower 48 states
 only. Shipping is billed with the win, and there are no refunds once the label prints.
 The Shipping page (northwoodbids.com/shipping) shows your open boxes, how much more
 rides free, what the next lot would add, every shipping charge and tracking. We text you

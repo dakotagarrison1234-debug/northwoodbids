@@ -6,6 +6,13 @@ operational wiring: what runs when, and what the money does.
 
 ## Decisions (final)
 
+- **Per-auction boxes (Oct 2026).** Auctions close Sunday evenings and every win
+  lands within minutes, so a box holds everything a buyer wins that night: it
+  stays open `BUNDLE_HOLD_HOURS` (3) after its first win, then the cron closes it
+  and it's in the packing queue by Monday. Two auctions closing the same evening
+  share a box. The day-6 "ships tomorrow" text is skipped while the hold is under
+  48 hours. The engine is unchanged — a longer hold is one constant.
+
 - **Both warehouses ship.** Owosso and Gladwin are each a shipping station
   (`PickupLocation.isShippingStation`, a plain per-location toggle — any number
   of locations can be one). A station packs and ships its own boxes; **nothing

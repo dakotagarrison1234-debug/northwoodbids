@@ -197,7 +197,7 @@ export default function HelpPage() {
               <p>One price per box, by weight and where you live. Extra lots ride free until the box steps up a weight range; then you pay only the difference. One box per warehouse: Corunna and Gladwin each pack their own. The full price table is on the <Link href="/shipping">Shipping</Link> page.</p>
             </Q>
             <Q q="When does my box ship?">
-              <p>Your box stays open 7 days so more wins can ride in it, or tap <strong>Ship it now</strong> on the Shipping page. It ships ground 3 to 5 business days after your box closes and every lot is paid. No refunds once the label prints.</p>
+              <p>Everything you win in one auction goes in one box. It ships ground 3 to 5 business days after the auction closes and every lot is paid. No refunds once the label prints.</p>
             </Q>
             <Q q="How long do I have to collect?">
               <p>Book your pickup as soon as you can after the win; we&apos;ll remind you by text. If life gets in the way, call us at <a href="tel:+18108181772">(810) 818-1772</a> and we&apos;ll work something out.</p>

@@ -6,6 +6,7 @@ import {
   bundlesDueForDay6Text,
   closeDueBundles,
   shippingStation,
+  BUNDLE_HOLD_HOURS,
 } from "@/lib/shipping/bundle";
 import { textBuyer, closedMessage } from "@/lib/shippingNotify";
 
@@ -34,9 +35,10 @@ export async function GET(request: NextRequest) {
   let closedTexted = 0;
   let advanced = 0;
 
-  // (a) Day-6 "ships tomorrow" text.
+  // (a) "Ships tomorrow" text — only meaningful when a box is held for days.
+  // With the short per-auction hold it would fire the moment a box opened.
   try {
-    const due = await bundlesDueForDay6Text(now);
+    const due = BUNDLE_HOLD_HOURS >= 48 ? await bundlesDueForDay6Text(now) : [];
     for (const b of due) {
       const lots = b.items.length;
       const lb = Math.max(1, Math.round(b.weightOz / 16));

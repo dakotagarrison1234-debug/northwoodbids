@@ -9,7 +9,7 @@ import {
  * The bundle engine (docs/shipping-research.md §9 items 3–5, 14–15).
  *
  * A bundle is one box per buyer. It opens at their first shipped win, takes every
- * further shipped win for 7 days, and the buyer only ever pays the DIFFERENCE
+ * further shipped win while it is open, and the buyer only ever pays the DIFFERENCE
  * between the old tier and the new one (usually $0). The delta is written on the
  * Item (`shipChargeCents`) the moment the lot closes, so every charge path —
  * auto-charge, retry, charge-owed — bills the same number without recomputing.
@@ -17,7 +17,14 @@ import {
  * Nothing in here charges a card. Nothing here talks to EasyPost.
  */
 
-export const BUNDLE_HOLD_DAYS = 7;
+/**
+ * How long a box stays open after its first win. Auctions close on Sunday
+ * evenings and every win lands within minutes, so a box is really "everything
+ * you won tonight": 3 hours is enough for two auctions closing the same evening
+ * to share a box, and the box is closed and in the packing queue by Monday
+ * morning. (Was 7 days when wins trickled in through the week.)
+ */
+export const BUNDLE_HOLD_HOURS = 3;
 
 export type ShipProfile = {
   name: string; street1: string; street2: string | null; city: string; state: string; zip: string; phone: string | null;
@@ -207,7 +214,7 @@ export async function joinBundleOnWin(itemId: string, clerkUserId: string, organ
       tx.shippingBundle.create({
         data: {
           organizationId, clerkUserId, status: "OPEN", locationId: station.id,
-          openedAt: now, closesAt: new Date(now.getTime() + BUNDLE_HOLD_DAYS * 86_400_000),
+          openedAt: now, closesAt: new Date(now.getTime() + BUNDLE_HOLD_HOURS * 3_600_000),
           shipName: profile.name, shipStreet1: profile.street1, shipStreet2: profile.street2, shipCity: profile.city,
           shipState: profile.state, shipZip: profile.zip, shipPhone: profile.phone, zone: profile.zone,
         },
@@ -297,7 +304,7 @@ export async function shipItNow(bundleId: string, clerkUserId: string): Promise<
   return r.count > 0;
 }
 
-/** Cron: close boxes whose 7 days are up. Returns the closed ids. */
+/** Cron: close boxes whose hold is up. Returns the closed ids. */
 export async function closeDueBundles(now: Date = new Date()): Promise<string[]> {
   const due = await prisma.shippingBundle.findMany({ where: { status: "OPEN", closesAt: { lte: now } }, select: { id: true } });
   if (due.length === 0) return [];

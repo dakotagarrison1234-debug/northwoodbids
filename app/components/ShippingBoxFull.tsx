@@ -77,7 +77,7 @@ function ShipNow({ box, reload, confirming, setConfirming }: { box: Box; reload:
   return (
     <div className="rounded-xl bg-[#f6ecda] border border-[#6c4d39]/30 px-3.5 py-3">
       <p className="text-sm text-[#241a12] font-semibold">Close this box today?</p>
-      <p className="text-[13px] text-[#6f5b46] mt-0.5">Wins after this start a new box. Ships 3 to 5 business days after every lot is paid.</p>
+      <p className="text-[13px] text-[#6f5b46] mt-0.5">Ships 3 to 5 business days after the auction closes and every lot is paid.</p>
       {error && <p className="text-[13px] text-red-700 font-semibold mt-1.5">{error}</p>}
       <div className="flex gap-2 mt-2.5">
         <button type="button" onClick={() => setConfirming(false)} disabled={busy} className="flex-1 rounded-xl border border-[#cdbda3] text-[#4a3a2b] font-bold text-sm py-2.5 min-h-[44px] hover:bg-white transition-colors disabled:opacity-50 nb-focus">
@@ -210,7 +210,7 @@ export function IconTiles() {
   const tiles = [
     { Icon: IcoCoin, title: "Pay once", sub: "per box" },
     { Icon: IcoBox, title: "Fill it", sub: "free" },
-    { Icon: IcoTruck, title: "Ships", sub: "in 7 days" },
+    { Icon: IcoTruck, title: "Ships", sub: "after the auction" },
   ];
   return (
     <div className="grid grid-cols-3 gap-3">
