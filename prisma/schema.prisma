@@ -739,6 +739,20 @@ model CreditLedger {
  * (same item re-listed, staff double-tapping) is served from here for free until the
  * entry ages out.
  */
+/**
+ * Spot names staff deleted from the Add-a-lot suggestion row. Lots keep their
+ * spot; the name just never comes back as a chip (any device, any auction).
+ */
+model DeletedSpot {
+  id             String   @id @default(cuid())
+  organizationId String
+  locationId     String
+  spot           String
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, locationId, spot])
+}
+
 model ProductLookupCache {
   id        String   @id @default(cuid())
   code      String   @unique // scanned code, uppercased (ASIN or FNSKU)

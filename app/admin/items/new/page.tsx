@@ -711,8 +711,14 @@ function NewItemForm() {
   // Press-and-hold on a spot chip asks before deleting it (no native confirm()).
   const [spotToHide, setSpotToHide] = useState<string | null>(null);
   const hideSpot = (spot: string) => {
+    // Gone on this device right away, and gone for good on the server (every device).
     setHiddenSpots((prev) => { const next = prev.includes(spot) ? prev : [...prev, spot]; writeHiddenSpots(next); return next; });
     setSpotToHide(null);
+    fetch("/api/admin/items/spots", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ locationId: formData.locationId, spot }),
+    }).catch(() => { /* device copy still hides it */ });
   };
   // Covers the form with a spinner while a scan/search auto-fills it, so the fields
   // and photos don't visibly pop in one at a time — then reveals the filled form.
@@ -999,6 +1005,12 @@ function NewItemForm() {
         if (spot) {
           try { localStorage.setItem(SPOT_KEY, JSON.stringify({ locationId: formData.locationId, spot })); } catch { /* ignore */ }
           setSpotOptions((prev) => (prev.includes(spot) ? prev : [spot, ...prev]));
+          // Typing a deleted spot again brings it back (the server un-deletes it on save).
+          setHiddenSpots((prev) => {
+            const next = prev.filter((h) => h.toLowerCase() !== spot.toLowerCase());
+            if (next.length !== prev.length) writeHiddenSpots(next);
+            return next;
+          });
         }
         if (addAnother) {
           setFormData((prev) => ({

@@ -32,9 +32,34 @@ export async function GET(req: NextRequest) {
     take: 300,
   });
 
-  const spots = [...new Set(rows.map((r) => (r.storageLocation ?? "").trim()).filter(Boolean))].sort((a, b) =>
-    a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" })
-  );
+  // Names staff deleted from the row never come back.
+  const deleted = await prisma.deletedSpot
+    .findMany({ where: { organizationId: orgId, locationId }, select: { spot: true } })
+    .catch(() => [] as { spot: string }[]);
+  const gone = new Set(deleted.map((d) => d.spot.toLowerCase()));
+
+  const spots = [...new Set(rows.map((r) => (r.storageLocation ?? "").trim()).filter(Boolean))]
+    .filter((s) => !gone.has(s.toLowerCase()))
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
 
   return NextResponse.json({ spots });
+}
+
+/** DELETE /api/admin/items/spots  { locationId, spot } — remove a spot from the suggestions for good. */
+export async function DELETE(req: NextRequest) {
+  const membership = await getUserOrg();
+  if (!membership) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const orgId = membership.organizationId;
+
+  const body = await req.json().catch(() => ({}));
+  const locationId = typeof body.locationId === "string" ? body.locationId : "";
+  const spot = typeof body.spot === "string" ? body.spot.trim() : "";
+  if (!locationId || !spot) return NextResponse.json({ error: "locationId and spot are required" }, { status: 400 });
+
+  await prisma.deletedSpot.upsert({
+    where: { organizationId_locationId_spot: { organizationId: orgId, locationId, spot } },
+    create: { organizationId: orgId, locationId, spot },
+    update: {},
+  });
+  return NextResponse.json({ success: true });
 }

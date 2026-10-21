@@ -150,6 +150,19 @@ export async function POST(request: NextRequest) {
       } : undefined,
     };
 
+    // Typing a spot that was deleted from the suggestion row brings it back.
+
+    if (storageLocation && locationId) {
+
+      await prisma.deletedSpot
+
+        .deleteMany({ where: { organizationId, locationId, spot: { equals: String(storageLocation).trim(), mode: "insensitive" } } })
+
+        .catch(() => { /* non-critical */ });
+
+    }
+
+
     const item = await prisma.item.create({ data: baseData });
     return NextResponse.json({ success: true, item }, { status: 201 });
   } catch (error) {
