@@ -461,7 +461,7 @@ export default async function HomePage() {
                 href="/play"
                 className="inline-flex items-center gap-1.5 mt-6 text-[13px] font-semibold text-[#cdbda3] hover:text-[#f0a35a] transition-colors"
               >
-                Warm up in the Auction Arcade
+                Play the Northwood Arcade
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <path d="M5 12h14M13 6l6 6-6 6" />
                 </svg>

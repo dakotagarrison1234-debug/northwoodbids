@@ -235,7 +235,7 @@ export default function UserMenu() {
           <SectionLabel>Account</SectionLabel>
           <NavLink href="/account" iconEl={<IcoUser />} label="Profile" sublabel="Name, phone, payment cards" onClick={close} active={on("/account")} />
           <NavLink href="/help" iconEl={<IcoHelp />} label="Help" sublabel="How bidding, pickup and shipping work" onClick={close} active={on("/help")} />
-          <NavLink href="/play" iconEl={<IcoTicket className="w-[18px] h-[18px]" />} label="Auction Arcade" sublabel="Going once, going twice" onClick={close} active={on("/play")} />
+          <NavLink href="/play" iconEl={<IcoTicket className="w-[18px] h-[18px]" />} label="Northwood Arcade" sublabel="Seven games, one scoreboard" onClick={close} active={on("/play")} />
 
           {(me?.orgId || me?.isSuperAdmin) && (
             <>

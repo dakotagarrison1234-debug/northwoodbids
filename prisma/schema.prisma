@@ -619,8 +619,10 @@ model GameScore {
   clerkUserId String
   // Start of the 30-day season this best belongs to. The leaderboard only shows
   // the CURRENT season, so scores "reset" every 30 days (old rows kept as history).
-  // One best per player per season.
+  // One best per player per season PER CABINET; the arcade total is the sum.
   seasonStart DateTime @default(now())
+  // Which cabinet (app/play/games/types.ts GameKey). "gavel" = the original game.
+  game        String   @default("gavel")
   name        String?
   avatarKey   String?
   bestScore   Int      @default(0)
@@ -628,7 +630,8 @@ model GameScore {
   updatedAt   DateTime @default(now()) @updatedAt
   createdAt   DateTime @default(now())
 
-  @@unique([clerkUserId, seasonStart])
+  @@unique([clerkUserId, seasonStart, game])
+  @@index([seasonStart, game, bestScore])
   @@index([seasonStart, bestScore])
 }
 
