@@ -246,6 +246,16 @@ and **Mark shipped** with a tracking number bought elsewhere.
 | `SHIP_FROM_NAME` `SHIP_FROM_STREET` `SHIP_FROM_CITY` `SHIP_FROM_STATE` `SHIP_FROM_ZIP` `SHIP_FROM_PHONE` | return address fallback when the box's warehouse address can't be parsed (one fallback for every station — fix the location address instead); `SHIP_FROM_PHONE` is also sent as the from-phone (UPS wants one) |
 | `GHL_CUSTOM_SMS_WEBHOOK` | buyer texts, events `shipping_shipped`, `shipping_out_for_delivery`, `shipping_delivered` (same payload shape as door codes — no new GHL workflow) |
 
+### Make shippable (setup tab)
+
+The fifth tab on the board. Pick ONE warehouse (no All); it lists every lot at
+that warehouse that is not shippable yet and not live (its auction is still
+DRAFT), grouped by auction, newest-opening last. S / M / L on each row flips the
+lot on at that preset (`/api/admin/shipping/setup` POST, which re-checks the
+same rules so a stale screen can't touch a live lot) and the row drops off; the
+green bar offers Undo. No custom size here — that lives on the lot's edit screen,
+as does anything in a live or closed auction.
+
 ### How the queue works
 
 Every box on `/admin/shipping` carries `location { id, name }` — the warehouse

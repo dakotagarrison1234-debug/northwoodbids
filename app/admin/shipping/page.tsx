@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { PageHeader, PageBody, Btn, Segmented, Empty, Notice } from "../ui";
 import BoxCard from "./BoxCard";
+import SetupTab from "./SetupTab";
 import { type Board, type Box, type BulkResult, type CardState, type PackInput, type RateView, fmtCents } from "./types";
 
 /**
@@ -29,9 +30,10 @@ const WAREHOUSE_KEY = "nb-ship-warehouse";
 // fill in as the run goes rather than all at the end.
 const BULK_CHUNK = 5;
 
-type Tab = "packing" | "closed" | "open" | "shipped";
-const TAB_LABEL: Record<Tab, string> = { packing: "To pack", closed: "Waiting", open: "Collecting", shipped: "Shipped" };
-const EMPTY: Record<Tab, string> = {
+type BoxTab = "packing" | "closed" | "open" | "shipped";
+type Tab = BoxTab | "setup";
+const TAB_LABEL: Record<Tab, string> = { packing: "To pack", closed: "Waiting", open: "Collecting", shipped: "Shipped", setup: "Make shippable" };
+const EMPTY: Record<BoxTab, string> = {
   packing: "Nothing to pack",
   closed: "No boxes waiting on lots",
   open: "No boxes collecting wins",
@@ -147,7 +149,8 @@ export default function AdminShippingPage() {
     locId === "all" ? (board?.packing.length ?? 0) : (board?.packing ?? []).filter((b) => b.location?.id === locId).length;
 
   const toPack = scoped(board?.packing ?? []).length;
-  const list: Box[] = board ? scoped(board[tab]) : [];
+  const boxTab: BoxTab = tab === "setup" ? "packing" : tab;
+  const list: Box[] = board ? scoped(board[boxTab]) : [];
   const configured = !!board?.configured && !board?.configMessage;
 
   // ── Bulk ────────────────────────────────────────────────────────────────
@@ -293,15 +296,19 @@ export default function AdminShippingPage() {
         <Segmented<Tab>
           value={tab}
           onChange={(t) => { setTab(t); setOpenId(null); }}
-          options={(["packing", "closed", "open", "shipped"] as Tab[]).map((t) => ({ value: t, label: TAB_LABEL[t], count: board ? scoped(board[t]).length : undefined }))}
+          options={(["packing", "closed", "open", "shipped", "setup"] as Tab[]).map((t) => ({ value: t, label: TAB_LABEL[t], count: t !== "setup" && board ? scoped(board[t]).length : undefined }))}
         />
 
+        {tab === "setup" ? (
+          <SetupTab />
+        ) : (
+        <>
         {bulkBar}
 
         {loading && !board ? (
           <div className="text-center py-20 text-[#8a7559]">Loading…</div>
         ) : list.length === 0 ? (
-          <Empty text={scope === "all" ? EMPTY[tab] : `${EMPTY[tab]} at ${stationList.find((s) => s.id === scope)?.name ?? "this warehouse"}`} />
+          <Empty text={scope === "all" ? EMPTY[boxTab] : `${EMPTY[boxTab]} at ${stationList.find((s) => s.id === scope)?.name ?? "this warehouse"}`} />
         ) : (
           <div className="space-y-3">
             {list.map((b) => (
@@ -327,6 +334,8 @@ export default function AdminShippingPage() {
               />
             ))}
           </div>
+        )}
+        </>
         )}
       </PageBody>
 
