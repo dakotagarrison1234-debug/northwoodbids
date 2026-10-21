@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Segmented, SearchBox, Empty, Notice, Btn, Panel } from "../ui";
+import { Segmented, SearchBox, Empty, Notice, Btn, Disclosure } from "../ui";
 
 /**
  * "Make shippable" — the Ship board's setup tab.
@@ -37,6 +37,10 @@ export default function SetupTab() {
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [last, setLast] = useState<{ item: SetupItem; auction: SetupAuction; preset: string } | null>(null);
+  // Auctions start collapsed; tap a header to reveal its lots. A search opens
+  // every auction with a match so results aren't hidden.
+  const [openIds, setOpenIds] = useState<Set<string>>(() => new Set());
+  const toggleAuction = (id: string) => setOpenIds((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
   const load = useCallback((locId: string) => {
     setLoading(true);
@@ -69,6 +73,7 @@ export default function SetupTab() {
   const pickWarehouse = (id: string) => {
     setWarehouse(id);
     setLast(null);
+    setOpenIds(new Set());
     try { localStorage.setItem(SETUP_WAREHOUSE_KEY, id); } catch { /* ignore */ }
   };
 
@@ -155,7 +160,17 @@ export default function SetupTab() {
         <Empty text="No lots match" sub="Try another word or clear the search." />
       ) : (
         shown.map((a) => (
-          <Panel key={a.id} title={a.title} sub={`Opens ${dateShort(a.startAt)} · ${a.items.length} lot${a.items.length !== 1 ? "s" : ""} not shippable`} flush>
+          <Disclosure
+            key={a.id}
+            open={term ? true : openIds.has(a.id)}
+            onToggle={() => toggleAuction(a.id)}
+            label={
+              <span className="flex items-baseline gap-2 flex-wrap">
+                <span className="text-[#241a12]">{a.title}</span>
+                <span className="text-[15px] font-semibold text-[#8a7559]">Opens {dateShort(a.startAt)} · {a.items.length} lot{a.items.length !== 1 ? "s" : ""}</span>
+              </span>
+            }
+          >
             <ul className="divide-y divide-[#f0e6d6]">
               {a.items.map((it) => (
                 <li key={it.id} className="flex items-center gap-3 px-4 py-2.5">
@@ -186,7 +201,7 @@ export default function SetupTab() {
                 </li>
               ))}
             </ul>
-          </Panel>
+          </Disclosure>
         ))
       )}
     </div>
