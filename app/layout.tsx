@@ -30,15 +30,16 @@ const bitter = Bitter({
 export const metadata: Metadata = {
   metadataBase: new URL("https://northwoodbids.com"),
   title: {
-    default: "Northwood Bids — Local Online Auctions in Owosso & Gladwin, MI",
+    default: "Northwood Bids — Local Online Auctions in Corunna & Gladwin, MI",
     template: "%s · Northwood Bids",
   },
   description:
     "Bid on brand-name overstock, returns & surplus at Northwood Bids — a local online auction " +
     "in mid-Michigan. Real-time bidding, set-your-max bids so you only pay what you want, and easy " +
-    "local pickup in Owosso and Gladwin. Free to join.",
+    "local pickup in Corunna and Gladwin. Free to join.",
   keywords: [
     "online auction Michigan",
+    "Corunna auction",
     "Owosso auction",
     "Gladwin auction",
     "liquidation auction Michigan",
@@ -77,17 +78,17 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "Northwood Bids",
     locale: "en_US",
-    title: "Northwood Bids — Local Online Auctions in Owosso & Gladwin, MI",
+    title: "Northwood Bids — Local Online Auctions in Corunna & Gladwin, MI",
     description:
       "Brand-name overstock, returns & surplus at auction prices. Bid live, pay what you want, " +
-      "pick up local in Owosso or Gladwin. Free to join.",
+      "pick up local in Corunna or Gladwin. Free to join.",
     url: "https://northwoodbids.com",
     images: [{ url: "/icon-512.png", width: 512, height: 512, alt: "Northwood Bids" }],
   },
   twitter: {
     card: "summary",
     title: "Northwood Bids — Local Online Auctions in Michigan",
-    description: "Brand-name overstock at auction prices. Bid live, pick up local in Owosso or Gladwin.",
+    description: "Brand-name overstock at auction prices. Bid live, pick up local in Corunna or Gladwin.",
     images: ["/icon-512.png"],
   },
   icons: {

@@ -382,7 +382,7 @@ export default function AccountPage() {
         <Section
           icon={<IcoTruck className="w-[18px] h-[18px]" />}
           title="Pickup location"
-          hint="Owosso or Gladwin. Wins from the other warehouse ride over for free."
+          hint="Corunna or Gladwin. Wins from the other warehouse ride over for free."
         >
           <Link
             href="/pickup"

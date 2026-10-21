@@ -60,7 +60,7 @@ export default async function SignUpPage({ searchParams }: { searchParams: Promi
 
         <p className="text-[#8a7559] text-xs mt-4 text-center flex items-center justify-center gap-1.5">
           <IcoShield className="w-3.5 h-3.5" />
-          Secured by Stripe &amp; Clerk · Owosso &amp; Gladwin, MI
+          Secured by Stripe &amp; Clerk · Corunna &amp; Gladwin, MI
         </p>
       </div>
     </div>

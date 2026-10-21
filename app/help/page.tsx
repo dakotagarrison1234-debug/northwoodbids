@@ -7,7 +7,7 @@ import {
 export const metadata = {
   title: "Help & FAQ | Northwood Bids",
   description:
-    "How bidding works at Northwood Bids: $2 starts, max bids, buyer's premium and tax, pickup in Owosso and Gladwin, free transfers, shipping, Bid Bucks and when your card is charged.",
+    "How bidding works at Northwood Bids: $2 starts, max bids, buyer's premium and tax, pickup in Corunna and Gladwin, free transfers, shipping, Bid Bucks and when your card is charged.",
 };
 
 /* ── Building blocks ──────────────────────────────────────────────────────── */
@@ -82,7 +82,7 @@ export default function HelpPage() {
             Straight answers, no fine-print runaround.
           </h1>
           <p className="text-[#f6ecda]/80 text-base sm:text-lg mt-3 max-w-xl leading-relaxed">
-            How bidding works, what you actually pay, and how to get your winnings home to Owosso or Gladwin.
+            How bidding works, what you actually pay, and how to get your winnings home to Corunna or Gladwin.
           </p>
           <div className="mt-6 flex flex-wrap gap-2">
             {TOPICS.map((t) => (
@@ -104,7 +104,7 @@ export default function HelpPage() {
           {[
             { Icon: IcoGavel, k: "Every lot starts at $2", v: "Brand-name overstock, no reserves. Where it lands is up to the room." },
             { Icon: IcoShield, k: "Charged only if you win", v: "A card on file is required to bid. It's untouched unless the hammer falls your way." },
-            { Icon: IcoTruck, k: "Pick up in Owosso or Gladwin", v: "Win anywhere, collect at your spot. Transfers between the two are free." },
+            { Icon: IcoTruck, k: "Pick up in Corunna or Gladwin", v: "Win anywhere, collect at your spot. Transfers between the two are free." },
           ].map((c) => (
             <div key={c.k} className="bg-white border border-[#e3d6bf] rounded-2xl p-4 shadow-[0_14px_30px_-20px_rgba(36,26,18,0.45)]">
               <c.Icon className="w-5 h-5 text-[#c47b3e] mb-2" />
@@ -185,7 +185,7 @@ export default function HelpPage() {
           {/* ── Pickup ── */}
           <Topic id="pickup" Icon={IcoTruck} title="Pickup & transfers" blurb="Two spots, one appointment, no waiting on a phone call.">
             <Q q="Where do I pick up what I've won?" open>
-              <p>At either of our two locations: <strong>Owosso</strong> or <strong>Gladwin</strong>. Pick your usual spot on the <Link href="/pickup">Pickup</Link> page and book a time that suits you. Everything you win before that appointment rides along on it automatically.</p>
+              <p>At either of our two locations: <strong>Corunna</strong> or <strong>Gladwin</strong>. Pick your usual spot on the <Link href="/pickup">Pickup</Link> page and book a time that suits you. Everything you win before that appointment rides along on it automatically.</p>
             </Q>
             <Q q="What if a lot is stored at the other location?">
               <p>We move it to your spot for free. Transfers usually take about five to six days, and we text you the moment it lands so you can book your pickup. A lot marked <strong>Pickup here only</strong> stays where it is; plan to collect those in person.</p>
@@ -194,7 +194,7 @@ export default function HelpPage() {
               <p>Some lots, yes. A lot that can ship shows a <strong>Pickup / Ship</strong> switch on its page. Pick <strong>Ship</strong> once (on any lot or the <Link href="/shipping">Shipping</Link> page) and it sticks: every lot you win ships until you switch back to Pickup. A lot that can&apos;t ship is pickup either way. Lower 48 states only.</p>
             </Q>
             <Q q="What does shipping cost?">
-              <p>One price per box, by weight and where you live. Extra lots ride free until the box steps up a weight range; then you pay only the difference. One box per warehouse: Owosso and Gladwin each pack their own. The full price table is on the <Link href="/shipping">Shipping</Link> page.</p>
+              <p>One price per box, by weight and where you live. Extra lots ride free until the box steps up a weight range; then you pay only the difference. One box per warehouse: Corunna and Gladwin each pack their own. The full price table is on the <Link href="/shipping">Shipping</Link> page.</p>
             </Q>
             <Q q="When does my box ship?">
               <p>Your box stays open 7 days so more wins can ride in it, or tap <strong>Ship it now</strong> on the Shipping page. It ships ground 3 to 5 business days after your box closes and every lot is paid. No refunds once the label prints.</p>

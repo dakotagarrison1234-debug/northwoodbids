@@ -136,7 +136,7 @@ export default function HomeHero({
           className="nb-rise text-[#6f5b46] text-sm sm:text-base font-medium mb-7 max-w-md mx-auto leading-snug"
           style={{ animationDelay: "200ms" }}
         >
-          Name-brand overstock, every lot from $2. Bid online, pick up in Owosso or Gladwin.
+          Name-brand overstock, every lot from $2. Bid online, pick up in Corunna or Gladwin.
         </p>
 
         {/* stat trio */}

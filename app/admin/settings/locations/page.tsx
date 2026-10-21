@@ -166,7 +166,7 @@ export default function LocationsSettingsPage() {
         {showAddLoc && (
           <Panel title="Add location">
             <div className="space-y-3 px-4 sm:px-5 py-4">
-              <Input value={newLoc.name} onChange={(e) => setNewLoc({ ...newLoc, name: e.target.value })} placeholder="Name (e.g. Owosso)" autoFocus />
+              <Input value={newLoc.name} onChange={(e) => setNewLoc({ ...newLoc, name: e.target.value })} placeholder="Name (e.g. Corunna)" autoFocus />
               <Input value={newLoc.address} onChange={(e) => setNewLoc({ ...newLoc, address: e.target.value })} placeholder="Address (optional)" />
               <textarea
                 value={newLoc.instructions}
@@ -334,7 +334,7 @@ function LocationCard({
           <div className="min-w-0 flex-1 space-y-2">
             <div>
               <label className={labelCls}>Name</label>
-              <Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Owosso" className="font-bold" />
+              <Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Corunna" className="font-bold" />
             </div>
             <div>
               <label className={labelCls}>Address</label>

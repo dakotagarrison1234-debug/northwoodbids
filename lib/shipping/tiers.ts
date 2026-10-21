@@ -216,7 +216,7 @@ export const HOW_IT_WORKS = [
   "One flat price per box, by weight and where you live.",
   "Your box stays open 7 days. Every lot you win in that time rides in it.",
   "Extra lots ride free until the box steps up a weight range; then you pay only the difference.",
-  "One box per warehouse. Owosso and Gladwin each pack their own.",
+  "One box per warehouse. Corunna and Gladwin each pack their own.",
   "Ground to the lower 48. No refunds once the label prints.",
   "Ships 3 to 5 business days after your box closes and every lot is paid.",
 ];

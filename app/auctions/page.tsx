@@ -68,7 +68,7 @@ export default async function AuctionsPage() {
                 Live Auctions
               </h1>
               <p className="text-[#6f5b46] text-sm sm:text-base mt-2 max-w-md">
-                Every open auction, soonest to close first. $2 starts, pickup in Owosso or Gladwin.
+                Every open auction, soonest to close first. $2 starts, pickup in Corunna or Gladwin.
               </p>
             </div>
           </div>

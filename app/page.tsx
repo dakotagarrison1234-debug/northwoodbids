@@ -59,7 +59,7 @@ const STEPS = [
     n: "03",
     Icon: IcoTruck,
     title: "Pick up",
-    desc: "Book a time in Owosso or Gladwin. Won it at the other barn? We move it for free.",
+    desc: "Book a time in Corunna or Gladwin. Won it at the other barn? We move it for free.",
   },
 ];
 
@@ -67,7 +67,7 @@ const WHY = [
   { Icon: IcoNew, title: "99% brand new", desc: "Name-brand overstock, still in the box. Not a garage sale." },
   { Icon: IcoCheck, title: "Straight conditions", desc: "We open the box and tell you what's in it. No mystery lots." },
   { Icon: IcoCoin, title: "$2 starts", desc: "Every lot begins at two bucks. The crowd sets the price." },
-  { Icon: IcoTruck, title: "Free barn-to-barn", desc: "Pick up in Owosso or Gladwin. We transfer between them at no charge." },
+  { Icon: IcoTruck, title: "Free barn-to-barn", desc: "Pick up in Corunna or Gladwin. We transfer between them at no charge." },
   { Icon: IcoLock, title: "Charged only if you win", desc: "Card on file, nothing taken until the gavel drops your way." },
   { Icon: IcoGift, title: "Bid Bucks", desc: "Invite a friend, earn $5 in Bid Bucks toward your own bill." },
 ];

@@ -227,7 +227,7 @@ export default function UserMenu() {
           <SectionLabel>Yours</SectionLabel>
           <NavLink href="/dashboard" iconEl={<IcoTrophy className="w-[18px] h-[18px]" />} label="My Bids" sublabel="Standing, wins and invoices" onClick={close} active={on("/dashboard", "/my-bids", "/invoice")} accent />
           <NavLink href="/watchlist" iconEl={<IcoStar className="w-[18px] h-[18px]" filled />} label="Watchlist" sublabel="Lots you have your eye on" onClick={close} active={on("/watchlist")} />
-          <NavLink href="/pickup" iconEl={<IcoTruck className="w-[18px] h-[18px]" />} label="Pickup" sublabel="Owosso or Gladwin, your call" onClick={close} active={on("/pickup")} />
+          <NavLink href="/pickup" iconEl={<IcoTruck className="w-[18px] h-[18px]" />} label="Pickup" sublabel="Corunna or Gladwin, your call" onClick={close} active={on("/pickup")} />
           <NavLink href="/shipping" iconEl={<IcoBox className="w-[18px] h-[18px]" />} label="Shipping" sublabel="Boxes, room left, tracking" onClick={close} active={on("/shipping")} />
           <NavLink href="/refer" iconEl={<IcoGift className="w-[18px] h-[18px]" />} label="Bid Bucks" sublabel="Invite a friend, earn $5 tickets" onClick={close} active={on("/refer")} />
           <NavLink href="/giveaways" iconEl={<IcoTicket className="w-[18px] h-[18px]" />} label="Giveaways" sublabel="Free prizes, every bid's a ticket" onClick={close} active={on("/giveaways")} />

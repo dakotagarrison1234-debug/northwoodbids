@@ -298,7 +298,7 @@ function InvoiceInner() {
               </div>
 
               <p className="text-xs text-[#8a7559] mt-8 pt-4 border-t border-[#e3d6bf]">
-                Thanks for bidding with Northwood. This receipt covers items paid in full for this auction. Pickup in Owosso or Gladwin.
+                Thanks for bidding with Northwood. This receipt covers items paid in full for this auction. Pickup in Corunna or Gladwin.
               </p>
             </>
           ) : null}

@@ -1303,7 +1303,7 @@ export default function ItemPage() {
               <p className="text-[11px] text-[#8a7559] mt-2.5 leading-snug">
                 {item.transferable === false
                   ? "This one stays put. Plan to collect it at the location above."
-                  : "Win it anywhere, collect it at Owosso or Gladwin. Transfers ride along free, usually within a week."}
+                  : "Win it anywhere, collect it at Corunna or Gladwin. Transfers ride along free, usually within a week."}
               </p>
             </div>
           )}

@@ -640,7 +640,7 @@ export default function PickupPage() {
     <div className="flex items-end justify-between gap-3 mb-6">
       <div className="min-w-0">
         <div className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-[#a85f28]">
-          <PineMark className="w-3.5 h-3.5" /> Owosso &amp; Gladwin
+          <PineMark className="w-3.5 h-3.5" /> Corunna &amp; Gladwin
         </div>
         <h1 className="font-display text-3xl sm:text-4xl font-black leading-[0.95] tracking-tight mt-1">Pickup</h1>
       </div>
