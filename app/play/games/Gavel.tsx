@@ -575,8 +575,10 @@ const Game = forwardRef<GameHandle, GameProps>(function Game({ onEnd, onHud, sfx
   return (
     <div
       ref={rootRef}
-      onPointerDown={(e) => { e.preventDefault(); if (!e.isPrimary || e.button !== 0) return; slam(); }}
-      className={`gavel-root absolute inset-0 overflow-hidden bg-[#140d08] text-[#f1e7d5] touch-none select-none cursor-pointer ${frenzy ? "frenzy" : ""}`}
+      // Only grab touches while a run is live, so taps before START or after the
+      // last strike fall through to the cabinet's buttons.
+      onPointerDown={(e) => { if (!live) return; e.preventDefault(); if (!e.isPrimary || e.button !== 0) return; slam(); }}
+      className={`gavel-root absolute inset-0 overflow-hidden bg-[#140d08] text-[#f1e7d5] touch-none select-none ${live ? "cursor-pointer" : ""} ${frenzy ? "frenzy" : ""}`}
     >
       {/* bunting / pennants */}
       <div className="bunting" aria-hidden="true">
@@ -591,16 +593,13 @@ const Game = forwardRef<GameHandle, GameProps>(function Game({ onEnd, onHud, sfx
       {/* particle layer (above stage, below nothing interactive) */}
       <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 w-full h-full z-30" aria-hidden="true" />
 
-      <div className={`absolute inset-0 z-20 flex flex-col items-center justify-center px-4 py-3 sm:px-6 ${shake === "hit" ? "shake-hit" : shake === "miss" ? "shake-miss" : ""}`}>
-        <div className="w-full max-w-xl flex flex-col gap-2 sm:gap-3">
-          {/* HUD */}
-          <div className={`grid grid-cols-3 items-center gap-2 min-h-[52px] ${showHud ? "" : "invisible"}`}>
-            <div className="text-left">
-              <div className="text-[13px] uppercase tracking-wider text-[#d8c19a] font-bold">Score</div>
-              <div ref={scoreElRef} className="font-display text-2xl sm:text-3xl font-black text-[#bfe08a] leading-none tabular-nums">0</div>
-            </div>
-            {/* multiplier + frenzy, the star of the HUD */}
-            <div className="flex flex-col items-center">
+      <div className={`absolute inset-0 z-20 flex flex-col px-4 pt-10 sm:pt-12 sm:px-6 pb-[max(20px,env(safe-area-inset-bottom))] ${shake === "hit" ? "shake-hit" : shake === "miss" ? "shake-miss" : ""}`}>
+        <div className="w-full max-w-xl mx-auto flex-1 min-h-0 flex flex-col">
+          {/* HUD: multiplier left, lives right. (The score lives in the cabinet's top bar.) */}
+          <div className={`flex items-center justify-between gap-2 min-h-[52px] ${showHud ? "" : "invisible"}`}>
+            <span ref={scoreElRef} className="hidden" aria-hidden="true">0</span>
+            {/* multiplier + frenzy */}
+            <div className="flex flex-col items-start">
               <div
                 key={multiplier}
                 className={`font-display font-black leading-none ${multiplier > 1 ? "text-3xl sm:text-4xl mult-pop" : "text-lg"}`}
@@ -626,7 +625,7 @@ const Game = forwardRef<GameHandle, GameProps>(function Game({ onEnd, onHud, sfx
           </div>
 
           {/* Lot on the block: pedestal card with entrance anim */}
-          <div key={lotKey} className={`lot-card relative rounded-2xl p-3 sm:p-4 flex items-center gap-3 sm:gap-4 min-h-[84px] ${golden ? "golden" : ""}`}>
+          <div key={lotKey} className={`lot-card relative mt-3 rounded-2xl p-3 sm:p-4 flex items-center gap-3 sm:gap-4 min-h-[84px] ${golden ? "golden" : ""}`}>
             <div className="lot-spot" aria-hidden="true" />
             {golden && (
               <span className="golden-badge absolute -top-2.5 right-3 z-10 text-[13px] font-display font-black text-[#5a3a00] px-2.5 py-0.5 rounded-full">
@@ -643,9 +642,12 @@ const Game = forwardRef<GameHandle, GameProps>(function Game({ onEnd, onHud, sfx
             </div>
           </div>
 
+          {/* Middle: the meter, centred in whatever height is left */}
+          <div className="flex-1 min-h-0 flex flex-col justify-center py-3">
+          <p className="text-center text-[15px] font-bold text-[#e9d9bd] mb-2.5">Tap when the needle is in the green</p>
           {/* Swing meter */}
           <div className="relative">
-            <div ref={meterElRef} className="meter relative h-14 rounded-2xl overflow-hidden">
+            <div ref={meterElRef} className="meter relative h-20 sm:h-24 rounded-2xl overflow-hidden">
               {/* SOLD zone */}
               <div className="zone absolute top-0 bottom-0" style={{ left: `${zone.start}%`, width: `${zone.width}%` }}>
                 <span className="zone-label">SOLD</span>
@@ -658,15 +660,12 @@ const Game = forwardRef<GameHandle, GameProps>(function Game({ onEnd, onHud, sfx
                 <div className="marker" />
               </div>
             </div>
-            {/* tick guides */}
-            <div className="flex justify-between text-[13px] text-[#a8997d] font-semibold px-1 mt-1 uppercase tracking-wide">
-              <span>Going once</span><span>twice</span><span>SOLD!</span>
-            </div>
           </div>
 
           {/* flash stamp */}
-          <div className="relative h-9">
+          <div className="relative h-12 mt-2">
             {flash && <div key={flash.id} className={`stamp ${flash.tone}`}>{flash.text}</div>}
+          </div>
           </div>
 
           {/* SLAM button (visual; the whole screen is the hit target) while live,
@@ -692,12 +691,12 @@ const Game = forwardRef<GameHandle, GameProps>(function Game({ onEnd, onHud, sfx
                 role="button"
                 aria-label="Slam the gavel"
                 aria-disabled={!live}
-                className={`slam-btn w-full font-display font-black text-2xl py-4 sm:py-5 rounded-2xl text-white select-none flex items-center justify-center gap-3 ${live ? "" : "opacity-60"}`}
+                className={`slam-btn w-full font-display font-black text-[28px] py-6 rounded-2xl text-white select-none flex items-center justify-center gap-3 ${live ? "" : "opacity-60"}`}
               >
                 <span key={gavelSlam} className="gavel-icon"><GavelSvg /></span>
                 SLAM!
               </div>
-              <p className="text-center text-[#8a7559] text-[13px] mt-2">tap anywhere or press Space</p>
+              <p className="text-center text-[#8a7559] text-[13px] mt-2.5">Tap anywhere on the screen</p>
             </div>
           )}
         </div>
@@ -797,7 +796,7 @@ const Game = forwardRef<GameHandle, GameProps>(function Game({ onEnd, onHud, sfx
         .zone-label {
           font-family: var(--font-bitter), serif;
           font-weight: 900;
-          font-size: 11px;
+          font-size: 13px;
           letter-spacing: 2px;
           color: #eaffd0;
           text-shadow: 0 1px 3px rgba(0,0,0,0.6);
@@ -814,8 +813,8 @@ const Game = forwardRef<GameHandle, GameProps>(function Game({ onEnd, onHud, sfx
         .marker {
           position: absolute;
           top: -3px; bottom: -3px;
-          left: -3px;
-          width: 6px;
+          left: -5px;
+          width: 10px;
           border-radius: 4px;
           background: linear-gradient(180deg, #fffdf7, #e8b563);
           box-shadow: 0 0 12px rgba(255,221,150,0.9), 0 0 2px #000;

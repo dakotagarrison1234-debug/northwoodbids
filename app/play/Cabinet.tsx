@@ -167,15 +167,17 @@ export default function Cabinet({
       {/* Screen */}
       <div className="relative flex-1 min-h-0">
         <div className="absolute inset-0 sm:inset-3 sm:rounded-2xl overflow-hidden bg-black sm:ring-8 sm:ring-[#1a1420] sm:shadow-[inset_0_0_60px_rgba(0,0,0,0.8)]">
-          <div className="absolute inset-0">
+          {/* The game gets its own stacking context (isolate) so nothing inside it,
+              whatever z-index it uses, can rise above the START / GAME OVER cards. */}
+          <div className="absolute inset-0 isolate z-0">
             <Game key={meta.key} ref={gameRef} onEnd={onEnd} onHud={setHud} sfx={sfx} lots={lots} />
           </div>
 
           {/* Scanline sheen */}
-          <div className="pointer-events-none absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 3px)" }} />
+          <div className="pointer-events-none absolute inset-0 z-[5] opacity-[0.07]" style={{ backgroundImage: "repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 3px)" }} />
 
           {phase === "ready" && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-[2px] p-6">
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/75 backdrop-blur-[2px] p-6">
               <div className="w-full max-w-sm text-center">
                 <div className="font-display text-[34px] sm:text-[44px] font-black uppercase tracking-wider leading-none" style={{ color: meta.accent, textShadow: `0 0 22px ${meta.accent}aa` }}>{meta.title}</div>
                 <p className="text-[15px] text-white/80 mt-3 leading-snug">{meta.howTo}</p>
@@ -193,7 +195,7 @@ export default function Cabinet({
           )}
 
           {phase === "over" && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-[2px] p-6">
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/80 backdrop-blur-[2px] p-6">
               <div className="w-full max-w-sm text-center">
                 <div className="text-[13px] font-black uppercase tracking-[0.2em] text-white/60">Game over</div>
                 <div className="font-display text-[56px] sm:text-[72px] font-black text-white tabular-nums leading-none mt-2">{fmt(finalRaw)}</div>
