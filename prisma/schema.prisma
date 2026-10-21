@@ -172,6 +172,8 @@ enum AuctionStatus {
   // ── Shipping (docs/shipping-research.md §9) ──
   // Opt-in per lot. Preset gives packed weight + box dims; Custom = exact values.
   shipEligible        Boolean            @default(false)
+  /// Staff tapped X on Make shippable: pickup only, never list it there again.
+  shipPickupOnly      Boolean            @default(false)
   shipPreset          ShipPreset?
   shipWeightOz        Int?
   shipLengthIn        Decimal?           @db.Decimal(6, 2)

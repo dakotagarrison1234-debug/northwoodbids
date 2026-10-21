@@ -89,7 +89,7 @@ export default function SetupTab() {
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error || "Couldn't update that lot.");
-      if (preset === "OFF") {
+      if (preset === "OFF" || preset === "UNSKIP") {
         // Undo: put it back where it was.
         setData((d) => d && ({
           ...d,
@@ -140,8 +140,11 @@ export default function SetupTab() {
       {last && (
         <Notice tone="green">
           <span className="flex flex-wrap items-center gap-3">
-            <span><strong className="font-bold">{last.item.title}</strong> is now shippable ({last.preset === "SMALL" ? "Small" : last.preset === "MEDIUM" ? "Medium" : "Large"}).</span>
-            <Btn size="sm" variant="outline" onClick={() => setPreset(last.item, last.auction, "OFF")} disabled={!!busy}>Undo</Btn>
+            <span>
+              <strong className="font-bold">{last.item.title}</strong>
+              {last.preset === "SKIP" ? " is pickup only." : ` is now shippable (${last.preset === "SMALL" ? "Small" : last.preset === "MEDIUM" ? "Medium" : "Large"}).`}
+            </span>
+            <Btn size="sm" variant="outline" onClick={() => setPreset(last.item, last.auction, last.preset === "SKIP" ? "UNSKIP" : "OFF")} disabled={!!busy}>Undo</Btn>
           </span>
         </Notice>
       )}
@@ -197,6 +200,16 @@ export default function SetupTab() {
                         {s.label}
                       </button>
                     ))}
+                    <button
+                      type="button"
+                      title="Pickup only — take it off this list"
+                      aria-label="Pickup only"
+                      disabled={busy === it.id}
+                      onClick={() => setPreset(it, a, "SKIP")}
+                      className="w-11 h-11 rounded-xl border-2 border-[#e6dac6] bg-white text-[#a1321f] hover:bg-[#fbeeec] hover:border-[#a1321f] transition-colors disabled:opacity-50 inline-flex items-center justify-center"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M4 4l8 8M12 4l-8 8" /></svg>
+                    </button>
                   </div>
                 </li>
               ))}

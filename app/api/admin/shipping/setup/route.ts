@@ -19,7 +19,8 @@ import { requireShipAdmin, forbidden } from "../_lib";
  *   rules server-side so a stale screen can't touch a lot that went live.
  */
 
-const PRESET_OK = new Set(["SMALL", "MEDIUM", "LARGE", "OFF"]);
+// SKIP = the X: pickup only, drop it from the list for good. UNSKIP undoes that.
+const PRESET_OK = new Set(["SMALL", "MEDIUM", "LARGE", "OFF", "SKIP", "UNSKIP"]);
 
 export async function GET(req: NextRequest) {
   const membership = await requireShipAdmin();
@@ -42,6 +43,7 @@ export async function GET(req: NextRequest) {
       organizationId: orgId,
       locationId,
       shipEligible: false,
+      shipPickupOnly: false,
       status: { in: ["DRAFT", "ACTIVE"] },
       auction: { status: "DRAFT", archived: false },
     },
@@ -85,9 +87,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "That lot is live or sold — change shipping from the lot's edit screen." }, { status: 409 });
   }
 
+  if (preset === "SKIP" || preset === "UNSKIP") {
+    await prisma.item.update({ where: { id: itemId }, data: { shipPickupOnly: preset === "SKIP" } });
+    return NextResponse.json({ success: true, itemId, preset });
+  }
   const ship = preset === "OFF" ? parseShipInput({ shipEligible: false }) : parseShipInput({ shipEligible: true, shipPreset: preset });
   if ("error" in ship) return NextResponse.json({ error: ship.error }, { status: 400 });
 
-  await prisma.item.update({ where: { id: itemId }, data: ship.fields });
+  await prisma.item.update({ where: { id: itemId }, data: { ...ship.fields, shipPickupOnly: false } });
   return NextResponse.json({ success: true, itemId, preset });
 }
