@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { PineRidge, BranchDivider, PineMark } from "@/app/components/Illustrations";
 import {
-  IcoGavel, IcoBolt, IcoCoin, IcoTruck, IcoGift, IcoShield, IcoUsers, IcoMegaphone,
+  IcoGavel, IcoBolt, IcoCoin, IcoTruck, IcoGift, IcoShield, IcoUsers, IcoMegaphone, IcoBox,
 } from "@/app/components/BidIcons";
+import SizeBadge from "@/app/components/SizeBadge";
+import { SIZE_STYLE, SIZE_HINT } from "@/lib/shipping/sizes";
 
 export const metadata = {
   title: "Help & FAQ | Northwood Bids",
@@ -190,20 +192,33 @@ export default function HelpPage() {
             <Q q="What if a lot is stored at the other location?">
               <p>We move it to your spot for free. Transfers usually take about five to six days, and we text you the moment it lands so you can book your pickup. A lot marked <strong>Pickup here only</strong> stays where it is; plan to collect those in person.</p>
             </Q>
-            <Q q="Can you ship it?">
-              <p>Some lots, yes. A lot that can ship shows a <strong>Pickup / Ship</strong> switch on its page. Pick <strong>Ship</strong> once (on any lot or the <Link href="/shipping">Shipping</Link> page) and it sticks: every lot you win ships until you switch back to Pickup. A lot that can&apos;t ship is pickup either way. Lower 48 states only.</p>
-            </Q>
-            <Q q="What does shipping cost?">
-              <p>One price per box, by weight and where you live. Extra lots ride free until the box steps up a weight range; then you pay only the difference. One box per warehouse: Corunna and Gladwin each pack their own. The full price table is on the <Link href="/shipping">Shipping</Link> page.</p>
-            </Q>
-            <Q q="When does my box ship?">
-              <p>Everything you win in one auction goes in one box. It ships ground 3 to 5 business days after the auction closes and every lot is paid. No refunds once the label prints.</p>
-            </Q>
             <Q q="How long do I have to collect?">
               <p>Book your pickup as soon as you can after the win; we&apos;ll remind you by text. If life gets in the way, call us at <a href="tel:+18108181772">(810) 818-1772</a> and we&apos;ll work something out.</p>
             </Q>
             <Q q="What's a door code?">
               <p>Some of our pickup doors have keypad locks. When you book a pickup at one of those spots, we text you a door code (it&apos;s on your <Link href="/pickup">Pickup</Link> page too). It works all day on your pickup date on every pickup door: touch the keypad to wake it, enter your code, and you&apos;re in. Press the Schlage button on your way out to lock up. Reschedule and the code moves with you; it stops working once your order is collected.</p>
+            </Q>
+          </Topic>
+
+          {/* ── Shipping ── */}
+          <Topic id="shipping" Icon={IcoBox} title="Shipping" blurb="Some lots can ship. One box per auction, one price.">
+            <Q q="Which lots can ship?" open>
+              <p>Look for the parcel badge on the lot&apos;s photo. The letter is the <strong>box</strong> it ships in (not the item&apos;s size); no badge means pickup only.</p>
+              <ul className="mt-3 space-y-2">
+                {(["S", "M", "L"] as const).map((k) => (
+                  <li key={k} className="flex items-center gap-3">
+                    <SizeBadge size={k} px={28} />
+                    <span><strong>{SIZE_STYLE[k].label} box</strong> <span className="text-[#6f5b46]">{SIZE_HINT[k]}</span></span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3">A lot that can ship shows a <strong>Pickup / Ship</strong> switch on its page. Pick <strong>Ship</strong> once (on any lot or the <Link href="/shipping">Shipping</Link> page) and it sticks: every lot you win ships until you switch back to Pickup. Lower 48 states only.</p>
+            </Q>
+            <Q q="What does shipping cost?">
+              <p>One price per box, by weight and where you live, from $5.49 in Michigan. Everything you win in one auction rides in one box: extra lots ride free until the box steps up a weight range, then you pay only the difference. One box per warehouse: Corunna and Gladwin each pack their own. The full price table is on the <Link href="/shipping">Shipping</Link> page.</p>
+            </Q>
+            <Q q="When does my box ship?">
+              <p>It ships ground 3 to 5 business days after the auction closes and every lot is paid. We text you the tracking number. No refunds once the label prints.</p>
             </Q>
           </Topic>
 

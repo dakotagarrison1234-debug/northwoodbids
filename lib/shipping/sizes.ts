@@ -16,6 +16,14 @@ export const SIZE_STYLE: Record<SizeKey, { letter: string; label: string; bg: st
   C: { letter: "C", label: "Custom", bg: "#241a12", fg: "#ffffff" },
 };
 
+/** The plain-English weight hint for each size, for intros and help. */
+export const SIZE_HINT: Record<SizeKey, string> = {
+  S: "under 8 oz",
+  M: "about 1 lb",
+  L: "2 to 5 lb",
+  C: "custom size",
+};
+
 /** An empty FreeBlock: sand with muted text. */
 export const SIZE_EMPTY = { bg: "#efe3d0", fg: "#a3927b" };
 

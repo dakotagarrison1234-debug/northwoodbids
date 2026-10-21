@@ -8,6 +8,7 @@ import LocalDate from "@/app/components/LocalDate";
 import PusherRefresh from "@/app/components/PusherRefresh";
 import NotFoundCard from "@/app/components/NotFoundCard";
 import AuctionItemsView, { type ViewItem } from "@/app/components/AuctionItemsView";
+import ShippingIntro from "@/app/components/ShippingIntro";
 import { sizeKeyOf } from "@/lib/shipping/sizes";
 import { PineMark, WoodenCrate, PineRidge, BranchDivider } from "@/app/components/Illustrations";
 import { IcoLock, IcoBolt, IcoMagnifier, BidCritter } from "@/app/components/BidIcons";
@@ -409,6 +410,10 @@ export default async function AuctionPage({ params }: Props) {
 
       {/* Item grid */}
       <section className="px-3 sm:px-8 py-4 sm:py-8 max-w-6xl mx-auto">
+        {/* Shipping explainer, only when this auction has lots that ship. */}
+        {visibleItems.length > 0 && viewItems.some((v) => v.shipSize) && (
+          <div className="mb-3 sm:mb-4"><ShippingIntro count={viewItems.filter((v) => v.shipSize).length} /></div>
+        )}
         {visibleItems.length === 0 ? (
           <div className="text-center py-16 px-6 rounded-2xl border border-dashed border-[#cdbda3] bg-[#fbf4e6]/70">
             <div className="nb-float flex justify-center mb-4">
