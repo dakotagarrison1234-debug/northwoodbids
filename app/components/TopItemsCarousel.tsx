@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import ItemCardTimer from "@/app/components/ItemCardTimer";
 import SectionHeader from "@/app/components/SectionHeader";
 import QuickBidModal from "@/app/components/QuickBidModal";
 
@@ -18,115 +17,218 @@ export type TopItem = {
 
 const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 
+/** px per second each row drifts. */
+const SPEED = 38;
+const EDGE_FADE = "linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%)";
+
 /**
- * Slowly self-scrolling, swipeable showcase of the hottest live lots. Auto-advances
- * with requestAnimationFrame; pauses while the person is touching/hovering so a
- * swipe isn't fought. The list is duplicated so the loop is seamless (when it passes
- * the halfway point we jump back by half — invisible since the halves are identical).
+ * "Heating Up": the hottest live lots on two full-width rows that drift
+ * constantly in opposite directions (top row left, bottom row right). Each row
+ * is its list repeated, moved with a transform and wrapped by exactly one
+ * copy's width, so the loop never shows a seam or an empty end. A finger or mouse can drag a
+ * row (with a little glide on release); a drag never opens the card it started
+ * on. Hovering with a mouse pauses a row. Rows sleep while off screen, and
+ * under reduced motion they only move when dragged. Fewer than 8 lots: one row.
  */
 export default function TopItemsCarousel({ items }: { items: TopItem[] }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const paused = useRef(false);
+  const [quick, setQuick] = useState<TopItem | null>(null);
+  const rows = items.length >= 8 ? [items.filter((_, i) => i % 2 === 0), items.filter((_, i) => i % 2 === 1)] : [items];
+
+  return (
+    <section className="pt-3 sm:pt-8">
+      {quick && <QuickBidModal itemId={quick.id} href={quick.href} onClose={() => setQuick(null)} />}
+      <div className="max-w-6xl mx-auto px-6 sm:px-8">
+        <SectionHeader compact variant="hot" eyebrow="Most bid-on right now" title="Heating Up" tagline="The lots everyone's fighting over." />
+      </div>
+      <div className="space-y-2">
+        {rows.map((row, r) => (
+          <DriftRow key={r} items={row} dir={r === 0 ? -1 : 1} onBid={setQuick} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function DriftRow({ items, dir, onBid }: { items: TopItem[]; dir: -1 | 1; onBid: (it: TopItem) => void }) {
+  const rowRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  // Per-frame state lives in a ref, never React state.
+  const s = useRef({ x: 0, period: 0, vel: 0, hover: false, visible: true, drag: null as null | { id: number; startX: number; startOff: number; lastX: number; lastT: number; moved: boolean }, suppressClick: false });
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
+    const row = rowRef.current;
+    const track = trackRef.current;
+    if (!row || !track) return;
+    const st = s.current;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const measure = () => {
+      // One copy's width = distance from the first card to the first card of the second copy.
+      const kids = track.children;
+      const n = items.length;
+      st.period = n >= 1 && kids.length > n ? (kids[n] as HTMLElement).offsetLeft - (kids[0] as HTMLElement).offsetLeft : 0;
+    };
+    const wrap = () => {
+      if (st.period <= 0) return;
+      while (st.x <= -st.period) st.x += st.period;
+      while (st.x > 0) st.x -= st.period;
+    };
+    const paint = () => { track.style.transform = `translate3d(${st.x.toFixed(2)}px,0,0)`; };
+
+    measure();
+    // Rows moving right start half a copy in so there are cards on the left from frame one.
+    if (dir === 1) st.x = -st.period / 2;
+    paint();
+
+    const ro = new ResizeObserver(() => { measure(); wrap(); paint(); });
+    ro.observe(track);
+    const io = new IntersectionObserver(([e]) => { st.visible = e.isIntersecting; }, { rootMargin: "100px" });
+    io.observe(row);
+
     let raf = 0;
     let last = performance.now();
-    const SPEED = 45; // px per second
     const tick = (t: number) => {
-      const dt = Math.min((t - last) / 1000, 0.05);
+      const dt = Math.min(t - last, 50);
       last = t;
-      if (!paused.current && el.scrollWidth > el.clientWidth + 4) {
-        el.scrollLeft += SPEED * dt;
-        const half = el.scrollWidth / 2;
-        if (el.scrollLeft >= half) el.scrollLeft -= half;
+      if (st.visible && !st.drag) {
+        if (Math.abs(st.vel) > 0.01) {
+          st.x += st.vel * dt; // glide after a fling
+          st.vel *= Math.pow(0.94, dt / 16.7);
+        } else {
+          st.vel = 0;
+          if (!reduce && !st.hover) st.x += (dir * SPEED * dt) / 1000;
+        }
+        wrap();
+        paint();
       }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, []);
 
-  const pause = () => { paused.current = true; };
-  const resume = () => { paused.current = false; };
-  const resumeSoon = () => { setTimeout(() => { paused.current = false; }, 1800); };
+    const onDown = (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      st.vel = 0;
+      st.suppressClick = false; // a touch drag fires no click, so never carry this over to the next tap
+      st.drag = { id: e.pointerId, startX: e.clientX, startOff: st.x, lastX: e.clientX, lastT: e.timeStamp, moved: false };
+    };
+    const onMove = (e: PointerEvent) => {
+      const d = st.drag;
+      if (!d || d.id !== e.pointerId) return;
+      const dx = e.clientX - d.startX;
+      if (!d.moved && Math.abs(dx) > 6) {
+        d.moved = true;
+        try { row.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+      }
+      if (!d.moved) return;
+      const dt = Math.max(e.timeStamp - d.lastT, 1);
+      st.vel = (e.clientX - d.lastX) / dt;
+      d.lastX = e.clientX;
+      d.lastT = e.timeStamp;
+      st.x = d.startOff + dx;
+      wrap();
+      paint();
+    };
+    const onUp = (e: PointerEvent) => {
+      const d = st.drag;
+      if (!d || d.id !== e.pointerId) return;
+      if (d.moved) {
+        st.suppressClick = true;
+        // Keep a fling's speed (capped); a slow release just resumes drifting.
+        st.vel = Math.max(-2.5, Math.min(2.5, st.vel));
+        if (e.timeStamp - d.lastT > 80) st.vel = 0;
+      }
+      st.drag = null;
+      last = performance.now();
+    };
+    const onCancel = () => { st.drag = null; st.vel = 0; };
+    const onEnter = (e: PointerEvent) => { if (e.pointerType === "mouse") st.hover = true; };
+    const onLeave = (e: PointerEvent) => { if (e.pointerType === "mouse") st.hover = false; };
+    // A drag must not open the card it started on.
+    const onClickCapture = (e: MouseEvent) => {
+      if (st.suppressClick) { e.preventDefault(); e.stopPropagation(); st.suppressClick = false; }
+    };
+    const onDragStart = (e: DragEvent) => e.preventDefault();
 
-  const loop = [...items, ...items];
-  const [quick, setQuick] = useState<TopItem | null>(null);
+    row.addEventListener("pointerdown", onDown);
+    row.addEventListener("pointermove", onMove);
+    row.addEventListener("pointerup", onUp);
+    row.addEventListener("pointercancel", onCancel);
+    row.addEventListener("pointerenter", onEnter);
+    row.addEventListener("pointerleave", onLeave);
+    row.addEventListener("click", onClickCapture, true);
+    row.addEventListener("dragstart", onDragStart);
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      io.disconnect();
+      row.removeEventListener("pointerdown", onDown);
+      row.removeEventListener("pointermove", onMove);
+      row.removeEventListener("pointerup", onUp);
+      row.removeEventListener("pointercancel", onCancel);
+      row.removeEventListener("pointerenter", onEnter);
+      row.removeEventListener("pointerleave", onLeave);
+      row.removeEventListener("click", onClickCapture, true);
+      row.removeEventListener("dragstart", onDragStart);
+    };
+  }, [dir, items.length]);
 
+  // Enough copies that the strip always overfills even a very wide screen while
+  // it slides by one copy (~156px a card): 3 copies for 10 lots, more for fewer.
+  const reps = Math.max(2, Math.ceil(2600 / Math.max(1, items.length * 156)) + 1);
+  const loop = Array.from({ length: reps }, () => items).flat();
   return (
-    <section className="max-w-6xl mx-auto px-6 sm:px-8 pt-3 sm:pt-8">
-      {quick && <QuickBidModal itemId={quick.id} href={quick.href} onClose={() => setQuick(null)} />}
-      <SectionHeader
-        compact
-        variant="hot"
-        eyebrow="Most bid-on right now"
-        title="Heating Up"
-        tagline="The lots everyone's fighting over."
-      />
-      <div
-        ref={ref}
-        onMouseEnter={pause}
-        onMouseLeave={resume}
-        onTouchStart={pause}
-        onTouchEnd={resumeSoon}
-        className="flex gap-3 overflow-x-auto pt-2 -mt-2 pb-3 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {loop.map((it, i) => {
-          const off =
-            it.retailValue > 0 && it.currentBid < it.retailValue
-              ? Math.round((1 - it.currentBid / it.retailValue) * 100)
-              : 0;
-          return (
-            <Link
-              key={`${it.id}-${i}`}
-              href={it.href}
-              className="group nb-lift shrink-0 w-40 sm:w-44 bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden hover:border-[#c47b3e]/50"
-            >
-              <div className="relative aspect-square bg-[#faf5ea] overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={it.photo} alt="" loading="lazy" className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300" />
-                <ItemCardTimer itemId={it.id} endAt={it.endsAt} />
-                {off >= 20 && (
-                  <span className="absolute bottom-2 right-2 z-10 rounded-md bg-[#c47b3e] text-white text-[10px] font-black px-1.5 py-0.5 shadow-sm tabular-nums">
-                    {off}% off
-                  </span>
-                )}
-              </div>
-              <div className="p-2.5">
-                <div className="text-sm font-semibold text-[#241a12] leading-tight line-clamp-2 min-h-[2.5em] group-hover:text-[#6c4d39] transition-colors">
-                  {it.title}
-                </div>
-                <div className="mt-2 flex items-end justify-between gap-1">
-                  <div className="leading-none">
-                    <div className="text-[9px] font-bold uppercase tracking-wider text-[#8a7559]">Current bid</div>
-                    <div className="mt-0.5 font-display text-lg font-black text-[#4a7c59] tabular-nums">{money(it.currentBid)}</div>
-                  </div>
-                  {it.bidCount > 0 && (
-                    <span className="text-[10px] font-black text-[#a85f28] bg-[#f7e4c9] px-1.5 py-0.5 rounded-full whitespace-nowrap tabular-nums">
-                      {it.bidCount} bid{it.bidCount !== 1 ? "s" : ""}
-                    </span>
-                  )}
-                </div>
-                {it.retailValue > 0 && (
-                  <div className="text-[11px] text-[#8a7559] mt-1 tabular-nums">
-                    Retail <span className="line-through">{money(it.retailValue)}</span>
-                  </div>
-                )}
-                {/* Quick bid: opens the pop-up right here; the rest of the card still links out. */}
-                <div
-                  role="button"
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setQuick(it); }}
-                  className="mt-2 block w-full text-center rounded-xl py-1.5 text-xs font-bold bg-[#6c4d39] text-white hover:bg-[#563e2c] transition-colors"
-                >
-                  Bid now
-                </div>
-              </div>
-            </Link>
-          );
-        })}
+    <div
+      ref={rowRef}
+      className="relative w-full overflow-hidden py-1.5 select-none"
+      style={{ touchAction: "pan-y", WebkitMaskImage: EDGE_FADE, maskImage: EDGE_FADE }}
+    >
+      <div ref={trackRef} className="flex gap-2 w-max will-change-transform">
+        {loop.map((it, i) => (
+          <HotCard key={`${it.id}-${i}`} it={it} onBid={onBid} />
+        ))}
       </div>
-    </section>
+    </div>
+  );
+}
+
+function HotCard({ it, onBid }: { it: TopItem; onBid: (it: TopItem) => void }) {
+  return (
+    <Link
+      href={it.href}
+      draggable={false}
+      className="group nb-lift shrink-0 w-[148px] sm:w-[160px] flex flex-col bg-white border border-[#e3d6bf] hover:border-[#c47b3e]/50 rounded-2xl p-1.5 shadow-[0_1px_2px_rgba(36,26,18,0.05)]"
+    >
+      <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-white ring-1 ring-black/[0.05]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={it.photo}
+          alt=""
+          loading="lazy"
+          draggable={false}
+          className="w-full h-full object-contain p-1.5 group-hover:scale-[1.06] transition-transform duration-500 ease-out"
+        />
+        {it.bidCount > 0 && (
+          <span className="absolute bottom-1.5 right-1.5 rounded-full bg-[#241a12]/80 text-white text-[10px] font-bold px-1.5 py-0.5 tabular-nums backdrop-blur">
+            {it.bidCount} bid{it.bidCount !== 1 ? "s" : ""}
+          </span>
+        )}
+      </div>
+      <div className="px-1 pt-1.5 pb-0.5 text-[12.5px] font-semibold text-[#241a12] leading-snug line-clamp-2 min-h-[2.6em] group-hover:text-[#6c4d39] transition-colors">
+        {it.title}
+      </div>
+      <div className="px-1 pb-0.5 flex items-center justify-between gap-1.5">
+        <span className="font-display text-[15px] font-black text-[#4a7c59] tabular-nums leading-none">{money(it.currentBid)}</span>
+        {/* Quick bid: opens the pop-up right here; the rest of the card links out. */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onBid(it); }}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onBid(it); } }}
+          className="shrink-0 inline-flex items-center justify-center min-h-[30px] px-3.5 rounded-full text-[11px] font-bold bg-[#6c4d39] hover:bg-[#563e2c] text-white shadow-[0_6px_14px_-6px_rgba(108,77,57,0.6)] transition-colors"
+        >
+          Bid
+        </div>
+      </div>
+    </Link>
   );
 }
