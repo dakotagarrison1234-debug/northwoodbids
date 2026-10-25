@@ -540,3 +540,4 @@ html[data-hw] .cv-card:hover { border-color: rgba(232, 120, 40, 0.7); box-shadow
 /* Little things. */
 html[data-hw] ::selection { background: #e8782a; color: #fff; }
 html[data-hw] { scrollbar-color: #c9541a #e9dcc6; }
+html[data-hw] .nb-hw-text .nb-hw-halo { color: #3d2c1d; text-shadow: 0 0 10px rgba(241, 231, 213, 1), 0 0 18px rgba(241, 231, 213, 0.9); }

@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import AuctionCard from "./components/AuctionCard";
 import SiteFooter from "./components/SiteFooter";
 import PusherRefresh from "./components/PusherRefresh";
@@ -218,6 +218,34 @@ export default async function HomePage() {
   const fresh = latestLots.filter((l) => !carouselIds.has(l.id));
   const tickerLots = (fresh.length >= 4 ? fresh : latestLots).slice(0, 14);
 
+  // Signed in: the hero becomes a welcome-back board (their name, lots they're
+  // winning, lots they've been outbid on, live auctions) instead of the pitch.
+  // "Winning" = they hold the top active bid on a lot that's still live.
+  let welcome: { name: string; winning: number; outbid: number } | null = null;
+  if (userId) {
+    const [profile, myLive] = await Promise.all([
+      prisma.bidderProfile.findUnique({ where: { clerkUserId: userId }, select: { name: true } }).catch(() => null),
+      prisma.item
+        .findMany({
+          where: {
+            status: "ACTIVE",
+            auction: { status: { in: ["OPEN", "CLOSING"] }, archived: false },
+            bids: { some: { clerkUserId: userId } },
+          },
+          select: { bids: { where: { status: "ACTIVE" }, orderBy: { amount: "desc" }, take: 1, select: { clerkUserId: true } } },
+          take: 1000,
+        })
+        .catch(() => [] as { bids: { clerkUserId: string | null }[] }[]),
+    ]);
+    const winning = myLive.filter((i) => i.bids[0]?.clerkUserId === userId).length;
+    let name = profile?.name?.trim() || "";
+    if (!name) {
+      const u = await currentUser().catch(() => null);
+      name = u?.username || u?.firstName || "";
+    }
+    welcome = { name: name || "bidder", winning, outbid: myLive.length - winning };
+  }
+
   // Local-business structured data — one entry per physical pickup location, straight
   // from the DB, so the schema always matches reality. Powers local/map ranking.
   const seoLocations = await prisma.pickupLocation
@@ -237,6 +265,7 @@ export default async function HomePage() {
           bestDeal={bestDeal}
           signedIn={!!userId}
           season={heroSeason(now)}
+          welcome={welcome}
         />
       </section>
 

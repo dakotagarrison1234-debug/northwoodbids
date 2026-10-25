@@ -42,6 +42,7 @@ export default function HomeHero({
   bestDeal,
   signedIn,
   season = "summer",
+  welcome = null,
 }: {
   liveAuctions: number;
   liveLots: number;
@@ -49,6 +50,8 @@ export default function HomeHero({
   bestDeal: number;
   signedIn: boolean;
   season?: HeroSeason;
+  /** Signed in: swap the pitch for a welcome-back board. */
+  welcome?: { name: string; winning: number; outbid: number } | null;
 }) {
   // Only mount the looping video when the visitor hasn't asked for reduced
   // motion — they get the still poster frame instead (and no video download).
@@ -114,6 +117,9 @@ export default function HomeHero({
       </div>
 
       {/* ── Foreground ── */}
+      {welcome ? (
+        <WelcomeBack welcome={welcome} liveAuctions={liveAuctions} halloween={halloween} />
+      ) : (
       <div className={`relative max-w-3xl mx-auto px-5 sm:px-8 pt-10 sm:pt-16 pb-28 sm:pb-36 text-center ${halloween ? "nb-hw-text" : ""}`}>
         {/* live pill */}
         {hasLive && (
@@ -187,6 +193,65 @@ export default function HomeHero({
             </span>
           </a>
         </div>
+      </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Signed-in hero: "Welcome back, <name>", three tappable cards (winning,
+ * outbid, live auctions) and a My Bids button. Nothing else, so the backdrop
+ * stays open around it.
+ */
+function WelcomeBack({
+  welcome,
+  liveAuctions,
+  halloween,
+}: {
+  welcome: { name: string; winning: number; outbid: number };
+  liveAuctions: number;
+  halloween: boolean;
+}) {
+  const cards = [
+    { href: "/dashboard?tab=winning", value: welcome.winning, label: "Winning", tone: "text-[#2f5d3a]", ring: "hover:border-[#4a7c59]/60" },
+    { href: "/dashboard?tab=losing", value: welcome.outbid, label: "Outbid", tone: welcome.outbid > 0 ? "text-[#b42318]" : "text-[#241a12]", ring: "hover:border-[#b42318]/50" },
+    { href: "#live-auctions", value: liveAuctions, label: liveAuctions === 1 ? "Live auction" : "Live auctions", tone: "text-[#241a12]", ring: "hover:border-[#6c4d39]/50" },
+  ];
+  return (
+    <div className={`relative max-w-3xl mx-auto px-5 sm:px-8 pt-12 sm:pt-20 pb-28 sm:pb-40 text-center ${halloween ? "nb-hw-text" : ""}`}>
+      <p className="nb-rise nb-hw-halo text-[#6f5b46] text-base sm:text-lg font-semibold" style={{ animationDelay: "40ms" }}>
+        Welcome back,
+      </p>
+      <h1
+        className="nb-rise font-display text-[2.6rem] leading-[0.98] sm:text-7xl font-black tracking-tight text-[#241a12] mt-1 mb-8 sm:mb-10 break-words"
+        style={{ animationDelay: "120ms" }}
+      >
+        {welcome.name}
+      </h1>
+
+      <div className="nb-rise grid grid-cols-3 gap-2 sm:gap-4 max-w-xl mx-auto mb-6 sm:mb-8" style={{ animationDelay: "220ms" }}>
+        {cards.map((c) => (
+          <Link
+            key={c.label}
+            href={c.href}
+            className={`rounded-2xl bg-[#fbf4e6]/85 border border-[#6c4d39]/15 backdrop-blur-sm py-3.5 sm:py-5 px-1.5 shadow-sm transition-colors ${c.ring}`}
+          >
+            <div className={`font-display font-black text-3xl sm:text-5xl leading-none tabular-nums ${c.tone}`}>
+              <CountUp value={c.value} />
+            </div>
+            <div className="mt-1.5 text-[11px] sm:text-[13px] font-bold uppercase tracking-wide text-[#8a7559]">{c.label}</div>
+          </Link>
+        ))}
+      </div>
+
+      <div className="nb-rise flex justify-center" style={{ animationDelay: "300ms" }}>
+        <Link
+          href="/dashboard"
+          className="w-full sm:w-auto bg-[#6c4d39] hover:bg-[#563e2c] active:scale-[0.99] text-white font-black px-10 py-3.5 rounded-xl text-base transition-all shadow-[0_8px_24px_-6px_rgba(108,77,57,0.65)] text-center"
+        >
+          My Bids
+        </Link>
       </div>
     </div>
   );
