@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 
@@ -64,8 +64,10 @@ export const HW = {
    *  ghost-sheet deer and cow, a goofy muskie leaping, a raccoon witch, bats, jack-o-lanterns. */
   heroEnd: `${CDN}/hf_20261025_162851_e6ad5c53-8b22-4bcd-85f9-1f69e5e517dd_min.webp`,
   /** The lake turning Halloween, start frame to end frame, 10 s, no audio, 1080p, ~31 MB
-   *  (desktop on a good connection only; phones get the two stills). */
+   *  (desktop on a good connection). */
   heroVideo: `${CDN}/hf_20261025_163029_2ce21f9b-f2ae-49da-a092-c1aee5cb7321.mp4`,
+  /** The same transformation re-encoded for phones: 960x540 H.264, 10 s, ~1.8 MB. */
+  heroVideoMobile: "https://d2ol7oe51mr4n9.cloudfront.net/user_3IByyQncVzaXbwKjQO3GCQGqPd7/e3ba0d4b-db8f-4cb4-bad7-cbc53d2a5184.mp4",
   /** Wide pumpkin-patch banner: fox, bunny witch, ghost-sheet bear cub, owl (calm on the left). */
   banner: `${CDN}/hf_20261025_162909_ba4504d7-ea0f-4dde-bb72-d9860eca556a.png`,
   /** Transparent cutouts. */
@@ -75,9 +77,6 @@ export const HW = {
   cow: `${CDN}/hf_20261025_163034_b9b2c18c-b9a4-43ad-8a2c-637ae60f72c4.png`,
 };
 
-/** A next/image-optimized URL, for CSS backgrounds (w must be a configured size). */
-const optimized = (src: string, w: number) => `/_next/image?url=${encodeURIComponent(src)}&w=${w}&q=75`;
-
 /* ── Hero ─────────────────────────────────────────────────────────────────── */
 
 const WIDE = "(min-width: 768px)";
@@ -86,38 +85,52 @@ function subscribeWide(cb: () => void) {
   mq.addEventListener("change", cb);
   return () => mq.removeEventListener("change", cb);
 }
-/** Big screen on a decent connection: worth the full-size transformation video. */
-function getRich() {
-  if (!window.matchMedia(WIDE).matches) return false;
+/** Which transformation video this device gets: the 1080p file on a big screen,
+ *  the 1.8 MB copy on phones, none when the user asked to save data or the link is 2g. */
+type HeroMode = "pending" | "full" | "lite" | "none";
+function getHeroMode(): HeroMode {
   const c = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
-  if (c?.saveData) return false;
-  if (c?.effectiveType && /(^|-)2g$|^3g$/.test(c.effectiveType)) return false;
-  return true;
+  if (c?.saveData) return "none";
+  if (c?.effectiveType && /(^|-)2g$/.test(c.effectiveType)) return "none";
+  if (c?.effectiveType === "3g") return "lite";
+  return window.matchMedia(WIDE).matches ? "full" : "lite";
 }
 
 /**
  * Replaces the hero backdrop for the week. The usual lake paints first, then it
  * dresses up for Halloween (ghost-sheet deer and cow, the muskie leaps, bats,
  * a raccoon witch, jack-o-lanterns) and stays that way:
- *  - desktop on a good connection: the transformation video plays once and
- *    freezes on its last frame;
- *  - phones / slow links: the same two frames with a soft, sparkly fade;
+ *  - desktop: the 1080p transformation video plays once and freezes on its last frame;
+ *  - phones: the same video, 960p (~1.8 MB), same behaviour;
+ *  - save-data / 2g, or autoplay refused (iOS Low Power Mode): the two frames with a soft fade;
  *  - reduced motion: the Halloween frame, still.
  */
 export function HeroHalloween({ motionOk }: { motionOk: boolean }) {
   const on = useHalloween();
-  const rich = useSyncExternalStore(subscribeWide, getRich, () => false);
+  const mode = useSyncExternalStore<HeroMode>(subscribeWide, getHeroMode, () => "pending");
   const [videoFailed, setVideoFailed] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const src = mode === "full" ? HW.heroVideo : mode === "lite" ? HW.heroVideoMobile : "";
+  const useVideo = on && motionOk && !videoFailed && !!src;
+  // Autoplay can be refused (iOS Low Power Mode) and leaves the poster up forever:
+  // fall back to the crossfade so the lake still turns.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!useVideo || !v) return;
+    const p = v.play();
+    if (p) p.catch((e: unknown) => { if ((e as { name?: string })?.name === "NotAllowedError") setVideoFailed(true); });
+  }, [useVideo, src]);
   if (!on) return null;
-  const useVideo = motionOk && rich && !videoFailed && !!HW.heroVideo;
   return (
     <div aria-hidden="true" className="absolute inset-0 overflow-hidden bg-[#f1e7d5]">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={HW.heroStart} alt="" className="absolute inset-0 w-full h-full object-cover object-[50%_100%]" fetchPriority="high" decoding="async" />
-      {useVideo ? (
+      {mode === "pending" && motionOk ? null : useVideo ? (
         <video
+          ref={videoRef}
+          key={src}
           className="nb-hero-video absolute inset-0 w-full h-full object-cover object-[50%_100%]"
-          src={HW.heroVideo}
+          src={src}
           poster={HW.heroStart}
           autoPlay
           muted
