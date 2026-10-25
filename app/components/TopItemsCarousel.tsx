@@ -56,13 +56,14 @@ export default function TopItemsCarousel({ items }: { items: TopItem[] }) {
   const [quick, setQuick] = useState<TopItem | null>(null);
 
   return (
-    <section className="max-w-6xl mx-auto px-6 sm:px-8 pt-8">
+    <section className="max-w-6xl mx-auto px-6 sm:px-8 pt-3 sm:pt-8">
       {quick && <QuickBidModal itemId={quick.id} href={quick.href} onClose={() => setQuick(null)} />}
       <SectionHeader
+        compact
         variant="hot"
         eyebrow="Most bid-on right now"
         title="Heating Up"
-        tagline="The lots everyone's fighting over across every live auction."
+        tagline="The lots everyone's fighting over."
       />
       <div
         ref={ref}

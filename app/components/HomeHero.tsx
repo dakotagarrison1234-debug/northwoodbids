@@ -161,10 +161,7 @@ export default function HomeHero({
         </div>
       )}
       {welcome ? (
-        band ? (
-          // Phones in Halloween week: name + My Bids are on the video header.
-          <div className="h-5" />
-        ) : (
+        band ? null /* phones in Halloween week: name + My Bids are on the video header */ : (
           <WelcomeBack welcome={welcome} liveAuctions={liveAuctions} halloween={halloween} />
         )
       ) : (

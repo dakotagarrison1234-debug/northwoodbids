@@ -78,22 +78,22 @@ export default function SectionHeader({
   return (
     <div
       className={`nb-section-head relative rounded-2xl bg-gradient-to-r ${t.tint} pl-5 pr-3 sm:pr-4 flex items-center justify-between gap-3 ${
-        compact ? "py-3 mb-4" : "py-3.5 sm:py-4 mb-6"
+        compact ? "py-2.5 mb-3" : "py-3.5 sm:py-4 mb-6"
       }`}
     >
-      <span className={`absolute left-0 top-3 bottom-3 w-1.5 rounded-full ${t.bar}`} aria-hidden />
+      <span className={`absolute left-0 ${compact ? "top-2.5 bottom-2.5" : "top-3 bottom-3"} w-1.5 rounded-full ${t.bar}`} aria-hidden />
       <div className="min-w-0 pl-1">
         <div className={`inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.18em] ${t.eyebrow}`}>
           <Mark variant={variant} /> {eyebrow}
         </div>
         <h2
           className={`font-display font-black leading-[0.95] tracking-tight text-[#241a12] mt-1 ${
-            compact ? "text-2xl sm:text-3xl" : "text-3xl sm:text-4xl"
+            compact ? "text-[1.6rem] sm:text-3xl" : "text-3xl sm:text-4xl"
           }`}
         >
           {title}
         </h2>
-        {tagline && <p className="text-sm text-[#6f5b46] mt-1.5 leading-snug">{tagline}</p>}
+        {tagline && <p className={`text-[#6f5b46] leading-snug ${compact ? "text-[13px] mt-1" : "text-sm mt-1.5"}`}>{tagline}</p>}
       </div>
       {action && <div className="shrink-0">{action}</div>}
       {count != null && count > 0 && (
