@@ -121,15 +121,42 @@ export default function HomeHero({
       </div>
 
       {/* ── Foreground ── */}
+      {/* Phones in Halloween week: an edge-to-edge 16:9 video header (nothing cropped),
+          headline on its sky, everything else below it. */}
       {band && (
-        <div className="relative px-3 pt-3">
-          <HeroHalloween motionOk={motionOk} band />
+        <div className={`relative w-full aspect-video overflow-hidden ${halloween ? "nb-hw-text" : ""}`}>
+          <HeroHalloween motionOk={motionOk} />
+          <div aria-hidden className="absolute inset-x-0 bottom-0 h-5 bg-gradient-to-t from-[#f1e7d5] to-transparent" />
+          <div className="absolute inset-x-0 top-0 px-4 pt-[3.5%] text-center">
+            {welcome ? (
+              <>
+                <p className="nb-rise nb-hw-halo text-[#3d2c1d] text-[13px] font-bold" style={{ animationDelay: "40ms" }}>
+                  Welcome back,
+                </p>
+                <h1
+                  className="nb-rise font-display text-[clamp(1.7rem,8.5vw,2.75rem)] leading-[1.05] font-black tracking-tight text-[#241a12] truncate py-0.5"
+                  style={{ animationDelay: "120ms" }}
+                >
+                  {welcome.name}
+                </h1>
+              </>
+            ) : (
+              <h1
+                className="nb-rise font-display text-[clamp(1.75rem,8.6vw,2.75rem)] leading-[0.98] font-black tracking-tight text-[#241a12]"
+                style={{ animationDelay: "120ms" }}
+              >
+                Going once.
+                <br />
+                <span className="nb-gradient-text">Going twice.</span>
+              </h1>
+            )}
+          </div>
         </div>
       )}
       {welcome ? (
         <WelcomeBack welcome={welcome} liveAuctions={liveAuctions} halloween={halloween} band={band} />
       ) : (
-      <div className={`relative max-w-3xl mx-auto px-5 sm:px-8 ${band ? "pt-6" : "pt-10"} sm:pt-16 ${band ? "pb-16" : "pb-28"} sm:pb-36 text-center ${halloween ? "nb-hw-text" : ""}`}>
+      <div className={`relative max-w-3xl mx-auto px-5 sm:px-8 ${band ? "pt-4 pb-14" : "pt-10 pb-28 sm:pt-16"} sm:pb-36 text-center ${halloween ? "nb-hw-text" : ""}`}>
         {/* live pill */}
         {hasLive && (
           <a
@@ -145,15 +172,15 @@ export default function HomeHero({
           </a>
         )}
 
-        {/* headline */}
-        <h1
+        {/* headline (on phones in Halloween week it sits on the video header instead) */}
+        {!band && <h1
           className="nb-rise font-display text-[3rem] leading-[0.94] sm:text-7xl font-black tracking-tight text-[#241a12] mb-3"
           style={{ animationDelay: "120ms" }}
         >
           Going once.
           <br />
           <span className="nb-gradient-text">Going twice.</span>
-        </h1>
+        </h1>}
         <p
           className="nb-rise text-[#6f5b46] text-sm sm:text-base font-medium mb-7 max-w-md mx-auto leading-snug"
           style={{ animationDelay: "200ms" }}
@@ -230,7 +257,9 @@ function WelcomeBack({
     { href: "#live-auctions", value: liveAuctions, label: liveAuctions === 1 ? "Live auction" : "Live auctions", tone: "text-[#241a12]", ring: "hover:border-[#6c4d39]/50" },
   ];
   return (
-    <div className={`relative max-w-3xl mx-auto px-5 sm:px-8 ${band ? "pt-6 pb-16" : "pt-12 pb-28"} sm:pt-20 sm:pb-40 text-center ${halloween ? "nb-hw-text" : ""}`}>
+    <div className={`relative max-w-3xl mx-auto px-5 sm:px-8 ${band ? "pt-4 pb-12" : "pt-12 pb-28 sm:pt-20"} sm:pb-40 text-center ${halloween ? "nb-hw-text" : ""}`}>
+      {/* Phones in Halloween week: the name is on the video header; just My Bids here. */}
+      {!band && <>
       <p className="nb-rise nb-hw-halo text-[#6f5b46] text-base sm:text-lg font-semibold" style={{ animationDelay: "40ms" }}>
         Welcome back,
       </p>
@@ -255,8 +284,9 @@ function WelcomeBack({
           </Link>
         ))}
       </div>
+      </>}
 
-      <div className="nb-rise flex justify-center" style={{ animationDelay: "300ms" }}>
+      <div className="nb-rise flex justify-center" style={{ animationDelay: band ? "200ms" : "300ms" }}>
         <Link
           href="/dashboard"
           className="w-full sm:w-auto bg-[#6c4d39] hover:bg-[#563e2c] active:scale-[0.99] text-white font-black px-10 py-3.5 rounded-xl text-base transition-all shadow-[0_8px_24px_-6px_rgba(108,77,57,0.65)] text-center"

@@ -106,16 +106,16 @@ function getHeroMode(): HeroMode {
  *  - reduced motion: the Halloween frame, still.
  */
 const isNarrow = () => !window.matchMedia(WIDE).matches;
-/** Phones / small tablets during Halloween week: the hero video is shown as its own
- *  uncropped 16:9 picture above the copy, not as a backdrop (a tall phone hero would
- *  crop away most of the 16:9 scene, and the copy would cover the rest). */
+/** Phones / small tablets during Halloween week: the hero becomes an edge-to-edge,
+ *  uncropped 16:9 video header with the headline on its sky, and the rest of the copy
+ *  below it (a tall phone hero would crop away most of the 16:9 scene). */
 export function useHeroBand() {
   const on = useHalloween();
   const narrow = useSyncExternalStore(subscribeWide, isNarrow, () => false);
   return on && narrow;
 }
 
-export function HeroHalloween({ motionOk, band = false }: { motionOk: boolean; band?: boolean }) {
+export function HeroHalloween({ motionOk }: { motionOk: boolean }) {
   const on = useHalloween();
   const mode = useSyncExternalStore<HeroMode>(subscribeWide, getHeroMode, () => "pending");
   const [videoFailed, setVideoFailed] = useState(false);
@@ -132,14 +132,7 @@ export function HeroHalloween({ motionOk, band = false }: { motionOk: boolean; b
   }, [useVideo, src]);
   if (!on) return null;
   return (
-    <div
-      aria-hidden="true"
-      className={
-        band
-          ? "nb-rise relative w-full max-w-xl mx-auto aspect-video overflow-hidden rounded-2xl bg-[#f1e7d5] border border-[#6c4d39]/15 shadow-[0_10px_28px_-12px_rgba(108,77,57,0.55)]"
-          : "absolute inset-0 overflow-hidden bg-[#f1e7d5]"
-      }
-    >
+    <div aria-hidden="true" className="absolute inset-0 overflow-hidden bg-[#f1e7d5]">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={HW.heroStart} alt="" className="absolute inset-0 w-full h-full object-cover object-[50%_100%]" fetchPriority="high" decoding="async" />
       {mode === "pending" && motionOk ? null : useVideo ? (
@@ -184,7 +177,8 @@ export function LogoPumpkin() {
   );
 }
 
-/** The pumpkin-patch banner across the top of the account menu, with the raccoon witch. */
+/** The pumpkin-patch banner across the top of the account menu. The scene already
+ *  has its own critters, so no cutouts are stacked on it. */
 export function MenuHalloween() {
   const on = useHalloween();
   if (!on) return null;
@@ -192,9 +186,6 @@ export function MenuHalloween() {
     <div aria-hidden="true" className="relative h-20 shrink-0 overflow-hidden">
       <Image src={HW.banner} alt="" fill sizes="300px" className="object-cover object-[78%_60%]" />
       <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[#fbf4e6] to-transparent" />
-      <div className="absolute right-2 bottom-0 w-16 h-16">
-        <Image src={HW.raccoon} alt="" fill sizes="64px" className="object-contain object-bottom" />
-      </div>
     </div>
   );
 }
@@ -203,9 +194,10 @@ export function MenuHalloween() {
 
 /**
  * The haunted pumpkin patch on the right of a cream page header. The cream
- * fades in from the left so the title stays dark-on-light and readable.
+ * fades in from the left so the title stays dark-on-light and readable. The scene
+ * has its own critters and pumpkins, so no cutouts are stacked on it.
  */
-export function HeaderBannerHalloween({ cream = "#efe5d3", pumpkins = true }: { cream?: string; pumpkins?: boolean }) {
+export function HeaderBannerHalloween({ cream = "#efe5d3" }: { cream?: string }) {
   const on = useHalloween();
   if (!on) return null;
   return (
@@ -215,11 +207,6 @@ export function HeaderBannerHalloween({ cream = "#efe5d3", pumpkins = true }: { 
       <div className="sm:hidden absolute inset-x-0 bottom-0 h-[52px]">
         <Image src={HW.banner} alt="" fill sizes="100vw" className="object-cover object-[60%_72%]" />
         <div className="absolute inset-0" style={{ background: `linear-gradient(180deg, ${cream} 0%, ${cream}99 35%, ${cream}00 75%)` }} />
-        {pumpkins && (
-          <div className="absolute right-2 bottom-0 w-16 h-12">
-            <Image src={HW.pumpkins} alt="" fill sizes="64px" className="object-contain object-bottom" />
-          </div>
-        )}
       </div>
       {/* Wider screens: the patch fills the right side, cream fades in from the left. */}
       <div className="hidden sm:block absolute inset-0">
@@ -228,11 +215,6 @@ export function HeaderBannerHalloween({ cream = "#efe5d3", pumpkins = true }: { 
           className="absolute inset-0"
           style={{ background: `linear-gradient(90deg, ${cream} 0%, ${cream} 34%, ${cream}e6 50%, ${cream}66 68%, ${cream}00 84%)` }}
         />
-        {pumpkins && (
-          <div className="absolute right-[3%] -bottom-2 w-36 h-[108px]">
-            <Image src={HW.pumpkins} alt="" fill sizes="144px" className="object-contain drop-shadow-[0_0_14px_rgba(255,160,50,0.55)]" />
-          </div>
-        )}
       </div>
     </div>
   );
