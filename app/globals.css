@@ -467,3 +467,21 @@ input[type="search"]::-webkit-search-decoration {
 .nb-lift-sm:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -16px rgba(60, 40, 25, 0.45); }
 /* Admin sidebar active glow */
 .nb-side-active { box-shadow: inset 3px 0 0 #f0a35a; }
+
+/* Halloween week (app/components/Halloween.tsx). */
+/* Slime under the header: the strip tiles sideways; the offset trims the art's empty top. */
+.nb-slime { background-repeat: repeat-x; background-size: 170px auto; background-position: 0 -10px; filter: drop-shadow(0 3px 4px rgba(40, 90, 10, 0.35)); }
+@media (min-width: 640px) { .nb-slime { background-size: 210px auto; background-position: 0 -13px; } }
+@keyframes nb-hw-bob { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-3px) rotate(4deg); } }
+.nb-hw-bob { animation: nb-hw-bob 3.2s ease-in-out infinite; }
+@keyframes nb-crow-tilt { 0%, 78%, 100% { transform: rotate(0deg); } 82% { transform: rotate(-9deg); } 88% { transform: rotate(4deg); } }
+.nb-crow-tilt { animation: nb-crow-tilt 5s ease-in-out infinite; transform-origin: 50% 100%; }
+@media (prefers-reduced-motion: reduce) { .nb-hw-bob, .nb-crow-tilt { animation: none; } }
+/* Haunted hero on phones: the haunted frame strobes in like lightning, then stays. */
+@keyframes nb-haunt { 0%, 40% { opacity: 0; } 43% { opacity: 1; } 46% { opacity: 0; } 55% { opacity: 1; } 58% { opacity: 0.15; } 64%, 100% { opacity: 1; } }
+.nb-haunt { opacity: 0; animation: nb-haunt 4.2s ease-out 0.4s forwards; }
+@keyframes nb-haunt-flash { 0%, 40% { opacity: 0; } 43% { opacity: 0.55; } 47% { opacity: 0; } 55% { opacity: 0.35; } 60%, 100% { opacity: 0; } }
+.nb-haunt-flash { opacity: 0; pointer-events: none; animation: nb-haunt-flash 4.2s ease-out 0.4s forwards; }
+/* Haunted hero: a cream halo keeps the headline crisp over the dark slime sky. */
+.nb-hw-text h1 { filter: drop-shadow(0 0 10px rgba(241, 231, 213, 0.95)) drop-shadow(0 0 22px rgba(241, 231, 213, 0.7)); }
+.nb-hw-text h1 + p { color: #3d2c1d; text-shadow: 0 0 10px rgba(241, 231, 213, 1), 0 0 18px rgba(241, 231, 213, 0.9); }

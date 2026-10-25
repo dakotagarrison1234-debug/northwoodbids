@@ -9,6 +9,7 @@ import PusherRefresh from "@/app/components/PusherRefresh";
 import NotFoundCard from "@/app/components/NotFoundCard";
 import AuctionItemsView, { type ViewItem } from "@/app/components/AuctionItemsView";
 import ShippingIntro from "@/app/components/ShippingIntro";
+import { HeaderBannerHalloween } from "@/app/components/Halloween";
 import { sizeKeyOf } from "@/lib/shipping/sizes";
 import { PineMark, WoodenCrate, PineRidge, BranchDivider } from "@/app/components/Illustrations";
 import { IcoLock, IcoBolt, IcoMagnifier, BidCritter } from "@/app/components/BidIcons";
@@ -350,6 +351,8 @@ export default async function AuctionPage({ params }: Props) {
           <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-[640px] h-[220px] bg-[#f0a35a]/10 rounded-full blur-[70px]" />
           <PineRidge className="nb-feather-x absolute bottom-0 left-0 w-full h-16 sm:h-20 opacity-25" />
         </div>
+        {/* Halloween week: the haunted pumpkin patch fills the right of the header */}
+        <HeaderBannerHalloween />
         <div className="relative max-w-6xl mx-auto flex items-start sm:items-center justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-2">

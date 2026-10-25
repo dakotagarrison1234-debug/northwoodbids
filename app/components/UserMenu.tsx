@@ -7,6 +7,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Avatar, hasAvatar } from "./Avatars";
 import { IcoStar, IcoGavel, IcoMagnifier, IcoTruck, IcoGift, IcoTrophy, IcoTicket, IcoBox } from "./BidIcons";
 import { PineMark } from "./Illustrations";
+import { MenuHalloween } from "./Halloween";
 
 interface MeData {
   orgId?: string | null;
@@ -217,6 +218,8 @@ export default function UserMenu() {
             </button>
           </div>
         </div>
+
+        <MenuHalloween />
 
         {/* Navigation links */}
         <nav className="flex-1 px-2 pb-2 overflow-y-auto min-h-0">

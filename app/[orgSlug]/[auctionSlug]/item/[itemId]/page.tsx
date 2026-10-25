@@ -17,6 +17,7 @@ import Skeleton from "@/app/components/Skeleton";
 import ShipChoice from "@/app/components/ShipChoice";
 import SizeBadge from "@/app/components/SizeBadge";
 import { sizeKeyOf } from "@/lib/shipping/sizes";
+import { PhotoCrow } from "@/app/components/Halloween";
 
 /* ── Presentation helpers (display only) ─────────────────────────────────── */
 
@@ -717,7 +718,9 @@ export default function ItemPage() {
           applies on lg, where it's the horizontal gutter between the two columns. */}
       <div className="max-w-6xl mx-auto px-6 sm:px-8 py-3 sm:py-8 grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-12">
         {/* Left: photos */}
-        <div>
+        <div className="relative">
+          {/* Halloween week: a crow perched on the photo */}
+          <PhotoCrow />
           {/* Main photo with swipe support. Capped to ~34vh on MOBILE so the price
               and bid controls surface with the product still in view — you shouldn't
               have to scroll past a full screen of photo to bid. Full square returns on

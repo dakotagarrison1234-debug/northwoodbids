@@ -5,6 +5,7 @@ import Link from "next/link";
 import CountUp from "./CountUp";
 import { PineMark } from "./Illustrations";
 import type { HeroSeason } from "@/lib/heroSeason";
+import { HeroHalloween, useHalloween } from "./Halloween";
 
 /**
  * The home hero — brand energy with depth and motion, auctions front and centre.
@@ -53,6 +54,8 @@ export default function HomeHero({
   // motion — they get the still poster frame instead (and no video download).
   const motionOk = useSyncExternalStore(subscribeMotion, getMotionOk, () => false);
   const isPhone = useSyncExternalStore(subscribePhone, getIsPhone, () => false);
+  // Halloween week swaps the lake loop for the haunted transformation (Halloween.tsx).
+  const halloween = useHalloween();
   // Asset names: northwoods-{loop|poster}[-winter][-mobile].{mp4|webp}
   const seasonTag = season === "winter" ? "-winter" : "";
   const heroSuffix = `${seasonTag}${isPhone ? "-mobile" : ""}`;
@@ -79,7 +82,7 @@ export default function HomeHero({
             decoding="async"
           />
         </picture>
-        {motionOk && (
+        {motionOk && !halloween && (
           <video
             key={heroSuffix}
             className="nb-hero-video absolute inset-0 w-full h-full object-cover object-[50%_100%]"
@@ -93,6 +96,8 @@ export default function HomeHero({
             onPlaying={(e) => e.currentTarget.classList.add("is-playing")}
           />
         )}
+        {/* Halloween week only (Oct 20-31): the lake turns haunted, then holds */}
+        <HeroHalloween motionOk={motionOk} />
         {/* readability wash: soft cream glow behind the copy */}
         <div
           className="absolute inset-0"
@@ -107,7 +112,7 @@ export default function HomeHero({
       </div>
 
       {/* ── Foreground ── */}
-      <div className="relative max-w-3xl mx-auto px-5 sm:px-8 pt-10 sm:pt-16 pb-28 sm:pb-36 text-center">
+      <div className={`relative max-w-3xl mx-auto px-5 sm:px-8 pt-10 sm:pt-16 pb-28 sm:pb-36 text-center ${halloween ? "nb-hw-text" : ""}`}>
         {/* live pill */}
         {hasLive && (
           <a

@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PineMark, PineRidge } from "./Illustrations";
+import { FooterHalloween } from "./Halloween";
 
 function Pin() {
   return (
@@ -53,6 +54,7 @@ export default function SiteFooter() {
       {/* Pine ridge sits on the cream page and hands off into the walnut panel. */}
       <div className="relative bg-[#f1e7d5]">
         <PineRidge className="nb-feather-x block w-full h-20 sm:h-28" />
+        <FooterHalloween />
       </div>
 
       {/* Weathered vertical plank grain */}

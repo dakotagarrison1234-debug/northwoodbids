@@ -16,6 +16,7 @@ import YourBoxCard, { useShippingBoxes, ACTIVE_BOX_STATUSES } from "@/app/compon
 import { ShippingTab } from "@/app/components/ShippingBoxFull";
 import ItemCardTimer from "@/app/components/ItemCardTimer";
 import { money } from "@/lib/format";
+import { HeaderBannerHalloween, SidebarPumpkins } from "@/app/components/Halloween";
 
 type Tab = "overview" | "active" | "history" | "shipping" | "auctions" | "profile";
 
@@ -639,6 +640,7 @@ function BidderDashboardInner() {
             </button>
           ))}
         </nav>
+        <SidebarPumpkins />
         <div className="px-4 py-4 border-t border-[#e3d6bf]/60">
           <Link href="/account" className="flex items-center gap-2 text-xs font-semibold text-[#8a7559] hover:text-[#241a12] transition-colors">
             <IcoUsers className="w-4 h-4" /> Account settings
@@ -650,12 +652,13 @@ function BidderDashboardInner() {
       <div className="flex-1 flex flex-col min-w-0 pb-20 md:pb-0">
 
         {/* Mobile top bar */}
-        <header className="md:hidden flex items-center justify-between px-5 py-3 border-b border-[#e3d6bf]/60 bg-white/90">
-          <div className="min-w-0">
+        <header className="md:hidden relative overflow-hidden flex items-center justify-between px-5 py-3 border-b border-[#e3d6bf]/60 bg-white/90">
+          <HeaderBannerHalloween cream="#fdfbf7" pumpkins={false} />
+          <div className="relative min-w-0">
             <div className="text-[10px] font-black uppercase tracking-[0.18em] text-[#6c4d39] truncate">{pageEyebrow}</div>
             <div className="font-display text-xl font-black leading-tight">{pageTitle}</div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="relative flex items-center gap-2">
             {unpaidWins.length > 0 && (
               <span className="inline-flex items-center gap-1 bg-[#c47b3e] text-white text-[11px] font-bold px-2 py-1 rounded-full">
                 <IcoCoin className="w-3.5 h-3.5" /> {unpaidWins.length} owed
@@ -743,9 +746,12 @@ function BidderDashboardInner() {
         )}
 
         {/* Desktop page title */}
-        <header className="hidden md:block border-b border-[#e3d6bf]/60 px-8 py-4">
-          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-[#6c4d39]">{pageEyebrow}</div>
-          <h1 className="font-display text-2xl font-black leading-tight">{pageTitle}</h1>
+        <header className="hidden md:block relative overflow-hidden border-b border-[#e3d6bf]/60 px-8 py-4 min-h-[76px]">
+          <HeaderBannerHalloween cream="#f1e7d5" />
+          <div className="relative">
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-[#6c4d39]">{pageEyebrow}</div>
+            <h1 className="font-display text-2xl font-black leading-tight">{pageTitle}</h1>
+          </div>
         </header>
 
         <div className="flex-1 overflow-auto px-5 sm:px-8 py-5 sm:py-7">

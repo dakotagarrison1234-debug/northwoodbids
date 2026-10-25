@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import UserMenu from "./UserMenu";
 import { IcoMagnifier } from "./BidIcons";
+import { HeaderHalloween, LogoPumpkin } from "./Halloween";
 
 /* Primary routes shown in the desktop bar. On phones they live in the
    account drawer so the bar stays logo / search / account. */
@@ -66,7 +67,7 @@ export default function HomeHeader() {
         <Link
           href="/"
           aria-label="Northwood Bids home"
-          className={`nb-focus flex items-center shrink-0 transition-opacity hover:opacity-85 ${searchOpen ? "hidden sm:flex" : ""}`}
+          className={`nb-focus relative flex items-center shrink-0 transition-opacity hover:opacity-85 ${searchOpen ? "hidden sm:flex" : ""}`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -74,6 +75,7 @@ export default function HomeHeader() {
             alt="Northwood Bids"
             className="h-11 sm:h-12 w-auto max-w-[200px] sm:max-w-[220px] object-contain"
           />
+          <LogoPumpkin />
         </Link>
 
         {searchOpen ? (
@@ -152,6 +154,7 @@ export default function HomeHeader() {
           </>
         )}
       </div>
+      <HeaderHalloween />
     </header>
   );
 }

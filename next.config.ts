@@ -20,6 +20,8 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "pub-829fa846d09e430db535c94618889062.r2.dev" },
       { protocol: "https", hostname: "assets.cdn.filesafe.space" },
+      // Higgsfield renders (seasonal art, e.g. app/components/Halloween.tsx)
+      { protocol: "https", hostname: "d8j0ntlcm91z4.cloudfront.net" },
     ],
   },
   async headers() {
