@@ -105,7 +105,17 @@ function getHeroMode(): HeroMode {
  *  - save-data / 2g, or autoplay refused (iOS Low Power Mode): the two frames with a soft fade;
  *  - reduced motion: the Halloween frame, still.
  */
-export function HeroHalloween({ motionOk }: { motionOk: boolean }) {
+const isNarrow = () => !window.matchMedia(WIDE).matches;
+/** Phones / small tablets during Halloween week: the hero video is shown as its own
+ *  uncropped 16:9 picture above the copy, not as a backdrop (a tall phone hero would
+ *  crop away most of the 16:9 scene, and the copy would cover the rest). */
+export function useHeroBand() {
+  const on = useHalloween();
+  const narrow = useSyncExternalStore(subscribeWide, isNarrow, () => false);
+  return on && narrow;
+}
+
+export function HeroHalloween({ motionOk, band = false }: { motionOk: boolean; band?: boolean }) {
   const on = useHalloween();
   const mode = useSyncExternalStore<HeroMode>(subscribeWide, getHeroMode, () => "pending");
   const [videoFailed, setVideoFailed] = useState(false);
@@ -122,7 +132,14 @@ export function HeroHalloween({ motionOk }: { motionOk: boolean }) {
   }, [useVideo, src]);
   if (!on) return null;
   return (
-    <div aria-hidden="true" className="absolute inset-0 overflow-hidden bg-[#f1e7d5]">
+    <div
+      aria-hidden="true"
+      className={
+        band
+          ? "nb-rise relative w-full max-w-xl mx-auto aspect-video overflow-hidden rounded-2xl bg-[#f1e7d5] border border-[#6c4d39]/15 shadow-[0_10px_28px_-12px_rgba(108,77,57,0.55)]"
+          : "absolute inset-0 overflow-hidden bg-[#f1e7d5]"
+      }
+    >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={HW.heroStart} alt="" className="absolute inset-0 w-full h-full object-cover object-[50%_100%]" fetchPriority="high" decoding="async" />
       {mode === "pending" && motionOk ? null : useVideo ? (

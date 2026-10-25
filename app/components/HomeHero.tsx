@@ -5,7 +5,7 @@ import Link from "next/link";
 import CountUp from "./CountUp";
 import { PineMark } from "./Illustrations";
 import type { HeroSeason } from "@/lib/heroSeason";
-import { HeroHalloween, useHalloween } from "./Halloween";
+import { HeroHalloween, useHalloween, useHeroBand } from "./Halloween";
 
 /**
  * The home hero — brand energy with depth and motion, auctions front and centre.
@@ -59,6 +59,8 @@ export default function HomeHero({
   const isPhone = useSyncExternalStore(subscribePhone, getIsPhone, () => false);
   // Halloween week swaps the lake loop for the haunted transformation (Halloween.tsx).
   const halloween = useHalloween();
+  // Phones: the Halloween video sits above the copy as an uncropped 16:9 picture.
+  const band = useHeroBand();
   // Asset names: northwoods-{loop|poster}[-winter][-mobile].{mp4|webp}
   const seasonTag = season === "winter" ? "-winter" : "";
   const heroSuffix = `${seasonTag}${isPhone ? "-mobile" : ""}`;
@@ -100,7 +102,11 @@ export default function HomeHero({
           />
         )}
         {/* Halloween week only (Oct 20-31): the lake turns haunted, then holds */}
-        <HeroHalloween motionOk={motionOk} />
+        {band ? (
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_90%_55%_at_50%_0%,#f6d8ad_0%,#f1e7d5_70%)]" />
+        ) : (
+          <HeroHalloween motionOk={motionOk} />
+        )}
         {/* readability wash: soft cream glow behind the copy */}
         <div
           className="absolute inset-0"
@@ -115,10 +121,15 @@ export default function HomeHero({
       </div>
 
       {/* ── Foreground ── */}
+      {band && (
+        <div className="relative px-3 pt-3">
+          <HeroHalloween motionOk={motionOk} band />
+        </div>
+      )}
       {welcome ? (
-        <WelcomeBack welcome={welcome} liveAuctions={liveAuctions} halloween={halloween} />
+        <WelcomeBack welcome={welcome} liveAuctions={liveAuctions} halloween={halloween} band={band} />
       ) : (
-      <div className={`relative max-w-3xl mx-auto px-5 sm:px-8 pt-10 sm:pt-16 pb-28 sm:pb-36 text-center ${halloween ? "nb-hw-text" : ""}`}>
+      <div className={`relative max-w-3xl mx-auto px-5 sm:px-8 ${band ? "pt-6" : "pt-10"} sm:pt-16 ${band ? "pb-16" : "pb-28"} sm:pb-36 text-center ${halloween ? "nb-hw-text" : ""}`}>
         {/* live pill */}
         {hasLive && (
           <a
@@ -206,10 +217,12 @@ function WelcomeBack({
   welcome,
   liveAuctions,
   halloween,
+  band = false,
 }: {
   welcome: { name: string; winning: number; outbid: number };
   liveAuctions: number;
   halloween: boolean;
+  band?: boolean;
 }) {
   const cards = [
     { href: "/dashboard?tab=winning", value: welcome.winning, label: "Winning", tone: "text-[#2f5d3a]", ring: "hover:border-[#4a7c59]/60" },
@@ -217,7 +230,7 @@ function WelcomeBack({
     { href: "#live-auctions", value: liveAuctions, label: liveAuctions === 1 ? "Live auction" : "Live auctions", tone: "text-[#241a12]", ring: "hover:border-[#6c4d39]/50" },
   ];
   return (
-    <div className={`relative max-w-3xl mx-auto px-5 sm:px-8 pt-12 sm:pt-20 pb-28 sm:pb-40 text-center ${halloween ? "nb-hw-text" : ""}`}>
+    <div className={`relative max-w-3xl mx-auto px-5 sm:px-8 ${band ? "pt-6 pb-16" : "pt-12 pb-28"} sm:pt-20 sm:pb-40 text-center ${halloween ? "nb-hw-text" : ""}`}>
       <p className="nb-rise nb-hw-halo text-[#6f5b46] text-base sm:text-lg font-semibold" style={{ animationDelay: "40ms" }}>
         Welcome back,
       </p>
