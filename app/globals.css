@@ -487,26 +487,6 @@ input[type="search"]::-webkit-search-decoration {
    Colour and decoration only: nothing here changes size or position, so no
    layout can shift on any screen. Gone at midnight Oct 31 automatically. */
 
-/* Night header: deep purple-black, pumpkin glow along the bottom edge. */
-html[data-hw] .nb-site-header {
-  background: linear-gradient(180deg, #221632 0%, #160f20 100%) !important;
-  border-bottom-color: rgba(232, 120, 40, 0.6) !important;
-  box-shadow: 0 1px 0 rgba(255, 150, 60, 0.35), 0 8px 26px -12px rgba(232, 120, 40, 0.65) !important;
-}
-/* The wooden NB keeps its grain; a pumpkin glow lifts it off the night header. */
-html[data-hw] .nb-site-header .nb-logo-img { filter: drop-shadow(0 0 6px rgba(255, 150, 60, 0.55)) brightness(1.15); }
-html[data-hw] .nb-site-header .nb-nav { color: #e9dcc6; }
-html[data-hw] .nb-site-header .nb-nav:hover,
-html[data-hw] .nb-site-header .nb-nav[aria-current="page"] { color: #ffb35c; }
-html[data-hw] .nb-site-header .nb-nav::after { background: #ff8a2b; }
-html[data-hw] .nb-site-header .text-\[\#6f5b46\] { color: #e9dcc6; }
-html[data-hw] .nb-site-header .hover\:text-\[\#241a12\]:hover { color: #fff; }
-html[data-hw] .nb-site-header .hover\:bg-\[\#efe3d0\]:hover,
-html[data-hw] .nb-site-header .hover\:bg-\[\#efe3d0\]\/70:hover { background-color: rgba(255, 255, 255, 0.09); }
-html[data-hw] .nb-site-header .text-\[\#8a7559\] { color: #cdbda3; }
-html[data-hw] .nb-site-header .text-\[\#6c4d39\] { color: #ffb35c; }
-html[data-hw] .nb-site-header .border-\[\#6c4d39\]\/25 { border-color: rgba(255, 179, 92, 0.45); }
-
 /* Walnut buttons and pills turn pumpkin orange. */
 html[data-hw] .bg-\[\#6c4d39\] { background-color: #c9541a; }
 html[data-hw] .hover\:bg-\[\#563e2c\]:hover,

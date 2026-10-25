@@ -39,8 +39,8 @@ const HW_SKIP = ["/admin", "/superadmin", "/play", "/invoice", "/labels"];
 /**
  * Mount once in the root layout. During the week it puts data-hw on <html>
  * for customer pages, which switches on the site-wide restyle in globals.css
- * (night header, pumpkin-orange buttons, haunted section bands, cobwebbed lot
- * cards). Colour and decoration only: no layout rules, so nothing can shift.
+ * (pumpkin-orange buttons, haunted section bands, cobwebbed lot cards). The
+ * header stays its normal cream. Colour and decoration only: no layout rules, so nothing can shift.
  */
 export function HalloweenRoot() {
   const on = useHalloween();
