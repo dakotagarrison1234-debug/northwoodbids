@@ -5,7 +5,7 @@ import Link from "next/link";
 import CountUp from "./CountUp";
 import { PineMark } from "./Illustrations";
 import type { HeroSeason } from "@/lib/heroSeason";
-import { HeroHalloween, HeroSlime, useHalloween } from "./Halloween";
+import { HeroHalloween, useHalloween } from "./Halloween";
 
 /**
  * The home hero — brand energy with depth and motion, auctions front and centre.
@@ -112,8 +112,6 @@ export default function HomeHero({
         {/* top + bottom fades into the page background */}
         <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-[#f1e7d5] to-transparent" />
         <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[#f1e7d5] to-transparent" />
-        {/* Halloween week: slime oozing from the top of the hero (scrolls away) */}
-        <HeroSlime />
       </div>
 
       {/* ── Foreground ── */}
