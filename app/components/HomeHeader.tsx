@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import UserMenu from "./UserMenu";
 import { IcoMagnifier } from "./BidIcons";
-import { HeaderHalloween, LogoPumpkin } from "./Halloween";
+import { LogoPumpkin } from "./Halloween";
 
 /* Primary routes shown in the desktop bar. On phones they live in the
    account drawer so the bar stays logo / search / account. */
@@ -154,7 +154,6 @@ export default function HomeHeader() {
           </>
         )}
       </div>
-      <HeaderHalloween />
     </header>
   );
 }

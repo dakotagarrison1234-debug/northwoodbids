@@ -652,13 +652,12 @@ function BidderDashboardInner() {
       <div className="flex-1 flex flex-col min-w-0 pb-20 md:pb-0">
 
         {/* Mobile top bar */}
-        <header className="md:hidden relative overflow-hidden flex items-center justify-between px-5 py-3 border-b border-[#e3d6bf]/60 bg-white/90">
-          <HeaderBannerHalloween cream="#fdfbf7" pumpkins={false} />
-          <div className="relative min-w-0">
+        <header className="md:hidden flex items-center justify-between px-5 py-3 border-b border-[#e3d6bf]/60 bg-white/90">
+          <div className="min-w-0">
             <div className="text-[10px] font-black uppercase tracking-[0.18em] text-[#6c4d39] truncate">{pageEyebrow}</div>
             <div className="font-display text-xl font-black leading-tight">{pageTitle}</div>
           </div>
-          <div className="relative flex items-center gap-2">
+          <div className="flex items-center gap-2">
             {unpaidWins.length > 0 && (
               <span className="inline-flex items-center gap-1 bg-[#c47b3e] text-white text-[11px] font-bold px-2 py-1 rounded-full">
                 <IcoCoin className="w-3.5 h-3.5" /> {unpaidWins.length} owed

@@ -120,18 +120,20 @@ export function HeroHalloween({ motionOk }: { motionOk: boolean }) {
 
 /* ── Header + menu ────────────────────────────────────────────────────────── */
 
-/** Slime dripping off the bottom of the site header, plus a jack-o-lantern on the logo. */
-export function HeaderHalloween() {
+/**
+ * Slime dripping from the top edge of the home hero (home page only). It
+ * lives in the hero, not the sticky header, so it scrolls away with the page.
+ * Short on phones so it never reaches the live pill under it.
+ */
+export function HeroSlime() {
   const on = useHalloween();
   if (!on) return null;
   return (
-    <>
-      <div
-        aria-hidden="true"
-        className="nb-slime pointer-events-none absolute left-0 right-0 top-full h-[38px] sm:h-[48px]"
-        style={{ backgroundImage: `url(${optimized(HW.slime, 640)})` }}
-      />
-    </>
+    <div
+      aria-hidden="true"
+      className="nb-slime pointer-events-none absolute left-0 right-0 top-0 z-[1] h-[30px] sm:h-[44px]"
+      style={{ backgroundImage: `url(${optimized(HW.slime, 640)})` }}
+    />
   );
 }
 
@@ -171,16 +173,30 @@ export function HeaderBannerHalloween({ cream = "#efe5d3", pumpkins = true }: { 
   if (!on) return null;
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-      <Image src={HW.banner} alt="" fill sizes="100vw" className="object-cover object-[80%_55%]" />
-      <div
-        className="absolute inset-0"
-        style={{ background: `linear-gradient(90deg, ${cream} 0%, ${cream} 30%, ${cream}e6 46%, ${cream}66 66%, ${cream}00 82%)` }}
-      />
-      {pumpkins && (
-        <div className="absolute right-[3%] -bottom-2 w-24 h-[72px] sm:w-36 sm:h-[108px]">
-          <Image src={HW.pumpkins} alt="" fill sizes="144px" className="object-contain drop-shadow-[0_0_14px_rgba(255,160,50,0.55)]" />
-        </div>
-      )}
+      {/* Phones: the haunted patch runs along the bottom padding band only, so
+          the title and dates always sit on plain cream. */}
+      <div className="sm:hidden absolute inset-x-0 bottom-0 h-[52px]">
+        <Image src={HW.banner} alt="" fill sizes="100vw" className="object-cover object-[60%_72%]" />
+        <div className="absolute inset-0" style={{ background: `linear-gradient(180deg, ${cream} 0%, ${cream}99 35%, ${cream}00 75%)` }} />
+        {pumpkins && (
+          <div className="absolute right-2 bottom-0 w-16 h-12">
+            <Image src={HW.pumpkins} alt="" fill sizes="64px" className="object-contain object-bottom" />
+          </div>
+        )}
+      </div>
+      {/* Wider screens: the patch fills the right side, cream fades in from the left. */}
+      <div className="hidden sm:block absolute inset-0">
+        <Image src={HW.banner} alt="" fill sizes="100vw" className="object-cover object-[80%_55%]" />
+        <div
+          className="absolute inset-0"
+          style={{ background: `linear-gradient(90deg, ${cream} 0%, ${cream} 34%, ${cream}e6 50%, ${cream}66 68%, ${cream}00 84%)` }}
+        />
+        {pumpkins && (
+          <div className="absolute right-[3%] -bottom-2 w-36 h-[108px]">
+            <Image src={HW.pumpkins} alt="" fill sizes="144px" className="object-contain drop-shadow-[0_0_14px_rgba(255,160,50,0.55)]" />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -203,7 +219,10 @@ export function PhotoCrow() {
   const on = useHalloween();
   if (!on) return null;
   return (
-    <div aria-hidden="true" className="pointer-events-none absolute -top-[46px] right-4 z-20 w-14 h-14 sm:w-16 sm:h-16 nb-crow-tilt">
+    // Phones/tablets: standing in the photo's bottom-right corner (the photo is
+    // 34vh tall there), so nothing above the photo is covered. Desktop: perched
+    // on the photo's top edge.
+    <div aria-hidden="true" className="pointer-events-none absolute top-[calc(34vh-50px)] right-2 z-20 w-12 h-12 lg:-top-[46px] lg:right-4 lg:w-16 lg:h-16 nb-crow-tilt">
       <Image src={HW.crow} alt="" fill sizes="64px" className="object-contain object-bottom" />
     </div>
   );
@@ -215,10 +234,10 @@ export function FooterHalloween() {
   if (!on) return null;
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 max-w-6xl mx-auto">
-      <div className="absolute left-[4%] bottom-0 w-32 h-24 sm:w-44 sm:h-32">
+      <div className="absolute left-[4%] bottom-0 w-24 h-[72px] sm:w-44 sm:h-32">
         <Image src={HW.pumpkins} alt="" fill sizes="176px" className="object-contain object-bottom drop-shadow-[0_0_14px_rgba(255,160,50,0.5)]" />
       </div>
-      <div className="absolute right-[8%] bottom-0 w-14 h-14 sm:w-16 sm:h-16">
+      <div className="absolute right-[8%] bottom-0 w-12 h-12 sm:w-16 sm:h-16">
         <Image src={HW.crow} alt="" fill sizes="64px" className="object-contain object-bottom" />
       </div>
     </div>
