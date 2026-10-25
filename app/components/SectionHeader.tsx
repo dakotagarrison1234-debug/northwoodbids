@@ -77,7 +77,7 @@ export default function SectionHeader({
   const t = THEME[variant];
   return (
     <div
-      className={`relative rounded-2xl bg-gradient-to-r ${t.tint} pl-5 pr-3 sm:pr-4 flex items-center justify-between gap-3 ${
+      className={`nb-section-head relative rounded-2xl bg-gradient-to-r ${t.tint} pl-5 pr-3 sm:pr-4 flex items-center justify-between gap-3 ${
         compact ? "py-3 mb-4" : "py-3.5 sm:py-4 mb-6"
       }`}
     >

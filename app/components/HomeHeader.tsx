@@ -58,7 +58,7 @@ export default function HomeHeader() {
 
   return (
     <header
-      className={`nb-header-pad safe-x sticky top-0 z-40 border-b border-[#e3d6bf] backdrop-blur-md transition-[box-shadow,background-color] duration-200 ${
+      className={`nb-site-header nb-header-pad safe-x sticky top-0 z-40 border-b border-[#e3d6bf] backdrop-blur-md transition-[box-shadow,background-color] duration-200 ${
         scrolled ? "bg-[#fbf4e6]/95 shadow-[0_6px_18px_-12px_rgba(60,40,25,0.45)]" : "bg-[#fbf4e6]/85"
       }`}
     >
@@ -73,7 +73,7 @@ export default function HomeHeader() {
           <img
             src="https://assets.cdn.filesafe.space/U1S2bq3S7QBjnH50rEhn/media/6a380945f2131051b829edf3.png"
             alt="Northwood Bids"
-            className="h-11 sm:h-12 w-auto max-w-[200px] sm:max-w-[220px] object-contain"
+            className="nb-logo-img h-11 sm:h-12 w-auto max-w-[200px] sm:max-w-[220px] object-contain"
           />
           <LogoPumpkin />
         </Link>

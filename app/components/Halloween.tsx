@@ -1,5 +1,6 @@
 "use client";
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 
 /**
@@ -30,6 +31,28 @@ function subscribeClock(cb: () => void) {
 /** True during Halloween week; false on the server and outside the window. */
 export function useHalloween(): boolean {
   return useSyncExternalStore(subscribeClock, () => isHalloweenWeek(), () => false);
+}
+
+/** Routes that keep their normal look all week (staff tools, the arcade, printables). */
+const HW_SKIP = ["/admin", "/superadmin", "/play", "/invoice", "/labels"];
+
+/**
+ * Mount once in the root layout. During the week it puts data-hw on <html>
+ * for customer pages, which switches on the site-wide restyle in globals.css
+ * (night header, pumpkin-orange buttons, haunted section bands, cobwebbed lot
+ * cards). Colour and decoration only: no layout rules, so nothing can shift.
+ */
+export function HalloweenRoot() {
+  const on = useHalloween();
+  const pathname = usePathname() ?? "/";
+  const active = on && !HW_SKIP.some((p) => pathname === p || pathname.startsWith(p + "/"));
+  useEffect(() => {
+    const el = document.documentElement;
+    if (active) el.setAttribute("data-hw", "1");
+    else el.removeAttribute("data-hw");
+    return () => el.removeAttribute("data-hw");
+  }, [active]);
+  return null;
 }
 
 const CDN = "https://d8j0ntlcm91z4.cloudfront.net/user_3IByyQncVzaXbwKjQO3GCQGqPd7";

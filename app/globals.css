@@ -485,3 +485,58 @@ input[type="search"]::-webkit-search-decoration {
 /* Haunted hero: a cream halo keeps the headline crisp over the dark slime sky. */
 .nb-hw-text h1 { filter: drop-shadow(0 0 10px rgba(241, 231, 213, 0.95)) drop-shadow(0 0 22px rgba(241, 231, 213, 0.7)); }
 .nb-hw-text h1 + p { color: #3d2c1d; text-shadow: 0 0 10px rgba(241, 231, 213, 1), 0 0 18px rgba(241, 231, 213, 0.9); }
+
+/* ── Halloween week site restyle (html[data-hw], set by HalloweenRoot) ──
+   Colour and decoration only: nothing here changes size or position, so no
+   layout can shift on any screen. Gone at midnight Oct 31 automatically. */
+
+/* Night header: deep purple-black, pumpkin glow along the bottom edge. */
+html[data-hw] .nb-site-header {
+  background: linear-gradient(180deg, #221632 0%, #160f20 100%) !important;
+  border-bottom-color: rgba(232, 120, 40, 0.6) !important;
+  box-shadow: 0 1px 0 rgba(255, 150, 60, 0.35), 0 8px 26px -12px rgba(232, 120, 40, 0.65) !important;
+}
+/* The wooden NB keeps its grain; a pumpkin glow lifts it off the night header. */
+html[data-hw] .nb-site-header .nb-logo-img { filter: drop-shadow(0 0 6px rgba(255, 150, 60, 0.55)) brightness(1.15); }
+html[data-hw] .nb-site-header .nb-nav { color: #e9dcc6; }
+html[data-hw] .nb-site-header .nb-nav:hover,
+html[data-hw] .nb-site-header .nb-nav[aria-current="page"] { color: #ffb35c; }
+html[data-hw] .nb-site-header .nb-nav::after { background: #ff8a2b; }
+html[data-hw] .nb-site-header .text-\[\#6f5b46\] { color: #e9dcc6; }
+html[data-hw] .nb-site-header .hover\:text-\[\#241a12\]:hover { color: #fff; }
+html[data-hw] .nb-site-header .hover\:bg-\[\#efe3d0\]:hover,
+html[data-hw] .nb-site-header .hover\:bg-\[\#efe3d0\]\/70:hover { background-color: rgba(255, 255, 255, 0.09); }
+html[data-hw] .nb-site-header .text-\[\#8a7559\] { color: #cdbda3; }
+html[data-hw] .nb-site-header .text-\[\#6c4d39\] { color: #ffb35c; }
+html[data-hw] .nb-site-header .border-\[\#6c4d39\]\/25 { border-color: rgba(255, 179, 92, 0.45); }
+
+/* Walnut buttons and pills turn pumpkin orange. */
+html[data-hw] .bg-\[\#6c4d39\] { background-color: #c9541a; }
+html[data-hw] .hover\:bg-\[\#563e2c\]:hover,
+html[data-hw] .group:hover .group-hover\:bg-\[\#563e2c\] { background-color: #a8430f; }
+
+/* Home section headers become haunted night bands (solid, so text always reads). */
+html[data-hw] .nb-section-head {
+  background: radial-gradient(120% 160% at 100% 0%, rgba(120, 200, 60, 0.18), transparent 55%), linear-gradient(90deg, #1f1530, #2b1c3d);
+  box-shadow: inset 0 0 0 1px rgba(255, 150, 60, 0.25), 0 10px 26px -16px rgba(30, 10, 50, 0.8);
+}
+html[data-hw] .nb-section-head h2 { color: #fff4e2; }
+html[data-hw] .nb-section-head p { color: #d8c8e6; }
+html[data-hw] .nb-section-head > div > div:first-child { color: #ffb35c; }
+html[data-hw] .nb-section-head > span:first-child { background: #ff8a2b; box-shadow: 0 0 10px rgba(255, 138, 43, 0.8); }
+
+/* Lot and auction cards: a cobweb in the top-left corner and a pumpkin glow on hover. */
+html[data-hw] .cv-card { position: relative; }
+html[data-hw] .cv-card::after {
+  content: "";
+  position: absolute; top: 0; left: 0; z-index: 5;
+  width: 46px; height: 46px;
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2060%2060%22%20fill%3D%22none%22%20stroke%3D%22%235a4e44%22%20stroke-opacity%3D%22.55%22%20stroke-width%3D%22.9%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M0%200%20L58.0%200.0%22/%3E%3Cpath%20d%3D%22M0%200%20L56.0%2015.0%22/%3E%3Cpath%20d%3D%22M0%200%20L49.2%2030.7%22/%3E%3Cpath%20d%3D%22M0%200%20L37.3%2044.4%22/%3E%3Cpath%20d%3D%22M0%200%20L21.7%2053.8%22/%3E%3Cpath%20d%3D%22M0%200%20L0.0%2058.0%22/%3E%3Cpath%20d%3D%22M12.0%200.0%20Q9.7%201.3%2011.6%203.1%20Q8.9%203.9%2010.2%206.4%20Q7.3%206.4%207.7%209.2%20Q5.0%208.3%204.5%2011.1%20Q1.8%209.5%200.0%2012.0%22/%3E%3Cpath%20d%3D%22M24.0%200.0%20Q19.3%202.5%2023.2%206.2%20Q17.8%207.8%2020.4%2012.7%20Q14.7%2012.8%2015.4%2018.4%20Q10.0%2016.7%209.0%2022.3%20Q3.7%2019.0%200.0%2024.0%22/%3E%3Cpath%20d%3D%22M37.0%200.0%20Q29.8%203.9%2035.7%209.6%20Q27.5%2012.0%2031.4%2019.6%20Q22.6%2019.7%2023.8%2028.3%20Q15.4%2025.7%2013.9%2034.3%20Q5.7%2029.2%200.0%2037.0%22/%3E%3Cpath%20d%3D%22M50.0%200.0%20Q40.3%205.3%2048.3%2012.9%20Q37.2%2016.2%2042.4%2026.5%20Q30.6%2026.6%2032.1%2038.3%20Q20.9%2034.7%2018.7%2046.4%20Q7.7%2039.5%200.0%2050.0%22/%3E%3C/svg%3E") no-repeat 0 0 / 100% 100%;
+  pointer-events: none;
+}
+@media (min-width: 640px) { html[data-hw] .cv-card::after { width: 60px; height: 60px; } }
+html[data-hw] .cv-card:hover { border-color: rgba(232, 120, 40, 0.7); box-shadow: 0 0 0 1px rgba(232, 120, 40, 0.35), 0 12px 30px -12px rgba(232, 120, 40, 0.55); }
+
+/* Little things. */
+html[data-hw] ::selection { background: #e8782a; color: #fff; }
+html[data-hw] { scrollbar-color: #c9541a #e9dcc6; }

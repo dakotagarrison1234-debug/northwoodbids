@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Bitter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import HomeHeader from "@/app/components/HomeHeader";
+import { HalloweenRoot } from "@/app/components/Halloween";
 import { GlobalFooter } from "@/app/components/SiteFooter";
 import ReferralClaimer from "@/app/components/ReferralClaimer";
 import PromoClaimer from "@/app/components/PromoClaimer";
@@ -135,6 +136,7 @@ export default function RootLayout({
         <body className="min-h-full flex flex-col">
           {/* Site-wide brand + site-search structured data (invisible). */}
           <JsonLd data={siteGraphLd()} />
+          <HalloweenRoot />
           <HomeHeader />
           <ReferralClaimer />
           <PromoClaimer />
