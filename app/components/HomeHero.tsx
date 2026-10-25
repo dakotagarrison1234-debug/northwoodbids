@@ -139,6 +139,13 @@ export default function HomeHero({
                 >
                   {welcome.name}
                 </h1>
+                <Link
+                  href="/dashboard"
+                  className="nb-rise mt-2 inline-block bg-[#6c4d39] hover:bg-[#563e2c] active:scale-[0.99] text-white font-black px-9 py-2.5 rounded-xl text-[15px] transition-all shadow-[0_8px_24px_-6px_rgba(108,77,57,0.65)]"
+                  style={{ animationDelay: "200ms" }}
+                >
+                  My Bids
+                </Link>
               </>
             ) : (
               <h1
@@ -154,7 +161,12 @@ export default function HomeHero({
         </div>
       )}
       {welcome ? (
-        <WelcomeBack welcome={welcome} liveAuctions={liveAuctions} halloween={halloween} band={band} />
+        band ? (
+          // Phones in Halloween week: name + My Bids are on the video header.
+          <div className="h-5" />
+        ) : (
+          <WelcomeBack welcome={welcome} liveAuctions={liveAuctions} halloween={halloween} />
+        )
       ) : (
       <div className={`relative max-w-3xl mx-auto px-5 sm:px-8 ${band ? "pt-4 pb-14" : "pt-10 pb-28 sm:pt-16"} sm:pb-36 text-center ${halloween ? "nb-hw-text" : ""}`}>
         {/* live pill */}
@@ -244,12 +256,10 @@ function WelcomeBack({
   welcome,
   liveAuctions,
   halloween,
-  band = false,
 }: {
   welcome: { name: string; winning: number; outbid: number };
   liveAuctions: number;
   halloween: boolean;
-  band?: boolean;
 }) {
   const cards = [
     { href: "/dashboard?tab=winning", value: welcome.winning, label: "Winning", tone: "text-[#2f5d3a]", ring: "hover:border-[#4a7c59]/60" },
@@ -257,9 +267,7 @@ function WelcomeBack({
     { href: "#live-auctions", value: liveAuctions, label: liveAuctions === 1 ? "Live auction" : "Live auctions", tone: "text-[#241a12]", ring: "hover:border-[#6c4d39]/50" },
   ];
   return (
-    <div className={`relative max-w-3xl mx-auto px-5 sm:px-8 ${band ? "pt-4 pb-12" : "pt-12 pb-28 sm:pt-20"} sm:pb-40 text-center ${halloween ? "nb-hw-text" : ""}`}>
-      {/* Phones in Halloween week: the name is on the video header; just My Bids here. */}
-      {!band && <>
+    <div className={`relative max-w-3xl mx-auto px-5 sm:px-8 pt-12 sm:pt-20 pb-28 sm:pb-40 text-center ${halloween ? "nb-hw-text" : ""}`}>
       <p className="nb-rise nb-hw-halo text-[#6f5b46] text-base sm:text-lg font-semibold" style={{ animationDelay: "40ms" }}>
         Welcome back,
       </p>
@@ -284,9 +292,8 @@ function WelcomeBack({
           </Link>
         ))}
       </div>
-      </>}
 
-      <div className="nb-rise flex justify-center" style={{ animationDelay: band ? "200ms" : "300ms" }}>
+      <div className="nb-rise flex justify-center" style={{ animationDelay: "300ms" }}>
         <Link
           href="/dashboard"
           className="w-full sm:w-auto bg-[#6c4d39] hover:bg-[#563e2c] active:scale-[0.99] text-white font-black px-10 py-3.5 rounded-xl text-base transition-all shadow-[0_8px_24px_-6px_rgba(108,77,57,0.65)] text-center"

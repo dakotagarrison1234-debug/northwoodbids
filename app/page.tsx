@@ -23,7 +23,6 @@ function startOfDetroitDay(now: Date): Date {
   return new Date(now.getTime() - sinceMidnightMs);
 }
 import GiveawayCard from "./components/GiveawayCard";
-import BidTicker from "./components/BidTicker";
 import ScrollReveal from "./components/ScrollReveal";
 import JsonLd from "./components/JsonLd";
 import { localBusinessLd } from "@/lib/seo";
@@ -182,42 +181,6 @@ export default async function HomePage() {
     }, 0)
   );
 
-  // Ticker feed: the LATEST bids landing across live lots — "what just happened",
-  // a different story from the carousel's "what's hottest". It skips any lot the
-  // carousel already showcases so the two strips never repeat the same names
-  // side by side (falling back to overlap only if there's too little activity).
-  const carouselIds = new Set(topItems.slice(0, 12).map((it) => it.id));
-  const recentBids = await prisma.bid.findMany({
-    where: { item: { status: "ACTIVE", auction: { status: { in: ["OPEN", "CLOSING"] }, archived: false } } },
-    orderBy: { placedAt: "desc" },
-    take: 80,
-    select: {
-      amount: true,
-      itemId: true,
-      item: {
-        select: {
-          title: true,
-          auction: { select: { slug: true, organization: { select: { slug: true } } } },
-        },
-      },
-    },
-  });
-  const seenTicker = new Set<string>();
-  const latestLots: { id: string; title: string; href: string; currentBid: number }[] = [];
-  for (const b of recentBids) {
-    if (seenTicker.has(b.itemId)) continue; // one entry per lot — its most recent bid
-    if (!b.item.auction?.slug || !b.item.auction.organization?.slug) continue;
-    seenTicker.add(b.itemId);
-    latestLots.push({
-      id: b.itemId,
-      title: b.item.title,
-      href: `/${b.item.auction.organization.slug}/${b.item.auction.slug}/item/${b.itemId}`,
-      currentBid: Number(b.amount),
-    });
-  }
-  const fresh = latestLots.filter((l) => !carouselIds.has(l.id));
-  const tickerLots = (fresh.length >= 4 ? fresh : latestLots).slice(0, 14);
-
   // Signed in: the hero becomes a welcome-back board (their name, lots they're
   // winning, lots they've been outbid on, live auctions) instead of the pitch.
   // "Winning" = they hold the top active bid on a lot that's still live.
@@ -271,13 +234,6 @@ export default async function HomePage() {
 
       {/* Active giveaway (renders nothing when there isn't one) */}
       <GiveawayCard />
-
-      {/* Live board — streaming ticker of the hottest lots + current bids */}
-      {tickerLots.length >= 4 && (
-        <div className="max-w-6xl mx-auto px-5 sm:px-8 -mt-2">
-          <BidTicker lots={tickerLots} />
-        </div>
-      )}
 
       {/* Hot right now — auto-scrolling showcase of the top live lots */}
       {topItems.length >= 4 && (
