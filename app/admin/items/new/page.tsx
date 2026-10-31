@@ -752,12 +752,6 @@ const CONDITIONS = [
 const MAX_SCAN_PHOTOS = 3;
 const MAX_PHOTOS = 6;
 
-type ShelfHolder = { name: string; count: number; minutesAgo: number; sections: string[]; auctionTitle: string | null };
-type ShelfCheck = { shelf: string; shelfNumber: string; holders: ShelfHolder[]; mine: { count: number; minutesAgo: number } | null };
-const ago = (m: number) => (m < 1 ? "just now" : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} hr ago` : m < 2880 ? "yesterday" : `${Math.round(m / 1440)} days ago`);
-// Confirming shelf 101 once covers 101A, 101B, 101C in that auction.
-const shelfKey = (shelf: string, auctionId: string) => `${auctionId}|${shelf.trim().toUpperCase().match(/\d+/)?.[0] ?? shelf.trim().toUpperCase()}`;
-
 /** Shrink phone photos before upload (bidders see ~400px cards). Null = use the original. */
 async function compressPhoto(file: File): Promise<{ blob: Blob; name: string; type: string } | null> {
   try {
@@ -827,13 +821,6 @@ function NewItemForm() {
   const [hiddenSpots, setHiddenSpots] = useState<string[]>([]);
   const [spotToHide, setSpotToHide] = useState<string | null>(null);
 
-  // Shelf ownership (PureBid rule): live status under the box, a confirm card
-  // when someone else has the shelf number, asked once per shelf per session.
-  const [shelfStatus, setShelfStatus] = useState<ShelfCheck | null>(null);
-  const [shelfConflict, setShelfConflict] = useState<{ check: ShelfCheck; addAnother: boolean } | null>(null);
-  const confirmedShelves = useRef<Set<string>>(new Set());
-  const [confirmedKeys, setConfirmedKeys] = useState<string[]>([]);
-
   const [formData, setFormData] = useState({
     ...EMPTY_ITEM,
     title: searchParams.get("title") || "",
@@ -842,7 +829,7 @@ function NewItemForm() {
     size: searchParams.get("size") || "",
     retailValue: searchParams.get("retailValue") || "",
     startingBid: searchParams.get("startingBid") || "2",
-    storageLocation: (searchParams.get("storageLocation") || "").toUpperCase(),
+    storageLocation: searchParams.get("storageLocation") || "",
     locationId: searchParams.get("locationId") || "",
     auctionId: preselectedAuctionId,
   });
@@ -890,9 +877,9 @@ function NewItemForm() {
       const loc = active.length === 1 ? active[0].id : active.some((l) => l.id === remembered) ? remembered : "";
       setFormData((prev) => {
         const locationId = prev.locationId || loc;
-        // The shelf last saved at that warehouse comes back (the URL or typing wins).
+        // The spot last saved at that warehouse comes back (the URL or typing wins).
         const last = readSpot();
-        const storageLocation = prev.storageLocation || (last && last.spot && locationId && last.locationId === locationId ? last.spot.toUpperCase() : "");
+        const storageLocation = prev.storageLocation || (last && last.spot && locationId && last.locationId === locationId ? last.spot : "");
         return { ...prev, locationId, storageLocation };
       });
     }).catch(() => {});
@@ -979,25 +966,6 @@ function NewItemForm() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-
-  // Live shelf status (debounced).
-  useEffect(() => {
-    const shelf = formData.storageLocation.trim();
-    const ctrl = new AbortController();
-    if (!shelf || !formData.auctionId) {
-      const t0 = setTimeout(() => setShelfStatus(null), 0);
-      return () => clearTimeout(t0);
-    }
-    const t = setTimeout(() => {
-      const q = new URLSearchParams({ shelf, auctionId: formData.auctionId });
-      if (formData.locationId) q.set("locationId", formData.locationId);
-      fetch(`/api/admin/intake/shelf-check?${q}`, { signal: ctrl.signal })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((d) => { if (d) setShelfStatus(d); })
-        .catch(() => {});
-    }, 450);
-    return () => { clearTimeout(t); ctrl.abort(); };
-  }, [formData.storageLocation, formData.auctionId, formData.locationId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const target = e.target as HTMLInputElement;
@@ -1098,17 +1066,21 @@ function NewItemForm() {
     document.querySelectorAll<HTMLElement>("[data-scroll-root]").forEach((el) => el.scrollTo({ top: 0, behavior: "smooth" }));
   };
 
-  const openPrintQueue = () =>
-    window.open(`/print/labels?queue=${encodeURIComponent(formData.auctionId || "all")}`, "_blank", "noopener");
+  const printUrl = () => `/print/labels?queue=${encodeURIComponent(formData.auctionId || "all")}`;
+  const openPrintQueue = () => window.open(printUrl(), "_blank", "noopener");
 
   // An untouched form: "Done" just leaves (printing anything still owed).
   const formEmpty = !formData.title.trim() && photos.length === 0 && !formData.description.trim();
-  const finish = (justSaved = false) => {
-    if (justSaved || unprinted > 0) openPrintQueue();
+  // `tab` is a print tab opened during the tap itself: phones (iPhone Safari)
+  // block a tab opened after the save's network wait, so it's opened first and
+  // pointed at the tags once the save lands.
+  const finish = (justSaved = false, tab: Window | null = null) => {
+    if (tab) tab.location.href = printUrl();
+    else if (justSaved || unprinted > 0) openPrintQueue();
     router.push(preselectedAuctionId ? `/admin/auctions/${preselectedAuctionId}` : "/admin/auctions");
   };
 
-  // Save + next keeps the auction, warehouse and shelf, clears the rest, jumps
+  // Save + next keeps the auction, warehouse and spot, clears the rest, jumps
   // to the top and gets the scanner ready. Save & done prints and leaves.
   const handleSave = async (addAnother = false) => {
     if (!addAnother && formEmpty) { finish(); return; }
@@ -1116,13 +1088,13 @@ function NewItemForm() {
     if (saving) return;
     if (!formData.title.trim()) { setBanner("Give the lot a title first."); return; }
     if (!formData.auctionId) { setBanner("Pick the auction this lot goes in."); return; }
+    // One warehouse is a given; with two or more, nobody gets a silent default.
     let locationId = formData.locationId;
-    if (!locationId && pickupLocations.length > 0) {
+    if (!locationId && pickupLocations.length === 1) {
       locationId = pickupLocations[0].id;
       setFormData((prev) => ({ ...prev, locationId }));
     }
-    if (!locationId) { setBanner("Set up your warehouse first (Settings → Locations)."); return; }
-    if (!formData.storageLocation.trim()) { setBanner("Type the shelf (e.g. A1) before saving."); return; }
+    if (!locationId) { setBanner(pickupLocations.length > 1 ? "Pick a warehouse." : "Set up your warehouse first (Settings → Locations)."); return; }
     if (!formData.condition) { setBanner("Pick a condition."); return; }
     const shipErr = shipProblem(ship);
     if (shipErr) { setBanner(shipErr); return; }
@@ -1130,6 +1102,9 @@ function NewItemForm() {
 
     setSaving(true);
     setBanner(null);
+    let printTab: Window | null = null;
+    if (!addAnother) { try { printTab = window.open("", "_blank"); } catch { printTab = null; } }
+    const closeTab = () => { try { printTab?.close(); } catch { /* ignore */ } };
     const sentCode = formData.itemCode;
     const savedTitle = formData.title;
     try {
@@ -1142,15 +1117,10 @@ function NewItemForm() {
           ...shipPayload(ship),
           photos,
           organizationId: orgId,
-          shelfConfirmed: confirmedShelves.current.has(shelfKey(formData.storageLocation, formData.auctionId)),
         }),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.status === 409 && data.shelfConflict) {
-        setShelfConflict({ check: data.shelfConflict, addAnother });
-        return;
-      }
-      if (!data.success) { setBanner("Couldn't save: " + (data.error || "unknown error")); return; }
+      if (!data.success) { closeTab(); setBanner("Couldn't save: " + (data.error || "unknown error")); return; }
 
       // The code that actually landed is the one on the tag.
       const code: string | null = data.item?.itemCode ?? sentCode ?? null;
@@ -1159,15 +1129,18 @@ function NewItemForm() {
       setUnprinted((n) => n + 1);
       setAuctionCount((n) => (n === null ? n : n + 1));
 
-      // The shelf just used is the default next time on this device, and a chip.
-      const spot = formData.storageLocation.trim().toUpperCase();
-      try { localStorage.setItem(SPOT_KEY, JSON.stringify({ locationId, spot })); } catch { /* ignore */ }
-      setSpotOptions((prev) => (prev.includes(spot) ? prev : [spot, ...prev]));
-      setHiddenSpots((prev) => {
-        const next = prev.filter((h) => h.toLowerCase() !== spot.toLowerCase());
-        if (next.length !== prev.length) writeHiddenSpots(next);
-        return next;
-      });
+      // The spot just used is the default next time on this device, and a chip.
+      const spot = formData.storageLocation.trim();
+      if (spot) {
+        try { localStorage.setItem(SPOT_KEY, JSON.stringify({ locationId, spot })); } catch { /* ignore */ }
+        setSpotOptions((prev) => (prev.includes(spot) ? prev : [spot, ...prev]));
+        // Typing a deleted spot again brings it back (the server un-deletes it on save).
+        setHiddenSpots((prev) => {
+          const next = prev.filter((h) => h.toLowerCase() !== spot.toLowerCase());
+          if (next.length !== prev.length) writeHiddenSpots(next);
+          return next;
+        });
+      }
 
       if (addAnother) {
         setFormData((prev) => ({ ...prev, ...EMPTY_ITEM }));
@@ -1183,9 +1156,10 @@ function NewItemForm() {
         setBanner(code ? `Saved as ${code}. Next item: scan it or enter it manually.` : "Saved. Scan the next item or enter it manually.");
         scrollTop();
       } else {
-        finish(true);
+        finish(true, printTab);
       }
     } catch {
+      closeTab();
       setBanner("Something went wrong. Try again.");
     } finally {
       setSaving(false);
@@ -1221,38 +1195,6 @@ function NewItemForm() {
             <div className="font-mono text-5xl sm:text-6xl font-black tracking-wider text-[#241a12] leading-none">{showCode}</div>
           )}
           <div className="font-display text-xl font-black text-[#6c4d39]">Filling in…</div>
-        </div>
-      )}
-
-      {/* Someone else's shelf: use another, or confirm you talked. */}
-      {shelfConflict && (
-        <div className="fixed inset-0 z-[80] bg-black/40 flex items-end sm:items-center justify-center p-4" role="dialog" aria-modal="true">
-          <div className="w-full max-w-md bg-white rounded-3xl p-5 shadow-2xl">
-            <div className="font-display text-xl font-black text-[#241a12]">Shelf {shelfConflict.check.shelfNumber} is someone else&apos;s right now</div>
-            <ul className="mt-2 space-y-1.5 text-[15px] text-[#4a3a2b]">
-              {shelfConflict.check.holders.map((h) => (
-                <li key={h.name + h.minutesAgo} className="bg-[#fbeed8] border border-[#eed3ab] rounded-xl px-3 py-2">
-                  <span className="font-bold">{h.name}</span> listed {h.count} item{h.count !== 1 ? "s" : ""} on {h.sections.join(", ")} {ago(h.minutesAgo)}{h.auctionTitle ? ` (${h.auctionTitle})` : ""}
-                </li>
-              ))}
-            </ul>
-            <p className="mt-3 text-[15px] text-[#8a7559] leading-snug">A shelf number stays with whoever listed on it for 7 days. The letter doesn&apos;t matter. Use a different number unless you&apos;ve checked with them.</p>
-            <div className="mt-4 flex flex-col gap-2">
-              <Btn full onClick={() => {
-                setShelfConflict(null);
-                setFormData((prev) => ({ ...prev, storageLocation: "" }));
-                setTimeout(() => document.querySelector<HTMLInputElement>('input[name="storageLocation"]')?.focus(), 50);
-              }}>Use a different shelf</Btn>
-              <Btn full tone="amber" variant="outline" onClick={() => {
-                const k = shelfKey(formData.storageLocation, formData.auctionId);
-                confirmedShelves.current.add(k);
-                setConfirmedKeys((prev) => (prev.includes(k) ? prev : [...prev, k]));
-                const again = shelfConflict.addAnother;
-                setShelfConflict(null);
-                void handleSave(again);
-              }}>We talked. Use shelf {shelfConflict.check.shelfNumber} anyway</Btn>
-            </div>
-          </div>
         </div>
       )}
 
@@ -1452,7 +1394,7 @@ function NewItemForm() {
                   )}
                 </div>
 
-                {/* Price + shelf on one line, like the tag reads. */}
+                {/* Price */}
                 <div className="flex gap-2 pt-3 mt-3 border-t border-[#f0e6d6]">
                   {[{ label: "Retail", name: "retailValue", placeholder: "0.00" }, { label: "Start *", name: "startingBid", placeholder: "2" }].map((f) => (
                     <div key={f.name} className="flex-1 min-w-0">
@@ -1464,31 +1406,16 @@ function NewItemForm() {
                       </div>
                     </div>
                   ))}
-                  <div className="w-[6.5rem] shrink-0">
-                    <label htmlFor="lot-shelf" className={lbl}>Shelf *</label>
-                    <input id="lot-shelf" name="storageLocation" value={formData.storageLocation}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, storageLocation: e.target.value.toUpperCase() }))}
-                      maxLength={12} autoCapitalize="characters" autoComplete="off" placeholder="A1"
-                      className={`${inputCls} !px-2 text-center font-mono font-black uppercase`} />
-                  </div>
                 </div>
 
-                {/* Whose shelf is this? (7-day rule) */}
-                {formData.storageLocation.trim() && shelfStatus && shelfStatus.shelf === formData.storageLocation.trim().toUpperCase() && shelfStatus.shelfNumber && (
-                  shelfStatus.holders.length > 0 ? (
-                    <p className="mt-2 text-[13px] font-semibold text-[#8a4f1c] bg-[#fbeed8] border border-[#eed3ab] rounded-lg px-3 py-2">
-                      Shelf {shelfStatus.shelfNumber} is {shelfStatus.holders[0].name}&apos;s · listed on {shelfStatus.holders[0].sections.join(", ")} {ago(shelfStatus.holders[0].minutesAgo)}
-                      {shelfStatus.holders.length > 1 ? ` (+${shelfStatus.holders.length - 1} more)` : ""}
-                      {confirmedKeys.includes(shelfKey(formData.storageLocation, formData.auctionId)) ? " · you confirmed" : ""}
-                    </p>
-                  ) : shelfStatus.mine ? (
-                    <p className="mt-2 text-[13px] text-[#8a7559]">Shelf {shelfStatus.shelfNumber} is yours · {shelfStatus.mine.count} item{shelfStatus.mine.count !== 1 ? "s" : ""} in the last 7 days</p>
-                  ) : (
-                    <p className="mt-2 text-[13px] text-[#2f5d3a]">Shelf {shelfStatus.shelfNumber} is free. Nobody has listed on it in 7 days.</p>
-                  )
-                )}
+                {/* Spot: where it sits (Shelf 2, Bin 4, Closet…). Spots already used in this
+                    auction + warehouse show as chips; press and hold one to delete it. */}
+                <div className="mt-3">
+                  <label htmlFor="lot-spot" className={lbl}>Spot</label>
+                  <Input id="lot-spot" name="storageLocation" value={formData.storageLocation} onChange={handleChange}
+                    placeholder="Shelf 2" autoComplete="off" />
+                </div>
 
-                {/* Shelves already used in this auction + warehouse. Hold one to delete it. */}
                 {visibleSpots.length > 0 && (
                   <div className="mt-2 space-y-2">
                     {spotToHide && (
@@ -1501,7 +1428,7 @@ function NewItemForm() {
                     <div className="flex flex-wrap gap-1.5">
                       {visibleSpots.slice(0, 12).map((sp) => (
                         <HoldChip key={sp} on={formData.storageLocation === sp} onHold={() => setSpotToHide(sp)}
-                          onClick={() => setFormData((prev) => ({ ...prev, storageLocation: sp }))} className="font-mono !min-h-[40px]">
+                          onClick={() => setFormData((prev) => ({ ...prev, storageLocation: sp }))}>
                           {sp}
                         </HoldChip>
                       ))}

@@ -82,16 +82,31 @@ async function getListerRow(clerkUserId: string): Promise<{ prefix: string }> {
   throw new Error("Could not assign a lister prefix");
 }
 
-/** Peek at a lister's next code for display ("will be DAK-48") — no allocation. */
+/**
+ * Peek at a lister's next code for the footer ("48-DAK") — no number is used up.
+ * Creates the lister's lane on first use so the preview and the saved code
+ * always share the same prefix.
+ */
 export async function peekNextCode(clerkUserId: string): Promise<string> {
   try {
-    const row = await prisma.listerCode.findUnique({ where: { clerkUserId }, select: { prefix: true, next: true } });
-    if (row) return `${row.next + 1}-${row.prefix}`;
-    const profile = await prisma.bidderProfile.findUnique({ where: { clerkUserId }, select: { name: true, email: true } });
-    return `1-${prefixCandidates(profile?.name ?? null, profile?.email ?? null)[0]}`;
-  } catch {
-    return "—";
-  }
+    const { prefix } = await getListerRow(clerkUserId);
+    const row = await prisma.listerCode.findUnique({ where: { clerkUserId }, select: { next: true } });
+    if (!row) return "—";
+    // Never preview a code that's already on an item (e.g. saved before this
+    // lane existed): step the counter past taken numbers. Free numbers are
+    // never skipped, so nothing is wasted.
+    let n = row.next + 1;
+    for (let i = 0; i < 200; i++) {
+      const taken = await prisma.item.findFirst({ where: { itemCode: `${n}-${prefix}` }, select: { id: true } });
+      if (!taken) break;
+      n++;
+    }
+    if (n > row.next + 1) {
+      await prisma.listerCode.updateMany({ where: { clerkUserId, next: { lt: n - 1 } }, data: { next: n - 1 } }).catch(() => {});
+    }
+    return `${n}-${prefix}`;
+  } catch { /* fall through */ }
+  return "—";
 }
 
 /** Old-style random 4-digit code, unique across all items (no lister known). */
@@ -132,32 +147,40 @@ export async function generateItemCode(clerkUserId?: string | null): Promise<str
 }
 
 /**
- * Honor an explicitly provided code when it's still free — this powers the
- * "assign a pre-printed tag" emergency mode (scan any tag, use its number).
+ * The code a new item saves with.
+ *
+ * With a lister (every New item save): their lane, always. The footer previews
+ * "48-DAK" and sends it along; if that number is still free it's used AND the
+ * lister's counter is moved up to it (the counter row is created first if this
+ * is their first item, so the next preview is 49-DAK, never 48 again). If it's
+ * taken, or missing, the next number is allocated atomically. A free code from
+ * outside their lane (a pre-printed tag, an old 4-digit code) is honoured as is.
+ *
+ * Without a lister (system-made items): an old-style random 4-digit code.
  */
 export async function ensureItemCode(provided: string | null | undefined, clerkUserId?: string | null): Promise<string> {
   const p = (provided ?? "").trim().toUpperCase();
-  if (/^[0-9]{1,7}-[0-9A-Z]{1,4}$/.test(p) || /^[0-9A-Z]{1,4}-[0-9]{1,7}$/.test(p) || /^\d{4,7}$/.test(p)) {
-    const exists = await prisma.item.findFirst({ where: { itemCode: p }, select: { id: true } });
-    if (!exists) {
-      // If the provided code sits in the CALLER'S OWN lane (the New Item
-      // footer previews "48-DAK" and sends it along), advance their counter
-      // past it. Without this the counter never moved, so the NEXT preview
-      // showed the exact code that was just used — every other item, the tag
-      // written on the box was one behind the code that actually saved.
-      const m = p.match(/^([0-9]{1,7})-([0-9A-Z]{1,4})$/);
-      if (m && clerkUserId) {
-        const n = Number(m[1]);
-        await prisma.listerCode
-          .updateMany({
-            where: { clerkUserId, prefix: m[2], next: { lt: n } },
-            data: { next: n },
-          })
-          .catch(() => {});
-      }
-      return p;
-    }
+  const valid = /^[0-9]{1,7}-[0-9A-Z]{1,4}$/.test(p) || /^[0-9A-Z]{1,4}-[0-9]{1,7}$/.test(p) || /^\d{4,7}$/.test(p);
+  const free = valid ? !(await prisma.item.findFirst({ where: { itemCode: p }, select: { id: true } })) : false;
+
+  if (!clerkUserId) return free ? p : generateItemCode(null);
+
+  let prefix: string;
+  try {
+    prefix = (await getListerRow(clerkUserId)).prefix; // creates the row on a first item
+  } catch {
+    return free ? p : generateItemCode(null);
   }
+
+  const m = p.match(/^([0-9]{1,7})-([0-9A-Z]{1,4})$/);
+  if (free && m && m[2] === prefix) {
+    const n = Number(m[1]);
+    await prisma.listerCode
+      .updateMany({ where: { clerkUserId, next: { lt: n } }, data: { next: n } })
+      .catch(() => {});
+    return p;
+  }
+  if (free && !m) return p; // pre-printed / legacy tag
   return generateItemCode(clerkUserId);
 }
 
