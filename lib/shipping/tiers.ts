@@ -3,9 +3,13 @@
  * table (docs/shipping-research.md §4c / §9). Pure functions, no I/O, so the
  * item page, the bundle engine and the admin queue all agree to the cent.
  *
- * Model in one breath: the buyer pays a flat tier by (bundle weight band × zone);
- * extra wins ride free until the band moves up, then they pay only the difference.
- * The tier is a hard ceiling — we rate-shop the real label and keep/eat the spread.
+ * Model in one breath: everything a buyer wins in a night rides in ONE box, and
+ * the box is priced by how many SPOTS it holds (a Small lot takes 1 spot, a
+ * Medium 2, a Large 5) and where it goes. 1–2 spots, up to 10, up to 20, up to
+ * 40: four box prices, and a lot only ever costs the difference between them.
+ * Weight still sets the hard limits and the real label; spots set the price,
+ * because "8 more small lots fit" is something a bidder can picture and
+ * "0.6 lb of headroom" is not. We rate-shop the real label and keep/eat the spread.
  */
 
 export type ShipPresetKey = "SMALL" | "MEDIUM" | "LARGE" | "CUSTOM";
@@ -64,28 +68,86 @@ export function zoneForState(stateRaw: string | null | undefined): 1 | 2 | 3 | n
 
 export const ZONE_LABEL: Record<1 | 2 | 3, string> = { 1: "Michigan", 2: "Midwest & East", 3: "West" };
 
-/** Weight bands (packed bundle weight) × zone → price in cents. §4c table. */
-export const TIERS: { maxOz: number; label: string; cents: [number, number, number] }[] = [
-  { maxOz: 16,  label: "under 1 lb", cents: [549, 699, 799] },
-  { maxOz: 80,  label: "1 to 5 lb",  cents: [749, 999, 1299] },
-  { maxOz: 160, label: "5 to 10 lb", cents: [1099, 1499, 1999] },
-  { maxOz: 320, label: "10 to 20 lb", cents: [1499, 2199, 2999] },
+// ─── Spots: what a box costs ──────────────────────────────────────────────
+
+/** Spots each preset takes in a box. */
+export const SPOTS: Record<Exclude<ShipPresetKey, "CUSTOM">, number> = { SMALL: 1, MEDIUM: 2, LARGE: 5 };
+
+/** A spot is about a Small lot plus its fill: half a pound packed. */
+export const OZ_PER_SPOT = 8;
+
+/**
+ * Spots a lot takes. Presets use SPOTS (more if the lister nudged the weight up
+ * past the preset); Custom lots count half a pound per spot, at least one.
+ */
+export function spotsFor(preset: ShipPresetKey | null | undefined, weightOz: number): number {
+  if (preset === "SMALL" || preset === "MEDIUM" || preset === "LARGE") {
+    const base = SPOTS[preset];
+    return weightOz > PRESETS[preset].weightOz ? Math.max(base, Math.ceil(weightOz / OZ_PER_SPOT)) : base;
+  }
+  return Math.max(1, Math.ceil(Math.max(1, weightOz) / OZ_PER_SPOT));
+}
+
+/**
+ * The four box prices: up to N spots × zone (Michigan / Midwest & East / West),
+ * in cents. Same dollar steps as the old weight bands (1–2 spots ≈ under 1 lb,
+ * up to 10 ≈ 5 lb), now counted in lots instead of ounces.
+ */
+export const BOX_PRICES: { upTo: number; cents: [number, number, number] }[] = [
+  { upTo: 2,  cents: [549, 699, 799] },
+  { upTo: 10, cents: [749, 999, 1299] },
+  { upTo: 20, cents: [1099, 1499, 1999] },
+  { upTo: 40, cents: [1499, 2199, 2999] },
 ];
 
-export function bandIndex(weightOz: number): number {
-  const i = TIERS.findIndex((t) => weightOz <= t.maxOz);
-  return i === -1 ? TIERS.length - 1 : i;
+/** A box never holds more than this; the next lot starts a new box. */
+export const MAX_SPOTS = BOX_PRICES[BOX_PRICES.length - 1].upTo;
+
+export function boxStepIndex(spots: number): number {
+  const i = BOX_PRICES.findIndex((t) => spots <= t.upTo);
+  return i === -1 ? BOX_PRICES.length - 1 : i;
 }
 
-/** Price for a bundle of this packed weight going to this zone, in cents. */
-export function tierCents(weightOz: number, zone: 1 | 2 | 3): number {
-  return TIERS[bandIndex(Math.max(1, weightOz))].cents[zone - 1];
+/** What a box holding this many spots costs, in cents (0 for an empty box). */
+export function boxCents(spots: number, zone: 1 | 2 | 3): number {
+  if (spots <= 0) return 0;
+  return BOX_PRICES[boxStepIndex(spots)].cents[zone - 1];
 }
 
-/** The cheapest possible price for a lot on its own — the "Ships from $X" number. */
-export function fromCents(weightOz: number): number {
-  return tierCents(weightOz, 1);
+/** The money rule: a lot costs only what it moves the box price by (≥ 0). */
+export function addCents(beforeSpots: number, afterSpots: number, zone: 1 | 2 | 3): number {
+  return Math.max(0, boxCents(afterSpots, zone) - boxCents(beforeSpots, zone));
 }
+
+/** The cheapest a box with this lot can be: the Michigan price. */
+export function shipsFromCents(spots: number): number {
+  return boxCents(Math.max(1, spots), 1);
+}
+
+/**
+ * Everything a bidder needs to picture their box at `spots`:
+ * the price now, how many spots are left at that price, and the next step.
+ *   { spots, capacity, priceCents, leftAtThisPrice, next: { upTo, cents, extraCents } | null, full }
+ * `full` = no room at all (the next lot starts a new box).
+ */
+export function boxView(spots: number, zone: 1 | 2 | 3) {
+  const s = Math.max(0, spots);
+  const i = boxStepIndex(Math.max(1, s));
+  const step = BOX_PRICES[i];
+  const nextStep = BOX_PRICES[i + 1] ?? null;
+  const priceCents = s > 0 ? step.cents[zone - 1] : 0;
+  return {
+    spots: s,
+    capacity: step.upTo,
+    priceCents,
+    stepPriceCents: step.cents[zone - 1],
+    leftAtThisPrice: Math.max(0, step.upTo - s),
+    next: nextStep ? { upTo: nextStep.upTo, cents: nextStep.cents[zone - 1], extraCents: nextStep.cents[zone - 1] - step.cents[zone - 1] } : null,
+    full: s >= MAX_SPOTS,
+  };
+}
+
+export type BoxView = ReturnType<typeof boxView>;
 
 export const fmtCents = (c: number) => `$${(c / 100).toFixed(2)}`;
 
@@ -151,16 +213,6 @@ export function packBundle(items: { weightOz: number; dims: Dims }[]): { weightO
   return { weightOz, box, overLimit };
 }
 
-/**
- * The money rule. Given what the bundle weighed before and after a lot joins,
- * the buyer pays only the difference between the two tiers (≥ 0).
- */
-export function deltaCents(beforeOz: number, afterOz: number, zone: 1 | 2 | 3): number {
-  const before = beforeOz <= 0 ? 0 : tierCents(beforeOz, zone);
-  const after = tierCents(afterOz, zone);
-  return Math.max(0, after - before);
-}
-
 // ─── Listing input → stored fields ─────────────────────────────────────────
 
 export type ShipFields = {
@@ -212,73 +264,11 @@ export function parseShipInput(body: {
  * these same lines so the story never drifts. Short sentences, one idea each.
  */
 export const HOW_IT_WORKS = [
-  "Pick Ship or Pickup once. It sticks for every lot until you change it.",
-  "One flat price per box, by weight and where you live.",
-  "Everything you win in one auction rides in one box.",
-  "Extra lots ride free until the box steps up a weight range; then you pay only the difference.",
-  "One box per warehouse. Corunna and Gladwin each pack their own.",
-  "Ground to the lower 48. No refunds once the label prints.",
-  "Ships 3 to 5 business days after the auction closes and every lot is paid.",
+  "Pick Ship once. It sticks for every lot until you switch back to Pickup.",
+  "Everything you win in a night ships in one box, for one price.",
+  "A small lot takes 1 spot, a medium 2, a large 5.",
+  "1 to 2 spots is the lowest price. Up to 10 spots costs a few dollars more, and so on.",
+  "Each warehouse packs its own box: Corunna and Gladwin.",
+  "Ground to the lower 48. Ships 3 to 5 business days after the auction closes and every lot is paid.",
+  "No refunds once the label prints.",
 ];
-
-
-/**
- * "Room left in your box": how much more weight fits before the price goes up,
- * and roughly how many more of each preset that is (each extra lot adds its
- * weight + fill). Null `nextCents` means the box is already in the top band.
- */
-export function headroom(weightOz: number, zone: 1 | 2 | 3): {
-  ozLeft: number; bandLabel: string; nextCents: number | null; stepCents: number; fits: { key: "SMALL" | "MEDIUM" | "LARGE"; label: string; count: number }[];
-} {
-  const i = bandIndex(Math.max(1, weightOz));
-  const band = TIERS[i];
-  const ozLeft = Math.max(0, band.maxOz - weightOz);
-  const next = TIERS[i + 1] ?? null;
-  const stepCents = next ? next.cents[zone - 1] - band.cents[zone - 1] : 0;
-  const fits = (["SMALL", "MEDIUM", "LARGE"] as const).map((key) => ({
-    key, label: PRESETS[key].label, count: weightOz <= 0 ? 0 : Math.floor(ozLeft / (PRESETS[key].weightOz + FILL_OZ)),
-  }));
-  return { ozLeft, bandLabel: band.label, nextCents: next ? next.cents[zone - 1] : null, stepCents, fits };
-}
-
-export type Headroom = ReturnType<typeof headroom>;
-
-
-/** The smallest thing that can still join a box: a Small plus its fill. */
-export const SMALLEST_ADD_OZ = PRESETS.SMALL.weightOz + FILL_OZ;
-
-/**
- * What an OPEN box can still take, in one of four shapes:
- *   room      — more fits at this price (fits = which presets, how many)
- *   full      — the next lot pushes the box into the next band (+stepCents)
- *   top-room  — top band, still under 20 lb: more fits, and nothing costs more
- *   top-full  — top band and no room: the next lot starts a new box
- */
-export function headroomState(h: Headroom):
-  | { kind: "room"; fits: { key: "SMALL" | "MEDIUM" | "LARGE"; label: string; count: number }[]; stepCents: number; nextCents: number }
-  | { kind: "full"; stepCents: number; nextCents: number }
-  | { kind: "top-room"; fits: { key: "SMALL" | "MEDIUM" | "LARGE"; label: string; count: number }[] }
-  | { kind: "top-full" } {
-  const fits = h.fits.filter((f) => f.count > 0);
-  const room = h.ozLeft >= SMALLEST_ADD_OZ && fits.length > 0;
-  if (h.nextCents === null) return room ? { kind: "top-room", fits } : { kind: "top-full" };
-  return room ? { kind: "room", fits, stepCents: h.stepCents, nextCents: h.nextCents } : { kind: "full", stepCents: h.stepCents, nextCents: h.nextCents };
-}
-
-/**
- * The ONE preset to name when there's only room for a few words: Medium when at
- * least one fits, else Small. ("3 more Smalls ride free".)
- */
-export function roomPick(fits: { key: string; label: string; count: number }[]): { label: string; count: number } | null {
-  const med = fits.find((f) => f.key === "MEDIUM" && f.count > 0);
-  if (med) return { label: med.label, count: med.count };
-  const sm = fits.find((f) => f.key === "SMALL" && f.count > 0);
-  return sm ? { label: sm.label, count: sm.count } : null;
-}
-
-/** "3 more Smalls ride free" / "1 more Medium rides free" — the item-page room line. */
-export function roomLine(fits: { key: string; label: string; count: number }[]): string | null {
-  const pick = roomPick(fits);
-  if (!pick) return null;
-  return `${pick.count} more ${pick.label}${pick.count === 1 ? "" : "s"} ride${pick.count === 1 ? "s" : ""} free`;
-}

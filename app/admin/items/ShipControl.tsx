@@ -1,7 +1,7 @@
 "use client";
 import { Input, Pill } from "../ui";
 import {
-  PRESETS, MAX_WEIGHT_OZ, MAX_SIDE_IN, OVER_LIMIT_MESSAGE, fromCents, fmtCents, withinLimits,
+  PRESETS, MAX_WEIGHT_OZ, MAX_SIDE_IN, OVER_LIMIT_MESSAGE, shipsFromCents, spotsFor, fmtCents, withinLimits,
   type ShipPresetKey,
 } from "@/lib/shipping/tiers";
 
@@ -115,14 +115,14 @@ export default function ShipControl({ value, onChange, readOnly = false, lockedN
     const oz = customOz(value) > 0 ? customOz(value) : p.weightOz;
     hint = oz > MAX_WEIGHT_OZ
       ? <span className="text-red-700">{OVER_LIMIT_MESSAGE}</span>
-      : <>Counts as <strong className="text-[#241a12]">{fmtLb(oz)}</strong> in {p.dims.l === 8 || p.dims.l === 18 ? "an" : "a"} {p.dims.l}×{p.dims.w}×{p.dims.h} box · {p.examples} · ships from <strong className="text-[#241a12]">{fmtCents(fromCents(oz))}</strong> in Michigan</>;
+      : <>Counts as <strong className="text-[#241a12]">{fmtLb(oz)}</strong> in {p.dims.l === 8 || p.dims.l === 18 ? "an" : "a"} {p.dims.l}×{p.dims.w}×{p.dims.h} box · {p.examples} · takes <strong className="text-[#241a12]">{spotsFor(value.preset, oz)} spot{spotsFor(value.preset, oz) === 1 ? "" : "s"}</strong> in a box · ships from <strong className="text-[#241a12]">{fmtCents(shipsFromCents(spotsFor(value.preset, oz)))}</strong> in Michigan</>;
   } else if (value.preset === "CUSTOM") {
     const oz = customOz(value);
     const l = num(value.lengthIn), w = num(value.widthIn), h = num(value.heightIn);
     if (oz > 0 && l && w && h) {
       const fp = { weightOz: oz, dims: { l, w, h } };
       hint = withinLimits(fp)
-        ? <>Ships from <strong className="text-[#241a12]">{fmtCents(fromCents(oz))}</strong> in Michigan</>
+        ? <>Takes <strong className="text-[#241a12]">{spotsFor("CUSTOM", oz)} spot{spotsFor("CUSTOM", oz) === 1 ? "" : "s"}</strong> in a box · ships from <strong className="text-[#241a12]">{fmtCents(shipsFromCents(spotsFor("CUSTOM", oz)))}</strong> in Michigan</>
         : <span className="text-red-700">{OVER_LIMIT_MESSAGE}</span>;
     } else {
       hint = `Enter weight and size to see the price (up to ${MAX_WEIGHT_OZ / 16} lb, ${MAX_SIDE_IN} in on the longest side).`;

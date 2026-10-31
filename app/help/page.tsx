@@ -6,6 +6,8 @@ import {
 import SizeBadge from "@/app/components/SizeBadge";
 import { SIZE_STYLE, SIZE_HINT } from "@/lib/shipping/sizes";
 
+const SPOTS_OF = { S: "1 spot", M: "2 spots", L: "5 spots" } as const;
+
 export const metadata = {
   title: "Help & FAQ | Northwood Bids",
   description:
@@ -201,21 +203,23 @@ export default function HelpPage() {
           </Topic>
 
           {/* ── Shipping ── */}
-          <Topic id="shipping" Icon={IcoBox} title="Shipping" blurb="Some lots can ship. One box per auction, one price.">
+          <Topic id="shipping" Icon={IcoBox} title="Shipping" blurb="Some lots can ship. Everything you win ships in one box, one price.">
             <Q q="Which lots can ship?" open>
-              <p>Look for the parcel badge on the lot&apos;s photo. The letter is the <strong>box</strong> it ships in (not the item&apos;s size); no badge means pickup only.</p>
+              <p>Look for the parcel badge on the lot&apos;s photo. The letter is how much room it takes in your box (not a clothing size); no badge means pickup only.</p>
               <ul className="mt-3 space-y-2">
                 {(["S", "M", "L"] as const).map((k) => (
                   <li key={k} className="flex items-center gap-3">
                     <SizeBadge size={k} px={28} />
-                    <span><strong>{SIZE_STYLE[k].label} box</strong> <span className="text-[#6f5b46]">{SIZE_HINT[k]}</span></span>
+                    <span><strong>{SIZE_STYLE[k].label}</strong> <span className="text-[#6f5b46]">{SPOTS_OF[k]} · {SIZE_HINT[k]}</span></span>
                   </li>
                 ))}
               </ul>
               <p className="mt-3">A lot that can ship shows a <strong>Pickup / Ship</strong> switch on its page. Pick <strong>Ship</strong> once (on any lot or the <Link href="/shipping">Shipping</Link> page) and it sticks: every lot you win ships until you switch back to Pickup. Lower 48 states only.</p>
             </Q>
             <Q q="What does shipping cost?">
-              <p>One price per box, by weight and where you live, from $5.49 in Michigan. Everything you win in one auction rides in one box: extra lots ride free until the box steps up a weight range, then you pay only the difference. One box per warehouse: Corunna and Gladwin each pack their own. The full price table is on the <Link href="/shipping">Shipping</Link> page.</p>
+              <p>You pay for the <strong>box</strong>, not for each lot. Everything you win in a night ships in one box. A small lot takes 1 spot, a medium 2, a large 5.</p>
+              <p className="mt-3">In Michigan a box of 1 to 2 spots is $5.49 and up to 10 spots is $7.49 (Midwest and East: $6.99 / $9.99, West: $7.99 / $12.99). Bigger boxes step up from there. So six small lots to Ohio cost $9.99 total, not $9.99 each. A lot only ever costs the difference it makes to your box, and the lot page shows that number before you bid.</p>
+              <p className="mt-3">One box per warehouse: Corunna and Gladwin each pack their own. Your box and how much more fits are on the <Link href="/shipping">Shipping</Link> page.</p>
             </Q>
             <Q q="When does my box ship?">
               <p>It ships ground 3 to 5 business days after the auction closes and every lot is paid. We text you the tracking number. No refunds once the label prints.</p>

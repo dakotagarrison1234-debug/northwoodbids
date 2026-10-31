@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { Fulfillment, Prisma } from "@prisma/client";
 import {
-  deltaCents, footprint, headroom, packBundle, tierCents, withinLimits, zoneForState, fromCents,
+  addCents, boxCents, boxView, footprint, packBundle, shipsFromCents, spotsFor, withinLimits, zoneForState, MAX_SPOTS,
   type Dims, type ShipPresetKey,
 } from "@/lib/shipping/tiers";
 
@@ -76,21 +76,68 @@ export function itemFootprint(it: ItemShipRow): { weightOz: number; dims: Dims }
   return fp;
 }
 
-/** What the item page's Ship segment shows about the buyer's open box at this lot's station. */
-export type OpenBoxPeek = { id: string; weightOz: number; zone: 1 | 2 | 3; headroom: ReturnType<typeof headroom> };
+/** Spots a lot takes (0 when it can't ship). */
+export function spotsOfItem(it: ItemShipRow): number {
+  const fp = itemFootprint(it);
+  return fp ? spotsFor(it.shipPreset, fp.weightOz) : 0;
+}
 
 /**
- * What the item page shows: "from $5.49" for anonymous/no-address viewers, or
- * the buyer's exact price for this lot (as a NEW box, or the delta if it joins
- * their open box). `box` is the open box it would join (so the switch can draw
- * the room left), null when it wouldn't join one.
+ * Lots the buyer is WINNING right now (top bid, still live) that would ride in
+ * the same box as a lot at `stationId`. They aren't in a box yet (a box opens at
+ * the first win), but they will be if the bids hold, so the item page counts
+ * them: that's how a bidder sees "4 more small lots still fit" before the night ends.
  */
-export async function quoteForViewer(it: ItemShipRow & { locationId?: string | null; organizationId?: string; transferable?: boolean }, clerkUserId: string | null): Promise<
+async function winningShipLots(clerkUserId: string, organizationId: string, stationId: string, excludeItemId: string): Promise<{ spots: number; lots: number }> {
+  const items = await prisma.item.findMany({
+    where: {
+      organizationId,
+      id: { not: excludeItemId },
+      status: "ACTIVE",
+      shipEligible: true,
+      shippingBundleId: null,
+      auction: { status: { in: ["OPEN", "CLOSING"] }, archived: false },
+      bids: { some: { clerkUserId, status: "ACTIVE" } },
+    },
+    select: {
+      ...itemShipSelect, locationId: true, transferable: true,
+      bids: { where: { status: "ACTIVE" }, orderBy: { amount: "desc" }, take: 1, select: { clerkUserId: true } },
+    },
+    take: 300,
+  });
+  const stations = new Map<string, Awaited<ReturnType<typeof stationForItem>>>();
+  let spots = 0, lots = 0;
+  for (const it of items) {
+    if (it.bids[0]?.clerkUserId !== clerkUserId) continue; // outbid: not theirs
+    const n = spotsOfItem(it);
+    if (n === 0) continue;
+    const key = it.locationId ?? "";
+    if (!stations.has(key)) stations.set(key, await stationForItem(organizationId, it.locationId));
+    const st = stations.get(key);
+    if (!st || st.id !== stationId || (st.transfer && it.transferable === false)) continue;
+    spots += n;
+    lots += 1;
+  }
+  return { spots, lots };
+}
+
+/**
+ * What the item page shows for this lot.
+ *
+ *   lot        its size and spots
+ *   box        the buyer's box at this lot's warehouse: spots already won
+ *              (the open box) and spots they're winning right now; null for
+ *              anonymous / no-address viewers
+ *   exactCents what winning THIS lot right now would add (the real charge
+ *              rule: the open box only; a new box when there's none)
+ *   fromCents  the Michigan price of a box holding just this lot
+ */
+export async function quoteForViewer(it: ItemShipRow & { id?: string; locationId?: string | null; organizationId?: string; transferable?: boolean }, clerkUserId: string | null): Promise<
   | { eligible: false }
   | {
-      eligible: true; fromCents: number; exactCents: number | null; joinsOpenBox: boolean; zone: 1 | 2 | 3 | null; needsAddress: boolean; box: OpenBoxPeek | null;
-      /** This lot's size and packed weight — the item page draws a fresh box from it when there's none to join. */
-      lot: { preset: ShipPresetKey; weightOz: number };
+      eligible: true; fromCents: number; exactCents: number | null; joinsOpenBox: boolean; zone: 1 | 2 | 3 | null; needsAddress: boolean;
+      lot: { preset: ShipPresetKey; spots: number };
+      box: { wonSpots: number; wonLots: number; winningSpots: number; winningLots: number } | null;
     }
 > {
   const fp = itemFootprint(it);
@@ -98,28 +145,31 @@ export async function quoteForViewer(it: ItemShipRow & { locationId?: string | n
   const station = it.organizationId ? await stationForItem(it.organizationId, it.locationId ?? null) : null;
   // Shipping would mean a transfer this lot isn't allowed to ride (same rule as routeWonLot).
   if (station?.transfer && it.transferable === false) return { eligible: false };
-  const base = { eligible: true as const, fromCents: fromCents(fp.weightOz), box: null, lot: { preset: it.shipPreset ?? "CUSTOM", weightOz: fp.weightOz } };
-  if (!clerkUserId) return { ...base, exactCents: null, joinsOpenBox: false, zone: null, needsAddress: true };
+  const lotSpots = spotsFor(it.shipPreset, fp.weightOz);
+  const base = { eligible: true as const, fromCents: shipsFromCents(lotSpots), lot: { preset: it.shipPreset ?? "CUSTOM", spots: lotSpots } };
+  if (!clerkUserId) return { ...base, box: null, exactCents: null, joinsOpenBox: false, zone: null, needsAddress: true };
   const profile = await getShipProfile(clerkUserId);
-  if (!profile) return { ...base, exactCents: null, joinsOpenBox: false, zone: null, needsAddress: true };
-  // No station = no box to join here; never match a box at another station.
+  if (!profile) return { ...base, box: null, exactCents: null, joinsOpenBox: false, zone: null, needsAddress: true };
+
+  // No station = nothing to join here; never match a box at another station.
   const open = station && it.organizationId ? await openBundleFor(clerkUserId, it.organizationId, station.id) : null;
-  if (!open) return { ...base, exactCents: tierCents(fp.weightOz, profile.zone), joinsOpenBox: false, zone: profile.zone, needsAddress: false };
-  const current = open.items.map(itemFootprint).filter((x): x is NonNullable<typeof x> => !!x);
+  const winning = station && it.organizationId && it.id
+    ? await winningShipLots(clerkUserId, it.organizationId, station.id, it.id)
+    : { spots: 0, lots: 0 };
+  const current = open ? open.items.map(itemFootprint).filter((x): x is NonNullable<typeof x> => !!x) : [];
+  const wonSpots = open ? open.items.reduce((n, x) => n + spotsOfItem(x), 0) : 0;
+  const box = { wonSpots, wonLots: open?.items.length ?? 0, winningSpots: winning.spots, winningLots: winning.lots };
+
+  if (!open) return { ...base, box, exactCents: boxCents(lotSpots, profile.zone), joinsOpenBox: false, zone: profile.zone, needsAddress: false };
   const after = packBundle([...current, fp]);
   // Wouldn't fit: joinBundleOnWin seals the open box and starts a fresh one for
-  // this lot, so quote the full first-lot tier (new box = the buyer's current zone).
-  if (after.overLimit && current.length > 0) {
-    return { ...base, exactCents: tierCents(fp.weightOz, profile.zone), joinsOpenBox: false, zone: profile.zone, needsAddress: false };
+  // this lot, so quote a new box (in the buyer's current zone).
+  if ((after.overLimit || wonSpots + lotSpots > MAX_SPOTS) && current.length > 0) {
+    return { ...base, box, exactCents: boxCents(lotSpots, profile.zone), joinsOpenBox: false, zone: profile.zone, needsAddress: false };
   }
-  // The delta is priced in the OPEN box's frozen zone — the address (and zone)
-  // the box opened with, not whatever the profile says today.
+  // Priced in the OPEN box's frozen zone (the address the box opened with).
   const zone = open.zone as 1 | 2 | 3;
-  const before = packBundle(current).weightOz;
-  return {
-    ...base, exactCents: deltaCents(before, after.weightOz, zone), joinsOpenBox: true, zone, needsAddress: false,
-    box: { id: open.id, weightOz: before, zone, headroom: headroom(before, zone) },
-  };
+  return { ...base, box, exactCents: addCents(wonSpots, wonSpots + lotSpots, zone), joinsOpenBox: true, zone, needsAddress: false };
 }
 
 /**
@@ -228,20 +278,23 @@ export async function joinBundleOnWin(itemId: string, clerkUserId: string, organ
     });
     if (!bundle) bundle = await openBox();
     let current = bundle.items.map(itemFootprint).filter((x): x is NonNullable<typeof x> => !!x);
+    let beforeSpots = bundle.items.reduce((n, x) => n + spotsOfItem(x), 0);
+    const lotSpots = spotsFor(item.shipPreset, fp.weightOz);
     let after = packBundle([...current, fp]);
     let sealedBundleId: string | undefined;
-    if (after.overLimit && current.length > 0) {
-      // This lot would push the box past 20 lb / 22 in. Seal the box as it stands
-      // and start a fresh one for this lot (it pays the full first-lot tier).
+    if ((after.overLimit || beforeSpots + lotSpots > MAX_SPOTS) && current.length > 0) {
+      // This lot would push the box past 20 lb / 22 in or its last spot. Seal the
+      // box as it stands and start a fresh one for this lot (it pays a new box).
       await tx.shippingBundle.update({ where: { id: bundle.id }, data: { status: "CLOSED", closedAt: now, closesAt: now } });
       sealedBundleId = bundle.id;
       bundle = await openBox();
       current = [];
+      beforeSpots = 0;
       after = packBundle([fp]);
     }
-    const before = packBundle(current);
     const zone = bundle.zone as 1 | 2 | 3;
-    const delta = deltaCents(before.weightOz, after.weightOz, zone);
+    // The money rule: this lot pays only what it moves the box price by.
+    const delta = addCents(beforeSpots, beforeSpots + lotSpots, zone);
     await tx.item.update({
       where: { id: itemId },
       data: { fulfillment: "SHIP", shippingBundleId: bundle.id, shipChargeCents: delta },
@@ -392,7 +445,7 @@ export async function shippingRefundableForItem(itemId: string): Promise<boolean
  * Everything the buyer's dashboard "Your box" card and /shipping need.
  * Default (dashboard): the 5 newest, delivered boxes only for a week.
  * `{ all: true }` (/shipping): up to 50, delivered boxes kept.
- * `headroom` = how much more fits in the box before the price moves up a band
+ * `spots` / `view` = how full the box is and what the next spot costs
  * (priced in the box's frozen zone).
  */
 export async function bundleSummaryFor(clerkUserId: string, opts: { all?: boolean } = {}) {
@@ -413,7 +466,7 @@ export async function bundleSummaryFor(clerkUserId: string, opts: { all?: boolea
       location: { select: { name: true } },
       items: {
         select: {
-          id: true, title: true, shipChargeCents: true, shipPreset: true, locationId: true, transferRequestId: true,
+          ...itemShipSelect, title: true, shipChargeCents: true, locationId: true, transferRequestId: true,
           payments: { select: { status: true } },
           photos: { where: { isPrimary: true }, take: 1, select: { url: true } },
         },
@@ -430,16 +483,24 @@ export async function bundleSummaryFor(clerkUserId: string, opts: { all?: boolea
   return bundles.map(({ organizationId, locationId, items, ...b }) => {
     const stationId = locationId ?? fallbackByOrg.get(organizationId) ?? null;
     const zone = b.zone as 1 | 2 | 3;
+    const spots = items.reduce((n, it) => n + spotsOfItem(it), 0);
     return {
       ...b,
-      tierCents: b.weightOz > 0 ? tierCents(b.weightOz, zone) : 0,
+      spots,
+      tierCents: boxCents(spots, zone),
       weightLb: Math.round((b.weightOz / 16) * 10) / 10,
-      headroom: headroom(b.weightOz, zone),
-      // Per lot: paid (any PAID row) and physically at the box's own station (no open transfer).
-      items: items.map(({ payments, locationId: at, transferRequestId, ...it }) => ({
-        ...it,
-        paid: payments.some((p) => p.status === "PAID"),
-        atStation: !!stationId && at === stationId && !transferRequestId,
+      view: boxView(spots, zone),
+      // Per lot: its spots, paid (any PAID row) and physically at the box's own
+      // station (no open transfer).
+      items: items.map((row) => ({
+        id: row.id,
+        title: row.title,
+        shipChargeCents: row.shipChargeCents,
+        shipPreset: row.shipPreset,
+        photos: row.photos,
+        spots: spotsOfItem(row),
+        paid: row.payments.some((p) => p.status === "PAID"),
+        atStation: !!stationId && row.locationId === stationId && !row.transferRequestId,
       })),
     };
   });

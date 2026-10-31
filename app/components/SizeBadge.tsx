@@ -23,8 +23,8 @@ export default function SizeBadge({ size, px = 24, className = "" }: { size: Siz
         color: s.fg,
         fontSize: Math.round(px * 0.5),
       }}
-      title={`Ships · ${s.label} box, ${SIZE_HINT[size]}`}
-      aria-label={`Ships, ${s.label} box`}
+      title={`Ships · ${s.label}, ${SIZE_HINT[size]}`}
+      aria-label={`Ships, ${s.label}`}
       role="img"
     >
       <svg width={icon} height={icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

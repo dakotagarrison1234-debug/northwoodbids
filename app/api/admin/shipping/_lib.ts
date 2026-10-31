@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { getUserOrg } from "@/lib/auth";
-import { BOXES, tierCents } from "@/lib/shipping/tiers";
+import { BOXES, boxCents } from "@/lib/shipping/tiers";
+import { itemShipSelect, spotsOfItem } from "@/lib/shipping/bundle";
 import { serviceLabel } from "@/lib/easypost";
 
 /**
@@ -27,6 +28,7 @@ export const bundleInclude = {
   location: { select: { id: true, name: true } },
   items: {
     select: {
+      ...itemShipSelect,
       id: true, title: true, itemCode: true, status: true, locationId: true, transferRequestId: true, storageLocation: true, grabbedAt: true,
       shipChargeCents: true,
       location: { select: { name: true } },
@@ -140,7 +142,8 @@ export function serializeBundle(
       shipChargeCents: it.shipChargeCents,
     };
   });
-  const tier = b.weightOz > 0 ? tierCents(b.weightOz, b.zone as 1 | 2 | 3) : 0;
+  // What the box price is today: its lots' spots, in the box's frozen zone.
+  const tier = boxCents(b.items.reduce((n, it) => n + spotsOfItem(it), 0), b.zone as 1 | 2 | 3);
   return {
     id: b.id,
     status: b.status,

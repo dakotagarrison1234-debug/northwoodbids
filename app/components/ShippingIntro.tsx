@@ -1,6 +1,6 @@
 import Link from "next/link";
 import SizeBadge from "./SizeBadge";
-import { TIERS, fmtCents } from "@/lib/shipping/tiers";
+import { BOX_PRICES, fmtCents } from "@/lib/shipping/tiers";
 
 /**
  * One slim line above the grid when an auction has lots that ship: the three
@@ -16,7 +16,7 @@ export default function ShippingIntro({ count }: { count: number }) {
         <SizeBadge size="L" px={22} />
       </span>
       <span>
-        <strong className="font-bold text-[#241a12]">{count}</strong> lots ship. One box per auction, from {fmtCents(TIERS[0].cents[0])}.
+        <strong className="font-bold text-[#241a12]">{count}</strong> lots ship. Everything you win ships in one box, from {fmtCents(BOX_PRICES[0].cents[0])}.
       </span>
       <Link href="/help#shipping" className="font-bold text-[#6c4d39] underline underline-offset-2 hover:text-[#241a12]">
         How it works

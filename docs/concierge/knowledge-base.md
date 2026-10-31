@@ -144,15 +144,18 @@ unlock the door remotely.
 **Can you ship my item?**
 Some lots can ship — those show a Pickup / Ship switch on the lot's page, with the
 price. Ship or Pickup is one setting: pick Ship once and every lot you win ships until
-you switch back to Pickup (on any lot's page or on the Shipping page). It's one flat
-price per box, by weight and where you live. Everything you win in one auction rides in
-one box. Extra lots ride free until the box steps up a weight
-range; then you pay only the difference. One box per warehouse: Corunna and Gladwin each
+you switch back to Pickup (on any lot's page or on the Shipping page). You pay for the
+BOX, not each lot: everything you win in a night ships in one box. A small lot takes 1
+spot, a medium 2, a large 5. A box of 1 to 2 spots is $5.49 in Michigan ($6.99 Midwest
+and East, $7.99 West); up to 10 spots is $7.49 ($9.99 / $12.99); bigger boxes step up
+from there. So six small lots to Ohio are $9.99 total, not each. A lot only costs the
+difference it makes to the box, and the lot page shows that number, counting the lots
+you're already winning. One box per warehouse: Corunna and Gladwin each
 pack their own, so wins at both go out as two boxes (two prices, two tracking numbers).
 It ships ground 3 to 5 business days after the auction closes and every lot is paid. Lower 48 states
 only. Shipping is billed with the win, and there are no refunds once the label prints.
-The Shipping page (northwoodbids.com/shipping) shows your open boxes, how much more
-rides free, what the next lot would add, every shipping charge and tracking. We text you
+The Shipping page (northwoodbids.com/shipping) shows your open boxes, how many spots are
+left at the current price, what the next lot would add, every shipping charge and tracking. We text you
 when the box ships and when it's delivered.
 
 ---

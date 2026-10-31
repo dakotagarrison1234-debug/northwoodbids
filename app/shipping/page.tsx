@@ -6,9 +6,9 @@ import ShipModeSwitch, { type ShipMode } from "@/app/components/ShipModeSwitch";
 import ShippingAddressModal, { type ShipAddress } from "@/app/components/ShippingAddressModal";
 import { BoxCard, ClosesPill, EmptyBoxCard, IconTiles, PastBoxRow } from "@/app/components/ShippingBoxFull";
 import { useShippingBoxes } from "@/app/components/YourBoxCard";
-import { HOW_IT_WORKS, TIERS, fmtCents } from "@/lib/shipping/tiers";
+import { BOX_PRICES, HOW_IT_WORKS, fmtCents } from "@/lib/shipping/tiers";
 
-const FINE_PRINT = "Prices by weight and distance · lower 48 · no refunds once the label prints";
+const FINE_PRINT = "One price per box, by spots and distance · lower 48 · no refunds once the label prints";
 
 /**
  * /shipping — the buyer's box. Title + closes pill, the box card (or the empty
@@ -76,7 +76,7 @@ export default function ShippingPage() {
   const open = (boxes ?? []).filter((b) => b.status === "OPEN");
   const past = (boxes ?? []).filter((b) => b.status === "CLOSED" || b.status === "PACKING" || b.status === "SHIPPED" || b.status === "DELIVERED").slice(0, 10);
   const z = zone ?? 1;
-  const baseCents = TIERS[0].cents[z - 1];
+  const baseCents = BOX_PRICES[0].cents[z - 1];
 
   return (
     <main className="min-h-screen bg-[#f1e7d5] text-[#241a12]">

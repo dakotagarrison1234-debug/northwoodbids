@@ -2,20 +2,19 @@
 import { useState } from "react";
 import Link from "next/link";
 import { IcoBox, IcoCoin, IcoPlus, IcoTruck } from "./BidIcons";
-import FillBar from "./FillBar";
-import FreeBlocks from "./FreeBlocks";
+import BoxSpots from "./BoxSpots";
 import SizeBadge from "./SizeBadge";
 import { type Box, closesIn, money, trackingLabel } from "./YourBoxCard";
 import { sizeKeyOf } from "@/lib/shipping/sizes";
-import { TIERS, headroom, headroomState } from "@/lib/shipping/tiers";
+import { BOX_PRICES } from "@/lib/shipping/tiers";
 
 /**
  * The box, the way the buyer sees it — shared by /shipping and the dashboard's
  * Shipping tab:
  *
- *   BoxCard       — one OPEN box: paid / everything else free, the fill bar,
- *                   the free blocks, the lot tiles, Fill it + Ship it now.
- *   EmptyBoxCard  — no open box: a first box's free blocks + one line + Fill it.
+ *   BoxCard       — one OPEN box: paid / room left, the box in spots with its
+ *                   two prices, the lot tiles, Fill it + Ship it now.
+ *   EmptyBoxCard  — no open box: the box prices + one line + Fill it.
  *   PastBoxRow    — a closed / packing / shipped / delivered box, one line.
  *   IconTiles     — Pay once · Fill it · Ships, the whole pitch in three tiles.
  *   ClosesPill    — "Closes in 4 days", ink on gold.
@@ -95,16 +94,16 @@ function ShipNow({ box, reload, confirming, setConfirming }: { box: Box; reload:
 export function BoxCard({ box: b, reload, header = false }: { box: Box; reload: () => Promise<void>; header?: boolean }) {
   const [confirming, setConfirming] = useState(false);
   const zone = zoneOf(b);
-  const st = headroomState(b.headroom);
+  const v = b.view;
   const paid = shippingPaid(b);
   const allPaid = b.chargedCents === 0 || paid >= b.chargedCents;
-  // Right stat: what the next lot costs. Free until the band is full; then the step up.
+  // Right stat: what the next lot costs. Free while spots are left; then the step up.
   const right =
-    st.kind === "full"
-      ? { eyebrow: "Next size", value: `+${money(st.stepCents)}`, cls: "text-[#c47b3e]" }
-      : st.kind === "top-full"
-      ? { eyebrow: "Next box", value: money(TIERS[0].cents[zone - 1]), cls: "text-[#c47b3e]" }
-      : { eyebrow: "Everything else", value: "FREE", cls: "text-[#4a7c59]" };
+    v.leftAtThisPrice > 0
+      ? { eyebrow: "Room left", value: `${v.leftAtThisPrice} free`, cls: "text-[#4a7c59]" }
+      : v.next && !v.full
+      ? { eyebrow: "Next lot", value: `+${money(v.next.extraCents)}`, cls: "text-[#c47b3e]" }
+      : { eyebrow: "Next box", value: money(BOX_PRICES[0].cents[zone - 1]), cls: "text-[#c47b3e]" };
   return (
     <section className="bg-white border border-[#e3d6bf] rounded-[18px] p-4 space-y-3">
       {header && (
@@ -126,9 +125,7 @@ export function BoxCard({ box: b, reload, header = false }: { box: Box; reload: 
         </div>
       </div>
 
-      <FillBar weightOz={b.weightOz} zone={zone} height={14} labels />
-
-      <FreeBlocks fits={b.headroom.fits} size="large" />
+      <BoxSpots zone={zone} wonSpots={b.spots} title="In your box" />
 
       {/* Lots in the box + the empty slot */}
       <ul className="flex flex-wrap gap-2">
@@ -169,8 +166,7 @@ export function BoxCard({ box: b, reload, header = false }: { box: Box; reload: 
 export function EmptyBoxCard({ zone }: { zone: 1 | 2 | 3 }) {
   return (
     <section className="bg-white border border-[#e3d6bf] rounded-[18px] p-4 space-y-3">
-      <FreeBlocks fits={headroom(1, zone).fits} size="large" />
-      <p className="text-sm text-[#6f5b46]">Pick Ship on a lot and your first win opens a box.</p>
+      <BoxSpots zone={zone} title="Box prices" emptyNote="Pick Ship on a lot and your first win opens a box." />
       <Link href={FILL_IT_HREF} className={`${btnInk} w-full`}>{FILL_IT_LABEL}</Link>
     </section>
   );

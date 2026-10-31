@@ -2,11 +2,10 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { IcoTruck, IcoCheck, IcoBox } from "./BidIcons";
-import FreeBlocks from "./FreeBlocks";
-import { fmtCents, headroomState, roomLine, type Headroom, type ShipPresetKey } from "@/lib/shipping/tiers";
+import BoxSpots from "./BoxSpots";
+import { fmtCents, type BoxView, type ShipPresetKey } from "@/lib/shipping/tiers";
 
 // Mirrors GET /api/shipping/box (bundleSummaryFor), dates as ISO strings.
-export type BoxHeadroom = Headroom;
 
 export type Box = {
   id: string;
@@ -31,9 +30,10 @@ export type Box = {
   shipState: string;
   /** The warehouse this box ships from — one open box per warehouse. */
   location: { name: string } | null;
-  /** How much more fits before the price moves up a band. */
-  headroom: BoxHeadroom;
-  items: { id: string; title: string; shipChargeCents: number; shipPreset: ShipPresetKey | null; paid: boolean; atStation: boolean; photos: { url: string }[] }[];
+  /** Spots the box holds, and what the next spot costs. */
+  spots: number;
+  view: BoxView;
+  items: { id: string; title: string; shipChargeCents: number; shipPreset: ShipPresetKey | null; spots: number; paid: boolean; atStation: boolean; photos: { url: string }[] }[];
 };
 
 export const money = (c: number) => fmtCents(c);
@@ -196,14 +196,6 @@ export function TrackingLine({ box }: { box: Box }) {
   );
 }
 
-/** The one-line room summary for an open box (Overview card + item page share the shape). */
-export function roomSummary(h: BoxHeadroom): { text: string; tone: "moss" | "amber" } {
-  const st = headroomState(h);
-  if (st.kind === "room" || st.kind === "top-room") return { text: roomLine(st.fits) ?? "Room for more", tone: "moss" };
-  if (st.kind === "full") return { text: `Next lot: +${money(st.stepCents)}`, tone: "amber" };
-  return { text: "Full — the next lot starts a new box", tone: "amber" };
-}
-
 /**
  * "Your box" — one compact card per shipping bundle on the bidder overview.
  * What's in it, what it weighs, what's been paid, where it ships from, how much
@@ -221,8 +213,7 @@ export default function YourBoxCard({ boxes, reload }: { boxes: Box[] | null; re
         const open = b.status === "OPEN";
         const dims = b.boxCode ? b.boxCode.replace(/x/g, "×") : null;
         const from = b.location?.name ?? null;
-        const st = open ? headroomState(b.headroom) : null;
-        const step = st && st.kind === "full" ? { key: "SMALL" as const, cents: st.stepCents } : null;
+        const zone = (b.zone >= 1 && b.zone <= 3 ? b.zone : 1) as 1 | 2 | 3;
         return (
           <section key={b.id} className="bg-white border border-[#e3d6bf] rounded-2xl overflow-hidden">
             {/* Header */}
@@ -232,7 +223,7 @@ export default function YourBoxCard({ boxes, reload }: { boxes: Box[] | null; re
                   <IcoBox className="w-3.5 h-3.5" /> Your box{from ? ` · ${from}` : ""}
                 </div>
                 <div className="text-sm text-[#6f5b46] mt-1 tabular-nums">
-                  {b.items.length} lot{b.items.length !== 1 ? "s" : ""} · {b.weightLb} lb{dims ? ` · box ${dims}` : ""}
+                  {b.items.length} lot{b.items.length !== 1 ? "s" : ""} · {b.spots} spot{b.spots !== 1 ? "s" : ""}{dims ? ` · box ${dims}` : ""}
                 </div>
                 <div className="text-sm text-[#241a12] mt-0.5">
                   Shipping <span className="font-extrabold tabular-nums">{money(b.chargedCents)}</span>
@@ -245,10 +236,10 @@ export default function YourBoxCard({ boxes, reload }: { boxes: Box[] | null; re
               </span>
             </div>
 
-            {/* Room left — the same three blocks as the Shipping page */}
+            {/* How full the box is, and how much more fits at this price */}
             {open && (
               <div className="px-4 sm:px-5 pb-3">
-                <FreeBlocks fits={b.headroom.fits} size="compact" step={step} />
+                <BoxSpots zone={zone} wonSpots={b.spots} title="In your box" compact />
               </div>
             )}
 
