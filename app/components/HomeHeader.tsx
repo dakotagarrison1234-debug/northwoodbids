@@ -39,7 +39,8 @@ export default function HomeHeader() {
     pathname?.startsWith("/superadmin") ||
     pathname?.startsWith("/sign-in") ||
     pathname?.startsWith("/sign-up") ||
-    pathname?.startsWith("/play")
+    pathname?.startsWith("/play") ||
+    pathname?.startsWith("/print")
   ) {
     return null;
   }

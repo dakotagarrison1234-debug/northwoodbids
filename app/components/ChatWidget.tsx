@@ -20,6 +20,7 @@ import { useEffect } from "react";
 // Anything under these prefixes never shows the widget.
 const HIDE_PREFIXES = [
   "/admin",
+  "/print",
   "/superadmin",
   "/dashboard",
   "/account",
@@ -35,6 +36,7 @@ const HIDE_PREFIXES = [
 // path like /help/x isn't mistaken for an auction page.
 const RESERVED_FIRST = new Set([
   "help",
+  "print",
   "terms",
   "privacy",
   "refer",

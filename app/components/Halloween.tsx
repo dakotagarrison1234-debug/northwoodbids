@@ -34,7 +34,7 @@ export function useHalloween(): boolean {
 }
 
 /** Routes that keep their normal look all week (staff tools, the arcade, printables). */
-const HW_SKIP = ["/admin", "/superadmin", "/play", "/invoice", "/labels"];
+const HW_SKIP = ["/admin", "/superadmin", "/play", "/invoice", "/labels", "/print"];
 
 /**
  * Mount once in the root layout. During the week it puts data-hw on <html>

@@ -110,8 +110,16 @@ enum AuctionStatus {
   donorName       String?
   taxDeductible   Boolean      @default(false)
   itemCode        String?
+  // When this item's 2x1 thermal tag was last printed (null = tag still owed).
+  // The New item screen's "Print" queue prints the lister's null-tag items in
+  // listing order, then stamps them.
+  tagPrintedAt    DateTime?
   storageLocation String?
   notes           String?
+  // Who listed this item: set once at creation, never changed on edit, so the
+  // lister keeps the credit (and their tag queue + shelf stay theirs).
+  createdById     String?
+  createdByName   String?
   status          ItemStatus   @default(DRAFT)
   isPremium       Boolean      @default(false)
   // False = must be collected at its own warehouse; never auto-transferred.
@@ -197,6 +205,8 @@ enum AuctionStatus {
   @@index([itemCode])
   @@index([giveawayId])
   @@index([shippingBundleId])
+  @@index([tagPrintedAt])
+  @@index([createdById])
 }
 
 enum ShipPreset {
@@ -748,6 +758,17 @@ model CreditLedger {
  * Spot names staff deleted from the Add-a-lot suggestion row. Lots keep their
  * spot; the name just never comes back as a chip (any device, any auction).
  */
+/// Per-lister item-code lanes: every staff member gets a 3-letter prefix from
+/// their name (DAK) and their own running number, so codes read 1-DAK, 2-DAK…
+/// `next` is the last number handed out; allocation is one atomic increment.
+model ListerCode {
+  id          String   @id @default(cuid())
+  clerkUserId String   @unique
+  prefix      String   @unique
+  next        Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
 model DeletedSpot {
   id             String   @id @default(cuid())
   organizationId String

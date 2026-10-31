@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { PageHeader, PageBody, Btn, Segmented, Empty, Notice } from "../ui";
 import BoxCard from "./BoxCard";
 import SetupTab from "./SetupTab";
+import BiddersTab from "./BiddersTab";
 import { type Board, type Box, type BulkResult, type CardState, type PackInput, type RateView, fmtCents } from "./types";
 
 /**
@@ -31,8 +32,8 @@ const WAREHOUSE_KEY = "nb-ship-warehouse";
 const BULK_CHUNK = 5;
 
 type BoxTab = "packing" | "closed" | "open" | "shipped";
-type Tab = BoxTab | "setup";
-const TAB_LABEL: Record<Tab, string> = { packing: "To pack", closed: "Waiting", open: "Collecting", shipped: "Shipped", setup: "Make shippable" };
+type Tab = BoxTab | "bidders" | "setup";
+const TAB_LABEL: Record<Tab, string> = { packing: "To pack", closed: "Waiting", open: "Collecting", shipped: "Shipped", bidders: "Bidding to ship", setup: "Make shippable" };
 const EMPTY: Record<BoxTab, string> = {
   packing: "Nothing to pack",
   closed: "No boxes waiting on lots",
@@ -149,7 +150,7 @@ export default function AdminShippingPage() {
     locId === "all" ? (board?.packing.length ?? 0) : (board?.packing ?? []).filter((b) => b.location?.id === locId).length;
 
   const toPack = scoped(board?.packing ?? []).length;
-  const boxTab: BoxTab = tab === "setup" ? "packing" : tab;
+  const boxTab: BoxTab = tab === "setup" || tab === "bidders" ? "packing" : tab;
   const list: Box[] = board ? scoped(board[boxTab]) : [];
   const configured = !!board?.configured && !board?.configMessage;
 
@@ -296,11 +297,13 @@ export default function AdminShippingPage() {
         <Segmented<Tab>
           value={tab}
           onChange={(t) => { setTab(t); setOpenId(null); }}
-          options={(["packing", "closed", "open", "shipped", "setup"] as Tab[]).map((t) => ({ value: t, label: TAB_LABEL[t], count: t !== "setup" && board ? scoped(board[t]).length : undefined }))}
+          options={(["packing", "closed", "open", "shipped", "bidders", "setup"] as Tab[]).map((t) => ({ value: t, label: TAB_LABEL[t], count: t !== "setup" && t !== "bidders" && board ? scoped(board[t]).length : undefined }))}
         />
 
         {tab === "setup" ? (
           <SetupTab />
+        ) : tab === "bidders" ? (
+          <BiddersTab />
         ) : (
         <>
         {bulkBar}

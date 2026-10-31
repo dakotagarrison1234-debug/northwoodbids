@@ -38,7 +38,14 @@ export async function GET(req: NextRequest) {
     .catch(() => [] as { spot: string }[]);
   const gone = new Set(deleted.map((d) => d.spot.toLowerCase()));
 
-  const spots = [...new Set(rows.map((r) => (r.storageLocation ?? "").trim()).filter(Boolean))]
+  // New items save the spot in capitals (A1), older ones may not — one chip per
+  // spot regardless of case, shown the way new items save it.
+  const byKey = new Map<string, string>();
+  for (const r of rows) {
+    const s = (r.storageLocation ?? "").trim();
+    if (s && !byKey.has(s.toLowerCase())) byKey.set(s.toLowerCase(), s.toUpperCase());
+  }
+  const spots = [...byKey.values()]
     .filter((s) => !gone.has(s.toLowerCase()))
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
 

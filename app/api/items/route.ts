@@ -2,7 +2,8 @@ import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { canAccessOrg } from "@/lib/auth";
-import { ensureItemCode } from "@/lib/itemCode";
+import { createItemWithCode } from "@/lib/itemCode";
+import { checkShelf } from "@/lib/shelfCheck";
 import { parseShipInput } from "@/lib/shipping/tiers";
 
 // Accept only http(s) URLs for photos — blocks javascript:/data:/file: etc.
@@ -47,6 +48,7 @@ export async function POST(request: NextRequest) {
       isPremium,
       packSize,
       transferable,
+      shelfConfirmed,
     } = body;
 
     if (!title || !organizationId) {
@@ -63,6 +65,11 @@ export async function POST(request: NextRequest) {
         { error: "Please choose a warehouse for this item." },
         { status: 400 }
       );
+    }
+
+    // Every item gets a shelf / spot — that's how a lot is found again.
+    if (!storageLocation || !String(storageLocation).trim()) {
+      return NextResponse.json({ error: "Type the shelf / spot (e.g. A1) before saving." }, { status: 400 });
     }
 
     if (!(await canAccessOrg(organizationId))) {
@@ -116,9 +123,13 @@ export async function POST(request: NextRequest) {
       if (parentAuction.status === "OPEN") itemStatus = "ACTIVE";
     }
 
-    // Random globally-unique item code. Honor the one already shown to staff
-    // (so the written tag matches) when it's still free, else mint a new one.
-    const autoItemCode = await ensureItemCode(itemCode);
+    // Attribute the listing to whoever created it (stays fixed across edits) —
+    // it also scopes their tag print queue and their shelf.
+    const creatorProfile = await prisma.bidderProfile.findUnique({
+      where: { clerkUserId: userId },
+      select: { name: true, email: true },
+    });
+    const createdByName = creatorProfile?.name || creatorProfile?.email?.split("@")[0] || "Staff";
 
     const baseData = {
       title,
@@ -131,8 +142,9 @@ export async function POST(request: NextRequest) {
       reservePrice: reservePrice ? parseFloat(reservePrice) : null,
       donorName: donorName || null,
       taxDeductible: taxDeductible || false,
-      itemCode: autoItemCode,
-      storageLocation: storageLocation || null,
+      storageLocation: String(storageLocation).trim().toUpperCase().slice(0, 40),
+      createdById: userId,
+      createdByName,
       locationId: locationId || null,
       notes: notes || null,
       auctionId: auctionId || null,
@@ -163,7 +175,34 @@ export async function POST(request: NextRequest) {
     }
 
 
-    const item = await prisma.item.create({ data: baseData });
+    // ── Shelf collision gate (PureBid rule) ─────────────────────────────────
+    // Someone ELSE listed on this shelf NUMBER (101A / 101B = shelf 101) in the
+    // last 7 days → 409 with who/when unless the lister confirmed. Your own
+    // shelf never blocks you.
+    if (auctionId && !shelfConfirmed) {
+      const check = await checkShelf({
+        orgId: organizationId,
+        shelf: String(storageLocation),
+        auctionId,
+        locationId,
+        clerkUserId: userId,
+      });
+      if (check.holders.length > 0) {
+        return NextResponse.json(
+          { error: `Shelf ${check.shelfNumber} is ${check.holders[0].name}'s right now.`, shelfConflict: check },
+          { status: 409 }
+        );
+      }
+    }
+
+    // The lister's next code (48-DAK). The footer's preview is honored while
+    // it's still free, and the code that actually landed is what's returned —
+    // so the printed tag always matches the database.
+    const item = await createItemWithCode(
+      userId,
+      (code) => prisma.item.create({ data: { ...baseData, itemCode: code } }),
+      itemCode
+    );
     return NextResponse.json({ success: true, item }, { status: 201 });
   } catch (error) {
     console.error("Error creating item:", error);

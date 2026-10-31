@@ -128,7 +128,7 @@ export default function SiteFooter() {
 
 /* Site-wide footer wiring. Skipped where a page has its own footer (home),
    where a bottom bar or full-bleed flow owns the screen, and on staff tools. */
-const NO_FOOTER = ["/", "/admin", "/superadmin", "/sign-in", "/sign-up", "/play", "/onboarding", "/invoice", "/register", "/join"];
+const NO_FOOTER = ["/", "/admin", "/superadmin", "/sign-in", "/sign-up", "/play", "/onboarding", "/invoice", "/print", "/register", "/join"];
 
 export function GlobalFooter() {
   const pathname = usePathname() ?? "/";

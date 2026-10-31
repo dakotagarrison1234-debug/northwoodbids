@@ -328,6 +328,13 @@ export default function EditItemPage() {
               <div className="font-mono font-black tracking-wider leading-none text-5xl sm:text-6xl mt-1">#{formData.itemCode || "—"}</div>
             </div>
             {formData.packSize > 1 && <Pill tone="amber">Combo of {formData.packSize}</Pill>}
+            {formData.itemCode && (
+              <a href={`/print/labels?ids=${encodeURIComponent(itemId)}`} target="_blank" rel="noopener noreferrer"
+                className="shrink-0 inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-xl bg-[#fbf4e6] text-[#241a12] text-[15px] font-bold hover:bg-white">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6V2h8v4" /><rect x="2" y="6" width="12" height="6" rx="1.5" /><path d="M4.5 10h7v4h-7z" /></svg>
+                Print tag
+              </a>
+            )}
           </div>
 
           <input type="file" accept="image/*" multiple id="photo-upload" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
