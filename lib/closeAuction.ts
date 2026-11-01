@@ -11,6 +11,7 @@ import {
   vestReferralForPayer,
 } from "@/lib/referral";
 import { joinBundleOnWin, shipCentsByItem, stationForItem, shippingStation } from "@/lib/shipping/bundle";
+import { claimItemsForCharge } from "@/lib/chargeGuard";
 import { textBuyer, sealedFullMessage } from "@/lib/shippingNotify";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -180,64 +181,60 @@ async function textSealedBox(bundleId: string, newLotCents: number): Promise<voi
 async function closeItem(
   item: ItemWithBidsAndOrg
 ): Promise<{ clerkUserId: string; amount: number } | null> {
-  // C3: Re-read the top bid fresh from DB to avoid stale pre-fetched value
-  const freshTopBid = await prisma.bid.findFirst({
-    where: { itemId: item.id, status: "ACTIVE" },
-    orderBy: { amount: "desc" },
-  });
-  const winningBid = freshTopBid;
+  // Claim the lot and read its top bid in ONE transaction. The claim
+  // (ACTIVE → SOLD) takes the row lock the bid route's guarded update also needs,
+  // so a bid can't land between reading the winner and recording it, and a second
+  // close pass (overlapping cron, manual close) finds the lot already closed and
+  // leaves it alone instead of flipping a SOLD lot back to UNSOLD.
+  type Outcome = { kind: "skip" } | { kind: "unsold" } | { kind: "reserve"; amount: number } | { kind: "won"; clerkUserId: string; amount: number };
+  const outcome: Outcome = await prisma.$transaction(async (tx) => {
+    const claim = await tx.item.updateMany({ where: { id: item.id, status: "ACTIVE" }, data: { status: "SOLD" } });
+    if (claim.count === 0) return { kind: "skip" } as const;
+    const winningBid = await tx.bid.findFirst({
+      where: { itemId: item.id, status: "ACTIVE" },
+      orderBy: { amount: "desc" },
+    });
 
-  // Reserve price enforcement: if the top bid is below the reserve, the item
-  // does NOT sell. Mark UNSOLD, cancel the standing bid, deactivate proxies.
-  if (
-    winningBid &&
-    item.reservePrice != null &&
-    Number(winningBid.amount) < Number(item.reservePrice)
-  ) {
-    await prisma.$transaction([
-      prisma.bid.update({ where: { id: winningBid.id }, data: { status: "CANCELLED" } }),
+    // No bids: unsold.
+    if (!winningBid) {
+      await tx.item.update({ where: { id: item.id }, data: { status: "UNSOLD" } });
+      await tx.proxyBid.updateMany({ where: { itemId: item.id, isActive: true }, data: { isActive: false } });
+      return { kind: "unsold" } as const;
+    }
+
+    // Reserve price enforcement: if the top bid is below the reserve, the item
+    // does NOT sell. Mark UNSOLD, cancel the standing bid, deactivate proxies.
+    if (item.reservePrice != null && Number(winningBid.amount) < Number(item.reservePrice)) {
+      await tx.bid.update({ where: { id: winningBid.id }, data: { status: "CANCELLED" } });
       // Terminalize every other standing bid so no one is left showing "active/winning".
-      prisma.bid.updateMany({
-        where: { itemId: item.id, status: "ACTIVE", id: { not: winningBid.id } },
-        data: { status: "OUTBID" },
-      }),
-      prisma.item.update({ where: { id: item.id }, data: { status: "UNSOLD" } }),
-      prisma.proxyBid.updateMany({ where: { itemId: item.id, isActive: true }, data: { isActive: false } }),
-    ]);
-    console.log(
-      `closeItem: reserve not met for "${item.title}" (${item.id}) — top bid $${Number(winningBid.amount)} < reserve $${Number(item.reservePrice)}`
-    );
-    triggerItemClosed(item.id).catch(() => {});
-    return null;
-  }
+      await tx.bid.updateMany({ where: { itemId: item.id, status: "ACTIVE", id: { not: winningBid.id } }, data: { status: "OUTBID" } });
+      await tx.item.update({ where: { id: item.id }, data: { status: "UNSOLD" } });
+      await tx.proxyBid.updateMany({ where: { itemId: item.id, isActive: true }, data: { isActive: false } });
+      return { kind: "reserve", amount: Number(winningBid.amount) } as const;
+    }
 
-  if (winningBid) {
-    await prisma.$transaction([
-      prisma.bid.update({ where: { id: winningBid.id }, data: { status: "WON" } }),
-      // Terminalize every losing standing bid so dashboards don't show stale "winning".
-      prisma.bid.updateMany({
-        where: { itemId: item.id, status: "ACTIVE", id: { not: winningBid.id } },
-        data: { status: "OUTBID" },
-      }),
-      // Snapshot the source location for commission. At close the item is still
-      // at the location that listed it (pickup transfers only happen afterward),
-      // so this locks in who gets paid — even if it's later moved for pickup.
-      prisma.item.update({ where: { id: item.id }, data: { status: "SOLD", soldLocationId: item.locationId } }),
-      prisma.proxyBid.updateMany({ where: { itemId: item.id, isActive: true }, data: { isActive: false } }),
-    ]);
-    triggerItemClosed(item.id).catch(() => {});
-    // Winner known → Pickup or Ship is decided NOW, before any charge is attempted,
-    // so the shipping delta is on the item by the time the bill is computed.
-    await routeWonLot(item, winningBid.clerkUserId);
-    return { clerkUserId: winningBid.clerkUserId, amount: Number(winningBid.amount) };
-  } else {
-    await prisma.$transaction([
-      prisma.item.update({ where: { id: item.id }, data: { status: "UNSOLD" } }),
-      prisma.proxyBid.updateMany({ where: { itemId: item.id, isActive: true }, data: { isActive: false } }),
-    ]);
-    triggerItemClosed(item.id).catch(() => {});
+    await tx.bid.update({ where: { id: winningBid.id }, data: { status: "WON" } });
+    // Terminalize every losing standing bid so dashboards don't show stale "winning".
+    await tx.bid.updateMany({ where: { itemId: item.id, status: "ACTIVE", id: { not: winningBid.id } }, data: { status: "OUTBID" } });
+    // Snapshot the source location for commission. At close the item is still
+    // at the location that listed it (pickup transfers only happen afterward),
+    // so this locks in who gets paid — even if it's later moved for pickup.
+    await tx.item.update({ where: { id: item.id }, data: { status: "SOLD", soldLocationId: item.locationId } });
+    await tx.proxyBid.updateMany({ where: { itemId: item.id, isActive: true }, data: { isActive: false } });
+    return { kind: "won", clerkUserId: winningBid.clerkUserId, amount: Number(winningBid.amount) } as const;
+  });
+
+  if (outcome.kind === "skip") return null; // another pass already closed it
+  triggerItemClosed(item.id).catch(() => {});
+  if (outcome.kind === "reserve") {
+    console.log(`closeItem: reserve not met for "${item.title}" (${item.id}) — top bid $${outcome.amount} < reserve $${Number(item.reservePrice)}`);
     return null;
   }
+  if (outcome.kind === "unsold") return null;
+  // Winner known → Pickup or Ship is decided NOW, before any charge is attempted,
+  // so the shipping delta is on the item by the time the bill is computed.
+  await routeWonLot(item, outcome.clerkUserId);
+  return { clerkUserId: outcome.clerkUserId, amount: outcome.amount };
 }
 
 /**
@@ -304,6 +301,9 @@ async function chargeWinners(
  * Idempotent: skips winners whose items already have a PAID/PENDING row, ignores
  * P2002 on inserts, and uses a stable per-winner idempotency key.
  */
+/** A declined card is retried this often (or as soon as the bidder saves a new card). */
+const CHARGE_RETRY_MS = 6 * 60 * 60 * 1000;
+
 async function chargeOneWinner(
   winner: WinnerEntry,
   org: OrgForCharging,
@@ -331,20 +331,70 @@ async function chargeOneWinner(
   // never double-charge it, and the charge amount + idempotency key reflect exactly
   // the set we're billing now.
   const allItemIds = winner.items.map((i) => i.id);
+  // Settled = PAID, or PENDING with a real PaymentIntent (a charge in flight). A
+  // PENDING row with no PaymentIntent is only a charge-lock marker (or one left by
+  // a run that timed out) and stays chargeable; claimItemsForCharge below keeps a
+  // FRESH marker from being charged twice.
   const settledRows = await prisma.payment.findMany({
-    where: { itemId: { in: allItemIds }, clerkUserId, status: { in: ["PAID", "PENDING"] } },
+    where: { itemId: { in: allItemIds }, clerkUserId, OR: [{ status: "PAID" }, { status: "PENDING", stripePaymentIntentId: { not: null } }] },
     select: { itemId: true },
   });
   const settledIds = new Set(settledRows.map((p) => p.itemId));
-  const chargeItems = winner.items.filter((i) => !settledIds.has(i.id));
-  if (chargeItems.length === 0) {
+  const unsettled = winner.items.filter((i) => !settledIds.has(i.id));
+  if (unsettled.length === 0) {
     console.log(`Auto-charge: already settled for ${clerkUserId} — skipping`);
     return;
   }
+  // Text "payment failed" only the FIRST time the card fails, not on every retry
+  // (our own hiccups, like a shipping lookup error, don't count as the card failing).
+  const alreadyFailed = !!(await prisma.payment.findFirst({
+    where: {
+      itemId: { in: unsettled.map((i) => i.id) }, clerkUserId, status: "FAILED",
+      OR: [{ failureReason: null }, { failureReason: { not: "shipping lookup failed" } }],
+    },
+    select: { id: true },
+  }));
+  // Take the same per-customer charge lock the manual payment paths use, so the
+  // automatic retry and a customer's own "Pay" can never charge the same lot twice
+  // (and two overlapping cron runs can't both charge).
+  const claimed = new Set(
+    (await claimItemsForCharge(clerkUserId, unsettled.map((i) => ({ id: i.id, bid: i.amount })))).map((c) => c.id),
+  );
+  const chargeItems = unsettled.filter((i) => claimed.has(i.id));
+  if (chargeItems.length === 0) {
+    console.log(`Auto-charge: another charge holds ${clerkUserId}'s lots — skipping`);
+    return;
+  }
   const chargingWinner: WinnerEntry = { ...winner, items: chargeItems };
+  // On an unexpected error the claim is left as is: it expires in ~25s and the
+  // next tick retries with the same Stripe key, so a charge that went through
+  // before the error is picked up as PAID instead of being charged again.
+  await chargeClaimedWinner(chargingWinner, org, auctionId, bidderCustomer, alreadyFailed, platformFeePercent, taxPercent);
+}
+
+/** The charge itself, for lots this pass has claimed (see chargeOneWinner). */
+async function chargeClaimedWinner(
+  chargingWinner: WinnerEntry,
+  org: OrgForCharging,
+  auctionId: string,
+  bidderCustomer: { stripeCustomerId: string; defaultPaymentMethodId: string | null } | null,
+  alreadyFailed: boolean,
+  platformFeePercent: number,
+  taxPercent: number,
+): Promise<void> {
+  const clerkUserId = chargingWinner.clerkUserId;
+  const chargeItems = chargingWinner.items;
   const itemIds = chargeItems.map((i) => i.id);
 
   const now = new Date();
+
+  // A lot another close pass claimed may not have its Pickup / Ship decided yet
+  // (overlapping runs). Decide it now so its shipping is on the bill.
+  const unrouted = await prisma.item.findMany({
+    where: { id: { in: itemIds }, fulfillment: null },
+    select: { id: true, organizationId: true, locationId: true },
+  });
+  for (const it of unrouted) await routeWonLot(it, clerkUserId);
 
   // ── Shipping ───────────────────────────────────────────────────────────────
   // Each lot's delta was written on the item when it was won (routeWonLot). It's
@@ -405,7 +455,7 @@ async function chargeOneWinner(
     // No card on file — mark all items as FAILED so bidder sees them on dashboard
     console.warn(`Auto-charge: no card on file for ${clerkUserId} in org ${org.id}`);
     await recordWinnerStatus(chargingWinner, "FAILED", now, { failureReason: "No payment card on file", shipByItem });
-    notifyPaymentFailed({
+    if (!alreadyFailed) notifyPaymentFailed({
       clerkUserId,
       itemCount: itemIds.length,
       reason: "No payment card on file",
@@ -475,8 +525,11 @@ async function chargeOneWinner(
         },
       },
       {
-        // Stable per (winner, item-set) — a winner is only ever charged once.
-        idempotencyKey: redemptionKey,
+        // Stable per (winner, item set, card, retry window): a crashed run that
+        // retries a minute later replays the same charge instead of making a new
+        // one, but a declined card retried after CHARGE_RETRY_MS, or a new card,
+        // is a real new attempt (Stripe would otherwise replay the old decline).
+        idempotencyKey: `${redemptionKey}:${bidderCustomer.defaultPaymentMethodId}:${Math.floor(Date.now() / CHARGE_RETRY_MS)}`,
       }
     );
   } catch (err: unknown) {
@@ -494,7 +547,7 @@ async function chargeOneWinner(
     }
     console.error(`Auto-charge FAILED for ${clerkUserId}:`, failureReason);
     await recordWinnerStatus(chargingWinner, "FAILED", now, { failureReason, shipByItem });
-    notifyPaymentFailed({
+    if (!alreadyFailed) notifyPaymentFailed({
       clerkUserId,
       itemCount: itemIds.length,
       reason: failureReason,
@@ -554,7 +607,7 @@ async function chargeOneWinner(
     stripePaymentIntentId: paymentIntent.id,
     shipByItem,
   });
-  notifyPaymentFailed({
+  if (!alreadyFailed) notifyPaymentFailed({
     clerkUserId,
     itemCount: itemIds.length,
     reason: status,
@@ -569,8 +622,12 @@ async function chargeOneWinner(
  * Fee/tax are distributed across items in whole cents; the leftover cent goes to
  * item[0] so per-item rows sum back to the charged total. Shipping is NOT split:
  * each lot's row carries that lot's own delta (`shipByItem`), which is what the
- * forfeit/refund paths give back. Idempotent: pre-checks existing rows and
- * ignores P2002.
+ * forfeit/refund paths give back.
+ *
+ * A row that already exists is UPDATED unless it's settled (PAID, or PENDING with
+ * a real PaymentIntent): a retry that succeeds must turn the lot's FAILED row
+ * (or a charge-lock placeholder) into PAID, or the lot would stay "owed" and the
+ * customer could pay twice. Settled rows are never touched. Ignores P2002.
  */
 async function recordWinnerStatus(
   winner: WinnerEntry,
@@ -607,9 +664,11 @@ async function recordWinnerStatus(
   // preserves idempotency alongside the P2002 catch).
   const existing = await prisma.payment.findMany({
     where: { itemId: { in: itemIds }, clerkUserId },
-    select: { itemId: true },
+    select: { itemId: true, status: true, stripePaymentIntentId: true },
   });
-  const existingItemIds = new Set(existing.map((p) => p.itemId));
+  const existingById = new Map(existing.map((p) => [p.itemId, p]));
+  const isSettled = (r: { status: string; stripePaymentIntentId: string | null }) =>
+    r.status === "PAID" || (r.status === "PENDING" && !!r.stripePaymentIntentId);
 
   const ops: Prisma.PrismaPromise<unknown>[] = [];
   // Attach the rounding remainder + the whole Bid Bucks credit to the FIRST row we
@@ -618,7 +677,8 @@ async function recordWinnerStatus(
   let extrasAssigned = false;
   for (let idx = 0; idx < winner.items.length; idx++) {
     const item = winner.items[idx];
-    if (existingItemIds.has(item.id)) continue; // already recorded — skip (idempotent)
+    const prior = existingById.get(item.id);
+    if (prior && isSettled(prior)) continue; // already paid / in flight — never touched
 
     const isFirstNew = !extrasAssigned;
     extrasAssigned = true;
@@ -628,25 +688,24 @@ async function recordWinnerStatus(
     // Shipping is comped along with everything else for an admin win.
     const itemShipCents = opts.comped ? 0 : shipByItem.get(item.id) ?? 0;
 
+    const fields = {
+      // A comp is a $0 bill — the winning amount is kept on the item/bid for the
+      // record, but the Payment row itself charges nothing.
+      amount: opts.comped ? 0 : item.amount,
+      applicationFeeAmount: opts.comped ? 0 : itemFeeCents / 100,
+      taxAmount: opts.comped ? 0 : itemTaxCents / 100,
+      creditApplied: itemCreditCents > 0 ? itemCreditCents / 100 : null,
+      shippingAmount: itemShipCents > 0 ? itemShipCents / 100 : null,
+      stripePaymentIntentId: opts.stripePaymentIntentId ?? null,
+      status,
+      comped: opts.comped ?? false,
+      autoChargeAttemptedAt: attemptedAt,
+      failureReason: opts.failureReason ?? null,
+    };
     ops.push(
-      prisma.payment.create({
-        data: {
-          clerkUserId,
-          itemId: item.id,
-          // A comp is a $0 bill — the winning amount is kept on the item/bid for the
-          // record, but the Payment row itself charges nothing.
-          amount: opts.comped ? 0 : item.amount,
-          applicationFeeAmount: opts.comped ? 0 : itemFeeCents / 100,
-          taxAmount: opts.comped ? 0 : itemTaxCents / 100,
-          creditApplied: itemCreditCents > 0 ? itemCreditCents / 100 : null,
-          shippingAmount: itemShipCents > 0 ? itemShipCents / 100 : null,
-          stripePaymentIntentId: opts.stripePaymentIntentId,
-          status,
-          comped: opts.comped ?? false,
-          autoChargeAttemptedAt: attemptedAt,
-          failureReason: opts.failureReason,
-        },
-      })
+      prior
+        ? prisma.payment.update({ where: { itemId_clerkUserId: { itemId: item.id, clerkUserId } }, data: { ...fields, shippingRefundedAt: null } })
+        : prisma.payment.create({ data: { clerkUserId, itemId: item.id, ...fields } })
     );
 
     if (opts.moveItemsToPendingPickup) {
@@ -705,12 +764,23 @@ export async function chargeUnchargedWinners(): Promise<{ chargedWinners: number
   const candidateItemIds = wonBids.map((b) => b.item.id);
   const payments = await prisma.payment.findMany({
     where: { itemId: { in: candidateItemIds } },
-    select: { itemId: true, clerkUserId: true, status: true },
+    select: { itemId: true, clerkUserId: true, status: true, stripePaymentIntentId: true, autoChargeAttemptedAt: true },
   });
-  // Items already settled (PAID/PENDING) — those winners don't need re-charging.
+  // Items already settled (PAID, or PENDING on a real PaymentIntent) — those
+  // winners don't need re-charging. A PENDING row with no PaymentIntent is just a
+  // charge-lock marker and stays chargeable.
   const settledKey = new Set(
-    payments.filter((p) => p.status === "PAID" || p.status === "PENDING").map((p) => `${p.itemId}:${p.clerkUserId}`)
+    payments
+      .filter((p) => p.status === "PAID" || (p.status === "PENDING" && !!p.stripePaymentIntentId))
+      .map((p) => `${p.itemId}:${p.clerkUserId}`)
   );
+  // A declined card is retried every RETRY_EVERY_MS (or right away once the
+  // bidder saves a new card), not on every one-minute tick.
+  const RETRY_EVERY_MS = CHARGE_RETRY_MS;
+  const lastFailedAt = new Map<string, number>(); // "itemId:user" → last failed attempt
+  for (const p of payments) {
+    if (p.status === "FAILED" && p.autoChargeAttemptedAt) lastFailedAt.set(`${p.itemId}:${p.clerkUserId}`, p.autoChargeAttemptedAt.getTime());
+  }
   // Items that have ANY payment row — used to tell "close recorded this winner"
   // (and thus already sent their 'you won') from "close never got to them".
   const itemsWithPayment = new Set(payments.map((p) => p.itemId));
@@ -751,8 +821,24 @@ export async function chargeUnchargedWinners(): Promise<{ chargedWinners: number
     if (itemsWithPayment.has(bid.item.id)) g.everProcessed = true;
   }
 
-  // Only act on winners with at least one item still needing a charge.
-  const groupList = [...groups.values()].filter((g) => g.hasUnsettled);
+  // Only act on winners with at least one item still needing a charge, and skip
+  // a declined card until it's due for a retry (or the bidder changed cards).
+  let groupList = [...groups.values()].filter((g) => g.hasUnsettled);
+  if (groupList.length === 0) return { chargedWinners: 0 };
+  const cards = await prisma.bidderStripeCustomer.findMany({
+    where: { clerkUserId: { in: [...new Set(groupList.map((g) => g.winner.clerkUserId))] } },
+    select: { clerkUserId: true, organizationId: true, updatedAt: true },
+  });
+  const cardUpdated = new Map(cards.map((c) => [`${c.clerkUserId}:${c.organizationId}`, c.updatedAt.getTime()]));
+  const nowMs = Date.now();
+  groupList = groupList.filter((g) => {
+    const unsettled = g.winner.items.filter((i) => !settledKey.has(`${i.id}:${g.winner.clerkUserId}`));
+    const failedTimes = unsettled.map((i) => lastFailedAt.get(`${i.id}:${g.winner.clerkUserId}`));
+    if (failedTimes.some((t) => t === undefined)) return true; // something never tried yet
+    const last = Math.max(...(failedTimes as number[]));
+    if (nowMs - last >= RETRY_EVERY_MS) return true;
+    return (cardUpdated.get(`${g.winner.clerkUserId}:${g.orgId}`) ?? 0) > last; // new card since the decline
+  });
   if (groupList.length === 0) return { chargedWinners: 0 };
 
   // Load org charging config once per org

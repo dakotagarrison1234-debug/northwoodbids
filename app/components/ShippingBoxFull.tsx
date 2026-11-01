@@ -116,8 +116,8 @@ export function BoxCard({ box: b, reload, header = false }: { box: Box; reload: 
       {/* Paid · everything else */}
       <div className="grid grid-cols-2 gap-3">
         <div className="min-w-0">
-          <Eyebrow>{allPaid ? "Paid" : "Due"}</Eyebrow>
-          <div className="font-display text-[30px] font-black leading-none text-[#241a12] tabular-nums mt-1">{money(b.chargedCents)}</div>
+          <Eyebrow>{allPaid ? "Paid" : "Still due"}</Eyebrow>
+          <div className="font-display text-[30px] font-black leading-none text-[#241a12] tabular-nums mt-1">{money(allPaid ? b.chargedCents : Math.max(0, b.chargedCents - paid))}</div>
         </div>
         <div className="min-w-0 text-right">
           <Eyebrow>{right.eyebrow}</Eyebrow>

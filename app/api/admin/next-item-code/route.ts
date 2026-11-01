@@ -1,7 +1,6 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
-import { prisma } from "@/lib/prisma";
+import { getUserOrg } from "@/lib/auth";
 import { peekNextCode } from "@/lib/itemCode";
 
 /**
@@ -13,12 +12,10 @@ import { peekNextCode } from "@/lib/itemCode";
  * save's response is the only truth the tag ever prints.
  */
 export async function GET() {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const membership = await prisma.orgMember.findFirst({ where: { clerkUserId: userId } });
+  // getUserOrg also covers a super admin acting as the org.
+  const membership = await getUserOrg();
   if (!membership) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const code = await peekNextCode(userId);
+  const code = await peekNextCode(membership.clerkUserId);
   return NextResponse.json({ code, approximate: true });
 }

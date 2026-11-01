@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUserOrg } from "@/lib/auth";
+import { isPublicHost } from "@/lib/ssrf";
+
+// Raster images only: an SVG (or anything else) served from our own origin could
+// carry script that runs with a staff member's session.
+const RASTER = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif", "image/avif"]);
+const MAX_BYTES = 10 * 1024 * 1024;
 
 // Same-origin image proxy for the social flyer.
 //
@@ -28,24 +34,33 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unsupported protocol" }, { status: 400 });
     }
 
+    // Never reach our own network (SSRF), and don't follow redirects into it.
+    if (!(await isPublicHost(target.hostname))) {
+      return NextResponse.json({ error: "Private URLs not allowed" }, { status: 400 });
+    }
     const upstream = await fetch(target.toString(), {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; NorthwoodBids/1.0)" },
       cache: "no-store",
+      redirect: "manual",
+      signal: AbortSignal.timeout(10_000),
     });
     if (!upstream.ok || !upstream.body) {
       return NextResponse.json({ error: "Image fetch failed" }, { status: 502 });
     }
 
-    const type = upstream.headers.get("content-type") ?? "image/jpeg";
-    if (!type.startsWith("image/")) {
-      return NextResponse.json({ error: "Not an image" }, { status: 415 });
+    const type = (upstream.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
+    if (!RASTER.has(type)) {
+      return NextResponse.json({ error: "Not a supported image" }, { status: 415 });
     }
 
     const buf = await upstream.arrayBuffer();
+    if (buf.byteLength > MAX_BYTES) return NextResponse.json({ error: "Image too large" }, { status: 413 });
     return new NextResponse(buf, {
       headers: {
         "Content-Type": type,
         "Cache-Control": "private, max-age=3600",
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "default-src 'none'; sandbox",
       },
     });
   } catch {

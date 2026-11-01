@@ -1493,7 +1493,7 @@ function NewItemForm() {
               </div>
             )}
             {formData.auctionId && (
-              <div className="flex items-baseline gap-1.5 min-w-0 flex-1 sm:flex-none sm:max-w-xs rounded-xl bg-white border border-[#e6dac6] px-3 py-1.5" title="Lots in this auction (everyone's)">
+              <div className="flex items-baseline gap-1.5 min-w-0 flex-1 sm:flex-none sm:max-w-xs overflow-hidden rounded-xl bg-white border border-[#e6dac6] px-3 py-1.5" title="Lots in this auction (everyone's)">
                 <span className="hidden sm:block text-[15px] font-bold text-[#241a12] truncate">{auctionTitle || "Auction"}</span>
                 {auctionCount !== null && (
                   <span className="text-lg font-black text-[#6c4d39] tabular-nums shrink-0 whitespace-nowrap">
@@ -1505,7 +1505,7 @@ function NewItemForm() {
             )}
             {unprinted > 0 && (
               <button type="button" onClick={() => { openPrintQueue(); setUnprinted(0); }}
-                className="shrink-0 inline-flex items-center gap-1.5 bg-[#fbeed8] border border-[#eed3ab] text-[#8a4f1c] text-[15px] font-black px-3 rounded-xl whitespace-nowrap min-h-[40px]">
+                className="shrink-0 inline-flex items-center gap-1.5 bg-[#fbeed8] border border-[#eed3ab] text-[#8a4f1c] text-[15px] font-black px-3 rounded-xl whitespace-nowrap min-h-[44px]">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6V2h8v4" /><rect x="2" y="6" width="12" height="6" rx="1.5" /><path d="M4.5 10h7v4h-7z" /></svg>
                 Print · {unprinted}
               </button>

@@ -65,7 +65,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
     }
 
-    const validRole = role === "ADMIN" ? "ADMIN" : "STAFF";
+    // Only the owner (or a super admin) can make someone an admin; an admin
+    // inviting "ADMIN" gets a staff invite.
+    const canMakeAdmin = membership.role === "OWNER" || (await isSuperAdmin());
+    const validRole = role === "ADMIN" && canMakeAdmin ? "ADMIN" : "STAFF";
 
     // Check if email already has a pending invite for this org
     const existing = await prisma.orgInvite.findFirst({

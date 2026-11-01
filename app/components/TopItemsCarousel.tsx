@@ -224,7 +224,7 @@ function HotCard({ it, onBid }: { it: TopItem; onBid: (it: TopItem) => void }) {
           tabIndex={0}
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onBid(it); }}
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onBid(it); } }}
-          className="shrink-0 inline-flex items-center justify-center min-h-[30px] px-3.5 rounded-full text-[11px] font-bold bg-[#6c4d39] hover:bg-[#563e2c] text-white shadow-[0_6px_14px_-6px_rgba(108,77,57,0.6)] transition-colors"
+          className="relative shrink-0 inline-flex items-center justify-center min-h-[30px] px-3.5 rounded-full text-[11px] font-bold bg-[#6c4d39] hover:bg-[#563e2c] text-white shadow-[0_6px_14px_-6px_rgba(108,77,57,0.6)] transition-colors before:content-[''] before:absolute before:-inset-x-1 before:-inset-y-[7px]"
         >
           Bid
         </div>

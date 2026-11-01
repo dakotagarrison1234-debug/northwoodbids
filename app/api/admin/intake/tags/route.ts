@@ -30,14 +30,14 @@ export async function GET(req: NextRequest) {
         ...(auctionId ? { auctionId } : {}),
       },
       orderBy: { createdAt: "asc" }, // listing order = shelf order
-      take: 200,
+      take: 500,
       select: { id: true, itemCode: true, title: true, storageLocation: true },
     }),
     auctionId
       ? prisma.item.count({ where: { organizationId: membership.organizationId, auctionId } })
       : Promise.resolve(null),
   ]);
-  return NextResponse.json({ items, auctionTotal });
+  return NextResponse.json({ items, auctionTotal, capped: items.length >= 500 });
 }
 
 export async function POST(req: NextRequest) {

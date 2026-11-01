@@ -87,8 +87,15 @@ export async function GET(
       return NextResponse.json({ item: staffItem });
     }
 
-    const { reservePrice, storageLocation, notes, itemCode, organization, ...publicItemFields } = item;
+    // Staff-only fields never reach the public: price floor, where it sits, who
+    // listed it, internal pickup / transfer links.
+    const {
+      reservePrice, storageLocation, notes, itemCode, organization,
+      createdById, createdByName, gatherSpot, pickupAppointmentId, transferRequestId, tagPrintedAt,
+      ...publicItemFields
+    } = item;
     void reservePrice; void storageLocation; void notes; void itemCode; void organization; // intentionally stripped
+    void createdById; void createdByName; void gatherSpot; void pickupAppointmentId; void transferRequestId; void tagPrintedAt;
     const publicBids = item.bids.map((b) => ({
       id: b.id,
       amount: Number(b.amount),

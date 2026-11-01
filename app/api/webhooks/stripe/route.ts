@@ -94,7 +94,12 @@ export async function POST(request: NextRequest) {
           (pi.metadata?.auctionId && pi.metadata?.clerkUserId
             ? `autocharge-${pi.metadata.auctionId}-${pi.metadata.clerkUserId}`
             : null);
-        if (key) await releaseReferralCredit(key);
+        if (key) {
+          await releaseReferralCredit(key);
+          // A "pay all" reservation is renamed to `<key>:<pi>` once its payment
+          // looked successful (lib/batchCharge.ts closeRedemption); give that back too.
+          await releaseReferralCredit(`${key}:${pi.id}`);
+        }
         // Notify each affected winner once (only rows this call transitioned).
         for (const clerkUserId of failedUserIds) {
           notifyPaymentFailed({ clerkUserId, reason }).catch((e) =>

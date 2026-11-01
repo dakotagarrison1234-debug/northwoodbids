@@ -7,6 +7,7 @@ import { vestReferralForPayer, reserveReferralCredit, releaseReferralCredit } fr
 import { settleItemsPaid } from "@/lib/settlePayments";
 import { claimItemsForCharge, releaseChargeClaims } from "@/lib/chargeGuard";
 import { shipCentsForItems } from "@/lib/shipping/bundle";
+import { batchKey, closeRedemption, itemIdsToMetadata, OWED_ITEM_STATUSES } from "@/lib/batchCharge";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -33,7 +34,8 @@ export async function POST(_request: NextRequest) {
 
     // Every WON bid, with its item + org config.
     const wonBids = await prisma.bid.findMany({
-      where: { clerkUserId: userId, status: "WON" },
+      // Only lots still owed: a refunded / forfeited lot keeps its WON bid but is UNSOLD.
+      where: { clerkUserId: userId, status: "WON", item: { status: { in: [...OWED_ITEM_STATUSES] } } },
       select: {
         amount: true,
         item: {
@@ -53,7 +55,7 @@ export async function POST(_request: NextRequest) {
     // Drop items that already have a non-FAILED payment (PAID/PENDING).
     const itemIds = wonBids.map((b) => b.item.id);
     const settled = await prisma.payment.findMany({
-      where: { itemId: { in: itemIds }, clerkUserId: userId, status: { in: ["PAID", "PENDING"] } },
+      where: { itemId: { in: itemIds }, clerkUserId: userId, OR: [{ status: "PAID" }, { status: "PENDING", stripePaymentIntentId: { not: null } }] },
       select: { itemId: true },
     });
     const settledIds = new Set(settled.map((p) => p.itemId));
@@ -94,6 +96,12 @@ export async function POST(_request: NextRequest) {
     // Bucks (credit never covers shipping), never taxed. 0 for pickup lots.
     const shipCents = await shipCentsForItems(items.map((i) => i.id));
 
+    // The Stripe key is tied to THIS set of lots (a double tap replays the same
+    // charge; a later bill for other lots is a new charge). The Bid Bucks key is
+    // the buyer's one OPEN "pay all" reservation: an abandoned 3-D Secure attempt
+    // keeps it and the next attempt reuses it, and once a payment succeeds it's
+    // closed (renamed) so the next bill reserves a fresh coupon.
+    const setKey = batchKey(items.map((i) => i.id));
     const redemptionKey = `retryall-${orgId}-${userId}`;
     const discountCents = await reserveReferralCredit(userId, chargeCents, redemptionKey);
     const netCents = chargeCents - discountCents + shipCents;
@@ -101,6 +109,7 @@ export async function POST(_request: NextRequest) {
     // Fully covered by Bid Bucks — no card charge (only when there's no shipping to collect).
     if (discountCents > 0 && netCents <= 0) {
       await settleItemsPaid(userId, items, feePct, taxPct, null, discountCents);
+      await closeRedemption(redemptionKey, `credit-${setKey}`);
       await autoAttachPaidItems(userId, orgId);
       await vestReferralForPayer(userId);
       return NextResponse.json({ success: true, paid: items.length });
@@ -123,9 +132,11 @@ export async function POST(_request: NextRequest) {
             redemptionKey,
             creditAppliedCents: String(discountCents),
             shippingCents: String(shipCents),
+            // The exact lots this charge pays for: the 3-D Secure confirm step settles these, nothing else.
+            ...itemIdsToMetadata(items.map((i) => i.id)),
           },
         },
-        { idempotencyKey: `retryall-${orgId}-${userId}-${bidderCustomer.defaultPaymentMethodId}` }
+        { idempotencyKey: `retryall-${orgId}-${userId}-${bidderCustomer.defaultPaymentMethodId}-${setKey}` }
       );
     } catch (err: unknown) {
       if (isAuthRequired(err)) {
@@ -143,6 +154,7 @@ export async function POST(_request: NextRequest) {
     if (pi.status === "succeeded" || pi.status === "processing") {
       const paidStatus = pi.status === "succeeded" ? "PAID" : "PENDING";
       await settleItemsPaid(userId, items, feePct, taxPct, pi.id, discountCents, paidStatus);
+      await closeRedemption(redemptionKey, pi.id);
       if (paidStatus === "PAID") {
         await autoAttachPaidItems(userId, orgId);
         await vestReferralForPayer(userId);

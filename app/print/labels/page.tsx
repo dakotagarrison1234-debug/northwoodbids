@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 /**
@@ -14,9 +14,11 @@ import { useSearchParams } from "next/navigation";
  * Builds a real PDF with one exact 2in x 1in page per tag, so it prints at true
  * size on a label roll whatever the browser's paper setting is. Desktop: the
  * print dialog opens by itself. Phones: Print / Share hands the PDF to the share
- * sheet (AirPrint / the label printer's app). Every tag that was built is
- * stamped printed server-side, so the counters drop and nothing is ever lost on
- * a refresh; a reprint just stamps again.
+ * sheet (AirPrint / the label printer's app). Tags are stamped printed
+ * server-side so the counters drop: on a computer when the print dialog opens
+ * (automatically, on load), on a phone only once Print / Share or Download is
+ * tapped, so closing the tab without printing never loses a tag. A reprint just
+ * stamps again.
  */
 
 type Label = { id: string; itemCode: string | null; title: string; storageLocation: string | null };
@@ -110,6 +112,17 @@ function LabelsInner() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [msg, setMsg] = useState(nothingToPrint ? "No items selected." : "Preparing tags…");
+  const [builtIds, setBuiltIds] = useState<string[]>([]);
+  const stamped = useRef(false);
+  const stamp = (itemIds: string[]) => {
+    if (stamped.current || itemIds.length === 0) return;
+    stamped.current = true;
+    fetch(queueAuction ? "/api/admin/intake/tags" : "/api/admin/items/labels", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ itemIds }),
+    }).catch(() => { stamped.current = false; });
+  };
 
   useEffect(() => {
     if (nothingToPrint) return;
@@ -142,22 +155,24 @@ function LabelsInner() {
         setPdfBlob(blob);
         setPdfUrl(url);
         setStatus("ready");
-        // A tag that's been built is a tag that's been printed: stamp it so the
-        // "Print · n" counter drops. A reprint re-stamping is harmless.
-        fetch(queueAuction ? "/api/admin/intake/tags" : "/api/admin/items/labels", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ itemIds: labels.map((l) => l.id) }),
-        }).catch(() => {});
+        const built = labels.map((l) => l.id);
+        setBuiltIds(built);
+        // Computer: the PDF viewer opens the print dialog on load, so that's printed.
+        // Phone: nothing prints until Print / Share or Download is tapped (below).
+        const phone = window.matchMedia("(pointer: coarse)").matches;
+        if (!phone) stamp(built);
       })
       .catch(() => { if (!cancelled) { setStatus("error"); setMsg("Couldn't build the tags."); } });
     return () => { cancelled = true; if (revoked) URL.revokeObjectURL(revoked); };
+    // stamp only reads refs and queueAuction (already a dependency).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nothingToPrint, ids, queueAuction, auctionId, auctionFilter]);
 
   // Phones don't run a PDF's auto-print: hand the file to the share sheet
   // (AirPrint / the label printer's app). Desktop just opens it.
   const printOrShare = async () => {
     if (!pdfBlob || !pdfUrl) return;
+    stamp(builtIds);
     const file = new File([pdfBlob], "tags.pdf", { type: "application/pdf" });
     const nav = navigator as Navigator & { canShare?: (d: { files: File[] }) => boolean; share?: (d: { files: File[]; title?: string }) => Promise<void> };
     if (nav.canShare && nav.share && nav.canShare({ files: [file] })) {
@@ -186,7 +201,7 @@ function LabelsInner() {
             style={{ background: "#6c4d39", color: "#fff", fontWeight: 700, fontSize: 15, border: 0, borderRadius: 12, padding: "0 18px", minHeight: 44, cursor: "pointer" }}>
             Print / Share
           </button>
-          <a href={pdfUrl!} download="tags.pdf"
+          <a href={pdfUrl!} download="tags.pdf" onClick={() => stamp(builtIds)}
             style={{ background: "#fff", color: "#563e2c", fontWeight: 700, fontSize: 15, border: "2px solid #d9c7ab", borderRadius: 12, padding: "0 16px", minHeight: 44, display: "inline-flex", alignItems: "center", textDecoration: "none" }}>
             Download PDF
           </a>

@@ -20,13 +20,16 @@ export async function GET(request: NextRequest) {
           { description: { contains: q, mode: "insensitive" } },
         ],
       },
-      include: {
+      // Public endpoint: only what the search box shows. Never the whole row
+      // (reserve price, notes, shelf, item code, who listed it).
+      select: {
+        id: true,
+        title: true,
+        currentBid: true,
+        startingBid: true,
         organization: { select: { name: true, slug: true } },
         auction: { select: { slug: true, title: true } },
-        photos: {
-          take: 1,
-          orderBy: { isPrimary: "desc" },
-        },
+        photos: { take: 1, orderBy: { isPrimary: "desc" }, select: { url: true } },
       },
       orderBy: { currentBid: "desc" },
       take: 10,
@@ -38,7 +41,10 @@ export async function GET(request: NextRequest) {
         status: "OPEN",
         title: { contains: q, mode: "insensitive" },
       },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        slug: true,
         organization: { select: { name: true, slug: true } },
         _count: { select: { items: true } },
       },

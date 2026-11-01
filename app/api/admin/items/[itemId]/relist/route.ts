@@ -84,7 +84,7 @@ export async function POST(request: NextRequest, { params }: Props) {
         data: {
           status: newStatus,
           auctionId: targetAuctionId,
-          currentBid: item.startingBid,
+          currentBid: 0, // no bids yet: the first bid opens at the starting price
           itemEndAt: null,
           pickedUpAt: null,
           grabbedAt: null,

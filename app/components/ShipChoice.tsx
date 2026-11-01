@@ -6,7 +6,7 @@ import { useUser } from "@clerk/nextjs";
 import ShipModeSwitch, { type ShipMode } from "./ShipModeSwitch";
 import ShippingAddressModal from "./ShippingAddressModal";
 import BoxSpots from "./BoxSpots";
-import { addCents, fmtCents, type ShipPresetKey } from "@/lib/shipping/tiers";
+import { MAX_SPOTS, addCents, boxCents, fmtCents, type ShipPresetKey } from "@/lib/shipping/tiers";
 
 type Quote =
   | { eligible: false; signedIn: boolean; mode: ShipMode | null }
@@ -147,10 +147,12 @@ export default function ShipChoice({
   // box) and what they're winning right now. Anonymous / no address: "from".
   const zone: 1 | 2 | 3 = quote.zone ?? 1;
   const base = quote.box ? quote.box.wonSpots + quote.box.winningSpots : 0;
-  const adds = quote.box ? addCents(base, base + quote.lot.spots, zone) : null;
+  // Past the biggest box this lot starts a second one, priced on its own.
+  const newBox = base > 0 && base + quote.lot.spots > MAX_SPOTS;
+  const adds = !quote.box ? null : newBox ? boxCents(quote.lot.spots, zone) : addCents(base, base + quote.lot.spots, zone);
   const shipPrice =
     adds == null ? `from ${fmtCents(quote.fromCents)}`
-    : base === 0 ? `${fmtCents(adds)} box`
+    : base === 0 || newBox ? `${fmtCents(adds)} box`
     : adds === 0 ? "FREE"
     : `+${fmtCents(adds)}`;
 

@@ -68,10 +68,15 @@ export async function POST(
       );
     }
     try {
-      await stripe.refunds.create({
-        payment_intent: payment.stripePaymentIntentId,
-        amount: refundCents, // partial: this item's share of the batch only
-      });
+      await stripe.refunds.create(
+        {
+          payment_intent: payment.stripePaymentIntentId,
+          amount: refundCents, // partial: this item's share of the batch only
+        },
+        // One refund per payment row: a double tap (or two admins) gets the same
+        // refund back from Stripe instead of sending the money twice.
+        { idempotencyKey: `refund:${payment.id}:${payment.stripePaymentIntentId}:${refundCents}` },
+      );
     } catch (err) {
       console.error("[admin refund] Stripe refund failed:", err);
       return NextResponse.json(

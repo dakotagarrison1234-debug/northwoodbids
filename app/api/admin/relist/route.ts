@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
           data: {
             status: newStatus,
             auctionId: target.id,
-            currentBid: it.startingBid,
+            currentBid: 0, // no bids yet: the first bid opens at the starting price
             itemEndAt: null,
             pickedUpAt: null,
             grabbedAt: null,

@@ -174,11 +174,15 @@ export async function ensureItemCode(provided: string | null | undefined, clerkU
 
   const m = p.match(/^([0-9]{1,7})-([0-9A-Z]{1,4})$/);
   if (free && m && m[2] === prefix) {
+    // Take the number by moving the counter up to it in ONE atomic update. Only
+    // the save that actually moved it owns the number; a save racing it (same
+    // lister on two devices) sees count 0 and gets the next number instead.
     const n = Number(m[1]);
-    await prisma.listerCode
+    const moved = await prisma.listerCode
       .updateMany({ where: { clerkUserId, next: { lt: n } }, data: { next: n } })
-      .catch(() => {});
-    return p;
+      .catch(() => ({ count: 0 }));
+    if (moved.count === 1) return p;
+    return generateItemCode(clerkUserId);
   }
   if (free && !m) return p; // pre-printed / legacy tag
   return generateItemCode(clerkUserId);

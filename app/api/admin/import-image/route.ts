@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { lookup } from "dns/promises";
 import net from "net";
+import { isPrivateIp } from "@/lib/ssrf";
 import { getUserOrg } from "@/lib/auth";
 
 const s3 = new S3Client({
@@ -21,39 +22,6 @@ const ALLOWED_CONTENT_TYPES = [
   "image/gif",
   "image/avif",
 ];
-
-// Returns true if the given IP literal falls in a private/reserved range that
-// should never be reachable from a server-side fetch (SSRF protection).
-function isPrivateIp(ip: string): boolean {
-  if (net.isIPv4(ip)) {
-    const parts = ip.split(".").map(Number);
-    const [a, b] = parts;
-    if (a === 10) return true; // 10.0.0.0/8
-    if (a === 127) return true; // 127.0.0.0/8 loopback
-    if (a === 0) return true; // 0.0.0.0/8 (incl. 0.0.0.0)
-    if (a === 169 && b === 254) return true; // 169.254.0.0/16 link-local incl. metadata
-    if (a === 172 && b >= 16 && b <= 31) return true; // 172.16.0.0/12
-    if (a === 192 && b === 168) return true; // 192.168.0.0/16
-    if (a === 100 && b >= 64 && b <= 127) return true; // 100.64.0.0/10 CGNAT
-    return false;
-  }
-  if (net.isIPv6(ip)) {
-    const lower = ip.toLowerCase();
-    if (lower === "::1" || lower === "::") return true; // loopback / unspecified
-    // IPv4-mapped (::ffff:a.b.c.d) — extract and re-check the embedded IPv4.
-    const mapped = lower.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-    if (mapped) return isPrivateIp(mapped[1]);
-    // Expand the leading group to test fc00::/7 (ULA) and fe80::/10 (link-local).
-    const firstGroup = lower.split(":")[0];
-    if (firstGroup) {
-      const val = parseInt(firstGroup.padEnd(4, "0").slice(0, 4), 16);
-      if ((val & 0xfe00) === 0xfc00) return true; // fc00::/7
-      if ((val & 0xffc0) === 0xfe80) return true; // fe80::/10
-    }
-    return false;
-  }
-  return false;
-}
 
 export async function GET(req: NextRequest) {
   const membership = await getUserOrg();

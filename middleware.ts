@@ -27,9 +27,22 @@ const isPublicRoute = createRouteMatcher([
   "/:orgSlug/:auctionSlug(.*)",
 ]);
 
+// Always behind sign-in, whatever the public patterns above match: the
+// "/:orgSlug/:auctionSlug(.*)" pattern also matches any two-segment path such as
+// /admin/items or /api/admin/x. Each route still checks roles itself; this is
+// the backstop so a new route that forgets can't be reached signed out.
+const isAlwaysPrivate = createRouteMatcher([
+  "/admin(.*)",
+  "/superadmin(.*)",
+  "/dashboard(.*)",
+  "/print(.*)",
+  "/api/admin(.*)",
+  "/api/superadmin(.*)",
+]);
+
 // Super admin routes still require auth (handled by requireSuperAdmin inside the layout)
 export default clerkMiddleware(async (auth, request) => {
-  if (!isPublicRoute(request)) {
+  if (isAlwaysPrivate(request) || !isPublicRoute(request)) {
     await auth.protect();
   }
 });
