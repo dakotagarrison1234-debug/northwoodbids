@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Bitter } from "next/font/google";
+import localFont from "next/font/local";
 import { ClerkProvider } from "@clerk/nextjs";
 import HomeHeader from "@/app/components/HomeHeader";
 import { HalloweenRoot } from "@/app/components/Halloween";
@@ -11,21 +11,28 @@ import JsonLd from "@/app/components/JsonLd";
 import { siteGraphLd } from "@/lib/seo";
 import "./globals.css";
 
-const geistSans = Geist({
+// Fonts are bundled in app/fonts (variable woff2, latin) so builds never have to
+// download them from Google — a Google Fonts hiccup was failing Vercel builds.
+const geistSans = localFont({
+  src: "./fonts/geist-latin-wght-normal.woff2",
   variable: "--font-geist-sans",
-  subsets: ["latin"],
+  weight: "100 900",
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
+const geistMono = localFont({
+  src: "./fonts/geist-mono-latin-wght-normal.woff2",
   variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: "100 900",
+  display: "swap",
 });
 
 // Rugged slab serif for headings / display
-const bitter = Bitter({
+const bitter = localFont({
+  src: "./fonts/bitter-latin-wght-normal.woff2",
   variable: "--font-bitter",
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800", "900"],
+  weight: "100 900",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
