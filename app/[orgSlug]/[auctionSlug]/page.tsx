@@ -9,6 +9,7 @@ import PusherRefresh from "@/app/components/PusherRefresh";
 import NotFoundCard from "@/app/components/NotFoundCard";
 import AuctionItemsView, { type ViewItem } from "@/app/components/AuctionItemsView";
 import ShippingIntro from "@/app/components/ShippingIntro";
+import ShareButton from "@/app/components/ShareButton";
 import { HeaderBannerHalloween } from "@/app/components/Halloween";
 import { sizeKeyOf } from "@/lib/shipping/sizes";
 import { PineMark, WoodenCrate, PineRidge, BranchDivider } from "@/app/components/Illustrations";
@@ -28,13 +29,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const auction = org
       ? await prisma.auction.findFirst({
           where: { organizationId: org.id, slug: auctionSlug },
-          include: {
-            items: {
-              where: { status: { not: "DRAFT" } },
-              include: { photos: true },
-              take: 12,
-            },
-          },
+          select: { id: true, title: true, status: true, startAt: true, endAt: true, _count: { select: { items: { where: { status: { not: "DRAFT" } } } } } },
         })
       : null;
 
@@ -42,25 +37,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       return { title: "Auction" };
     }
 
-    // First available item primary photo, else any photo, else the app icon.
-    let ogImage = "/icon-512.png";
-    for (const item of auction.items) {
-      const primary = item.photos.find((p) => p.isPrimary)?.url ?? item.photos[0]?.url;
-      if (primary) {
-        ogImage = primary;
-        break;
-      }
-    }
-
+    // The picture is the branded card in ./opengraph-image.tsx (lot count,
+    // close time, a 2×2 of the hottest lots). The words ride along with it.
+    const now = new Date();
+    const tz = "America/Detroit";
+    const fmt = (d: Date) => `${d.toLocaleDateString("en-US", { timeZone: tz, weekday: "short", month: "short", day: "numeric" })} at ${d.toLocaleTimeString("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit" })}`;
+    const closed = auction.status === "CLOSED" || auction.status === "SETTLED" || auction.endAt < now;
+    const upcoming = !closed && (auction.status === "DRAFT" || auction.startAt > now);
+    const lots = auction._count.items;
+    const when = closed ? "Auction closed" : upcoming ? `Bidding opens ${fmt(auction.startAt)}` : `Bidding closes ${fmt(auction.endAt)}`;
     const title = auction.title;
-    const description = `${org!.name} · live auction — bid now`;
+    const description = `${lots} lot${lots === 1 ? "" : "s"}, every one from $2. ${when}. Pick up in Corunna or Gladwin.`;
 
     return {
       title,
       description,
       alternates: { canonical: `/${orgSlug}/${auctionSlug}` },
-      openGraph: { title, description, images: [ogImage], url: `/${orgSlug}/${auctionSlug}`, type: "website" },
-      twitter: { card: "summary_large_image", title, description, images: [ogImage] },
+      openGraph: { title, description, url: `/${orgSlug}/${auctionSlug}`, type: "website", siteName: "Northwood Bids" },
+      twitter: { card: "summary_large_image", title, description },
     };
   } catch {
     return { title: "Auction" };
@@ -377,6 +371,13 @@ export default async function AuctionPage({ params }: Props) {
                 )}
                 {isClosed ? "Closed" : isClosing ? "Closing" : isUpcoming ? "On deck" : "Live"}
               </span>
+              {!isClosed && (
+                <ShareButton
+                  title={auction.title}
+                  path={`/${orgSlug}/${auctionSlug}`}
+                  text={`${auction.title} on Northwood Bids: ${visibleItems.length} lot${visibleItems.length === 1 ? "" : "s"}, every one from $2. ${isUpcoming ? "Opens" : "Bidding closes"} ${(isUpcoming ? auction.startAt : auction.endAt).toLocaleString("en-US", { timeZone: "America/Detroit", weekday: "short", hour: "numeric", minute: "2-digit" })}. Pick up in Corunna or Gladwin.`}
+                />
+              )}
             </div>
             <h1 className="font-display text-3xl sm:text-4xl font-black tracking-tight leading-[0.95] text-[#241a12] break-words">
               {auction.title}

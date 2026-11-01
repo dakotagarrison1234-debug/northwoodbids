@@ -176,7 +176,18 @@ export default function ItemPage() {
     const url = refCode
       ? `${window.location.origin}/r/${refCode}?to=${encodeURIComponent(path)}`
       : `${window.location.origin}${path}`;
-    const data = { title: item.title, text: `Check out this lot on Northwood Bids — bidding starts at $2.`, url };
+    // Say why to tap: the price, how far under retail, and when it ends. The
+    // link preview itself is the branded card (./opengraph-image.tsx).
+    const now = Number(item.currentBid) || 0;
+    const price = now > 0 ? now : Number(item.startingBid) || 0;
+    const retail = Number(item.retailValue) || 0;
+    const off = retail > price && price > 0 ? Math.round((1 - price / retail) * 100) : 0;
+    const endIso = item.itemEndAt ?? item.auction?.endAt ?? null;
+    const ends = endIso
+      ? ` Ends ${new Date(endIso).toLocaleString("en-US", { timeZone: "America/Detroit", weekday: "short", hour: "numeric", minute: "2-digit" })}.`
+      : "";
+    const deal = `${now > 0 ? "Bidding at" : "Starts at"} $${Math.round(price)}${off >= 20 ? `, ${off}% off retail` : ""}.`;
+    const data = { title: item.title, text: `${item.title} on Northwood Bids. ${deal}${ends}`, url };
     if (navigator.share) {
       try { await navigator.share(data); return; } catch { /* cancelled */ return; }
     }

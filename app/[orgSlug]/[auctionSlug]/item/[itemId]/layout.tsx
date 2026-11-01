@@ -19,24 +19,33 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { orgSlug, auctionSlug, itemId } = await params;
     const item = await prisma.item.findUnique({
       where: { id: itemId },
-      include: { photos: true },
+      select: { title: true, status: true, currentBid: true, startingBid: true, retailValue: true, _count: { select: { bids: true } } },
     });
     if (!item) return { title: "Item" };
 
-    const ogImage =
-      item.photos.find((p) => p.isPrimary)?.url ?? item.photos[0]?.url ?? "/icon-512.png";
-    const bid = Number(item.currentBid) > 0 ? Number(item.currentBid) : Number(item.startingBid);
+    // The picture is the branded card in ./opengraph-image.tsx (photo, price,
+    // % off, bids, end time). The words below ride along with it.
+    const current = Number(item.currentBid);
+    const bid = current > 0 ? current : Number(item.startingBid);
+    const retailN = Number(item.retailValue);
+    const off = retailN > bid && bid > 0 ? Math.round((1 - bid / retailN) * 100) : 0;
+    const sold = ["SOLD", "PENDING_PICKUP", "PICKED_UP"].includes(item.status);
     const title = item.title;
-    const retail = Number(item.retailValue) > 0 ? ` (retail $${Number(item.retailValue).toLocaleString()})` : "";
-    const description = `Current bid $${bid.toLocaleString()}${retail}. Bid now and pick up local in Corunna or Gladwin — Northwood Bids.`;
+    const lead = sold ? `Sold for $${bid.toLocaleString()}` : current > 0 ? `Bidding at $${bid.toLocaleString()}` : `Starts at $${bid.toLocaleString()}`;
+    const parts = [
+      lead,
+      retailN > 0 ? `retail $${Math.round(retailN).toLocaleString()}${off >= 20 ? ` (${off}% off)` : ""}` : null,
+      item._count.bids > 0 ? `${item._count.bids} bid${item._count.bids === 1 ? "" : "s"}` : null,
+    ].filter(Boolean);
+    const description = `${parts.join(" · ")}. Bid online at Northwood Bids, pick up in Corunna or Gladwin.`;
     const canonical = `/${orgSlug}/${auctionSlug}/item/${itemId}`;
 
     return {
       title,
       description,
       alternates: { canonical },
-      openGraph: { title, description, images: [ogImage], url: canonical, type: "website" },
-      twitter: { card: "summary_large_image", title, description, images: [ogImage] },
+      openGraph: { title, description, url: canonical, type: "website", siteName: "Northwood Bids" },
+      twitter: { card: "summary_large_image", title, description },
     };
   } catch {
     return { title: "Item" };

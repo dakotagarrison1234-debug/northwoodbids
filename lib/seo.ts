@@ -10,7 +10,7 @@ export const SEO_BASE = "https://northwoodbids.com";
 
 const ORG_ID = `${SEO_BASE}/#organization`;
 const WEBSITE_ID = `${SEO_BASE}/#website`;
-const LOGO = `${SEO_BASE}/icon-512.png`;
+const LOGO = `${SEO_BASE}/icon.png`; // the wooden NB on cream, 512×512
 
 /** The brand entity — referenced by everything else via @id. */
 export function organizationLd() {

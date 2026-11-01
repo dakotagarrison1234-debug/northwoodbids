@@ -84,15 +84,16 @@ export const metadata: Metadata = {
       "Brand-name overstock, returns & surplus at auction prices. Bid live, pay what you want, " +
       "pick up local in Corunna or Gladwin. Free to join.",
     url: "https://northwoodbids.com",
-    images: [{ url: "/icon-512.png", width: 512, height: 512, alt: "Northwood Bids" }],
+    // The image is app/opengraph-image.tsx (the branded 1200×630 card); pages
+    // with their own card (lots, auctions, sign-up) override it.
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Northwood Bids — Local Online Auctions in Michigan",
-    description: "Brand-name overstock at auction prices. Bid live, pick up local in Corunna or Gladwin.",
-    images: ["/icon-512.png"],
+    description: "Brand-name overstock from $2. Bid live, pick up local in Corunna or Gladwin.",
   },
   icons: {
+    // The wooden NB on cream (app/favicon.ico, app/icon.png, app/apple-icon.png).
     icon: [
       { url: "/favicon.ico", sizes: "any" },
       { url: "/icon.png", type: "image/png", sizes: "512x512" },
