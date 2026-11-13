@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg, requireRole } from "@/lib/auth";
-import { lockSeamDoor, unlockSeamDoor } from "@/lib/doorLock";
+import { issueTestDoorCode, lockSeamDoor, unlockSeamDoor } from "@/lib/doorLock";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -11,6 +11,7 @@ interface Props {
 /**
  * PATCH /api/admin/doors/[id] — { name?, locationId?, active? }  assign / rename / pause
  * POST  /api/admin/doors/[id] — { action: "unlock" | "lock" }    buzz someone in from the board
+ *                                { action: "test" }               one-hour PIN texted to me (owner/admin)
  */
 export async function PATCH(request: NextRequest, { params }: Props) {
   try {
@@ -60,6 +61,19 @@ export async function POST(request: NextRequest, { params }: Props) {
     if (!lock || lock.organizationId !== membership.organizationId) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const { action } = await request.json();
+    if (action === "test") {
+      // A one-hour PIN for checking a lock end to end. Owner/admin only (it costs a credit).
+      if (!(await requireRole(membership.organizationId, ["OWNER", "ADMIN"]))) {
+        return NextResponse.json({ error: "Owner or admin only" }, { status: 403 });
+      }
+      try {
+        const t = await issueTestDoorCode({ seamDeviceId: lock.seamDeviceId, name: lock.name }, membership.clerkUserId);
+        console.info(`[doors] test code on ${lock.name} by ${membership.clerkUserId}`);
+        return NextResponse.json({ ok: true, code: t.code, endsAt: t.endsAt.toISOString(), texted: t.texted });
+      } catch (e) {
+        return NextResponse.json({ error: e instanceof Error ? e.message : "Couldn't make a code on that lock." }, { status: 502 });
+      }
+    }
     if (action !== "unlock" && action !== "lock") return NextResponse.json({ error: "Unknown action" }, { status: 400 });
     const r = action === "unlock" ? await unlockSeamDoor(lock.seamDeviceId) : await lockSeamDoor(lock.seamDeviceId);
     if (!r.ok) return NextResponse.json({ error: r.error ?? "The lock didn't respond." }, { status: 502 });

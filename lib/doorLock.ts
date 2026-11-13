@@ -456,6 +456,60 @@ export async function textDoorCode(appointmentId: string, reason: "booked" | "mo
   }
 }
 
+/**
+ * Settings → Doors "Send test code": a real PIN on ONE lock, good for the next
+ * hour, texted to the staff member who asked (no appointment needed). Seam
+ * removes it from the lock when the hour is up. Costs one Seam credit.
+ */
+export async function issueTestDoorCode(
+  lock: { seamDeviceId: string; name: string },
+  clerkUserId: string
+): Promise<{ code: string; endsAt: Date; texted: boolean }> {
+  const startsAt = new Date(Date.now() + 60_000);
+  const endsAt = new Date(Date.now() + 60 * 60_000);
+  const r = await seam<{ access_codes: SeamAccessCode[] }>(
+    "/access_codes/create_multiple",
+    {
+      device_ids: [lock.seamDeviceId],
+      name: `Test ${timeOf(startsAt)}`,
+      starts_at: startsAt.toISOString(),
+      ends_at: endsAt.toISOString(),
+      behavior_when_code_cannot_be_shared: "throw",
+      prefer_native_scheduling: true,
+    },
+    "PUT"
+  );
+  const code = (r.access_codes ?? []).find((c) => c.code)?.code;
+  if (!code) throw new Error("Seam returned no PIN");
+
+  let texted = false;
+  const hook = process.env.GHL_CUSTOM_SMS_WEBHOOK;
+  const profile = await prisma.bidderProfile.findUnique({ where: { clerkUserId }, select: { email: true, phone: true, name: true } });
+  if (hook && profile?.phone) {
+    const name = profile.name ?? "Team";
+    const sms =
+      `Northwood Bids TEST: door code ${code} works on the ${lock.name} until ${timeOf(endsAt)} today. ` +
+      doorHowTo(code, [lock.name]);
+    try {
+      const res = await fetch(hook, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: profile.email ?? "", phone: profile.phone, name,
+          firstName: name.split(" ")[0] || name, lastName: name.split(" ").slice(1).join(" ") || "",
+          event: "door_code", smsMessage: sms,
+          bidderEmail: profile.email ?? "", bidderPhone: profile.phone, bidderName: name,
+          doorCode: code, pickupAt: startsAt.toISOString(), location: lock.name,
+        }),
+      });
+      texted = res.ok;
+    } catch (e) {
+      console.error("[doorLock] test code SMS failed:", e);
+    }
+  }
+  return { code, endsAt, texted };
+}
+
 /** Booking helper: issue + text, never throws. Used by the customer booking route. */
 export async function issueAndTextDoorCode(appointmentId: string, reason: "booked" | "moved" = "booked"): Promise<void> {
   try {

@@ -91,6 +91,24 @@ export default function DoorsSettingsPage() {
     setTimeout(load, 2500);
   };
 
+  // One-hour test PIN on one lock, texted to me — no appointment needed.
+  const [testCode, setTestCode] = useState<{ lock: string; code: string; until: string; texted: boolean } | null>(null);
+  const sendTest = async (id: string, lockName: string) => {
+    setBusy(`${id}:test`); setMsg(null); setTestCode(null);
+    try {
+      const r = await fetch(`/api/admin/doors/${id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "test" }) });
+      const d = await r.json();
+      if (!r.ok) setMsg({ tone: "red", text: d.error || "Couldn't make a test code." });
+      else setTestCode({
+        lock: lockName,
+        code: d.code,
+        until: new Date(d.endsAt).toLocaleTimeString("en-US", { timeZone: "America/Detroit", hour: "numeric", minute: "2-digit" }),
+        texted: !!d.texted,
+      });
+    } catch { setMsg({ tone: "red", text: "Something went wrong." }); }
+    setBusy(null);
+  };
+
   const unassigned = data?.locks.filter((l) => !l.locationId) ?? [];
 
   return (
@@ -102,6 +120,18 @@ export default function DoorsSettingsPage() {
       />
       <PageBody>
         {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}
+        {testCode && (
+          <div className="rounded-2xl bg-[#241a12] text-[#fbf4e6] px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-[13px] font-black uppercase tracking-[0.18em] text-[#f0a35a]">Test code · {testCode.lock}</div>
+              <div className="text-[15px] text-[#c9b79a] mt-0.5">
+                Works until {testCode.until}. Give it a minute to reach the lock.{" "}
+                {testCode.texted ? "Texted to your phone." : "Not texted (no phone on your profile), so use it from here."}
+              </div>
+            </div>
+            <div className="font-mono text-4xl font-black tracking-[0.18em] tabular-nums">{testCode.code}</div>
+          </div>
+        )}
 
         {data === null ? (
           <div className="text-[#8a7559] py-10 text-center">Loading…</div>
@@ -163,9 +193,12 @@ export default function DoorsSettingsPage() {
                           {l.issues.length > 0 && <div className="text-[15px] text-[#a84a2f] mt-1">{l.issues.join(" · ")}</div>}
                           {l.battery != null && l.battery < 25 && <div className="text-[15px] text-[#a84a2f] mt-1">Battery low — swap the 4 AA batteries.</div>}
                         </div>
-                        <div className="flex gap-2 shrink-0">
+                        <div className="flex flex-wrap gap-2 w-full sm:w-auto sm:shrink-0">
                           <Btn size="sm" variant="outline" tone="green" onClick={() => act(l.id, "unlock")} disabled={busy === `${l.id}:unlock` || l.online === false}><IcoBolt className="w-4 h-4" /> Unlock</Btn>
                           <Btn size="sm" variant="outline" tone="slate" onClick={() => act(l.id, "lock")} disabled={busy === `${l.id}:lock` || l.online === false}>Lock</Btn>
+                          <Btn size="sm" variant="outline" onClick={() => sendTest(l.id, l.name)} disabled={busy === `${l.id}:test` || l.online === false || l.canProgram === false}>
+                            {busy === `${l.id}:test` ? "Making…" : "Send test code"}
+                          </Btn>
                         </div>
                       </div>
 
