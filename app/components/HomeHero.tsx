@@ -331,12 +331,12 @@ function ThinHero({
       </div>
 
       {/* ── top centre: on the sky ── */}
-      <div className="absolute inset-x-0 top-0 pt-[2.2%] sm:pt-[2.6%] px-3 flex flex-col items-center text-center">
+      <div className="absolute inset-x-0 top-0 pt-2 sm:pt-[2.4%] px-3 flex flex-col items-center text-center">
         {welcome ? (
           <>
-            <p className={`nb-rise text-[#3d2c1d] text-[12px] sm:text-lg font-bold ${halo}`} style={{ animationDelay: "40ms" }}>Welcome back,</p>
+            <p className={`nb-rise text-[#3d2c1d] text-[12px] sm:text-lg font-bold leading-none ${halo}`} style={{ animationDelay: "40ms" }}>Welcome back,</p>
             <h1
-              className={`nb-rise font-display text-[clamp(1.4rem,7vw,2.1rem)] sm:text-[clamp(2.4rem,4.4vw,4rem)] leading-[1.02] font-black tracking-tight text-[#241a12] max-w-[62%] sm:max-w-[46%] truncate py-0.5 ${halo}`}
+              className={`nb-rise font-display text-[clamp(1.4rem,7vw,2.1rem)] sm:text-[clamp(2.4rem,4.4vw,4rem)] leading-[1.05] font-black tracking-tight text-[#241a12] max-w-[62%] sm:max-w-[46%] truncate mt-0.5 sm:mt-1 ${halo}`}
               style={{ animationDelay: "120ms" }}
             >
               {welcome.name}
@@ -347,7 +347,7 @@ function ThinHero({
             {hasLive && (
               <a
                 href="#live-auctions"
-                className="nb-rise pointer-events-auto inline-flex items-center gap-1.5 sm:gap-2 bg-[#6c4d39] text-[#f6ecda] text-[10px] sm:text-[11px] font-black uppercase tracking-[0.14em] px-2.5 sm:px-4 py-1 sm:py-2 rounded-full mb-1 sm:mb-3 shadow-[0_6px_20px_-6px_rgba(108,77,57,0.7)] hover:bg-[#563e2c] transition-colors"
+                className="nb-rise pointer-events-auto inline-flex items-center gap-1.5 sm:gap-2 bg-[#6c4d39] text-[#f6ecda] text-[10px] sm:text-[11px] font-black uppercase tracking-[0.14em] px-2.5 sm:px-4 py-[3px] sm:py-1.5 rounded-full mb-1 sm:mb-2 shadow-[0_6px_20px_-6px_rgba(108,77,57,0.7)] hover:bg-[#563e2c] transition-colors"
                 style={{ animationDelay: "40ms" }}
               >
                 <span className="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2">
@@ -358,15 +358,15 @@ function ThinHero({
               </a>
             )}
             <h1
-              className={`nb-rise font-display text-[clamp(1.35rem,6.6vw,1.9rem)] sm:text-[clamp(2.3rem,4.2vw,3.75rem)] leading-[0.98] font-black tracking-tight text-[#241a12] ${halo}`}
+              className={`nb-rise font-display text-[clamp(1.35rem,6.6vw,1.9rem)] sm:text-[clamp(2.3rem,4.2vw,3.75rem)] leading-[0.92] font-black tracking-tight text-[#241a12] ${halo}`}
               style={{ animationDelay: "120ms" }}
             >
               Going once.
               <br />
-              <span className="nb-gradient-text">Going twice.</span>
+              <span className="text-[#2f5d3a]">Going twice.</span>
             </h1>
             <p
-              className={`hidden lg:block nb-rise mt-2 text-[#3d2c1d] text-[15px] font-semibold whitespace-nowrap ${halo}`}
+              className={`hidden lg:block nb-rise mt-1.5 text-[#3d2c1d] text-[15px] font-semibold whitespace-nowrap ${halo}`}
               style={{ animationDelay: "200ms" }}
             >
               Name-brand overstock, every lot from $2. Bid online, pick up in Corunna or Gladwin.
@@ -376,10 +376,10 @@ function ThinHero({
       </div>
 
       {/* ── bottom centre: on the lake, between the critters ── */}
-      <div className="absolute inset-x-0 bottom-0 pb-[2.4%] sm:pb-[3%] px-3 flex flex-col items-center gap-2 sm:gap-3">
+      <div className="absolute inset-x-0 bottom-0 pb-2 sm:pb-[2.6%] px-3 flex flex-col items-center gap-2 sm:gap-2.5">
         {welcome ? (
           <>
-            <div className="hidden sm:grid nb-rise grid-cols-3 gap-3 w-[34%] min-w-[340px]" style={{ animationDelay: "220ms" }}>
+            <div className="hidden sm:grid nb-rise grid-cols-3 gap-2.5 w-[430px]" style={{ animationDelay: "220ms" }}>
               {[
                 { href: "/dashboard?tab=winning", value: welcome.winning, label: "Winning", tone: "text-[#2f5d3a]" },
                 { href: "/dashboard?tab=losing", value: welcome.outbid, label: "Outbid", tone: welcome.outbid > 0 ? "text-[#b42318]" : "text-[#241a12]" },
@@ -395,7 +395,7 @@ function ThinHero({
             </div>
             <Link
               href="/dashboard"
-              className={`${btn} nb-rise bg-[#6c4d39] hover:bg-[#563e2c] text-white text-[13px] sm:text-base px-6 sm:px-10 py-1.5 sm:py-3 shadow-[0_8px_24px_-6px_rgba(36,26,18,0.6)]`}
+              className={`${btn} nb-rise bg-[#6c4d39] hover:bg-[#563e2c] text-white text-[13px] sm:text-base h-8 sm:h-12 w-[140px] sm:w-[430px] shadow-[0_8px_24px_-6px_rgba(36,26,18,0.6)]`}
               style={{ animationDelay: "300ms" }}
             >
               My Bids
@@ -403,22 +403,22 @@ function ThinHero({
           </>
         ) : (
           <>
-            <div className="hidden sm:grid nb-rise grid-cols-3 gap-3 w-[34%] min-w-[340px]" style={{ animationDelay: "260ms" }}>
+            <div className="hidden sm:grid nb-rise grid-cols-3 gap-2.5 w-[430px]" style={{ animationDelay: "260ms" }}>
               <Stat value={liveLots} label={liveLots === 1 ? "lot live" : "lots live"} solid />
               <Stat value={bestDeal} suffix="%" label="off retail" accent solid />
               <Stat value={bidsToday} label="bids today" solid />
             </div>
-            <div className="nb-rise flex items-center justify-center gap-1.5 sm:gap-2.5" style={{ animationDelay: "340ms" }}>
+            <div className={`nb-rise grid gap-2 sm:gap-2.5 ${signedIn ? "grid-cols-1 w-[140px] sm:w-[260px]" : "grid-cols-2 w-[244px] sm:w-[430px]"}`} style={{ animationDelay: "340ms" }}>
               <a
                 href="#live-auctions"
-                className={`${btn} bg-[#6c4d39] hover:bg-[#563e2c] text-white text-[13px] sm:text-base px-3.5 sm:px-8 py-1.5 sm:py-3 shadow-[0_8px_24px_-6px_rgba(36,26,18,0.6)]`}
+                className={`${btn} bg-[#6c4d39] hover:bg-[#563e2c] text-white text-[13px] sm:text-base h-8 sm:h-12 shadow-[0_8px_24px_-6px_rgba(36,26,18,0.6)]`}
               >
                 {hasLive ? "Start bidding" : "See what's coming"}
               </a>
               {!signedIn && (
                 <Link
                   href="/sign-up"
-                  className={`${btn} bg-[#fbf4e6]/95 hover:bg-white border-2 border-[#6c4d39]/25 text-[#6c4d39] text-[13px] sm:text-base px-3 sm:px-8 py-[4px] sm:py-2.5 shadow-sm`}
+                  className={`${btn} bg-[#fbf4e6]/95 hover:bg-white border-2 border-[#6c4d39]/25 text-[#6c4d39] text-[13px] sm:text-base h-8 sm:h-12 shadow-sm`}
                 >
                   <span className="sm:hidden">Join free</span>
                   <span className="hidden sm:inline">Create free account</span>
