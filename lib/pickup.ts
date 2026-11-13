@@ -155,13 +155,12 @@ export async function switchPreferredCascade(
 const DAYS_AHEAD = 28;
 
 /**
- * Same-day cutoff, in pickup-timezone hours (24h clock).
- *
- * Orders have to be gathered and boxed before a customer turns up, so a booking
- * made at 2pm for 3pm the same day is a fire drill. Book before 8am and today is
- * still fair game; book after and the earliest option rolls to the next day the
- * location is actually open — which may be tomorrow, or later if tomorrow is
- * closed or blacked out.
+ * Booking cutoff, in pickup-timezone hours (24h clock): book by 8:00am the DAY
+ * BEFORE. Orders are gathered and staged during the day, so a pickup has to be
+ * on the books by 8am the day before (self-serve locations are open 24 hours,
+ * so the staging has to be done before the customer can walk in). Today is
+ * never bookable; tomorrow is until 8am today; after that the earliest is the
+ * day after tomorrow — or later if those days are closed or blacked out.
  */
 const SAME_DAY_CUTOFF_HOUR = 8;
 const WD: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
@@ -639,16 +638,15 @@ export async function getAvailableSlots(
   const today = zonedYMD(now);
   const noonAnchor = Date.UTC(today.y, today.mo - 1, today.d, 12, 0, 0);
 
-  // Past the cutoff, today is off the table entirely — skip day 0 rather than
-  // filtering times, so a location that's open until 6pm doesn't keep offering
-  // 5pm today at 4:59pm.
+  // Book by 8am the day before: today is never offered, and tomorrow drops off
+  // at 8am today. Whole days are skipped (not individual times).
   const nowHourLocal = Number(
     new Intl.DateTimeFormat("en-US", { timeZone: PICKUP_TZ, hour: "2-digit", hour12: false }).format(now)
-  );
-  const skipToday = nowHourLocal >= SAME_DAY_CUTOFF_HOUR;
+  ) % 24;
+  const firstDayOffset = nowHourLocal >= SAME_DAY_CUTOFF_HOUR ? 2 : 1;
 
   const candidates: Date[] = [];
-  for (let dayOffset = skipToday ? 1 : 0; dayOffset <= DAYS_AHEAD; dayOffset++) {
+  for (let dayOffset = firstDayOffset; dayOffset <= DAYS_AHEAD; dayOffset++) {
     const dayInstant = new Date(noonAnchor + dayOffset * 24 * 60 * 60 * 1000);
     const { y, mo, d, weekday } = zonedYMD(dayInstant);
     if (isBlackedOut(y, mo, d)) continue; // vacation/holiday — no slots this day

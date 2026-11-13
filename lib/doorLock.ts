@@ -25,8 +25,9 @@ import { APP_URL } from "@/lib/paymentNotify";
 
 const SEAM_BASE = "https://connect.getseam.com";
 
-/** The code works from this hour (local) on the pickup date until midnight. */
-export const DOOR_CODE_DAY_START_HOUR = 6;
+/** The code works from this hour (local) on the pickup date until midnight.
+ *  0 = the whole day, midnight to midnight, so self-serve pickup is truly any time. */
+export const DOOR_CODE_DAY_START_HOUR = 0;
 
 export function seamConfigured(): boolean {
   return !!process.env.SEAM_API_KEY;
@@ -164,7 +165,7 @@ export async function lockSeamDoor(deviceId: string): Promise<{ ok: boolean; err
 // ─── Code window ────────────────────────────────────────────────────────────
 
 /**
- * "All day on the pickup date", in Michigan time: 6:00am → 11:59:59pm of the
+ * "All day on the pickup date", in Michigan time: 12:00am → 11:59:59pm of the
  * calendar day the appointment falls on. If that start is already behind us
  * (same-day booking) the code starts now.
  */

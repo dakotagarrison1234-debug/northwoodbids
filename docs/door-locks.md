@@ -9,7 +9,7 @@ automatically, and what to do when something's off.
 
 | Moment | What happens |
 |---|---|
-| Customer books a pickup at Corunna | Site makes one PIN on both locks, valid 6:00am to 11:59pm (Michigan time) on the pickup date, and texts it with the address + keypad how-to. The booking screen shows it too. |
+| Customer books a pickup at Corunna | Site makes one PIN on both locks, valid all day, 12:00am to 11:59pm (Michigan time), on the pickup date, and texts it with the address + keypad how-to. The booking screen shows it too. |
 | Customer opens /pickup | Big black "Your door code" block under the appointment, with the day it works and which doors. |
 | Customer reschedules (same place) | Same PIN, new day. Fresh text. |
 | Customer or staff moves it to another location | PIN pulled off Corunna; a new one is made if the new place has locks. |
@@ -134,7 +134,8 @@ inactive; existing bidders with Owosso as home can be bulk-moved to Corunna on r
 
 - Encode Plus stores 100 codes. Each pickup day uses one slot per lock until it expires at midnight, so even 40 pickups in a day is fine. Seam deletes expired ones.
 - All codes on a lock must be the same length. Don't mix 4- and 6-digit staff codes on the same lock.
-- A code can't be made for a pickup date that has already ended, and a code's start is "now" for same-day bookings (not 6am).
+- A code can't be made for a pickup date that has already ended, and a code's start is "now" if it's made on the pickup day itself (staff bookings, reopened orders).
+- Customers must book by 8:00am the day before (lib/pickup.ts), so every order is staged before the door code starts working at midnight.
 - Apple Home Key / HomeKit on the Encode Plus is separate and doesn't affect any of this. Don't add the locks to Apple Home with the same account though — codes toggled off in Apple Home get deleted from Schlage and lose their schedule.
 - Seam credits are only charged for successful code creations and remote unlocks. Reads, status and webhooks are free.
 

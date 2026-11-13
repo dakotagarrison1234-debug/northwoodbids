@@ -37,6 +37,7 @@ const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Frida
 const WEEKDAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function minutesToLabel(mins: number) {
+  if (mins >= 1440) return "Midnight";
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   const ampm = h >= 12 ? "PM" : "AM";
@@ -248,7 +249,9 @@ function LocationCard({
   onWindowAdded: () => void;
   flash: (text: string, ok: boolean) => void;
 }) {
-  const [win, setWin] = useState({ weekday: 3, start: "09:00", end: "17:00", slotMinutes: 30, capacityPerSlot: 2 });
+  // weekday 7 = "Every day" (adds the same hours to all seven days).
+  // allDay = open 24 hours: midnight to midnight (0 → 1440).
+  const [win, setWin] = useState({ weekday: 3, start: "09:00", end: "17:00", slotMinutes: 30, capacityPerSlot: 2, allDay: false });
   const [showAddHours, setShowAddHours] = useState(false);
 
   // ── Edit name / address / instructions in place ──────────────────────────
@@ -273,33 +276,40 @@ function LocationCard({
   };
 
   const addWindow = async () => {
-    const startMinutes = timeStrToMinutes(win.start);
-    const endMinutes = timeStrToMinutes(win.end);
+    const startMinutes = win.allDay ? 0 : timeStrToMinutes(win.start);
+    const endMinutes = win.allDay ? 1440 : timeStrToMinutes(win.end);
     if (startMinutes >= endMinutes) {
       flash("End time must be after start time.", false);
       return;
     }
-    try {
-      const res = await fetch(`/api/admin/pickup/locations/${loc.id}/windows`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          weekday: win.weekday,
-          startMinutes,
-          endMinutes,
-          slotMinutes: win.slotMinutes,
-          capacityPerSlot: win.capacityPerSlot,
-        }),
-      });
-      const d = await res.json();
-      if (d.success) {
-        flash("Hours added.", true);
-        setShowAddHours(false);
-        onWindowAdded();
-      } else flash(d.error || "Could not add hours.", false);
-    } catch {
-      flash("Something went wrong.", false);
+    const days = win.weekday === 7 ? [0, 1, 2, 3, 4, 5, 6] : [win.weekday];
+    let added = 0;
+    let err: string | null = null;
+    for (const weekday of days) {
+      try {
+        const res = await fetch(`/api/admin/pickup/locations/${loc.id}/windows`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            weekday,
+            startMinutes,
+            endMinutes,
+            slotMinutes: win.slotMinutes,
+            capacityPerSlot: win.capacityPerSlot,
+          }),
+        });
+        const d = await res.json();
+        if (d.success) added++;
+        else err = d.error || "Could not add hours.";
+      } catch {
+        err = "Something went wrong.";
+      }
     }
+    if (added > 0) {
+      flash(err ? `Added ${added} of ${days.length} days. ${err}` : days.length > 1 ? "Hours added to every day." : "Hours added.", !err);
+      setShowAddHours(false);
+      onWindowAdded();
+    } else flash(err ?? "Could not add hours.", false);
   };
 
   // ── Block-off dates (vacations / holidays) ──
@@ -387,7 +397,7 @@ function LocationCard({
               <div key={w.id} className="flex items-center justify-between gap-3 bg-[#f4ede1] border border-[#e6dac6] rounded-xl pl-4 pr-1.5 py-1.5 min-h-[48px]">
                 <span className="text-[#241a12]">
                   <span className="font-bold">{WEEKDAYS_SHORT[w.weekday]}</span>{" "}
-                  {minutesToLabel(w.startMinutes)}–{minutesToLabel(w.endMinutes)} ·{" "}
+                  {w.startMinutes === 0 && w.endMinutes >= 1440 ? "Open 24 hours" : `${minutesToLabel(w.startMinutes)}–${minutesToLabel(w.endMinutes)}`} ·{" "}
                   {w.slotMinutes}-min slots · {w.capacityPerSlot} per slot
                 </span>
                 <Btn onClick={() => onDeleteWindow(w.id)} tone="red" variant="ghost" size="sm" className="shrink-0">Remove</Btn>
@@ -406,15 +416,44 @@ function LocationCard({
                   {WEEKDAYS.map((d, i) => (
                     <option key={i} value={i}>{d}</option>
                   ))}
+                  <option value={7}>Every day</option>
                 </select>
               </div>
-              <div>
-                <label className={labelCls}>Start</label>
-                <Input type="time" value={win.start} onChange={(e) => setWin({ ...win, start: e.target.value })} />
-              </div>
-              <div>
-                <label className={labelCls}>End</label>
-                <Input type="time" value={win.end} onChange={(e) => setWin({ ...win, end: e.target.value })} />
+              {win.allDay ? (
+                <div className="col-span-2">
+                  <label className={labelCls}>Hours</label>
+                  <div className="min-h-[50px] flex items-center rounded-xl bg-white border border-[#d9c7ab] px-4 text-[17px] font-bold text-[#2f5d3a]">
+                    Open 24 hours · midnight to midnight
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className={labelCls}>Start</label>
+                    <Input type="time" value={win.start} onChange={(e) => setWin({ ...win, start: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>End</label>
+                    <Input type="time" value={win.end} onChange={(e) => setWin({ ...win, end: e.target.value })} />
+                  </div>
+                </>
+              )}
+              <div className="col-span-2 sm:col-span-3">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={win.allDay}
+                  onClick={() => setWin({ ...win, allDay: !win.allDay })}
+                  className="w-full min-h-[50px] flex items-center justify-between gap-3 rounded-xl bg-white border border-[#d9c7ab] px-4 text-left"
+                >
+                  <span>
+                    <span className="block font-bold text-[#241a12]">Open 24 hours</span>
+                    <span className="block text-[15px] text-[#8a7559]">Self-serve with the door code. Customers can come any time that day.</span>
+                  </span>
+                  <span className={`shrink-0 w-12 h-7 rounded-full p-0.5 transition-colors ${win.allDay ? "bg-[#4a7c59]" : "bg-[#d9c7ab]"}`}>
+                    <span className={`block w-6 h-6 rounded-full bg-white shadow transition-transform ${win.allDay ? "translate-x-5" : ""}`} />
+                  </span>
+                </button>
               </div>
               <div>
                 <label className={labelCls}>Slot length</label>

@@ -326,19 +326,13 @@ function SlotPicker({
   const navBtn =
     "inline-flex items-center gap-1 rounded-lg border border-[#e3d6bf] bg-white px-2.5 py-1.5 text-xs font-bold text-[#6c4d39] hover:bg-[#faf5ea] disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
 
-  // Today never appears in the slot list once the 8am cutoff has passed. Say why,
-  // or it just looks like the schedule is broken.
-  const todayKey = dayKey(new Date().toISOString());
-  const todayMissing = !days.some((d) => d.key === todayKey);
-
   return (
     <div className="space-y-5">
-      {todayMissing && (
-        <p className="text-sm text-[#6f5b46] bg-[#faf5ea] border border-[#e3d6bf] rounded-xl px-4 py-2.5 flex items-start gap-2">
-          <IcoLock className="w-4 h-4 text-[#8a7559] shrink-0 mt-0.5" />
-          <span>Same-day windows close at <strong className="text-[#241a12]">8:00 AM</strong> so we have time to pull your order. The soonest open day is below.</span>
-        </p>
-      )}
+      {/* Book by 8am the day before (lib/pickup.ts) — say so, or the missing days look broken. */}
+      <p className="text-sm text-[#6f5b46] bg-[#faf5ea] border border-[#e3d6bf] rounded-xl px-4 py-2.5 flex items-start gap-2">
+        <IcoLock className="w-4 h-4 text-[#8a7559] shrink-0 mt-0.5" />
+        <span>Book by <strong className="text-[#241a12]">8:00 AM the day before</strong> so your order is pulled and waiting. The soonest open day is below.</span>
+      </p>
 
       {/* Week navigation */}
       <div>
