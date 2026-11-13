@@ -1,9 +1,7 @@
 import { SignIn } from "@clerk/nextjs";
 import AuthSwitch from "@/app/components/AuthSwitch";
 import { IcoBolt, IcoTrophy, IcoTruck, IcoShield } from "@/app/components/BidIcons";
-
-const LOGO_URL =
-  "https://assets.cdn.filesafe.space/TwuL7EwKfW8oGIV0Zo5q/media/6a373b261c5d711b35bf4e56.png";
+import AuthLogo from "@/app/components/AuthLogo";
 
 const CHIPS: { Icon: (p: { className?: string }) => React.ReactElement; label: string }[] = [
   { Icon: IcoBolt, label: "Pick up where you left off" },
@@ -19,8 +17,7 @@ export default function SignInPage() {
         <div className="bg-white border border-[#e3d6bf] rounded-3xl shadow-[0_24px_60px_-24px_rgba(108,77,57,0.5)] overflow-hidden">
           {/* Warm header band */}
           <div className="relative px-6 pt-7 pb-6 text-center text-white" style={{ background: "linear-gradient(140deg,#6c4d39,#8a5a2f)" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={LOGO_URL} alt="Northwood Bids" className="h-16 w-auto max-w-[200px] object-contain mx-auto mb-3 drop-shadow" />
+            <AuthLogo />
             <h1 className="font-display text-[1.7rem] leading-tight font-black">Welcome back</h1>
             <p className="text-white/85 text-sm mt-1">Your bids, wins and pickups are right where you left them.</p>
           </div>
