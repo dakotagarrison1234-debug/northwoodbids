@@ -842,6 +842,48 @@ function PickupBoard() {
     }
   };
 
+  // ── Bulk transfers: tick several, then Loaded / Dropped off once ─────────
+  // Runs the same per-transfer PATCH one at a time (never in parallel), so each
+  // drop-off still gets its own atomic claim, arrival text, undo snapshot and
+  // pickup merge — and two transfers for one bidder can't race each other.
+  const [pickedTransfers, setPickedTransfers] = useState<Set<string>>(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState<string | null>(null);
+  const togglePickTransfer = (id: string) =>
+    setPickedTransfers((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const bulkTransferStatus = async (list: Transfer[], status: "LOADED" | "COMPLETED") => {
+    const verb = status === "LOADED" ? "Loading" : "Dropping off";
+    const failed: { id: string; who: string; why: string }[] = [];
+    for (let i = 0; i < list.length; i++) {
+      const t = list[i];
+      setBulkBusy(`${verb} ${i + 1} of ${list.length}…`);
+      try {
+        const res = await fetch(`/api/admin/pickup/transfers/${t.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        });
+        const d = await res.json().catch(() => ({}));
+        if (!d.success) failed.push({ id: t.id, who: bidderPrimary(t.bidder), why: d.error || "failed" });
+      } catch {
+        failed.push({ id: t.id, who: bidderPrimary(t.bidder), why: "network error" });
+      }
+    }
+    setBulkBusy(null);
+    // Keep only the ones that didn't go through ticked, so you can retry them.
+    setPickedTransfers(new Set(failed.map((f) => f.id)));
+    setExpandedTransferId(null);
+    await loadTransfers();
+    const done = list.length - failed.length;
+    const doneText = status === "LOADED" ? `${plural(done, "transfer")} loaded.` : `${plural(done, "transfer")} dropped off.`;
+    if (failed.length === 0) flash(doneText, true);
+    else flash(`${done > 0 ? doneText + " " : ""}Not done: ${failed.map((f) => `${f.who} (${f.why})`).join(", ")}`, false);
+  };
+
   // ── Derived lists ────────────────────────────────────────────────────────
   // Warehouse filter — you physically work one building at a time, so picking
   // Owosso should make Gladwin's pickups disappear entirely rather than sit there
@@ -912,6 +954,12 @@ function PickupBoard() {
 
   const activeTransfersScoped = allActiveTransfers.filter((t) => !scopedLocName || t.items.some((i) => i.fromLocationName === scopedLocName));
   const activeTransfers = activeTransfersScoped.filter(transferMatches);
+  // Only what's on screen counts — a ticked card hidden by search/warehouse is never acted on.
+  const pickedActive = activeTransfers.filter((t) => pickedTransfers.has(t.id));
+  const pickedRequested = pickedActive.filter((t) => t.status === "REQUESTED");
+  const pickedItemCount = pickedActive.reduce((n, t) => n + t.items.length, 0);
+  const pickedDestinations = [...new Set(pickedActive.map((t) => t.toLocation.name))];
+  const allTransfersPicked = activeTransfers.length > 0 && pickedActive.length === activeTransfers.length;
 
   // Waiting rows scoped to the working warehouse (someone with items at both shows
   // in both, but each owner only sees/gathers their building's items).
@@ -1305,12 +1353,35 @@ function PickupBoard() {
     const scopedIds = scopedItems.map((it) => it.id);
     const allGathered = t.items.length > 0 && t.items.every((i) => i.grabbed);
     const spotKey = `transfer:${t.id}`;
+    const picked = pickedTransfers.has(t.id);
     return (
-      <div key={t.id} id={`transfer-${t.id}`} className={`bg-white border rounded-2xl overflow-hidden ${t.status === "LOADED" ? "border-[#eed3ab]" : "border-[#e6dac6]"}`}>
+      <div
+        key={t.id}
+        id={`transfer-${t.id}`}
+        className={`bg-white border rounded-2xl overflow-hidden ${
+          picked ? "border-[#4a7c59] ring-2 ring-[#4a7c59]/25" : t.status === "LOADED" ? "border-[#eed3ab]" : "border-[#e6dac6]"
+        }`}
+      >
+        <div className="flex items-stretch">
+        {/* Select for the bulk Loaded / Dropped off bar */}
+        <button
+          type="button"
+          onClick={() => togglePickTransfer(t.id)}
+          disabled={!!bulkBusy}
+          aria-pressed={picked}
+          aria-label={picked ? `Unselect ${bidderPrimary(t.bidder)}` : `Select ${bidderPrimary(t.bidder)}`}
+          className={`shrink-0 w-14 grid place-items-center border-r border-[#f0e6d6] transition-colors ${picked ? "bg-[#e6f1e8]" : "hover:bg-[#faf5ea]"}`}
+        >
+          <span className={`w-7 h-7 rounded-lg border-2 grid place-items-center ${
+            picked ? "bg-[#4a7c59] border-[#4a7c59] text-white" : "bg-white border-[#d9c7ab] text-transparent"
+          }`}>
+            <IcoCheck className="w-4 h-4" />
+          </span>
+        </button>
         <button
           type="button"
           onClick={() => setExpandedTransferId(expanded ? null : t.id)}
-          className="w-full min-h-[56px] text-left px-4 py-3.5 hover:bg-[#faf5ea] transition-colors flex items-center justify-between gap-3"
+          className="flex-1 min-w-0 min-h-[56px] text-left px-4 py-3.5 hover:bg-[#faf5ea] transition-colors flex items-center justify-between gap-3"
         >
           <div className="min-w-0 flex-1">
             <div className="font-bold text-[#241a12] truncate">{bidderPrimary(t.bidder)}</div>
@@ -1331,6 +1402,7 @@ function PickupBoard() {
             <Chevron open={expanded} />
           )}
         </button>
+        </div>
 
         {expanded && (
           <div className="px-4 sm:px-5 pb-4 border-t border-[#f0e6d6] pt-3">
@@ -1596,11 +1668,26 @@ function PickupBoard() {
                 <span className="text-[15px] text-[#8a7559]">
                   {plural(activeTransfersScoped.length, "transfer")} to move{scopedLocName ? ` from ${scopedLocName}` : ""}
                 </span>
-                <PrintLabelButton
-                  href={`/api/admin/label?type=transfer-batch&location=${apptLocationId}`}
-                  label={scopedLocName ? `Print all to pull · ${scopedLocName}` : "Print all to pull"}
-                  className={printBtnCls}
-                />
+                <div className="flex flex-wrap items-center gap-2">
+                  {activeTransfers.length > 1 && (
+                    <Btn
+                      size="sm"
+                      tone="green"
+                      variant="outline"
+                      disabled={!!bulkBusy}
+                      onClick={() =>
+                        setPickedTransfers(allTransfersPicked ? new Set() : new Set(activeTransfers.map((t) => t.id)))
+                      }
+                    >
+                      {allTransfersPicked ? "Clear selection" : "Select all"}
+                    </Btn>
+                  )}
+                  <PrintLabelButton
+                    href={`/api/admin/label?type=transfer-batch&location=${apptLocationId}`}
+                    label={scopedLocName ? `Print all to pull · ${scopedLocName}` : "Print all to pull"}
+                    className={printBtnCls}
+                  />
+                </div>
               </div>
             )}
             {activeTransfers.length === 0 ? (
@@ -1609,6 +1696,61 @@ function PickupBoard() {
               </div>
             ) : (
               <div className="space-y-2">{activeTransfers.map(transferCard)}</div>
+            )}
+
+            {/* Bulk bar — sits just above the phone tab bar, never over it. */}
+            {pickedActive.length > 0 && (
+              <div className="sticky z-30 bottom-[calc(72px+env(safe-area-inset-bottom))] md:bottom-4">
+                <div className="bg-[#241a12] text-[#f1e7d5] rounded-2xl shadow-lg p-3 flex flex-col sm:flex-row sm:items-center gap-2.5">
+                  <div className="min-w-0 flex-1 px-1">
+                    <div className="font-bold text-[16px] leading-tight">
+                      {bulkBusy ?? `${plural(pickedActive.length, "transfer")} selected`}
+                    </div>
+                    {!bulkBusy && (
+                      <div className="text-[14px] text-[#c9b89c] truncate">
+                        {plural(pickedItemCount, "item")} → {pickedDestinations.join(", ")}
+                      </div>
+                    )}
+                  </div>
+                  <div className={`grid gap-2 sm:flex ${pickedRequested.length > 0 ? "grid-cols-[auto_1fr_1fr]" : "grid-cols-[auto_1fr]"}`}>
+                    <Btn size="sm" tone="slate" variant="outline" disabled={!!bulkBusy} onClick={() => setPickedTransfers(new Set())} className="!px-3">
+                      Clear
+                    </Btn>
+                    {pickedRequested.length > 0 && (
+                      <Btn
+                        size="sm"
+                        variant="outline"
+                        className="!px-3"
+                        disabled={!!bulkBusy}
+                        onClick={() =>
+                          askConfirm(
+                            `Mark ${plural(pickedRequested.length, "transfer")} as loaded onto the truck?`,
+                            () => bulkTransferStatus(pickedRequested, "LOADED"),
+                            { confirmLabel: "Loaded" }
+                          )
+                        }
+                      >
+                        Loaded
+                      </Btn>
+                    )}
+                    <Btn
+                      size="sm"
+                      tone="green"
+                      className="!px-3"
+                      disabled={!!bulkBusy}
+                      onClick={() =>
+                        askConfirm(
+                          `Drop off ${plural(pickedActive.length, "transfer")} (${plural(pickedItemCount, "item")})? Items move to ${pickedDestinations.join(" and ")} and each bidder is told they can schedule.`,
+                          () => bulkTransferStatus(pickedActive, "COMPLETED"),
+                          { confirmLabel: "Dropped off" }
+                        )
+                      }
+                    >
+                      Dropped off
+                    </Btn>
+                  </div>
+                </div>
+              </div>
             )}
 
             {completedTransfersAll.length > 0 && (
