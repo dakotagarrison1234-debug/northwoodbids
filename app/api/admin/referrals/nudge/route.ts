@@ -7,7 +7,9 @@ import { getUserOrg, isSuperAdmin } from "@/lib/auth";
 import { textBuyer } from "@/lib/shippingNotify";
 
 /**
- * POST /api/admin/referrals/nudge — { clerkUserIds: string[] }
+ * POST /api/admin/referrals/nudge — { clerkUserIds: string[]; message?: string }
+ *   message: the text to send (optional; the default below is used when blank).
+ *   "Northwood Bids:" is put in front automatically.
  *
  * "Send $5 to people who haven't bid" (Bidder report). Each person gets ONE $5
  * Bid Buck and a text inviting them to bid. Owner/Admin only.
@@ -70,9 +72,11 @@ export async function POST(req: NextRequest) {
 
   // Texts, five at a time so a big batch doesn't hammer the SMS webhook.
   // Bid Bucks only come off winning bills of $5+ (lib/referral.ts), so say so.
-  const msg =
-    `Here's $${NUDGE_AMOUNT} in Bid Bucks to get you started! Place your first bid at northwoodbids.com. ` +
-    `It comes off your first winning bill of $5 or more, automatically.`;
+  const custom = typeof body.message === "string" ? body.message.replace(/\s+/g, " ").trim() : "";
+  const msg = custom
+    ? custom.replace(/^northwood bids:\s*/i, "").slice(0, 320)
+    : `Here's $${NUDGE_AMOUNT} in Bid Bucks to get you started! Place your first bid at northwoodbids.com. ` +
+      `It comes off your first winning bill of $5 or more, automatically.`;
   let texted = 0;
   const withPhone = given.filter((p) => !!p.phone);
   for (let i = 0; i < withPhone.length; i += 5) {

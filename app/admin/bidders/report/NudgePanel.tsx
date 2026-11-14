@@ -20,6 +20,11 @@ const RANGES: { value: Range; label: string }[] = [
   { value: "all", label: "Anytime" },
 ];
 
+/** What goes out unless it's edited. "Northwood Bids:" is added in front automatically. */
+const DEFAULT_MSG =
+  "Here's $5 in Bid Bucks to get you started! Place your first bid at northwoodbids.com. It comes off your first winning bill of $5 or more, automatically.";
+const MAX_MSG = 320;
+
 const AGO = (d: number) => (d <= 0 ? "today" : d === 1 ? "yesterday" : d < 60 ? `${d}d ago` : `${Math.floor(d / 30)}mo ago`);
 
 /**
@@ -35,6 +40,7 @@ export default function NudgePanel({ bidders, nudged, team, onSent }: { bidders:
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [message, setMessage] = useState(DEFAULT_MSG);
 
   const done = useMemo(() => new Set(nudged), [nudged]);
   const staff = useMemo(() => new Set(team), [team]);
@@ -65,7 +71,7 @@ export default function NudgePanel({ bidders, nudged, team, onSent }: { bidders:
       const res = await fetch("/api/admin/referrals/nudge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clerkUserIds: pickedInPool.map((b) => b.clerkUserId) }),
+        body: JSON.stringify({ clerkUserIds: pickedInPool.map((b) => b.clerkUserId), message: message.trim() }),
       });
       const d = await res.json();
       if (!res.ok || !d.success) setResult({ ok: false, text: d.error || "Couldn't send." });
@@ -151,12 +157,36 @@ export default function NudgePanel({ bidders, nudged, team, onSent }: { bidders:
             </div>
           )}
 
-          <div className="px-4 sm:px-5 py-4 border-t border-[#f0e6d6]">
+          <div className="px-4 sm:px-5 py-4 border-t border-[#f0e6d6] space-y-3">
+            <div>
+              <div className="flex items-center justify-between gap-3 mb-1.5">
+                <label htmlFor="nudge-msg" className="text-[13px] font-black uppercase tracking-[0.12em] text-[#8a7559]">Text message</label>
+                {message !== DEFAULT_MSG && (
+                  <button type="button" onClick={() => setMessage(DEFAULT_MSG)} className="text-[14px] font-bold text-[#6c4d39] underline underline-offset-2">
+                    Reset
+                  </button>
+                )}
+              </div>
+              <textarea
+                id="nudge-msg"
+                value={message}
+                onChange={(e) => setMessage(e.target.value.slice(0, MAX_MSG))}
+                rows={4}
+                className="w-full rounded-xl bg-white border border-[#d9c7ab] focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 px-4 py-3 text-[16px] text-[#241a12] outline-none resize-y"
+              />
+              <div className="flex items-center justify-between gap-3 mt-1 text-[13px] text-[#8a7559]">
+                <span>Starts with &ldquo;Northwood Bids:&rdquo; automatically.</span>
+                <span className="tabular-nums">{message.length}/{MAX_MSG}</span>
+              </div>
+            </div>
             {confirming ? (
               <div className="rounded-xl bg-[#faf5ea] border border-[#e6dac6] p-4">
                 <p className="text-[15px] text-[#241a12]">
                   Give <span className="font-bold">{pickedInPool.length}</span> {pickedInPool.length === 1 ? "person" : "people"} $5 in Bid Bucks each (up to{" "}
                   <span className="font-bold">${pickedInPool.length * 5}</span> total, only spent on a winning bill of $5 or more) and text them?
+                </p>
+                <p className="mt-2 text-[14px] text-[#6f5b46] bg-white border border-[#e6dac6] rounded-lg px-3 py-2">
+                  Northwood Bids: {message.trim() || DEFAULT_MSG}
                 </p>
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <Btn tone="slate" variant="outline" onClick={() => setConfirming(false)} disabled={busy}>Back</Btn>
