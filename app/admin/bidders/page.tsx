@@ -70,6 +70,7 @@ function BiddersPageInner() {
     if (!giving) return;
     const amount = Number(giveAmt);
     if (!Number.isFinite(amount) || amount <= 0) { setGiveErr("Enter an amount over $0."); return; }
+    if (amount % 5 !== 0) { setGiveErr("Bid Bucks come in $5s. Try $5, $10, $15…"); return; }
     if (amount > 1000) { setGiveErr("That's over the $1,000 limit."); return; }
     setGiveBusy(true); setGiveErr(null);
     try {
@@ -345,8 +346,13 @@ function BiddersPageInner() {
             <label className="block text-[13px] font-bold uppercase tracking-wide text-[#8a7559] mt-4 mb-1.5">Amount</label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8a7559] font-bold">$</span>
-              <Input type="number" inputMode="decimal" min={1} step="1" value={giveAmt} onChange={(e) => setGiveAmt(e.target.value)} className="pl-8 font-bold" />
+              <Input type="number" inputMode="numeric" min={5} step="5" value={giveAmt} onChange={(e) => setGiveAmt(e.target.value)} className="pl-8 font-bold" />
             </div>
+            {Number(giveAmt) >= 5 && Number(giveAmt) % 5 === 0 && (
+              <p className="text-[15px] text-[#2f5d3a] font-semibold mt-1.5">
+                {Number(giveAmt) / 5} × $5 Bid Bucks · $5 off each of their next {Number(giveAmt) / 5 === 1 ? "order" : `${Number(giveAmt) / 5} orders`}
+              </p>
+            )}
 
             <label className="block text-[13px] font-bold uppercase tracking-wide text-[#8a7559] mt-4 mb-1.5">Note (just for you)</label>
             <Input value={giveNote} onChange={(e) => setGiveNote(e.target.value)} placeholder="Sorry about the late pickup" maxLength={120} />
@@ -361,7 +367,7 @@ function BiddersPageInner() {
               >
                 <span>
                   <span className="block font-bold text-[#241a12]">Text them about it</span>
-                  <span className="block text-[13px] text-[#8a7559]">&ldquo;We added ${Number(giveAmt) > 0 ? Number(giveAmt) : 0} in Bid Bucks to your account…&rdquo;</span>
+                  <span className="block text-[13px] text-[#8a7559]">&ldquo;We added ${Number(giveAmt) > 0 ? Number(giveAmt) : 0} in Bid Bucks to your account. $5 comes off each order…&rdquo;</span>
                 </span>
                 <span className={`shrink-0 w-12 h-7 rounded-full p-0.5 transition-colors ${giveText ? "bg-[#4a7c59]" : "bg-[#d9c7ab]"}`}>
                   <span className={`block w-6 h-6 rounded-full bg-white shadow transition-transform ${giveText ? "translate-x-5" : ""}`} />

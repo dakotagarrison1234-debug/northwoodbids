@@ -79,6 +79,11 @@ export async function POST(req: NextRequest) {
   }
 
   const cleanReason = (typeof reason === "string" && reason.trim()) || "manual adjustment";
+  // Gifts come in whole $5 Bid Bucks — each order redeems one $5, so an odd
+  // amount would strand change that can never be spent.
+  if (cleanReason.startsWith("gift") && (amt <= 0 || Math.round(amt * 100) % 500 !== 0)) {
+    return NextResponse.json({ error: "Bid Bucks gifts come in $5s." }, { status: 400 });
+  }
 
   await prisma.creditLedger.create({
     data: {
@@ -98,7 +103,7 @@ export async function POST(req: NextRequest) {
     texted = await textBuyer(
       clerkUserId.trim(),
       "bid_bucks_gift",
-      `We added ${fmt(gift)} in Bid Bucks to your account${balance > gift ? ` (${fmt(balance)} total)` : ""}. It comes off your next order automatically. northwoodbids.com`,
+      `We added ${fmt(gift)} in Bid Bucks to your account${balance > gift ? ` (${fmt(balance)} total)` : ""}. $5 comes off each order automatically, so that's $5 off your next ${Math.floor(gift / 5) === 1 ? "order" : `${Math.floor(gift / 5)} orders`}. northwoodbids.com`,
       { bidBucksAdded: gift, bidBucksBalance: balance },
     );
   }
