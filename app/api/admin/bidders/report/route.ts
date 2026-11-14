@@ -460,8 +460,17 @@ export async function GET(request: NextRequest) {
     })(),
   };
 
+  // Who already got the "$5 to get you bidding" nudge (one per person).
+  const [nudgedRows, teamRows] = await Promise.all([
+    prisma.creditLedger.findMany({ where: { reason: "adjustment: gift: bid nudge" }, select: { clerkUserId: true } }),
+    prisma.orgMember.findMany({ where: { organizationId: orgId }, select: { clerkUserId: true } }),
+  ]);
+
   return NextResponse.json({
     summary, signupTrend, topSpenders, topInviters, topCodes, bidders: rows,
+    nudged: [...new Set(nudgedRows.map((n) => n.clerkUserId))],
+    team: teamRows.map((t) => t.clerkUserId),
+    canManage: membership.role === "OWNER" || membership.role === "ADMIN",
     period: { days, kpis, funnel, trend, busiest, lists },
   });
 }

@@ -350,7 +350,7 @@ function BiddersPageInner() {
             </div>
             {Number(giveAmt) >= 5 && Number(giveAmt) % 5 === 0 && (
               <p className="text-[15px] text-[#2f5d3a] font-semibold mt-1.5">
-                {Number(giveAmt) / 5} × $5 Bid Bucks · $5 off each of their next {Number(giveAmt) / 5 === 1 ? "order" : `${Number(giveAmt) / 5} orders`}
+                {Number(giveAmt) / 5} × $5 Bid Bucks · $5 off each of their next {Number(giveAmt) / 5 === 1 ? "winning bill" : `${Number(giveAmt) / 5} winning bills`} ($5+)
               </p>
             )}
 
@@ -367,7 +367,7 @@ function BiddersPageInner() {
               >
                 <span>
                   <span className="block font-bold text-[#241a12]">Text them about it</span>
-                  <span className="block text-[13px] text-[#8a7559]">&ldquo;We added ${Number(giveAmt) > 0 ? Number(giveAmt) : 0} in Bid Bucks to your account. $5 comes off each order…&rdquo;</span>
+                  <span className="block text-[13px] text-[#8a7559]">&ldquo;We added ${Number(giveAmt) > 0 ? Number(giveAmt) : 0} in Bid Bucks to your account. $5 comes off each winning bill…&rdquo;</span>
                 </span>
                 <span className={`shrink-0 w-12 h-7 rounded-full p-0.5 transition-colors ${giveText ? "bg-[#4a7c59]" : "bg-[#d9c7ab]"}`}>
                   <span className={`block w-6 h-6 rounded-full bg-white shadow transition-transform ${giveText ? "translate-x-5" : ""}`} />

@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
     texted = await textBuyer(
       clerkUserId.trim(),
       "bid_bucks_gift",
-      `We added ${fmt(gift)} in Bid Bucks to your account${balance > gift ? ` (${fmt(balance)} total)` : ""}. $5 comes off each order automatically, so that's $5 off your next ${Math.floor(gift / 5) === 1 ? "order" : `${Math.floor(gift / 5)} orders`}. northwoodbids.com`,
+      `We added ${fmt(gift)} in Bid Bucks to your account${balance > gift ? ` (${fmt(balance)} total)` : ""}. $5 comes off each winning bill of $5 or more, automatically. northwoodbids.com`,
       { bidBucksAdded: gift, bidBucksBalance: balance },
     );
   }

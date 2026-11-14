@@ -196,6 +196,18 @@ export default function ReferPage() {
             </div>
           </div>
 
+          {/* Their whole Bid Bucks balance — includes anything we gave them, which the
+              ticket book below doesn't show. */}
+          {data.balance > 0 && (
+            <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl bg-white border-2 border-[#4a7c59]/40 px-5 py-4">
+              <div className="min-w-0">
+                <p className="font-display font-black text-lg leading-tight text-[#241a12]">Your Bid Bucks</p>
+                <p className="text-sm text-[#6f5b46]">$5 comes off each winning bill of $5 or more, automatically.</p>
+              </div>
+              <span className="shrink-0 font-display font-black text-3xl text-[#2f5d3a] tabular-nums">${data.balance % 1 === 0 ? data.balance.toFixed(0) : data.balance.toFixed(2)}</span>
+            </div>
+          )}
+
           {/* Welcome credit from a QR / business card */}
           {(data.welcomeGranted ?? 0) > 0 && (
             <div className="mt-5 flex items-center gap-3 rounded-2xl bg-[#241a12] text-[#fbf4e6] px-5 py-4">

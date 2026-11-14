@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { AreaTrend } from "../../reports/Charts";
+import NudgePanel from "./NudgePanel";
 import {
   PageHeader, PageBody, Panel, StatCard, Segmented, SearchBox, Pill, Btn, BtnLink, Empty, Eyebrow, Progress, Initials, Toolbar, Disclosure,
 } from "../../ui";
@@ -66,6 +67,9 @@ type Period = {
 };
 type Data = {
   period: Period;
+  nudged: string[];
+  team: string[];
+  canManage: boolean;
   summary: Summary;
   signupTrend: { label: string; count: number }[];
   topSpenders: { name: string; spend: number; won: number }[];
@@ -200,6 +204,7 @@ export default function BidderReportPage() {
   const [metric, setMetric] = useState<"bids" | "signups" | "revenue">("bids");
   const [listOpen, setListOpen] = useState(false);
   const [shown, setShown] = useState(15);
+  const [reloadTick, setReloadTick] = useState(0);
 
   useEffect(() => {
     let live = true;
@@ -209,7 +214,7 @@ export default function BidderReportPage() {
       .catch(() => { if (live) setError(true); })
       .finally(() => { if (live) setLoading(false); });
     return () => { live = false; };
-  }, [period]);
+  }, [period, reloadTick]);
 
   const filtered = useMemo(() => {
     if (!d) return [];
@@ -406,16 +411,11 @@ export default function BidderReportPage() {
               <RowLine name={r.name} right={money0(r.spend)} sub={`spent all-time · last bid ${AGO(r.daysSinceLastBid)}${r.phone ? ` · ${r.phone}` : ""}`} />
             )}
           />
-          <Capped
-            title="Joined, never bid"
-            sub="Signed up in the last 30 days · easy follow-up"
-            list={P.lists.neverBid}
-            empty="Every recent signup has bid."
-            render={(r) => (
-              <RowLine name={r.name} right={<span className="text-[15px] font-bold text-[#8a7559]">{AGO(r.daysSinceSignup)}</span>} sub={r.phone || r.email || "no contact"} />
-            )}
-          />
         </div>
+
+        {d.canManage && (
+          <NudgePanel bidders={d.bidders} nudged={d.nudged ?? []} team={d.team ?? []} onSent={() => setReloadTick((t) => t + 1)} />
+        )}
 
         {P.lists.failedPayments.total > 0 && (
           <Capped
