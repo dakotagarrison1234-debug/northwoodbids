@@ -252,7 +252,17 @@ export async function issueDoorCode(appointmentId: string): Promise<{ code: stri
   // orphan a set of codes on the locks. Whoever loses the race just returns.
   const claimed = await prisma.pickupAppointment.updateMany({
     // A claim older than two minutes is a crashed run, not a live one — take it over.
-    where: { id: appointmentId, OR: [{ NOT: { doorCodeStatus: "issuing" } }, { updatedAt: { lt: new Date(Date.now() - 120_000) } }] },
+    // doorCodeStatus is nullable, and SQL's "NOT (x = 'issuing')" is never true for
+    // NULL — so a pickup that has never had a code must be matched explicitly, or a
+    // fresh booking / just-staged pickup (updatedAt < 2 min) could never get one.
+    where: {
+      id: appointmentId,
+      OR: [
+        { doorCodeStatus: null },
+        { doorCodeStatus: { not: "issuing" } },
+        { updatedAt: { lt: new Date(Date.now() - 120_000) } },
+      ],
+    },
     data: { doorCodeStatus: "issuing" },
   });
   if (claimed.count === 0) return appt.doorCode ? { code: appt.doorCode, status: "pending" } : null;
