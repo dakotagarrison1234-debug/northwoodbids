@@ -1,5 +1,5 @@
 export const dynamic = "force-dynamic";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg } from "@/lib/auth";
 
@@ -13,7 +13,18 @@ const num = (d: unknown) => (d == null ? 0 : Number(d));
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const daysBetween = (a: Date, b: Date) => Math.floor((a.getTime() - b.getTime()) / DAY);
 
-export async function GET() {
+const TZ = "America/Detroit";
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+/** Weekday (0-6) and hour (0-23) of an instant in Michigan time. */
+function dayHour(d: Date): { wd: number; h: number } {
+  const p = new Intl.DateTimeFormat("en-US", { timeZone: TZ, weekday: "short", hour: "numeric", hourCycle: "h23" }).formatToParts(d);
+  const wd = WEEKDAYS.indexOf(p.find((x) => x.type === "weekday")?.value ?? "Sun");
+  const h = Number(p.find((x) => x.type === "hour")?.value ?? 0) % 24;
+  return { wd: wd < 0 ? 0 : wd, h };
+}
+const hourLabel = (h: number) => `${h % 12 === 0 ? 12 : h % 12} ${h < 12 ? "AM" : "PM"}`;
+
+export async function GET(request: NextRequest) {
   const membership = await getUserOrg();
   if (!membership) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const orgId = membership.organizationId;
@@ -233,5 +244,224 @@ export async function GET() {
     .slice(0, 10)
     .map((r) => ({ name: r.name, spend: r.spend, won: r.won }));
 
-  return NextResponse.json({ summary, signupTrend, topSpenders, topInviters, topCodes, bidders: rows });
+  // ══ Period view (?days=7|30|90|0 — 0 = all time) ═══════════════════════════
+  // Everything a "how was this week?" look needs, compared with the period
+  // before it. Lists are capped at 10 server-side (the page shows 5 + "more").
+  const daysParam = Number(request.nextUrl.searchParams.get("days") ?? 7);
+  const days = [7, 30, 90, 0].includes(daysParam) ? daysParam : 7;
+  const start = days ? new Date(now.getTime() - days * DAY) : null;
+  const prevStart = days ? new Date(now.getTime() - 2 * days * DAY) : null;
+  // Raw bid rows for the trend + busiest times. All time looks at the last year.
+  const rawFrom = start ?? new Date(now.getTime() - 365 * DAY);
+
+  const paidWhere = (from: Date | null, to: Date | null) => ({
+    status: "PAID" as const,
+    comped: false,
+    ...itemScope,
+    ...(from || to
+      ? {
+          OR: [
+            { paidAt: { ...(from ? { gte: from } : {}), ...(to ? { lt: to } : {}) } },
+            { paidAt: null, createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lt: to } : {}) } },
+          ],
+        }
+      : {}),
+  });
+
+  const [periodBids, prevBidAgg, periodPays, prevPays, firstPaidAgg, failedPays] = await Promise.all([
+    prisma.bid.findMany({
+      where: { ...itemScope, placedAt: { gte: rawFrom } },
+      select: { clerkUserId: true, placedAt: true, itemId: true, status: true, item: { select: { status: true } } },
+      take: 200_000,
+    }),
+    prevStart && start
+      ? prisma.bid.groupBy({ by: ["clerkUserId"], where: { ...itemScope, placedAt: { gte: prevStart, lt: start } }, _count: { id: true } })
+      : Promise.resolve([] as { clerkUserId: string; _count: { id: number } }[]),
+    prisma.payment.findMany({
+      where: paidWhere(start, null),
+      select: { clerkUserId: true, amount: true, applicationFeeAmount: true, paidAt: true, createdAt: true },
+      take: 100_000,
+    }),
+    prevStart && start
+      ? prisma.payment.findMany({
+          where: paidWhere(prevStart, start),
+          select: { clerkUserId: true, amount: true, applicationFeeAmount: true },
+          take: 100_000,
+        })
+      : Promise.resolve([] as { clerkUserId: string; amount: unknown; applicationFeeAmount: unknown }[]),
+    prisma.payment.groupBy({ by: ["clerkUserId"], where: paidWhere(null, null), _min: { paidAt: true, createdAt: true } }),
+    prisma.payment.findMany({
+      where: { status: "FAILED", comped: false, ...itemScope },
+      select: { clerkUserId: true, amount: true, applicationFeeAmount: true, taxAmount: true, createdAt: true },
+      take: 5000,
+    }),
+  ]);
+
+  const inPeriod = (d: Date) => !start || d.getTime() >= start.getTime();
+  const bidsInPeriod = periodBids.filter((b) => inPeriod(b.placedAt));
+  const payValue = (p: { amount: unknown; applicationFeeAmount: unknown }) => num(p.amount) + num(p.applicationFeeAmount);
+
+  // Per-person spend / bids / wins in the period.
+  const pSpend = new Map<string, number>();
+  const pLots = new Map<string, number>();
+  for (const p of periodPays) {
+    pSpend.set(p.clerkUserId, (pSpend.get(p.clerkUserId) ?? 0) + payValue(p));
+    pLots.set(p.clerkUserId, (pLots.get(p.clerkUserId) ?? 0) + 1);
+  }
+  const pBids = new Map<string, number>();
+  const pWonItems = new Map<string, Set<string>>();
+  const bidItems = new Set<string>();
+  const decidedItems = new Set<string>();
+  const wonItems = new Set<string>();
+  for (const b of bidsInPeriod) {
+    pBids.set(b.clerkUserId, (pBids.get(b.clerkUserId) ?? 0) + 1);
+    bidItems.add(b.itemId);
+    const decided = b.item.status !== "ACTIVE" && b.item.status !== "DRAFT";
+    if (decided) decidedItems.add(b.itemId);
+    if (b.status === "WON") {
+      wonItems.add(b.itemId);
+      if (!pWonItems.has(b.clerkUserId)) pWonItems.set(b.clerkUserId, new Set());
+      pWonItems.get(b.clerkUserId)!.add(b.itemId);
+    }
+  }
+
+  const firstPaidBy = new Map(firstPaidAgg.map((f) => [f.clerkUserId, f._min.paidAt ?? f._min.createdAt ?? null]));
+  const firstTimeIds = [...pSpend.keys()].filter((id) => {
+    const f = firstPaidBy.get(id);
+    return f ? inPeriod(f) : false;
+  });
+
+  const revenue = r2(periodPays.reduce((t, p) => t + payValue(p), 0));
+  const prevRevenue = r2(prevPays.reduce((t, p) => t + payValue(p), 0));
+  const buyers = pSpend.size;
+  const prevBuyers = new Set(prevPays.map((p) => p.clerkUserId)).size;
+  const signupIds = rows.filter((r) => inPeriod(new Date(r.signupAt))).map((r) => r.clerkUserId);
+  const prevSignups = start && prevStart
+    ? rows.filter((r) => { const t = new Date(r.signupAt).getTime(); return t >= prevStart.getTime() && t < start.getTime(); }).length
+    : null;
+
+  const kpis = {
+    revenue,
+    prevRevenue: days ? prevRevenue : null,
+    buyers,
+    prevBuyers: days ? prevBuyers : null,
+    firstTimeBuyers: firstTimeIds.length,
+    returningBuyers: buyers - firstTimeIds.length,
+    signups: signupIds.length,
+    prevSignups,
+    activeBidders: pBids.size,
+    prevActiveBidders: days ? prevBidAgg.length : null,
+    bids: bidsInPeriod.length,
+    prevBids: days ? prevBidAgg.reduce((t, b) => t + b._count.id, 0) : null,
+    lotsPaid: periodPays.length,
+    avgPerBuyer: buyers ? r2(revenue / buyers) : 0,
+    prevAvgPerBuyer: days ? (prevBuyers ? r2(prevRevenue / prevBuyers) : 0) : null,
+    // Won ÷ bid-on, counting only lots whose auction has finished.
+    winRate: decidedItems.size ? Math.round(([...wonItems].filter((i) => decidedItems.has(i)).length / decidedItems.size) * 100) : null,
+    lotsBidOn: bidItems.size,
+  };
+
+  // Signup funnel for people who joined in the period.
+  const funnel = {
+    joined: signupIds.length,
+    bid: signupIds.filter((id) => (bidCountBy.get(id) ?? 0) > 0).length,
+    won: signupIds.filter((id) => (wonBy.get(id) ?? 0) > 0).length,
+    paid: signupIds.filter((id) => (spendBy.get(id) ?? 0) > 0).length,
+  };
+
+  // Trend buckets: daily for 7/30, weekly for 90, monthly for all time.
+  type Bucket = { label: string; from: number; to: number; bids: number; signups: number; revenue: number };
+  const buckets: Bucket[] = [];
+  const fmtDay = (d: Date, opts: Intl.DateTimeFormatOptions) => d.toLocaleDateString("en-US", { timeZone: TZ, ...opts });
+  if (days === 7 || days === 30) {
+    for (let i = days - 1; i >= 0; i--) {
+      const from = now.getTime() - (i + 1) * DAY, to = now.getTime() - i * DAY;
+      buckets.push({ label: fmtDay(new Date(to), days === 7 ? { weekday: "short" } : { month: "numeric", day: "numeric" }), from, to, bids: 0, signups: 0, revenue: 0 });
+    }
+  } else if (days === 90) {
+    for (let i = 12; i >= 0; i--) {
+      const from = now.getTime() - (i + 1) * 7 * DAY, to = now.getTime() - i * 7 * DAY;
+      buckets.push({ label: fmtDay(new Date(from), { month: "numeric", day: "numeric" }), from, to, bids: 0, signups: 0, revenue: 0 });
+    }
+  } else {
+    for (let i = 11; i >= 0; i--) {
+      const from = now.getTime() - (i + 1) * 30 * DAY, to = now.getTime() - i * 30 * DAY;
+      buckets.push({ label: fmtDay(new Date(to), { month: "short" }), from, to, bids: 0, signups: 0, revenue: 0 });
+    }
+  }
+  const bucketOf = (t: number) => buckets.find((b) => t >= b.from && t < b.to);
+  for (const b of periodBids) { const k = bucketOf(b.placedAt.getTime()); if (k) k.bids++; }
+  for (const r of rows) { const k = bucketOf(new Date(r.signupAt).getTime()); if (k) k.signups++; }
+  for (const p of periodPays) { const k = bucketOf((p.paidAt ?? p.createdAt).getTime()); if (k) k.revenue += payValue(p); }
+  const trend = buckets.map((b) => ({ label: b.label, bids: b.bids, signups: b.signups, revenue: r2(b.revenue) }));
+
+  // Busiest times (Michigan time). All time uses the last 90 days so it's current.
+  const timesFrom = start ?? new Date(now.getTime() - 90 * DAY);
+  const byWeekday = Array(7).fill(0) as number[];
+  const byHour = Array(24).fill(0) as number[];
+  for (const b of periodBids) {
+    if (b.placedAt < timesFrom) continue;
+    const { wd, h } = dayHour(b.placedAt);
+    byWeekday[wd]++; byHour[h]++;
+  }
+  const topWd = byWeekday.indexOf(Math.max(...byWeekday));
+  const topH = byHour.indexOf(Math.max(...byHour));
+  const anyTimes = byWeekday.some((n) => n > 0);
+  const busiest = {
+    byWeekday: WEEKDAYS.map((d, i) => ({ label: d, value: byWeekday[i] })),
+    topDay: anyTimes ? WEEKDAYS[topWd] : null,
+    topHour: anyTimes ? `${hourLabel(topH)}–${hourLabel((topH + 1) % 24)}` : null,
+  };
+
+  // ── Short lists (max 10 each; the page shows 5 then "more") ──
+  const person = (id: string) => {
+    const r = rows.find((x) => x.clerkUserId === id);
+    return { clerkUserId: id, name: r?.name ?? "Bidder", phone: r?.phone ?? "", email: r?.email ?? "" };
+  };
+  const topBidderIds = [...new Set([...pSpend.keys(), ...pBids.keys()])]
+    .sort((a, b) => (pSpend.get(b) ?? 0) - (pSpend.get(a) ?? 0) || (pBids.get(b) ?? 0) - (pBids.get(a) ?? 0));
+  const lists = {
+    topBidders: {
+      total: topBidderIds.length,
+      rows: topBidderIds.slice(0, 10).map((id) => ({ ...person(id), spend: r2(pSpend.get(id) ?? 0), bids: pBids.get(id) ?? 0, won: pWonItems.get(id)?.size ?? 0 })),
+    },
+    newBuyers: {
+      total: firstTimeIds.length,
+      rows: [...firstTimeIds].sort((a, b) => (pSpend.get(b) ?? 0) - (pSpend.get(a) ?? 0)).slice(0, 10)
+        .map((id) => ({ ...person(id), spend: r2(pSpend.get(id) ?? 0), lots: pLots.get(id) ?? 0 })),
+    },
+    // Bought before, no bids in 30+ days (and not long gone): worth a text.
+    goneQuiet: (() => {
+      const all = rows.filter((r) => r.spend > 0 && r.daysSinceLastBid != null && r.daysSinceLastBid > 30 && r.daysSinceLastBid <= 180 && !r.blocked)
+        .sort((a, b) => b.spend - a.spend);
+      return { total: all.length, rows: all.slice(0, 10).map((r) => ({ clerkUserId: r.clerkUserId, name: r.name, phone: r.phone, email: r.email, spend: r.spend, daysSinceLastBid: r.daysSinceLastBid })) };
+    })(),
+    // Signed up 1–30 days ago, never bid: the easiest follow-up.
+    neverBid: (() => {
+      const all = rows.filter((r) => r.neverBid && r.daysSinceSignup >= 1 && r.daysSinceSignup <= 30 && !r.blocked)
+        .sort((a, b) => a.daysSinceSignup - b.daysSinceSignup);
+      return { total: all.length, rows: all.slice(0, 10).map((r) => ({ clerkUserId: r.clerkUserId, name: r.name, phone: r.phone, email: r.email, daysSinceSignup: r.daysSinceSignup })) };
+    })(),
+    // Card charges that failed and are still owed.
+    failedPayments: (() => {
+      const owed = new Map<string, { amount: number; lots: number }>();
+      for (const f of failedPays) {
+        const cur = owed.get(f.clerkUserId) ?? { amount: 0, lots: 0 };
+        cur.amount += num(f.amount) + num(f.applicationFeeAmount) + num(f.taxAmount);
+        cur.lots += 1;
+        owed.set(f.clerkUserId, cur);
+      }
+      const all = [...owed.entries()].sort((a, b) => b[1].amount - a[1].amount);
+      return {
+        total: all.length,
+        amount: r2(all.reduce((t, [, v]) => t + v.amount, 0)),
+        rows: all.slice(0, 10).map(([id, v]) => ({ ...person(id), owed: r2(v.amount), lots: v.lots })),
+      };
+    })(),
+  };
+
+  return NextResponse.json({
+    summary, signupTrend, topSpenders, topInviters, topCodes, bidders: rows,
+    period: { days, kpis, funnel, trend, busiest, lists },
+  });
 }
