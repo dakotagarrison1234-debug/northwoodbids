@@ -401,10 +401,14 @@ export async function refreshDoorCodeStatus(appointmentId: string): Promise<stri
 
 const timeOf = (d: Date) => d.toLocaleTimeString("en-US", { timeZone: BUSINESS_TZ, hour: "numeric", minute: "2-digit" });
 
-/** The keypad how-to, worded once so the text, /pickup and Woody all agree. */
-export function doorHowTo(code: string, doorNames: string[]): string {
-  const doors = doorNames.length === 0 ? "the door" : doorNames.length === 1 ? `the ${doorNames[0].toLowerCase()}` : `the ${doorNames.map((n) => n.toLowerCase()).join(" or ")}`;
-  return `Touch the keypad on ${doors} to wake it, enter ${code}, and it unlocks. Press the Schlage button on your way out to lock up.`;
+/** "the back door" / "the side door or back door" — the doors a code opens. */
+function doorList(doorNames: string[]): string {
+  return doorNames.length === 0 ? "the door" : `the ${doorNames.map((n) => n.toLowerCase()).join(" or ")}`;
+}
+
+/** The keypad how-to for /pickup (the code itself is shown big right above it). The doors lock themselves. */
+export function doorHowTo(doorNames: string[]): string {
+  return `Tap the keypad on ${doorList(doorNames)}, then enter your code.`;
 }
 
 /**
@@ -423,15 +427,13 @@ export async function textDoorCode(appointmentId: string, reason: "booked" | "mo
   if (!profile?.phone) return false;
 
   const { dayLabel } = doorCodeWindow(appt.startsAt);
+  // Short and to the point: when, where, the code once, which door. The doors auto-lock.
   const where = appt.location.address ? `${appt.location.name}, ${appt.location.address}` : appt.location.name;
-  const lead =
-    reason === "booked" ? `Pickup booked for ${dayLabel} at ${timeOf(appt.startsAt)} — ${where}.`
-    : reason === "moved" ? `Your pickup moved to ${dayLabel} at ${timeOf(appt.startsAt)} — ${where}.`
-    : `Your pickup is ${dayLabel} at ${timeOf(appt.startsAt)} — ${where}.`;
+  const lead = reason === "booked" ? "Pickup booked" : reason === "moved" ? "Pickup moved" : "Your pickup";
   const sms =
-    `Northwood Bids: ${lead} Your door code is ${appt.doorCode} (works all day ${dayLabel}). ` +
-    doorHowTo(appt.doorCode, appt.location.doorLocks.map((l) => l.name)) +
-    ` Your order's spot number is on ${APP_URL}/pickup.`;
+    `Northwood Bids: ${lead}: ${dayLabel}, ${timeOf(appt.startsAt)} at ${where}. ` +
+    `Door code ${appt.doorCode}, works all day on ${doorList(appt.location.doorLocks.map((l) => l.name))}. ` +
+    `Your spot: ${APP_URL}/pickup`;
 
   const name = profile.name ?? "Bidder";
   try {
@@ -497,9 +499,7 @@ export async function issueTestDoorCode(
   const profile = await prisma.bidderProfile.findUnique({ where: { clerkUserId }, select: { email: true, phone: true, name: true } });
   if (hook && profile?.phone) {
     const name = profile.name ?? "Team";
-    const sms =
-      `Northwood Bids TEST: door code ${code} works on the ${lock.name} until ${timeOf(endsAt)} today. ` +
-      doorHowTo(code, [lock.name]);
+    const sms = `Northwood Bids TEST: door code ${code}, works on ${doorList([lock.name])} until ${timeOf(endsAt)}.`;
     try {
       const res = await fetch(hook, {
         method: "POST",

@@ -78,7 +78,7 @@ export async function GET() {
             status: a.doorCodeStatus ?? "pending",
             dayLabel: doorCodeWindow(a.startsAt).dayLabel,
             doors: a.location.doorLocks.map((l) => l.name),
-            howTo: doorHowTo(a.doorCode, a.location.doorLocks.map((l) => l.name)),
+            howTo: doorHowTo(a.location.doorLocks.map((l) => l.name)),
           }
         : null,
       location: {
