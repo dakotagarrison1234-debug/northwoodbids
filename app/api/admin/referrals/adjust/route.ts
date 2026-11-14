@@ -2,10 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg, isSuperAdmin } from "@/lib/auth";
 import { getCreditBalance } from "@/lib/referral";
+import { textBuyer } from "@/lib/shippingNotify";
+
+/** GET ?clerkUserId= — one customer's Bid Bucks balance (Bidders page). Owner/Admin only. */
+export async function GET(req: NextRequest) {
+  const [membership, superAdmin] = await Promise.all([getUserOrg(), isSuperAdmin()]);
+  const role = membership?.role;
+  if (!superAdmin && role !== "OWNER" && role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const id = req.nextUrl.searchParams.get("clerkUserId")?.trim();
+  if (!id) return NextResponse.json({ error: "clerkUserId is required" }, { status: 400 });
+  return NextResponse.json({ balance: await getCreditBalance(id) });
+}
 
 /**
  * POST /api/admin/referrals/adjust
- * Body: { clerkUserId: string; amount: number; reason?: string }
+ * Body: { clerkUserId: string; amount: number; reason?: string; notify?: boolean }
+ *   notify: text the customer that Bid Bucks were added (gifts only).
  *
  * Manually credits (+) or debits (-) a bidder's Bid Bucks by writing an
  * adjustment row to the ledger. Owner/Admin only. Used to correct issues.
@@ -17,7 +31,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { clerkUserId, amount, reason } = await req.json();
+  const { clerkUserId, amount, reason, notify } = await req.json();
 
   if (typeof clerkUserId !== "string" || !clerkUserId.trim()) {
     return NextResponse.json({ error: "clerkUserId is required" }, { status: 400 });
@@ -37,7 +51,7 @@ export async function POST(req: NextRequest) {
   if (!superAdmin) {
     const orgId = membership!.organizationId;
     const target = clerkUserId.trim();
-    const [hasCard, hasBid] = await Promise.all([
+    const [hasCard, hasBid, homeHere] = await Promise.all([
       prisma.bidderStripeCustomer.findFirst({
         where: { clerkUserId: target, organizationId: orgId },
         select: { id: true },
@@ -46,8 +60,17 @@ export async function POST(req: NextRequest) {
         where: { clerkUserId: target, item: { organizationId: orgId } },
         select: { id: true },
       }),
+      // Signed up and picked one of OUR pickup spots (new customers who haven't bid yet).
+      prisma.bidderProfile.findFirst({
+        where: { clerkUserId: target, preferredPickupLocationId: { not: null } },
+        select: { preferredPickupLocationId: true },
+      }).then(async (p) =>
+        p?.preferredPickupLocationId
+          ? prisma.pickupLocation.findFirst({ where: { id: p.preferredPickupLocationId, organizationId: orgId }, select: { id: true } })
+          : null
+      ),
     ]);
-    if (!hasCard && !hasBid) {
+    if (!hasCard && !hasBid && !homeHere) {
       return NextResponse.json(
         { error: "That bidder isn't part of your auction house." },
         { status: 403 }
@@ -66,5 +89,18 @@ export async function POST(req: NextRequest) {
   });
 
   const balance = await getCreditBalance(clerkUserId.trim());
-  return NextResponse.json({ success: true, balance });
+
+  // Gift text: "You've got $10 in Bid Bucks". Only for additions, never blocks.
+  let texted = false;
+  if (notify === true && amt > 0) {
+    const gift = Math.round(amt * 100) / 100;
+    const fmt = (n: number) => `$${n % 1 === 0 ? n.toFixed(0) : n.toFixed(2)}`;
+    texted = await textBuyer(
+      clerkUserId.trim(),
+      "bid_bucks_gift",
+      `We added ${fmt(gift)} in Bid Bucks to your account${balance > gift ? ` (${fmt(balance)} total)` : ""}. It comes off your next order automatically. northwoodbids.com`,
+      { bidBucksAdded: gift, bidBucksBalance: balance },
+    );
+  }
+  return NextResponse.json({ success: true, balance, texted });
 }

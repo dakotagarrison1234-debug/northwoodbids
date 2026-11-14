@@ -23,7 +23,9 @@ export type ShippingEvent =
   | "shipping_shipped"
   | "shipping_out_for_delivery"
   | "shipping_delivered"
-  | "shipping_moved_to_pickup";
+  | "shipping_moved_to_pickup"
+  // Not shipping, but the same verbatim-SMS channel: staff gave this customer Bid Bucks.
+  | "bid_bucks_gift";
 
 export async function textBuyer(
   clerkUserId: string,

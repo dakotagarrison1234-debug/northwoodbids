@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Pill, PageHeader, PageBody, SearchBox, Segmented, Panel, Row, Initials, Btn, Empty, Notice, Eyebrow } from "../ui";
+import { Pill, PageHeader, PageBody, SearchBox, Segmented, Panel, Row, Initials, Btn, Empty, Notice, Eyebrow, Input } from "../ui";
+import { fmtMoney } from "../format";
 import MessageSheet, { type MessageTarget } from "../MessageSheet";
 
 interface Bidder {
@@ -44,6 +45,51 @@ function BiddersPageInner() {
   >(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [msgTarget, setMsgTarget] = useState<MessageTarget | null>(null);
+
+  // ── Bid Bucks: balance of the open bidder + the "Give Bid Bucks" sheet ──
+  const [bucks, setBucks] = useState<Record<string, number>>({});
+  const [giving, setGiving] = useState<Bidder | null>(null);
+  const [giveAmt, setGiveAmt] = useState("10");
+  const [giveNote, setGiveNote] = useState("");
+  const [giveText, setGiveText] = useState(true);
+  const [giveBusy, setGiveBusy] = useState(false);
+  const [giveErr, setGiveErr] = useState<string | null>(null);
+  const [okNote, setOkNote] = useState<string | null>(null);
+
+  const loadBucks = useCallback((clerkUserId: string) => {
+    fetch(`/api/admin/referrals/adjust?clerkUserId=${encodeURIComponent(clerkUserId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d && typeof d.balance === "number") setBucks((m) => ({ ...m, [clerkUserId]: d.balance })); })
+      .catch(() => {});
+  }, []);
+
+  const openGive = (b: Bidder) => {
+    setGiving(b); setGiveAmt("10"); setGiveNote(""); setGiveText(!!b.phone); setGiveErr(null);
+  };
+  const submitGive = async () => {
+    if (!giving) return;
+    const amount = Number(giveAmt);
+    if (!Number.isFinite(amount) || amount <= 0) { setGiveErr("Enter an amount over $0."); return; }
+    if (amount > 1000) { setGiveErr("That's over the $1,000 limit."); return; }
+    setGiveBusy(true); setGiveErr(null);
+    try {
+      const res = await fetch("/api/admin/referrals/adjust", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clerkUserId: giving.clerkUserId, amount, reason: `gift${giveNote.trim() ? `: ${giveNote.trim()}` : ""}`, notify: giveText }),
+      });
+      const d = await res.json();
+      if (!res.ok || !d.success) { setGiveErr(d.error || "Couldn't add Bid Bucks."); setGiveBusy(false); return; }
+      setBucks((m) => ({ ...m, [giving.clerkUserId]: d.balance }));
+      const who = giving.name || giving.email || "them";
+      setOkNote(`Gave ${who} ${fmtMoney(amount)} in Bid Bucks. New balance ${fmtMoney(d.balance)}.${giveText ? (d.texted ? " Texted them." : " The text didn't go out.") : ""}`);
+      setTimeout(() => setOkNote(null), 6000);
+      setGiving(null);
+    } catch {
+      setGiveErr("Something went wrong.");
+    }
+    setGiveBusy(false);
+  };
 
   const canManage = myRole === "OWNER" || myRole === "ADMIN";
 
@@ -153,6 +199,7 @@ function BiddersPageInner() {
         <Segmented<Filter> value={filter} onChange={setFilter} options={FILTERS} />
 
         {notice && <Notice tone="red">{notice}</Notice>}
+        {okNote && <Notice tone="green">{okNote}</Notice>}
 
         <Panel>
           {loading ? (
@@ -170,7 +217,10 @@ function BiddersPageInner() {
                   <li key={b.clerkUserId} className={b.blocked ? "bg-[#fbeae6]" : ""}>
                     <Row
                       tone={b.blocked ? "red" : undefined}
-                      onClick={() => setOpenId(open ? null : b.clerkUserId)}
+                      onClick={() => {
+                        setOpenId(open ? null : b.clerkUserId);
+                        if (!open && canManage) loadBucks(b.clerkUserId);
+                      }}
                       leading={<Initials name={b.name || b.email} />}
                       title={b.name || "Unnamed bidder"}
                       sub={contact || "No contact details"}
@@ -209,7 +259,22 @@ function BiddersPageInner() {
                           </div>
                         )}
 
+                        {/* Bid Bucks — their balance, and a way to give them some. */}
+                        {canManage && (
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <Eyebrow className="shrink-0">Bid Bucks</Eyebrow>
+                            <span className="font-bold text-[#2f5d3a] tabular-nums">
+                              {bucks[b.clerkUserId] === undefined ? "…" : fmtMoney(bucks[b.clerkUserId])}
+                            </span>
+                          </div>
+                        )}
+
                         <div className="flex flex-wrap gap-2">
+                          {canManage && (
+                            <Btn tone="green" variant="outline" size="sm" onClick={() => openGive(b)}>
+                              Give Bid Bucks
+                            </Btn>
+                          )}
                           {/* Text this customer directly. Owner/admin only, and only if
                               we have a number to text. */}
                           {canManage && b.phone && (
@@ -248,6 +313,73 @@ function BiddersPageInner() {
       </PageBody>
 
       <MessageSheet target={msgTarget} onClose={() => setMsgTarget(null)} />
+
+      {/* Give Bid Bucks — bottom sheet on phones, centered card on desktop. */}
+      {giving && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 sm:p-4" onClick={() => !giveBusy && setGiving(null)}>
+          <div
+            className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl border border-[#e6dac6] shadow-xl p-5 pb-[calc(env(safe-area-inset-bottom)+20px)] sm:pb-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="font-display text-2xl font-black text-[#241a12]">Give Bid Bucks</div>
+            <p className="text-[15px] text-[#8a7559] mt-0.5 truncate">
+              {giving.name || giving.email || "This bidder"}
+              {bucks[giving.clerkUserId] !== undefined && ` · has ${fmtMoney(bucks[giving.clerkUserId])}`}
+            </p>
+
+            <div className="grid grid-cols-4 gap-2 mt-4">
+              {[5, 10, 20, 25].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setGiveAmt(String(n))}
+                  className={`min-h-[48px] rounded-xl border-2 font-black text-lg transition-colors ${
+                    Number(giveAmt) === n ? "border-[#4a7c59] bg-[#e6f1e8] text-[#2f5d3a]" : "border-[#e6dac6] bg-white text-[#241a12]"
+                  }`}
+                >
+                  ${n}
+                </button>
+              ))}
+            </div>
+
+            <label className="block text-[13px] font-bold uppercase tracking-wide text-[#8a7559] mt-4 mb-1.5">Amount</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8a7559] font-bold">$</span>
+              <Input type="number" inputMode="decimal" min={1} step="1" value={giveAmt} onChange={(e) => setGiveAmt(e.target.value)} className="pl-8 font-bold" />
+            </div>
+
+            <label className="block text-[13px] font-bold uppercase tracking-wide text-[#8a7559] mt-4 mb-1.5">Note (just for you)</label>
+            <Input value={giveNote} onChange={(e) => setGiveNote(e.target.value)} placeholder="Sorry about the late pickup" maxLength={120} />
+
+            {giving.phone && (
+              <button
+                type="button"
+                role="switch"
+                aria-checked={giveText}
+                onClick={() => setGiveText((v) => !v)}
+                className="mt-4 w-full min-h-[50px] flex items-center justify-between gap-3 rounded-xl bg-[#faf5ea] border border-[#e6dac6] px-4 text-left"
+              >
+                <span>
+                  <span className="block font-bold text-[#241a12]">Text them about it</span>
+                  <span className="block text-[13px] text-[#8a7559]">&ldquo;We added ${Number(giveAmt) > 0 ? Number(giveAmt) : 0} in Bid Bucks to your account…&rdquo;</span>
+                </span>
+                <span className={`shrink-0 w-12 h-7 rounded-full p-0.5 transition-colors ${giveText ? "bg-[#4a7c59]" : "bg-[#d9c7ab]"}`}>
+                  <span className={`block w-6 h-6 rounded-full bg-white shadow transition-transform ${giveText ? "translate-x-5" : ""}`} />
+                </span>
+              </button>
+            )}
+
+            {giveErr && <p className="text-[15px] font-semibold text-[#a1321f] mt-3">{giveErr}</p>}
+
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <Btn tone="slate" variant="outline" full onClick={() => setGiving(null)} disabled={giveBusy}>Cancel</Btn>
+              <Btn tone="green" full onClick={submitGive} disabled={giveBusy}>
+                {giveBusy ? "Adding…" : `Give ${Number(giveAmt) > 0 ? fmtMoney(Number(giveAmt)) : ""}`}
+              </Btn>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* In-app confirmation (native confirm() is blocked in some installed/PWA webviews) */}
       {confirmDialog && (
