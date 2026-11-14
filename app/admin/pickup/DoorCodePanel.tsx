@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Btn, Eyebrow, Pill } from "../ui";
 import { IcoLock, IcoBolt } from "@/app/components/BidIcons";
 
-type Door = { code: string | null; status: string | null; sentAt: string | null; locks: { id: string; name: string }[] };
+type Door = { code: string | null; status: string | null; sentAt: string | null; usedAt?: string | null; locks: { id: string; name: string }[] };
 
 /**
  * The door-code strip on an appointment card (only at locations with locks).
@@ -61,6 +61,12 @@ export default function DoorCodePanel({ appointmentId, door, scheduled, onChange
               {door.locks.map((l) => l.name).join(" + ")}
               {door.sentAt ? ` · texted ${new Date(door.sentAt).toLocaleString("en-US", { timeZone: "America/Detroit", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}` : door.code ? " · not texted yet" : ""}
             </div>
+            {door.usedAt && (
+              <div className="text-[13px] font-bold text-[#2f5d3a]">
+                Code used {new Date(door.usedAt).toLocaleTimeString("en-US", { timeZone: "America/Detroit", hour: "numeric", minute: "2-digit" })}
+                {scheduled ? " · marks picked up 10 min after" : ""}
+              </div>
+            )}
           </div>
         </div>
         {scheduled && (

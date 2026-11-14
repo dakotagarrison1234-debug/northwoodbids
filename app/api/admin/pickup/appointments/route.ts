@@ -65,7 +65,7 @@ export async function GET() {
       notes: a.notes,
       stagedSpot: a.stagedSpot ?? null,
       door: locksByLocation.has(a.locationId)
-        ? { code: a.doorCode ?? null, status: a.doorCodeStatus ?? null, sentAt: a.doorCodeSentAt?.toISOString() ?? null, locks: locksByLocation.get(a.locationId)! }
+        ? { code: a.doorCode ?? null, status: a.doorCodeStatus ?? null, sentAt: a.doorCodeSentAt?.toISOString() ?? null, usedAt: a.doorCodeUsedAt?.toISOString() ?? null, locks: locksByLocation.get(a.locationId)! }
         : null,
       clerkUserId: a.clerkUserId,
       location: a.location,

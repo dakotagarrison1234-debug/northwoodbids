@@ -530,6 +530,45 @@ export async function issueAndTextDoorCode(appointmentId: string, reason: "booke
   }
 }
 
+// ─── Auto-collect after the code is used ────────────────────────────────────
+
+/** Minutes after a customer's code opens the door before the pickup auto-completes. */
+export const AUTO_COLLECT_AFTER_MIN = 10;
+
+/**
+ * Pickups whose door code was used at least AUTO_COLLECT_AFTER_MIN minutes ago
+ * become COLLECTED exactly like staff's "Order picked up" / the customer's own
+ * "I picked up my order": items PICKED_UP, staged spot freed, code pulled off the
+ * locks. Atomic per appointment, so a staff tap at the same moment can't double up.
+ */
+export async function autoCollectUsedPickups(now: Date = new Date()): Promise<number> {
+  const due = await prisma.pickupAppointment.findMany({
+    where: { status: "SCHEDULED", doorCodeUsedAt: { lte: new Date(now.getTime() - AUTO_COLLECT_AFTER_MIN * 60_000) } },
+    select: { id: true },
+    take: 50,
+  });
+  let done = 0;
+  for (const { id } of due) {
+    try {
+      const claimed = await prisma.pickupAppointment.updateMany({
+        where: { id, status: "SCHEDULED" },
+        data: { status: "COLLECTED", stagedSpot: null, stagedAt: null },
+      });
+      if (claimed.count === 0) continue;
+      await prisma.item.updateMany({
+        where: { pickupAppointmentId: id },
+        data: { status: "PICKED_UP", pickedUpAt: new Date(), grabbedAt: null },
+      });
+      await revokeDoorCode(id).catch((e) => console.error("[doorLock] revoke after auto-collect failed:", e));
+      done++;
+      console.info(`[doorLock] auto-collected pickup ${id} (door code used)`);
+    } catch (e) {
+      console.error("[doorLock] auto-collect failed:", id, e);
+    }
+  }
+  return done;
+}
+
 // ─── Seam webhook (Svix signature) ──────────────────────────────────────────
 
 /**
@@ -565,6 +604,15 @@ export function verifySeamWebhook(rawBody: string, headers: { id: string | null;
  */
 export async function handleSeamEvent(evt: { event_type: string; access_code_id?: string; device_id?: string; battery_level?: number }): Promise<string | null> {
   const t = evt.event_type;
+  // A customer's code opened a door: stamp the pickup (first use only). The
+  // door-pickups cron marks it collected 10 minutes later.
+  if (t === "lock.unlocked" && evt.access_code_id) {
+    await prisma.pickupAppointment.updateMany({
+      where: { status: "SCHEDULED", doorCodeIds: { has: evt.access_code_id }, doorCodeUsedAt: null },
+      data: { doorCodeUsedAt: new Date() },
+    });
+    return null;
+  }
   if (t.startsWith("access_code.") && evt.access_code_id) {
     const appt = await prisma.pickupAppointment.findFirst({
       where: { doorCodeIds: { has: evt.access_code_id } },

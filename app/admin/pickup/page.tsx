@@ -98,7 +98,7 @@ interface Appointment {
   notes: string | null;
   stagedSpot: string | null;
   // Present only at locations with smart locks. code is null until one is made.
-  door: { code: string | null; status: string | null; sentAt: string | null; locks: { id: string; name: string }[] } | null;
+  door: { code: string | null; status: string | null; sentAt: string | null; usedAt?: string | null; locks: { id: string; name: string }[] } | null;
   clerkUserId: string;
   locationId: string;
   location: { id: string; name: string };
