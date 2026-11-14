@@ -250,6 +250,27 @@ function TickRow({
   return <button type="button" onClick={onToggle} className={`${cls} active:bg-[#faf5ea]`}>{inner}</button>;
 }
 
+/**
+ * Where an item is — ALWAYS shown, ticked or not, so nobody has to untick or
+ * open another screen to find it: warehouse (when useful), its shelf spot in
+ * amber, and the staged/gathered spot in green once it's been set aside.
+ */
+function WhereChips({ shelf, warehouse, staged }: { shelf: string | null; warehouse?: string | null; staged?: string | null }) {
+  return (
+    <>
+      {warehouse && <span className="text-[15px] font-semibold text-[#6f5b46]">{warehouse}</span>}
+      {shelf ? (
+        <span className="text-[15px] font-bold text-[#8a4f1c] bg-[#fbeed8] border border-[#eed3ab] rounded px-1.5 py-0.5">{shelf}</span>
+      ) : (
+        <span className="text-[15px] text-[#a3927b]">No spot</span>
+      )}
+      {staged && (
+        <span className="text-[15px] font-bold text-[#2f5d3a] bg-[#e6f1e8] border border-[#bfd9c5] rounded px-1.5 py-0.5">{staged}</span>
+      )}
+    </>
+  );
+}
+
 /** The Spot box: free text, Enter saves, and a chip offers the last prefix used ("Box"). */
 function SpotEditor({
   value, onChange, onSave, onCancel, onClear, prefix, saveLabel, placeholder,
@@ -1066,10 +1087,7 @@ function PickupBoard() {
                     title={it.title}
                     meta={
                       <>
-                        {/* Once grabbed or staged, the shelf spot no longer applies. */}
-                        {it.storageLocation && !it.grabbed && !a.stagedSpot && (
-                          <span className="text-[15px] font-bold text-[#8a4f1c] bg-[#fbeed8] border border-[#eed3ab] rounded px-1.5 py-0.5">{it.storageLocation}</span>
-                        )}
+                        <WhereChips shelf={it.storageLocation} staged={a.stagedSpot} />
                         {it.needsPlacement && !it.grabbed && !a.stagedSpot && <Pill tone="amber">Just arrived · place it</Pill>}
                       </>
                     }
@@ -1312,11 +1330,8 @@ function PickupBoard() {
                         <Pill tone="amber">On a transfer</Pill>
                       ) : (
                         <>
+                          <WhereChips shelf={it.storageLocation} warehouse={scopedLocName ? null : it.warehouse || "Unassigned"} staged={it.gatherSpot} />
                           {it.needsPlacement && !it.grabbed && <Pill tone="amber">Just arrived · place it</Pill>}
-                          {/* Off the shelf once THIS item is grabbed or has its own spot. */}
-                          {!it.grabbed && !it.gatherSpot && (
-                            <span className="text-[15px] text-[#6f5b46]">{it.warehouse || "Unassigned"} · {it.storageLocation || "no spot"}</span>
-                          )}
                         </>
                       )
                     }
@@ -1422,11 +1437,7 @@ function PickupBoard() {
                     onToggle={() => toggleTransferGrab(t.id, it.id, !it.grabbed)}
                     code={it.itemCode}
                     title={it.title}
-                    meta={
-                      !it.grabbed && !it.gatherSpot ? (
-                        <span className="text-[15px] text-[#6f5b46]">{it.fromLocationName || "Unassigned"} · {it.storageLocation || "no spot"}</span>
-                      ) : undefined
-                    }
+                    meta={<WhereChips shelf={it.storageLocation} warehouse={scopedLocName ? null : it.fromLocationName || "Unassigned"} staged={it.gatherSpot} />}
                   />
                 </li>
               ))}
