@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserOrg, requireRole } from "@/lib/auth";
-import { issueTestDoorCode, lockSeamDoor, unlockSeamDoor } from "@/lib/doorLock";
+import { extendCodesToLock, issueTestDoorCode, lockSeamDoor, unlockSeamDoor } from "@/lib/doorLock";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -42,7 +42,12 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     if (body.active !== undefined) data.active = !!body.active;
 
     const updated = await prisma.doorLock.update({ where: { id }, data });
-    return NextResponse.json({ lock: updated });
+
+    // Newly on a location (or switched back on): existing customers' codes for
+    // upcoming pickups there get added to this lock too, same PIN, no new text.
+    const placedNow = updated.active && !!updated.locationId && (updated.locationId !== lock.locationId || (updated.active && !lock.active));
+    const extended = placedNow ? await extendCodesToLock(updated) : 0;
+    return NextResponse.json({ lock: updated, extended });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Internal error";
     console.error("[admin/doors/[id] PATCH]:", msg, err);

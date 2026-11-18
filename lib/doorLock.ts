@@ -334,6 +334,68 @@ export async function moveDoorCode(appointmentId: string, previousLocationId: st
   return { code: r?.code ?? null, changed: !!r && r.code !== appt.doorCode };
 }
 
+/**
+ * A lock was just put on a location (or switched back on). Customers who already
+ * have a code for an upcoming pickup there get the SAME PIN added to this lock,
+ * so their code works on every door without a new code or a new text.
+ * Returns how many pickups were extended. Never throws.
+ */
+export async function extendCodesToLock(lock: { id: string; seamDeviceId: string; locationId: string | null; active: boolean }): Promise<number> {
+  if (!seamConfigured() || !lock.active || !lock.locationId) return 0;
+  try {
+    const startOfToday = doorCodeWindow(new Date()).startsAt; // midnight today (Michigan) or now
+    const appts = await prisma.pickupAppointment.findMany({
+      where: {
+        locationId: lock.locationId,
+        status: "SCHEDULED",
+        doorCode: { not: null },
+        startsAt: { gte: new Date(startOfToday.getTime() - 24 * 60 * 60 * 1000) },
+      },
+      select: { id: true, startsAt: true, doorCode: true, doorCodeIds: true },
+    });
+    let extended = 0;
+    for (const a of appts) {
+      if (!a.doorCode) continue;
+      // Skip pickups that already have a code on this lock.
+      let onThisLock = false;
+      for (const cid of a.doorCodeIds) {
+        try {
+          const r = await seam<{ access_code: SeamAccessCode }>("/access_codes/get", { access_code_id: cid });
+          if (r.access_code?.device_id === lock.seamDeviceId) { onThisLock = true; break; }
+        } catch { /* gone or unreadable — ignore */ }
+      }
+      if (onThisLock) continue;
+      const { startsAt, endsAt, dayLabel } = doorCodeWindow(a.startsAt);
+      if (endsAt.getTime() <= Date.now()) continue;
+      try {
+        const r = await seam<{ access_code: SeamAccessCode }>("/access_codes/create", {
+          device_id: lock.seamDeviceId,
+          code: a.doorCode,
+          name: `Pickup ${dayLabel} ${a.id.slice(-4).toUpperCase()}`,
+          starts_at: startsAt.toISOString(),
+          ends_at: endsAt.toISOString(),
+          prefer_native_scheduling: true,
+        });
+        const newId = r.access_code?.access_code_id;
+        if (newId) {
+          await prisma.pickupAppointment.update({
+            where: { id: a.id },
+            data: { doorCodeIds: { push: newId }, doorCodeStatus: "pending" },
+          });
+          extended++;
+        }
+      } catch (e) {
+        console.error(`[doorLock] couldn't add pickup ${a.id}'s code to the new lock:`, e);
+      }
+    }
+    if (extended) console.info(`[doorLock] added ${extended} existing pickup code(s) to lock ${lock.id}`);
+    return extended;
+  } catch (e) {
+    console.error("[doorLock] extendCodesToLock failed:", e);
+    return 0;
+  }
+}
+
 /** Pull the code off the locks and clear it. Safe to call when there's nothing to revoke. */
 export async function revokeDoorCode(appointmentId: string): Promise<void> {
   const appt = await prisma.pickupAppointment.findUnique({

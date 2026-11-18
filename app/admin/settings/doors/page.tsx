@@ -74,7 +74,9 @@ export default function DoorsSettingsPage() {
     setBusy(id);
     try {
       const r = await fetch(`/api/admin/doors/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (!r.ok) setMsg({ tone: "red", text: (await r.json()).error || "Couldn't save." });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) setMsg({ tone: "red", text: d.error || "Couldn't save." });
+      else if (d.extended > 0) setMsg({ tone: "green", text: `Saved. ${d.extended} upcoming pickup code${d.extended !== 1 ? "s" : ""} now work on this door too (same codes, no new texts).` });
     } catch { setMsg({ tone: "red", text: "Something went wrong." }); }
     setBusy(null);
     load();
