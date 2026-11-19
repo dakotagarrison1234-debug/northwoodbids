@@ -10,7 +10,7 @@ export default function LocationBadge({
   size?: "sm" | "md";
   className?: string;
 }) {
-  const pad = size === "sm" ? "px-2 py-0.5 text-xs gap-1" : "px-2.5 py-1 text-sm gap-1.5";
+  const pad = size === "sm" ? "px-2 py-0.5 text-sm gap-1" : "px-2.5 py-1 text-sm gap-1.5";
   const icon = size === "sm" ? 12 : 14;
   return (
     <span

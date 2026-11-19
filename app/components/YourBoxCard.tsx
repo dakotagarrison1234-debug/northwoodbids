@@ -142,7 +142,7 @@ export function ShipNowControls({ box, reload, compact = false }: { box: Box; re
   if (!confirming) {
     return (
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className={`${compact ? "text-xs" : "text-[13px]"} text-[#8a7559] leading-snug min-w-0`}>
+        <p className={`${compact ? "text-sm" : "text-[13px]"} text-[#8a7559] leading-snug min-w-0`}>
           Everything you win tonight rides in this box.
         </p>
         <button
@@ -157,8 +157,8 @@ export function ShipNowControls({ box, reload, compact = false }: { box: Box; re
   return (
     <div className="rounded-xl bg-[#f6ecda] border border-[#6c4d39]/30 px-3.5 py-3">
       <p className="text-sm text-[#241a12] font-semibold">Close this box today?</p>
-      <p className={`${compact ? "text-xs" : "text-[13px]"} text-[#6f5b46] mt-0.5`}>Ships 3 to 5 business days after the auction closes and every lot is paid.</p>
-      {error && <p className={`${compact ? "text-xs" : "text-[13px]"} text-red-700 font-semibold mt-1.5`}>{error}</p>}
+      <p className={`${compact ? "text-sm" : "text-[13px]"} text-[#6f5b46] mt-0.5`}>Ships 3 to 5 business days after the auction closes and every lot is paid.</p>
+      {error && <p className={`${compact ? "text-sm" : "text-[13px]"} text-red-700 font-semibold mt-1.5`}>{error}</p>}
       <div className="flex gap-2 mt-2.5">
         <button
           onClick={() => setConfirming(false)}
@@ -219,7 +219,7 @@ export default function YourBoxCard({ boxes, reload }: { boxes: Box[] | null; re
             {/* Header */}
             <div className="px-4 sm:px-5 pt-4 pb-3 flex items-start justify-between gap-3 flex-wrap">
               <div className="min-w-0">
-                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-[#6c4d39]">
+                <div className="flex items-center gap-2 text-[12px] font-black uppercase tracking-[0.18em] text-[#6c4d39]">
                   <IcoBox className="w-3.5 h-3.5" /> Your box{from ? ` · ${from}` : ""}
                 </div>
                 <div className="text-sm text-[#6f5b46] mt-1 tabular-nums">
@@ -230,7 +230,7 @@ export default function YourBoxCard({ boxes, reload }: { boxes: Box[] | null; re
                   <span className="text-[#8a7559]"> · to {b.shipCity}, {b.shipState}</span>
                 </div>
               </div>
-              <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap ${pill.cls}`}>
+              <span className={`inline-flex items-center gap-1 text-[13px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap ${pill.cls}`}>
                 {pill.text === "Delivered" ? <IcoCheck className="w-3 h-3" /> : <IcoTruck className="w-3 h-3" />}
                 {pill.text}
               </span>
@@ -249,8 +249,8 @@ export default function YourBoxCard({ boxes, reload }: { boxes: Box[] | null; re
                 <li key={it.id} className="flex items-center gap-2 bg-[#faf5ea] border border-[#e3d6bf] rounded-xl pl-1 pr-2.5 py-1 max-w-full">
                   <Thumb url={it.photos[0]?.url ?? null} title={it.title} />
                   <div className="min-w-0">
-                    <div className="text-xs font-semibold text-[#241a12] truncate max-w-[180px]">{it.title}</div>
-                    <div className={`text-[11px] tabular-nums ${it.shipChargeCents > 0 ? "text-[#8a7559]" : "text-[#4a7c59] font-semibold"}`}>{it.shipChargeCents > 0 ? `+${money(it.shipChargeCents)}` : "Free"}</div>
+                    <div className="text-sm font-semibold text-[#241a12] truncate max-w-[180px]">{it.title}</div>
+                    <div className={`text-[13px] tabular-nums ${it.shipChargeCents > 0 ? "text-[#8a7559]" : "text-[#4a7c59] font-semibold"}`}>{it.shipChargeCents > 0 ? `+${money(it.shipChargeCents)}` : "Free"}</div>
                   </div>
                 </li>
               ))}
@@ -266,7 +266,7 @@ export default function YourBoxCard({ boxes, reload }: { boxes: Box[] | null; re
           </section>
         );
       })}
-      <Link href="/shipping" className="inline-flex items-center min-h-[44px] text-xs font-semibold text-[#8a7559] hover:text-[#6c4d39] underline underline-offset-2 nb-focus rounded">
+      <Link href="/shipping" className="inline-flex items-center min-h-[44px] text-sm font-semibold text-[#8a7559] hover:text-[#6c4d39] underline underline-offset-2 nb-focus rounded">
         See all shipping
       </Link>
     </div>

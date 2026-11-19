@@ -36,7 +36,7 @@ export default function AuthSwitch({ active }: { active: "in" | "up" }) {
           Create account
         </Link>
       </div>
-      <p className="text-center text-xs text-[#8a7559] mt-2">
+      <p className="text-center text-sm text-[#8a7559] mt-2">
         {active === "up"
           ? "Already bid with us? Sign in instead."
           : "First time at Northwood? Create a free account."}

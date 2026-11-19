@@ -58,7 +58,7 @@ function Chip({ tone = "cream", title, children }: { tone?: "cream" | "ink" | "l
     amber: "bg-[#f0a35a]/20 border-[#c47b3e]/40 text-[#8a4f1c]",
   }[tone];
   return (
-    <span title={title} className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full border whitespace-nowrap ${tones}`}>
+    <span title={title} className={`inline-flex items-center gap-1 text-sm font-bold px-2.5 py-1 rounded-full border whitespace-nowrap ${tones}`}>
       {children}
     </span>
   );
@@ -764,7 +764,7 @@ export default function ItemPage() {
             ) : (
               <div className="flex flex-col items-center gap-2 text-[#b3a085]">
                 <IcoGavel className="w-8 h-8" />
-                <span className="text-xs font-semibold uppercase tracking-wide">Photo coming</span>
+                <span className="text-sm font-semibold uppercase tracking-wide">Photo coming</span>
               </div>
             )}
 
@@ -773,14 +773,14 @@ export default function ItemPage() {
               <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5">
                 {item.shipEligible && <SizeBadge size={sizeKeyOf(item.shipPreset)} px={30} className="shadow-sm" />}
                 {item.retailValue && currentBid > 0 && item.retailValue > currentBid ? (
-                  <span className="inline-flex items-center gap-1 bg-[#c47b3e] text-white text-[11px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full shadow-sm">
+                  <span className="inline-flex items-center gap-1 bg-[#c47b3e] text-white text-[13px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full shadow-sm">
                     {Math.round((1 - currentBid / item.retailValue) * 100)}% off retail
                   </span>
                 ) : null}
               </div>
             )}
             {(item.packSize ?? 0) > 1 && (
-              <span className="absolute top-2.5 right-2.5 z-10 inline-flex items-center bg-[#241a12]/85 text-[#f6ecda] text-[11px] font-bold px-2.5 py-1 rounded-full backdrop-blur-sm">
+              <span className="absolute top-2.5 right-2.5 z-10 inline-flex items-center bg-[#241a12]/85 text-[#f6ecda] text-[13px] font-bold px-2.5 py-1 rounded-full backdrop-blur-sm">
                 {item.packSize}-pack lot
               </span>
             )}
@@ -817,7 +817,7 @@ export default function ItemPage() {
                     />
                   ))}
                 </div>
-                <span className="absolute bottom-2 right-2.5 text-[10px] font-bold tabular-nums text-[#f6ecda] bg-[#241a12]/55 backdrop-blur-sm px-2 py-1 rounded-full">
+                <span className="absolute bottom-2 right-2.5 text-[12px] font-bold tabular-nums text-[#f6ecda] bg-[#241a12]/55 backdrop-blur-sm px-2 py-1 rounded-full">
                   {selectedPhotoIdx + 1} / {item.photos.length}
                 </span>
               </>
@@ -892,7 +892,7 @@ export default function ItemPage() {
                   <IcoShare className="w-5 h-5" />
                 </button>
                 {shareNote && (
-                  <span className="absolute right-0 top-full mt-1 whitespace-nowrap bg-[#241a12] text-[#f6ecda] text-xs font-bold px-2.5 py-1 rounded-lg">
+                  <span className="absolute right-0 top-full mt-1 whitespace-nowrap bg-[#241a12] text-[#f6ecda] text-sm font-bold px-2.5 py-1 rounded-lg">
                     {shareNote}
                   </span>
                 )}
@@ -940,13 +940,13 @@ export default function ItemPage() {
             <div className="flex items-center justify-between gap-3 px-4 py-3 bg-[#fbf4e6]/70">
               {item.retailValue ? (
                 <div className="min-w-0 flex items-baseline gap-2">
-                  <span className="text-[#8a7559] text-[11px] font-black uppercase tracking-[0.14em]">Retail</span>
+                  <span className="text-[#8a7559] text-[13px] font-black uppercase tracking-[0.14em]">Retail</span>
                   <span className="text-[#a32d2d] font-extrabold text-xl leading-none tabular-nums line-through decoration-2 decoration-[#a32d2d]/50">
                     ${item.retailValue.toLocaleString()}
                   </span>
                 </div>
               ) : (
-                <div className="text-[#8a7559] text-[11px] font-black uppercase tracking-[0.14em]">Bidding open</div>
+                <div className="text-[#8a7559] text-[13px] font-black uppercase tracking-[0.14em]">Bidding open</div>
               )}
               <div className="flex items-center gap-2 shrink-0">
                 {item.retailValue && currentBid > 0 && item.retailValue > currentBid ? (
@@ -954,7 +954,7 @@ export default function ItemPage() {
                     {Math.round((1 - currentBid / item.retailValue) * 100)}% off
                   </span>
                 ) : null}
-                <span className="text-xs font-semibold text-[#8a7559] tabular-nums inline-flex items-center gap-1">
+                <span className="text-sm font-semibold text-[#8a7559] tabular-nums inline-flex items-center gap-1">
                   <IcoGavel className="w-3.5 h-3.5" />
                   {bidCount} bid{bidCount !== 1 ? "s" : ""}
                 </span>
@@ -990,7 +990,7 @@ export default function ItemPage() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-extrabold text-red-700 leading-tight">You&apos;ve been outbid</div>
-                  <div className="text-xs text-red-600 leading-tight mt-0.5">
+                  <div className="text-sm text-red-600 leading-tight mt-0.5">
                     Someone went higher — tap Bid at the bottom to get back in front.
                   </div>
                 </div>
@@ -1006,7 +1006,7 @@ export default function ItemPage() {
                   <div className="font-display font-bold text-sm text-[#241a12] leading-tight">
                     {itemSold ? "Sold. Hammer's down." : auctionClosed ? "This auction has closed." : itemNotActive ? "Not open for bidding right now." : "Bidding on this lot has ended."}
                   </div>
-                  <div className="text-xs text-[#6f5b46] mt-0.5">
+                  <div className="text-sm text-[#6f5b46] mt-0.5">
                     {itemSold ? "Plenty more on the block." : "Browse what else is open — most lots start at $2."}
                   </div>
                 </div>
@@ -1042,19 +1042,19 @@ export default function ItemPage() {
                       <button
                         onClick={() => setShowMaxBidExplainer(true)}
                         aria-label="Learn how max bidding works"
-                        className="w-4.5 h-4.5 rounded-full bg-[#6c4d39]/20 text-[#6c4d39] text-[10px] font-black flex items-center justify-center hover:bg-[#6c4d39]/35 transition-colors leading-none shrink-0"
+                        className="w-4.5 h-4.5 rounded-full bg-[#6c4d39]/20 text-[#6c4d39] text-[12px] font-black flex items-center justify-center hover:bg-[#6c4d39]/35 transition-colors leading-none shrink-0"
                       >
                         ?
                       </button>
                     </div>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wide text-[#8a4f1c] bg-[#f0a35a]/25 border border-[#c47b3e]/40 px-2 py-0.5 rounded-full shrink-0">
+                    <span className="inline-flex items-center gap-1 text-[12px] font-black uppercase tracking-wide text-[#8a4f1c] bg-[#f0a35a]/25 border border-[#c47b3e]/40 px-2 py-0.5 rounded-full shrink-0">
                       <IcoBolt className="w-2.5 h-2.5" /> Recommended
                     </span>
                   </div>
 
                   {/* Plain-English one-liner, always visible. The "?" still opens the
                       full walkthrough, but nobody should have to tap to grasp the gist. */}
-                  <p className="relative text-xs text-[#6f5b46] leading-snug mb-2.5">
+                  <p className="relative text-sm text-[#6f5b46] leading-snug mb-2.5">
                     Name the most you&apos;d pay. We bid just enough to keep you on top — never a dollar past it.
                   </p>
 
@@ -1074,19 +1074,19 @@ export default function ItemPage() {
                           Your ceiling:{" "}
                           <span className="text-[#6c4d39] font-extrabold text-base tabular-nums">${userProxy.maxAmount.toLocaleString()}</span>
                         </p>
-                        <p className="text-[#8a7559] text-xs mt-0.5">We&apos;re holding the line for you up to this amount.</p>
+                        <p className="text-[#8a7559] text-sm mt-0.5">We&apos;re holding the line for you up to this amount.</p>
                       </div>
                       <div className="flex gap-2 shrink-0">
                         <button
                           onClick={() => { setProxyAmount(String(userProxy.maxAmount)); setUserProxy(null); }}
-                          className="text-xs text-[#6f5b46] hover:text-[#241a12] border border-[#cdbda3] hover:border-[#b3a085] px-3 py-1.5 rounded-lg transition-colors"
+                          className="text-sm text-[#6f5b46] hover:text-[#241a12] border border-[#cdbda3] hover:border-[#b3a085] px-3 py-1.5 rounded-lg transition-colors"
                         >
                           Update
                         </button>
                         <button
                           onClick={handleCancelProxy}
                           disabled={cancellingProxy}
-                          className="text-xs text-red-600 hover:text-red-400 border border-red-200 hover:border-red-300 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                          className="text-sm text-red-600 hover:text-red-400 border border-red-200 hover:border-red-300 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
                         >
                           {cancellingProxy ? "Cancelling…" : "Cancel"}
                         </button>
@@ -1141,7 +1141,7 @@ export default function ItemPage() {
                         const taxC = Math.round((amt * 100 + feeC) * taxPct / 100);
                         const totalCents = Math.round(amt * 100) + feeC + taxC;
                         return (
-                          <p className="text-xs text-[#8a7559] mt-2">
+                          <p className="text-sm text-[#8a7559] mt-2">
                             Worst case if your max wins:{" "}
                             <span className="text-[#4a3a2b] font-semibold tabular-nums">
                               ${(totalCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -1178,15 +1178,15 @@ export default function ItemPage() {
                             <span className="absolute inline-flex h-full w-full rounded-full bg-[#f0a35a] opacity-75 animate-ping" />
                             <span className="relative inline-flex h-2 w-2 rounded-full bg-[#f0a35a]" />
                           </span>
-                          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#f0a35a]">You&apos;re in the lead</p>
+                          <p className="text-[13px] font-black uppercase tracking-[0.18em] text-[#f0a35a]">You&apos;re in the lead</p>
                         </div>
-                        <p className="text-xs text-[#f6ecda]/70 leading-tight mt-1">
+                        <p className="text-sm text-[#f6ecda]/70 leading-tight mt-1">
                           We&apos;ll text you the second anyone passes you.
                         </p>
                       </div>
                       <div className="shrink-0 text-right">
                         <div className="font-extrabold text-2xl leading-none tabular-nums">${currentBid.toLocaleString()}</div>
-                        <div className="text-[10px] font-bold uppercase tracking-wide text-[#f6ecda]/60 mt-0.5">your bid</div>
+                        <div className="text-[12px] font-bold uppercase tracking-wide text-[#f6ecda]/60 mt-0.5">your bid</div>
                       </div>
                     </div>
                   )}
@@ -1212,7 +1212,7 @@ export default function ItemPage() {
                     return (
                       <details className="group mt-3 bg-[#efe3d0]/60 border border-[#cdbda3]/60 rounded-xl overflow-hidden">
                         <summary className="flex items-center justify-between gap-2 px-4 py-2.5 cursor-pointer list-none">
-                          <span className="text-xs text-[#6f5b46]">
+                          <span className="text-sm text-[#6f5b46]">
                             Total if you win{" "}
                             <span className="font-bold text-[#241a12] tabular-nums">${fmt(totalCents)}</span>
                           </span>
@@ -1220,7 +1220,7 @@ export default function ItemPage() {
                             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4" /></svg>
                           </span>
                         </summary>
-                        <div className="px-4 pb-3 text-xs space-y-1 border-t border-[#cdbda3]/50 pt-2">
+                        <div className="px-4 pb-3 text-sm space-y-1 border-t border-[#cdbda3]/50 pt-2">
                           <div className="flex justify-between text-[#6f5b46]">
                             <span>Your bid</span>
                             <span className="tabular-nums">${fmt(bidCents)}</span>
@@ -1258,7 +1258,7 @@ export default function ItemPage() {
             <div className={`flex items-center justify-between gap-3 mt-2 px-3 py-2 rounded-xl border ${
               hasCard ? "border-transparent" : "bg-[#f0a35a]/15 border-[#c47b3e]/40"
             }`}>
-              <div className="flex items-center gap-1.5 text-xs text-[#8a7559] min-w-0">
+              <div className="flex items-center gap-1.5 text-sm text-[#8a7559] min-w-0">
                 <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" aria-hidden="true">
                   <rect x="2" y="5" width="16" height="12" rx="2" />
                   <path d="M2 9h16" />
@@ -1272,7 +1272,7 @@ export default function ItemPage() {
               </div>
               <button
                 onClick={() => setShowCardModal(true)}
-                className="text-xs text-[#6c4d39] hover:text-[#c47b3e] font-bold transition-colors shrink-0"
+                className="text-sm text-[#6c4d39] hover:text-[#c47b3e] font-bold transition-colors shrink-0"
               >
                 {hasCard ? "Update" : "Add card"}
               </button>
@@ -1314,7 +1314,7 @@ export default function ItemPage() {
                 )}
                 {item.taxDeductible && <Chip tone="cream">Tax deductible</Chip>}
               </div>
-              <p className="text-[11px] text-[#8a7559] mt-2.5 leading-snug">
+              <p className="text-[13px] text-[#8a7559] mt-2.5 leading-snug">
                 {item.transferable === false
                   ? "This one stays put. Plan to collect it at the location above."
                   : "Win it anywhere, collect it at Corunna or Gladwin. Transfers ride along free, usually within a week."}
@@ -1331,7 +1331,7 @@ export default function ItemPage() {
               marks a bid our max-bid engine placed on someone's behalf. */}
           {liveBids.length > 0 && (
             <div className="mt-5 bg-white border border-[#e3d6bf] rounded-2xl p-4 sm:p-5">
-              <SectionLabel aside={<span className="text-[11px] font-semibold text-[#8a7559] tabular-nums">last {liveBids.length}</span>}>
+              <SectionLabel aside={<span className="text-[13px] font-semibold text-[#8a7559] tabular-nums">last {liveBids.length}</span>}>
                 Bid ledger
               </SectionLabel>
               <ol className="divide-y divide-[#efe3d0] -mx-1">
@@ -1343,7 +1343,7 @@ export default function ItemPage() {
                   return (
                     <li key={i} className={`flex items-center gap-3 px-1 py-2.5 ${leading ? "bg-[#fbf4e6]/70 rounded-xl" : ""}`}>
                       <span
-                        className={`w-8 h-8 rounded-full grid place-items-center text-[11px] font-black shrink-0 border ${
+                        className={`w-8 h-8 rounded-full grid place-items-center text-[13px] font-black shrink-0 border ${
                           leading ? "bg-[#241a12] border-[#241a12] text-[#f0a35a]" : "bg-[#efe3d0] border-[#e3d6bf] text-[#6f5b46]"
                         }`}
                         aria-hidden="true"
@@ -1357,17 +1357,17 @@ export default function ItemPage() {
                             {masked && <span className="sr-only">{masked}</span>}
                           </span>
                           {bid.isProxy && (
-                            <span className="inline-flex items-center gap-0.5 text-[10px] font-black uppercase tracking-wide text-[#3c6449] bg-[#4a7c59]/12 border border-[#4a7c59]/30 px-1.5 py-0.5 rounded-full">
+                            <span className="inline-flex items-center gap-0.5 text-[12px] font-black uppercase tracking-wide text-[#3c6449] bg-[#4a7c59]/12 border border-[#4a7c59]/30 px-1.5 py-0.5 rounded-full">
                               <IcoBolt className="w-2.5 h-2.5" /> auto
                             </span>
                           )}
                           {leading && !biddingLocked && (
-                            <span className="text-[10px] font-black uppercase tracking-wide text-[#8a4f1c] bg-[#f0a35a]/20 border border-[#c47b3e]/40 px-1.5 py-0.5 rounded-full">
+                            <span className="text-[12px] font-black uppercase tracking-wide text-[#8a4f1c] bg-[#f0a35a]/20 border border-[#c47b3e]/40 px-1.5 py-0.5 rounded-full">
                               leading
                             </span>
                           )}
                         </div>
-                        <div className="text-[11px] text-[#8a7559] mt-0.5">
+                        <div className="text-[13px] text-[#8a7559] mt-0.5">
                           {bid.time === "just now" ? "just now" : relTime(bid.time, ledgerNow)}
                         </div>
                       </div>
@@ -1397,7 +1397,7 @@ export default function ItemPage() {
               <span className={`font-extrabold text-3xl leading-none tabular-nums ${priceColor}`}>
                 ${currentBid.toLocaleString()}
               </span>
-              <span className="text-xs font-semibold text-[#8a7559] leading-tight">
+              <span className="text-sm font-semibold text-[#8a7559] leading-tight">
                 {item.currentBid > 0 ? "Current" : "Starting"}<br />bid
               </span>
             </div>
@@ -1435,7 +1435,7 @@ export default function ItemPage() {
                     <span>Placing…</span>
                   ) : quickArmed ? (
                     <>
-                      <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/90">Tap again</span>
+                      <span className="text-[12px] font-bold uppercase tracking-[0.16em] text-white/90">Tap again</span>
                       <span>Bid ${minBid.toLocaleString()}</span>
                     </>
                   ) : (

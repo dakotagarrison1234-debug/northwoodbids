@@ -44,7 +44,7 @@ export default function AuctionPreviewThumbs({
             {isMoreTile && (
               <div className="absolute inset-0 bg-[#241a12]/70 flex flex-col items-center justify-center leading-none">
                 <span className="text-[#f6ecda] font-display font-black text-base">+{remaining}</span>
-                <span className="text-[#e3d6bf] text-[9px] font-bold uppercase tracking-wider mt-0.5">more</span>
+                <span className="text-[#e3d6bf] text-[12px] font-bold uppercase tracking-wider mt-0.5">more</span>
               </div>
             )}
           </div>

@@ -22,7 +22,7 @@ export default function BidTicker({ lots }: { lots: TickerLot[] }) {
           <span className="absolute inline-flex h-full w-full rounded-full bg-[#f0a35a] opacity-75 animate-ping" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-[#f0a35a]" />
         </span>
-        <span className="text-[10px] font-black uppercase tracking-[0.18em] text-[#f0a35a] whitespace-nowrap">
+        <span className="text-[12px] font-black uppercase tracking-[0.18em] text-[#f0a35a] whitespace-nowrap">
           Latest bids
         </span>
       </div>
@@ -44,7 +44,7 @@ export default function BidTicker({ lots }: { lots: TickerLot[] }) {
               <span className="text-[#e9ddc7] text-sm font-semibold max-w-[220px] truncate group-hover:text-white">
                 {l.title}
               </span>
-              <span className="rounded-md bg-[#f6ecda]/10 px-1.5 py-0.5 text-[#f6ecda] text-xs font-black tabular-nums group-hover:bg-[#f0a35a] group-hover:text-[#241a12] transition-colors">
+              <span className="rounded-md bg-[#f6ecda]/10 px-1.5 py-0.5 text-[#f6ecda] text-sm font-black tabular-nums group-hover:bg-[#f0a35a] group-hover:text-[#241a12] transition-colors">
                 ${l.currentBid.toLocaleString()}
               </span>
               <span aria-hidden className="ml-2 h-1 w-1 rounded-full bg-[#6c4d39]" />

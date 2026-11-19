@@ -106,7 +106,7 @@ export default function PickupStatusCard() {
         {/* Header line summarizing state */}
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <div className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-[#a85f28]">
+            <div className="inline-flex items-center gap-1.5 text-[13px] font-black uppercase tracking-[0.18em] text-[#a85f28]">
               <IcoCrate /> Pickup
             </div>
             <h2 className="font-display text-xl font-black text-[#241a12] leading-tight mt-0.5 truncate">{headline}</h2>
@@ -126,7 +126,7 @@ export default function PickupStatusCard() {
               <IcoCalendar />
               <span>{fmtDateTime(appointment.startsAt)}</span>
             </div>
-            <div className="text-xs text-[#6f5b46] mt-1">
+            <div className="text-sm text-[#6f5b46] mt-1">
               {appointment.location.name} · {appointment.items.length} item{appointment.items.length !== 1 ? "s" : ""}
             </div>
             {appointment.items.length > 0 && (
@@ -140,11 +140,11 @@ export default function PickupStatusCard() {
                   )
                 )}
                 {appointment.items.length > 8 && (
-                  <span className="text-xs text-[#8a7559] font-semibold">+{appointment.items.length - 8}</span>
+                  <span className="text-sm text-[#8a7559] font-semibold">+{appointment.items.length - 8}</span>
                 )}
               </div>
             )}
-            <div className="text-xs text-[#6f5b46] mt-2 flex items-center gap-1.5">
+            <div className="text-sm text-[#6f5b46] mt-2 flex items-center gap-1.5">
               <IcoCheck className="w-3.5 h-3.5 text-[#4a7c59]" /> New wins join this pickup on their own.
             </div>
           </div>
@@ -156,7 +156,7 @@ export default function PickupStatusCard() {
             <div className="font-semibold text-[#241a12] text-sm">
               {ready.length} item{ready.length !== 1 ? "s" : ""} paid and waiting
             </div>
-            <p className="text-[#6f5b46] text-xs mt-0.5 mb-3">
+            <p className="text-[#6f5b46] text-sm mt-0.5 mb-3">
               {transferItemCount > 0
                 ? "Book these now, or wait for the transfer below and grab everything in one trip."
                 : "Pick a day and time that suits you."}
@@ -167,12 +167,12 @@ export default function PickupStatusCard() {
                   <Thumb url={it.photo} title={it.title} />
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-[#241a12] truncate">{it.title}</div>
-                    {it.locationName && <div className="text-xs text-[#8a7559] truncate">at {it.locationName}</div>}
+                    {it.locationName && <div className="text-sm text-[#8a7559] truncate">at {it.locationName}</div>}
                   </div>
                 </div>
               ))}
               {ready.length > 4 && (
-                <div className="text-xs text-[#8a7559]">and {ready.length - 4} more</div>
+                <div className="text-sm text-[#8a7559]">and {ready.length - 4} more</div>
               )}
             </div>
             <Link
@@ -193,7 +193,7 @@ export default function PickupStatusCard() {
                 {transferItemCount} item{transferItemCount !== 1 ? "s" : ""} moving to {pendingTransfers[0]?.toLocationName ?? "your warehouse"}
               </span>
             </div>
-            <p className="text-xs text-[#6f5b46] mt-1">
+            <p className="text-sm text-[#6f5b46] mt-1">
               {appointment
                 ? "They'll be added to your booked pickup when they land. Transfers take about 5 to 6 days; we text you on arrival."
                 : "About 5 to 6 days on the road. We text you when they arrive, then you book one trip for everything."}
@@ -201,7 +201,7 @@ export default function PickupStatusCard() {
             <ul className="mt-2 space-y-0.5">
               {pendingTransfers.flatMap((t) =>
                 t.items.map((it) => (
-                  <li key={it.id} className="text-xs text-[#241a12] flex items-start gap-1.5">
+                  <li key={it.id} className="text-sm text-[#241a12] flex items-start gap-1.5">
                     <span className="w-1 h-1 rounded-full bg-[#c47b3e] mt-1.5 shrink-0" aria-hidden />
                     <span className="min-w-0">{it.title} <span className="text-[#8a7559]">from {it.fromLocationName}</span></span>
                   </li>

@@ -83,7 +83,7 @@ export default function SectionHeader({
     >
       <span className={`absolute left-0 ${compact ? "top-2.5 bottom-2.5" : "top-3 bottom-3"} w-1.5 rounded-full ${t.bar}`} aria-hidden />
       <div className="min-w-0 pl-1">
-        <div className={`inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.18em] ${t.eyebrow}`}>
+        <div className={`inline-flex items-center gap-1.5 text-[13px] font-black uppercase tracking-[0.18em] ${t.eyebrow}`}>
           <Mark variant={variant} /> {eyebrow}
         </div>
         <h2
@@ -99,7 +99,7 @@ export default function SectionHeader({
       {count != null && count > 0 && (
         <span className={`shrink-0 inline-flex flex-col items-center justify-center rounded-xl px-3 py-1.5 leading-none ${t.pill}`}>
           <span className="font-display font-black text-xl tabular-nums">{count}</span>
-          {countLabel && <span className="text-[9px] font-bold uppercase tracking-wider opacity-90 mt-0.5">{countLabel}</span>}
+          {countLabel && <span className="text-[12px] font-bold uppercase tracking-wider opacity-90 mt-0.5">{countLabel}</span>}
         </span>
       )}
     </div>

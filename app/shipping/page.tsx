@@ -142,7 +142,7 @@ export default function ShippingPage() {
           </>
         )}
 
-        <p className="text-[12px] text-[#8a7559] text-center leading-snug pt-1">{FINE_PRINT}</p>
+        <p className="text-sm text-[#8a7559] text-center leading-snug pt-1">{FINE_PRINT}</p>
       </div>
 
       {modal && (

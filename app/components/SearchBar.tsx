@@ -144,7 +144,7 @@ export default function SearchBar({
             <>
               {results!.items.length > 0 && (
                 <div>
-                  <div className="px-4 py-2 text-[10px] font-bold text-[#a08b6e] uppercase tracking-[0.12em] bg-[#fbf4e6] border-b border-[#e3d6bf]">Lots</div>
+                  <div className="px-4 py-2 text-[12px] font-bold text-[#a08b6e] uppercase tracking-[0.12em] bg-[#fbf4e6] border-b border-[#e3d6bf]">Lots</div>
                   {results!.items.map(item => (
                     <Link key={item.id} href={`/${item.organization.slug}/${item.auction?.slug}/item/${item.id}`} onClick={clearAndClose}
                       className="flex items-center gap-3 px-4 py-3 hover:bg-[#efe3d0] transition-colors">
@@ -160,7 +160,7 @@ export default function SearchBar({
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-[#241a12] truncate">{item.title}</div>
-                        <div className="text-xs text-[#8a7559] truncate">{item.organization.name}</div>
+                        <div className="text-sm text-[#8a7559] truncate">{item.organization.name}</div>
                       </div>
                       <div className="text-[#6c4d39] text-sm font-semibold shrink-0">${(Number(item.currentBid) || 0).toLocaleString()}</div>
                     </Link>
@@ -170,7 +170,7 @@ export default function SearchBar({
 
               {results!.auctions.length > 0 && (
                 <div>
-                  <div className="px-4 py-2 text-[10px] font-bold text-[#a08b6e] uppercase tracking-[0.12em] bg-[#fbf4e6] border-y border-[#e3d6bf]">Live auctions</div>
+                  <div className="px-4 py-2 text-[12px] font-bold text-[#a08b6e] uppercase tracking-[0.12em] bg-[#fbf4e6] border-y border-[#e3d6bf]">Live auctions</div>
                   {results!.auctions.map(auction => (
                     <Link key={auction.id} href={`/${auction.organization.slug}/${auction.slug}`} onClick={clearAndClose}
                       className="flex items-center gap-3 px-4 py-3 hover:bg-[#efe3d0] transition-colors">
@@ -179,9 +179,9 @@ export default function SearchBar({
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-[#241a12] truncate">{auction.title}</div>
-                        <div className="text-xs text-[#8a7559]">{auction.organization.name} &middot; {auction._count.items} lots</div>
+                        <div className="text-sm text-[#8a7559]">{auction.organization.name} &middot; {auction._count.items} lots</div>
                       </div>
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold bg-[#5f7a45]/15 text-[#3f5226] px-2 py-0.5 rounded-full shrink-0"><span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" aria-hidden="true" />Live</span>
+                      <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold bg-[#5f7a45]/15 text-[#3f5226] px-2 py-0.5 rounded-full shrink-0"><span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" aria-hidden="true" />Live</span>
                     </Link>
                   ))}
                 </div>
@@ -189,7 +189,7 @@ export default function SearchBar({
 
               {results!.orgs.length > 0 && (
                 <div>
-                  <div className="px-4 py-2 text-[10px] font-bold text-[#a08b6e] uppercase tracking-[0.12em] bg-[#fbf4e6] border-y border-[#e3d6bf]">Auction houses</div>
+                  <div className="px-4 py-2 text-[12px] font-bold text-[#a08b6e] uppercase tracking-[0.12em] bg-[#fbf4e6] border-y border-[#e3d6bf]">Auction houses</div>
                   {results!.orgs.map(org => (
                     <Link key={org.id} href={`/${org.slug}`} onClick={clearAndClose}
                       className="flex items-center gap-3 px-4 py-3 hover:bg-[#efe3d0] transition-colors">
@@ -202,7 +202,7 @@ export default function SearchBar({
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-[#241a12] truncate">{org.name}</div>
-                        <div className="text-xs text-[#8a7559]">
+                        <div className="text-sm text-[#8a7559]">
                           {org.auctions.length > 0
                             ? <span className="text-[#3f5226] font-medium">{org.auctions.length} live now</span>
                             : `${org._count.auctions} auctions total`}
@@ -224,7 +224,7 @@ export default function SearchBar({
               <div className="px-4 py-8 flex flex-col items-center text-center">
                 <WoodenCrate className="w-20 h-16 mb-3" />
                 <p className="text-[#241a12] text-sm font-semibold">Nothing live for &ldquo;{query}&rdquo;</p>
-                <p className="text-[#8a7559] text-xs mt-1">Try a brand or a shorter word. New lots land every week.</p>
+                <p className="text-[#8a7559] text-sm mt-1">Try a brand or a shorter word. New lots land every week.</p>
               </div>
             )
           )}

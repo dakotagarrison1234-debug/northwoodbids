@@ -111,7 +111,7 @@ export default function AuctionItemsView({
       {/* Toolbar: lot count + bid filter on the left, grid/list toggle on the right */}
       <div className="flex items-center justify-between gap-3 mb-4 sm:mb-5 flex-wrap rounded-2xl bg-[#fbf4e6] border border-[#e3d6bf] px-3 py-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          <span className="inline-flex items-center gap-1.5 text-xs text-[#6f5b46] font-bold shrink-0 tabular-nums">
+          <span className="inline-flex items-center gap-1.5 text-sm text-[#6f5b46] font-bold shrink-0 tabular-nums">
             <PineMark className="w-3.5 h-3.5" />
             {shownItems.length} lot{shownItems.length !== 1 ? "s" : ""}
           </span>
@@ -121,7 +121,7 @@ export default function AuctionItemsView({
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as typeof sort)}
-              className="appearance-none bg-white border border-[#e3d6bf] hover:border-[#cdbda3] rounded-xl pl-3 pr-8 py-1.5 text-xs font-bold text-[#6c4d39] focus:outline-none focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 transition-colors cursor-pointer"
+              className="appearance-none bg-white border border-[#e3d6bf] hover:border-[#cdbda3] rounded-xl pl-3 pr-8 py-1.5 text-sm font-bold text-[#6c4d39] focus:outline-none focus:border-[#6c4d39] focus:ring-2 focus:ring-[#6c4d39]/15 transition-colors cursor-pointer"
             >
               <option value="featured">Featured first</option>
               <option value="nobids">No bids yet</option>
@@ -153,7 +153,7 @@ export default function AuctionItemsView({
               key={v}
               onClick={() => choose(v)}
               aria-pressed={view === v}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[9px] text-xs font-bold transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[9px] text-sm font-bold transition-colors ${
                 view === v ? "bg-[#6c4d39] text-white shadow-sm" : "text-[#6f5b46] hover:bg-[#f1e7d5]"
               }`}
             >
@@ -202,21 +202,21 @@ export default function AuctionItemsView({
                   ) : (
                     <div className="flex flex-col items-center gap-1 text-[#b3a085] bg-[#faf5ea] absolute inset-0 justify-center">
                       <WoodenCrate className="w-14 h-12 opacity-70" />
-                      <span className="text-[11px] font-semibold">Photo coming</span>
+                      <span className="text-[13px] font-semibold">Photo coming</span>
                     </div>
                   )}
                   {item.badge && (
-                    <div className={`absolute top-2 right-2 z-10 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider shadow-sm backdrop-blur-sm ${item.badge.cls}`}>
+                    <div className={`absolute top-2 right-2 z-10 text-[12px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider shadow-sm backdrop-blur-sm ${item.badge.cls}`}>
                       {item.badge.text}
                     </div>
                   )}
                   {item.isCombo && (
-                    <div className="absolute bottom-2 left-2 bg-[#241a12]/85 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm z-10">
+                    <div className="absolute bottom-2 left-2 bg-[#241a12]/85 text-white text-[12px] px-2 py-0.5 rounded-full font-bold shadow-sm z-10">
                       {item.packSize}-Pack
                     </div>
                   )}
                   {item.size && (
-                    <div className="absolute bottom-2 right-2 z-10 bg-[#efe3d0]/95 border border-[#cdbda3] text-[#241a12] text-[10px] px-1.5 py-0.5 rounded-md font-bold shadow-sm">
+                    <div className="absolute bottom-2 right-2 z-10 bg-[#efe3d0]/95 border border-[#cdbda3] text-[#241a12] text-[12px] px-1.5 py-0.5 rounded-md font-bold shadow-sm">
                       Sz {item.size}
                     </div>
                   )}
@@ -228,7 +228,7 @@ export default function AuctionItemsView({
                   <h3 className="font-semibold text-sm leading-tight line-clamp-2 text-[#241a12] group-hover:text-[#6c4d39] transition-colors break-words">
                     {item.title}
                   </h3>
-                  <div className="flex items-center gap-1.5 mt-1 text-[11px] text-[#8a7559]">
+                  <div className="flex items-center gap-1.5 mt-1 text-[13px] text-[#8a7559]">
                     <span className="capitalize truncate min-w-0">{item.condition}</span>
                     {item.shipSize && <SizeBadge size={item.shipSize} px={20} className="shrink-0" />}
                     {item.isItemLive && (
@@ -240,15 +240,15 @@ export default function AuctionItemsView({
                   </div>
                   <div className="mt-auto pt-2 flex items-end justify-between gap-2">
                     <div className="min-w-0">
-                      <div className="text-[9px] font-bold text-[#8a7559] uppercase tracking-wider leading-none">{item.priceLabel}</div>
+                      <div className="text-[12px] font-bold text-[#8a7559] uppercase tracking-wider leading-none">{item.priceLabel}</div>
                       <div className={`font-display font-black text-lg leading-tight tabular-nums truncate mt-0.5 ${item.isItemUnsold ? "text-[#8a7559]" : "text-[#6c4d39]"}`}>
                         ${item.priceValue.toLocaleString()}
                       </div>
                     </div>
                     {item.retailValue > 0 && (
                       <div className="text-right shrink-0 leading-none whitespace-nowrap">
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-[#8a7559]">retail </span>
-                        <span className="text-[12px] font-bold text-[#8a7559] tabular-nums line-through">${item.retailValue.toLocaleString()}</span>
+                        <span className="text-[12px] font-bold uppercase tracking-wider text-[#8a7559]">retail </span>
+                        <span className="text-sm font-bold text-[#8a7559] tabular-nums line-through">${item.retailValue.toLocaleString()}</span>
                       </div>
                     )}
                   </div>
@@ -265,7 +265,7 @@ export default function AuctionItemsView({
               {isStaff && (
                 <Link
                   href={item.editHref}
-                  className="mt-1.5 flex items-center justify-center gap-1.5 rounded-xl border border-[#cdbda3] bg-white/80 hover:bg-white text-[#6c4d39] text-xs font-bold py-2 transition-colors"
+                  className="mt-1.5 flex items-center justify-center gap-1.5 rounded-xl border border-[#cdbda3] bg-white/80 hover:bg-white text-[#6c4d39] text-sm font-bold py-2 transition-colors"
                 >
                   <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11.5 2.5l2 2L6 12l-2.5.5L4 10l7.5-7.5z" /></svg>
                   Edit listing
@@ -306,7 +306,7 @@ export default function AuctionItemsView({
                     <WoodenCrate className="w-12 h-10 opacity-70" />
                   )}
                   {item.isCombo && (
-                    <span className="absolute bottom-1 left-1 bg-[#241a12]/85 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold z-10">
+                    <span className="absolute bottom-1 left-1 bg-[#241a12]/85 text-white text-[12px] px-1.5 py-0.5 rounded-full font-bold z-10">
                       {item.packSize}-Pack
                     </span>
                   )}
@@ -318,7 +318,7 @@ export default function AuctionItemsView({
                     {(item.badge || item.isItemLive) && (
                       <div className="flex items-center gap-1.5 mb-1">
                         {item.badge && (
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider ${item.badge.cls}`}>
+                          <span className={`text-[12px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider ${item.badge.cls}`}>
                             {item.badge.text}
                           </span>
                         )}
@@ -330,7 +330,7 @@ export default function AuctionItemsView({
                     <h3 className="font-semibold text-[15px] sm:text-base leading-snug line-clamp-2 text-[#241a12] group-hover:text-[#6c4d39] transition-colors break-words">
                       {item.title}
                     </h3>
-                    <div className="flex items-center gap-2 mt-1 text-[11px] sm:text-xs text-[#8a7559]">
+                    <div className="flex items-center gap-2 mt-1 text-[13px] sm:text-sm text-[#8a7559]">
                       {item.condition && <span className="capitalize truncate">{item.condition}</span>}
                       {item.size && (
                         <span className="shrink-0 bg-[#efe3d0] border border-[#cdbda3] text-[#241a12] rounded-md px-1.5 py-0.5">
@@ -343,7 +343,7 @@ export default function AuctionItemsView({
 
                   <div className="flex items-end justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-[9px] font-bold text-[#8a7559] uppercase tracking-wider leading-none mb-1">
+                      <div className="text-[12px] font-bold text-[#8a7559] uppercase tracking-wider leading-none mb-1">
                         {item.priceLabel}
                       </div>
                       <div className="flex items-baseline gap-2 flex-wrap">
@@ -351,7 +351,7 @@ export default function AuctionItemsView({
                           ${item.priceValue.toLocaleString()}
                         </span>
                         {item.retailValue > 0 && (
-                          <span className="text-[11px] font-semibold text-[#8a7559] tabular-nums">
+                          <span className="text-[13px] font-semibold text-[#8a7559] tabular-nums">
                             retail <span className="line-through">${item.retailValue.toLocaleString()}</span>
                           </span>
                         )}
@@ -371,7 +371,7 @@ export default function AuctionItemsView({
               {isStaff && (
                 <Link
                   href={item.editHref}
-                  className="mt-1 self-start flex items-center gap-1.5 text-[#6c4d39] text-[11px] font-bold px-2 py-1"
+                  className="mt-1 self-start flex items-center gap-1.5 text-[#6c4d39] text-[13px] font-bold px-2 py-1"
                 >
                   <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11.5 2.5l2 2L6 12l-2.5.5L4 10l7.5-7.5z" /></svg>
                   Edit listing

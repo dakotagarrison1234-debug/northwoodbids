@@ -42,14 +42,14 @@ const btnOutline = "inline-flex items-center justify-center rounded-xl border bo
 
 export function ClosesPill({ box, className = "" }: { box: Box; className?: string }) {
   return (
-    <span className={`inline-flex items-center rounded-full bg-[#241a12] text-[#f0a35a] text-[12px] font-bold px-3 py-1.5 whitespace-nowrap tabular-nums ${className}`}>
+    <span className={`inline-flex items-center rounded-full bg-[#241a12] text-[#f0a35a] text-sm font-bold px-3 py-1.5 whitespace-nowrap tabular-nums ${className}`}>
       {closesIn(box.closesAt)}
     </span>
   );
 }
 
 function Eyebrow({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <div className={`text-[11px] font-bold uppercase tracking-[0.12em] text-[#8a7559] ${className}`}>{children}</div>;
+  return <div className={`text-[13px] font-bold uppercase tracking-[0.12em] text-[#8a7559] ${className}`}>{children}</div>;
 }
 
 /** Ship-it-now: one outline button; tap → inline confirm under the button row. */
@@ -190,7 +190,7 @@ export function PastBoxRow({ box: b }: { box: Box }) {
         <span className="text-[#8a7559]"> · {lots(b.items.length)} · {money(b.chargedCents)}</span>
       </div>
       <div className="shrink-0 flex flex-col items-end gap-1">
-        <span className={`inline-flex items-center rounded-full text-[12px] font-bold px-2.5 py-1 whitespace-nowrap ${pill}`}>{label}</span>
+        <span className={`inline-flex items-center rounded-full text-sm font-bold px-2.5 py-1 whitespace-nowrap ${pill}`}>{label}</span>
         {shipped && b.trackingUrl && (
           <a href={b.trackingUrl} target="_blank" rel="noopener noreferrer" className="text-[13px] font-bold text-[#6c4d39] hover:text-[#c47b3e] underline underline-offset-2 nb-focus rounded">
             Track
@@ -214,7 +214,7 @@ export function IconTiles() {
         <div key={title} className="bg-white border border-[#e3d6bf] rounded-[18px] px-2 py-3 text-center">
           <Icon className="w-6 h-6 text-[#6c4d39] mx-auto" />
           <div className="text-[13px] font-bold text-[#241a12] mt-1.5">{title}</div>
-          <div className="text-[12px] text-[#8a7559]">{sub}</div>
+          <div className="text-sm text-[#8a7559]">{sub}</div>
         </div>
       ))}
     </div>

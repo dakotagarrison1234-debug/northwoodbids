@@ -120,8 +120,8 @@ export default function ItemCardTimer({ itemId, endAt: initialEndAt, inline, pla
   }
 
   const base = inline
-    ? "inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold tabular-nums"
-    : "absolute top-2.5 left-2.5 z-10 inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full font-bold tabular-nums shadow-sm backdrop-blur-sm";
+    ? "inline-flex items-center gap-1 text-[12px] px-2 py-0.5 rounded-full font-bold tabular-nums"
+    : "absolute top-2.5 left-2.5 z-10 inline-flex items-center gap-1 text-[13px] px-2 py-1 rounded-full font-bold tabular-nums shadow-sm backdrop-blur-sm";
 
   if (urgency === "ended") {
     return (

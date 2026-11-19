@@ -57,7 +57,7 @@ export default async function AuctionsPage() {
           <div className="flex items-center gap-4">
             <GavelEmblem className="w-14 h-14 sm:w-16 sm:h-16 shrink-0" />
             <div className="min-w-0">
-              <p className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-[#2f5d3a]">
+              <p className="inline-flex items-center gap-1.5 text-[13px] font-black uppercase tracking-[0.18em] text-[#2f5d3a]">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full rounded-full bg-[#4a7c59] opacity-70 animate-ping" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-[#4a7c59]" />
@@ -82,7 +82,6 @@ export default async function AuctionsPage() {
               variant="live"
               eyebrow="Bidding is open"
               title="Closing Soonest"
-              tagline="The clock on each card is live. When it hits zero, the high bid takes it."
               count={auctions.length}
               countLabel={auctions.length === 1 ? "auction" : "auctions"}
             />

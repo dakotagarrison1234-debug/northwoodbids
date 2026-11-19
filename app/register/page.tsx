@@ -42,7 +42,7 @@ function StepShell({
                 return (
                   <li key={s.id} className="flex items-center gap-2 flex-1 min-w-0">
                     <span
-                      className={`shrink-0 w-6 h-6 rounded-full text-[11px] font-black flex items-center justify-center border ${
+                      className={`shrink-0 w-6 h-6 rounded-full text-[13px] font-black flex items-center justify-center border ${
                         done
                           ? "bg-white text-[#6c4d39] border-white"
                           : now
@@ -53,7 +53,7 @@ function StepShell({
                     >
                       {done ? <IcoCheck className="w-3.5 h-3.5" /> : i + 1}
                     </span>
-                    <span className={`text-[11px] font-bold uppercase tracking-[0.14em] truncate ${now ? "text-white" : "text-white/60"}`}>
+                    <span className={`text-[13px] font-bold uppercase tracking-[0.14em] truncate ${now ? "text-white" : "text-white/60"}`}>
                       {s.label}
                     </span>
                     {i < STEPS.length - 1 && <span className={`h-px flex-1 ${done ? "bg-white/70" : "bg-white/25"}`} aria-hidden />}
@@ -61,13 +61,13 @@ function StepShell({
                 );
               })}
             </ol>
-            <div className="text-[11px] font-black uppercase tracking-[0.18em] text-[#f6d9b5]">{eyebrow}</div>
+            <div className="text-[13px] font-black uppercase tracking-[0.18em] text-[#f6d9b5]">{eyebrow}</div>
             <h1 className="font-display text-[1.7rem] leading-tight font-black mt-1">{title}</h1>
             <p className="text-white/85 text-sm mt-1">{sub}</p>
           </div>
           <div className="px-5 sm:px-7 pt-5 pb-6">{children}</div>
         </div>
-        <p className="text-[#8a7559] text-xs mt-4 text-center flex items-center justify-center gap-1.5">
+        <p className="text-[#8a7559] text-sm mt-4 text-center flex items-center justify-center gap-1.5">
           <IcoShield className="w-3.5 h-3.5" />
           Step {idx + 1} of {STEPS.length} · takes about a minute
         </p>
@@ -276,7 +276,7 @@ function RegisterForm() {
             </button>
           ))}
         </div>
-        <p className="text-xs text-[#8a7559] mt-3 text-center">Tap one to lock it in. Swap it anytime from your account.</p>
+        <p className="text-sm text-[#8a7559] mt-3 text-center">Tap one to lock it in. Swap it anytime from your account.</p>
         <button onClick={() => setStep("location")} disabled={savingAvatar} className={SKIP_BTN}>
           Skip for now
         </button>
@@ -318,7 +318,7 @@ function RegisterForm() {
             ))}
           </div>
         )}
-        <div className="mt-4 flex items-start gap-2 text-xs text-[#6f5b46] bg-[#faf5ea] border border-[#e3d6bf] rounded-xl px-3.5 py-2.5">
+        <div className="mt-4 flex items-start gap-2 text-sm text-[#6f5b46] bg-[#faf5ea] border border-[#e3d6bf] rounded-xl px-3.5 py-2.5">
           <IcoTruck className="w-4 h-4 shrink-0 text-[#6c4d39] mt-px" />
           <span>Win something at the other warehouse? We move it to yours for free, usually within a week, and text you when it lands.</span>
         </div>
@@ -381,7 +381,7 @@ function RegisterForm() {
         </button>
         <BranchDivider className="w-40 h-5 mx-auto opacity-80" />
         {hasWelcomeCode && (
-          <p className="text-center text-xs font-bold text-[#a85f28] -mb-1">Your $5 welcome credit needs a phone number — skipping forfeits it.</p>
+          <p className="text-center text-sm font-bold text-[#a85f28] -mb-1">Your $5 welcome credit needs a phone number — skipping forfeits it.</p>
         )}
         <button onClick={handleSkipPhone} className={`${SKIP_BTN} mt-0`}>
           Skip for now (no text alerts)

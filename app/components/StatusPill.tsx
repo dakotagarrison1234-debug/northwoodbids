@@ -21,7 +21,7 @@ export default function StatusPill({ status, label, className = "" }: StatusPill
   const dot = LIVE.has(key) ? "live" : NEEDS_ACTION.has(key) ? "action" : null;
   return (
     <span
-      className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-semibold capitalize whitespace-nowrap ${statusStyle(status)} ${className}`}
+      className={`inline-flex items-center gap-1.5 text-sm px-2.5 py-1 rounded-full font-semibold capitalize whitespace-nowrap ${statusStyle(status)} ${className}`}
     >
       {dot && (
         <span

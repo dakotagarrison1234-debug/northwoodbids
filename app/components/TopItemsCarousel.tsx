@@ -38,7 +38,7 @@ export default function TopItemsCarousel({ items }: { items: TopItem[] }) {
     <section className="pt-3 sm:pt-8">
       {quick && <QuickBidModal itemId={quick.id} href={quick.href} onClose={() => setQuick(null)} />}
       <div className="max-w-6xl mx-auto px-6 sm:px-8">
-        <SectionHeader compact variant="hot" eyebrow="Most bid-on right now" title="Heating Up" tagline="The lots everyone's fighting over." />
+        <SectionHeader compact variant="hot" eyebrow="Most bid-on right now" title="Heating Up" />
       </div>
       <div className="space-y-2">
         {rows.map((row, r) => (
@@ -208,7 +208,7 @@ function HotCard({ it, onBid }: { it: TopItem; onBid: (it: TopItem) => void }) {
           className="w-full h-full object-contain p-1.5 group-hover:scale-[1.06] transition-transform duration-500 ease-out"
         />
         {it.bidCount > 0 && (
-          <span className="absolute bottom-1.5 right-1.5 rounded-full bg-[#241a12]/80 text-white text-[10px] font-bold px-1.5 py-0.5 tabular-nums backdrop-blur">
+          <span className="absolute bottom-1.5 right-1.5 rounded-full bg-[#241a12]/80 text-white text-[12px] font-bold px-1.5 py-0.5 tabular-nums backdrop-blur">
             {it.bidCount} bid{it.bidCount !== 1 ? "s" : ""}
           </span>
         )}
@@ -224,7 +224,7 @@ function HotCard({ it, onBid }: { it: TopItem; onBid: (it: TopItem) => void }) {
           tabIndex={0}
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onBid(it); }}
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onBid(it); } }}
-          className="relative shrink-0 inline-flex items-center justify-center min-h-[30px] px-3.5 rounded-full text-[11px] font-bold bg-[#6c4d39] hover:bg-[#563e2c] text-white shadow-[0_6px_14px_-6px_rgba(108,77,57,0.6)] transition-colors before:content-[''] before:absolute before:-inset-x-1 before:-inset-y-[7px]"
+          className="relative shrink-0 inline-flex items-center justify-center min-h-[30px] px-3.5 rounded-full text-[13px] font-bold bg-[#6c4d39] hover:bg-[#563e2c] text-white shadow-[0_6px_14px_-6px_rgba(108,77,57,0.6)] transition-colors before:content-[''] before:absolute before:-inset-x-1 before:-inset-y-[7px]"
         >
           Bid
         </div>

@@ -66,7 +66,7 @@ export default function GiveawaysPage() {
         {/* Page header */}
         <div className="flex items-end justify-between gap-3 mb-6">
           <div className="min-w-0">
-            <div className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-[#a85f28]">
+            <div className="inline-flex items-center gap-1.5 text-[13px] font-black uppercase tracking-[0.18em] text-[#a85f28]">
               <PineMark className="w-3.5 h-3.5" /> Free to play
             </div>
             <h1 className="font-display text-3xl sm:text-4xl font-black leading-[0.95] tracking-tight mt-1">Giveaways</h1>
@@ -192,7 +192,7 @@ export default function GiveawaysPage() {
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex gap-3 text-sm">
-      <dt className="w-20 shrink-0 text-[10px] font-black uppercase tracking-[0.14em] text-[#8a7559] pt-0.5">{label}</dt>
+      <dt className="w-20 shrink-0 text-[12px] font-black uppercase tracking-[0.14em] text-[#8a7559] pt-0.5">{label}</dt>
       <dd className="min-w-0 flex-1 text-[#241a12] leading-snug">{children}</dd>
     </div>
   );
@@ -224,7 +224,7 @@ function FullCard({
       <div className="flex-1 min-w-0 p-5 sm:p-6 flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <PhaseChip g={g} />
-          <span className="text-[11px] text-[#8a7559]">{drawStyleLabel(g)}</span>
+          <span className="text-[13px] text-[#8a7559]">{drawStyleLabel(g)}</span>
         </div>
 
         <div>
@@ -252,13 +252,13 @@ function FullCard({
                   )}
                   <span className="min-w-0 truncate">{p.title}</span>
                   {p.retailValue != null && p.retailValue > 0 && (
-                    <span className="text-xs font-bold text-[#a85f28] tabular-nums shrink-0">{money(p.retailValue)}</span>
+                    <span className="text-sm font-bold text-[#a85f28] tabular-nums shrink-0">{money(p.retailValue)}</span>
                   )}
                 </li>
               ))}
             </ul>
             {g.totalValue > 0 && g.prizes.length > 1 && (
-              <p className="text-xs text-[#8a7559] mt-1.5 tabular-nums">{money(g.totalValue)} total value</p>
+              <p className="text-sm text-[#8a7559] mt-1.5 tabular-nums">{money(g.totalValue)} total value</p>
             )}
           </Row>
         </dl>
@@ -272,7 +272,7 @@ function FullCard({
 
         {complete && g.wonBy.length > 0 && (
           <div className="rounded-xl bg-[#faf5ea] border border-[#e3d6bf] px-4 py-3 mt-auto">
-            <div className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-[#a85f28]">
+            <div className="inline-flex items-center gap-1.5 text-[12px] font-black uppercase tracking-[0.14em] text-[#a85f28]">
               <IcoTrophy className="w-3.5 h-3.5" /> {plural(g.wonBy.length, "Winner")}
             </div>
             <ul className="mt-1.5 space-y-1">
@@ -305,7 +305,7 @@ function WinnerTile({ w }: { w: Winner }) {
           </div>
         )}
         {w.value != null && w.value > 0 && (
-          <span className="absolute bottom-2 right-2 rounded-md bg-[#c47b3e] text-white text-[10px] font-black px-1.5 py-0.5 tabular-nums">
+          <span className="absolute bottom-2 right-2 rounded-md bg-[#c47b3e] text-white text-[12px] font-black px-1.5 py-0.5 tabular-nums">
             {money(w.value)}
           </span>
         )}
@@ -315,8 +315,8 @@ function WinnerTile({ w }: { w: Winner }) {
           <IcoTrophy className="w-3.5 h-3.5 text-[#c47b3e] shrink-0" />
           <span className="truncate">{w.name}</span>
         </div>
-        <div className="text-xs text-[#6f5b46] mt-1 leading-snug line-clamp-2">{w.prize}</div>
-        <div className="text-[11px] text-[#8a7559] mt-1.5 truncate">
+        <div className="text-sm text-[#6f5b46] mt-1 leading-snug line-clamp-2">{w.prize}</div>
+        <div className="text-[13px] text-[#8a7559] mt-1.5 truncate">
           {w.giveawayTitle} · {relativeDay(w.wonAt)}
         </div>
       </div>

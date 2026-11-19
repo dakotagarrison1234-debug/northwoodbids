@@ -48,7 +48,7 @@ function IcoClose() {
 // ── Section label ──────────────────────────────────────────────────────────────
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="px-4 pt-4 pb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#b3a085]">
+    <div className="px-4 pt-4 pb-1 text-[12px] font-bold uppercase tracking-[0.12em] text-[#b3a085]">
       {children}
     </div>
   );
@@ -206,7 +206,7 @@ export default function UserMenu() {
               </div>
               <div className="min-w-0">
                 <p className="font-display text-[#241a12] font-bold text-[15px] leading-tight truncate">{displayName}</p>
-                <p className="text-[#8a7559] text-xs truncate mt-0.5">{email}</p>
+                <p className="text-[#8a7559] text-sm truncate mt-0.5">{email}</p>
               </div>
             </div>
             <button
@@ -268,7 +268,7 @@ export default function UserMenu() {
             <span className="w-5 flex items-center justify-center shrink-0 text-[#a08b6e]"><IcoSignOut /></span>
             <span>Sign out</span>
           </button>
-          <div className="flex items-center gap-1.5 px-4 pt-3 text-[11px] text-[#b3a085]">
+          <div className="flex items-center gap-1.5 px-4 pt-3 text-[13px] text-[#b3a085]">
             <PineMark className="w-3.5 h-3.5" />
             <span>Northwood Bids, mid-Michigan</span>
           </div>

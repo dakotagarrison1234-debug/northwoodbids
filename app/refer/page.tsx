@@ -38,7 +38,7 @@ function Ticket({ state }: { state: CouponState }) {
       <div className="nb-bb-pop relative rounded-xl p-3 text-center text-[#7a2e00] overflow-hidden shadow-[0_6px_16px_-6px_rgba(255,120,0,0.7)]" style={{ background: "linear-gradient(160deg,#ffe08a,#ffb300)" }}>
         <div className="nb-bb-shine absolute inset-0 pointer-events-none" />
         <p className="relative font-display text-2xl font-black leading-none">$5</p>
-        <p className="relative text-[9px] font-black uppercase tracking-wider mt-1">Ready</p>
+        <p className="relative text-[12px] font-black uppercase tracking-wider mt-1">Ready</p>
       </div>
     );
   }
@@ -46,7 +46,7 @@ function Ticket({ state }: { state: CouponState }) {
     return (
       <div className="relative rounded-xl border-2 border-[#cdbda3] bg-[#efe3d0] text-[#8a7559] p-3 text-center">
         <p className="font-display text-2xl font-black leading-none line-through decoration-2">$5</p>
-        <p className="text-[9px] font-black uppercase tracking-wider mt-1">Used</p>
+        <p className="text-[12px] font-black uppercase tracking-wider mt-1">Used</p>
       </div>
     );
   }
@@ -54,7 +54,7 @@ function Ticket({ state }: { state: CouponState }) {
     <div className="relative rounded-xl border-2 border-dashed border-[#e0b3a0] bg-white/50 text-[#c08a6a] p-3 text-center">
       <IcoLock className="w-4 h-4 mx-auto mb-0.5 opacity-70" />
       <p className="font-display text-lg font-black leading-none opacity-60">$5</p>
-      <p className="text-[9px] font-black uppercase tracking-wider mt-0.5">Locked</p>
+      <p className="text-[12px] font-black uppercase tracking-wider mt-0.5">Locked</p>
     </div>
   );
 }
@@ -67,7 +67,7 @@ function StatusBadge({ status }: { status: Referral["status"] }) {
   }[status];
   const Icon = map.Icon;
   return (
-    <span className={`inline-flex items-center gap-1 text-xs font-black uppercase tracking-wide border px-2 py-0.5 rounded-full whitespace-nowrap ${map.cls}`}>
+    <span className={`inline-flex items-center gap-1 text-sm font-black uppercase tracking-wide border px-2 py-0.5 rounded-full whitespace-nowrap ${map.cls}`}>
       <Icon className="w-3.5 h-3.5" /> {map.label}
     </span>
   );
@@ -161,7 +161,7 @@ export default function ReferPage() {
             <IcoCoin className="nb-bb-float absolute right-9 bottom-8 w-6 h-6 text-white/80" />
 
             <div className="relative">
-              <span className="inline-flex items-center gap-1.5 bg-black/25 backdrop-blur-sm text-white text-[11px] font-black uppercase tracking-[0.18em] px-3 py-1 rounded-full">
+              <span className="inline-flex items-center gap-1.5 bg-black/25 backdrop-blur-sm text-white text-[13px] font-black uppercase tracking-[0.18em] px-3 py-1 rounded-full">
                 <IcoSpark className="w-3.5 h-3.5" /> Everyone wins · limited
               </span>
               <h1 className="font-display font-black leading-[0.92] mt-3 drop-shadow-[0_2px_0_rgba(0,0,0,0.15)]">
@@ -174,7 +174,7 @@ export default function ReferPage() {
 
               {/* Progress toward the max */}
               <div className="mt-5 mx-auto max-w-sm">
-                <div className="flex items-end justify-between text-white/90 text-xs font-black mb-1">
+                <div className="flex items-end justify-between text-white/90 text-sm font-black mb-1">
                   <span>${earnedDollars} earned</span>
                   <span>${maxDollars} max</span>
                 </div>
@@ -190,7 +190,7 @@ export default function ReferPage() {
               >
                 <IcoMegaphone className="w-5 h-5" /> SHARE &amp; GRAB $5
               </button>
-              <p className="mt-2 text-xs font-bold text-white/85">
+              <p className="mt-2 text-sm font-bold text-white/85">
                 {availDollars > 0 ? `You've got $${availDollars} waiting to come off your next win.` : "It's free money. Seriously."}
               </p>
             </div>
@@ -270,7 +270,7 @@ export default function ReferPage() {
                 </button>
               </div>
             </div>
-            <p className="text-[#8a7559] text-xs mt-3">
+            <p className="text-[#8a7559] text-sm mt-3">
               Your code: <span className="font-mono font-black text-[#e11d48] tracking-wider">{data.code}</span>
             </p>
           </div>
@@ -284,7 +284,7 @@ export default function ReferPage() {
                   <div key={i} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
                     <div className="min-w-0">
                       <p className="text-[#241a12] text-sm font-medium truncate">{r.auctionTitle}</p>
-                      <p className="text-[#8a7559] text-xs">{new Date(r.date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</p>
+                      <p className="text-[#8a7559] text-sm">{new Date(r.date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</p>
                     </div>
                     <span className="text-green-700 font-black text-sm whitespace-nowrap">−${r.amount.toFixed(0)}</span>
                   </div>
@@ -318,7 +318,7 @@ export default function ReferPage() {
           <div className="mt-4 bg-white border border-[#e3d6bf] rounded-2xl p-5">
             <div className="flex items-center justify-between gap-3">
               <p className="text-[#241a12] font-black inline-flex items-center gap-2"><IcoUsers className="w-5 h-5 text-[#6c4d39]" /> Your crew</p>
-              {data.totalRedeemed > 0 && (<span className="text-xs font-bold text-[#6f5b46]">${data.totalRedeemed.toFixed(0)} saved so far</span>)}
+              {data.totalRedeemed > 0 && (<span className="text-sm font-bold text-[#6f5b46]">${data.totalRedeemed.toFixed(0)} saved so far</span>)}
             </div>
             {data.referrals.length === 0 ? (
               <p className="text-[#8a7559] text-sm mt-3">No invites yet — share your link above and start stacking.</p>
@@ -328,7 +328,7 @@ export default function ReferPage() {
                   <div key={i} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
                     <div className="min-w-0">
                       <p className="text-[#241a12] font-medium text-sm truncate">{r.name}</p>
-                      <p className="text-[#8a7559] text-xs">Joined {new Date(r.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</p>
+                      <p className="text-[#8a7559] text-sm">Joined {new Date(r.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</p>
                     </div>
                     <StatusBadge status={r.status} />
                   </div>
@@ -338,7 +338,7 @@ export default function ReferPage() {
           </div>
 
           {/* Fine print */}
-          <div className="mt-4 text-[#8a7559] text-xs leading-relaxed">
+          <div className="mt-4 text-[#8a7559] text-sm leading-relaxed">
             <p className="font-semibold text-[#6f5b46] mb-1">The fine print</p>
             <p>
               You earn a $5 coupon only after a bidder you invited wins an item and their payment goes through — not just for signing up or bidding.

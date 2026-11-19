@@ -35,7 +35,7 @@ export default function AuctionCountdown({
   if (ms === null) {
     return (
       <div className="flex items-center gap-1.5 text-[#8a7559]">
-        <span className="text-[10px] font-black uppercase tracking-[0.14em]">{label}</span>
+        <span className="text-[12px] font-black uppercase tracking-[0.14em]">{label}</span>
         <Unit v="--" u="" tone="bg-[#efe3d0] text-[#8a7559]" />
         <Unit v="--" u="" tone="bg-[#efe3d0] text-[#8a7559]" />
       </div>
@@ -49,7 +49,7 @@ export default function AuctionCountdown({
           <span className="absolute inline-flex h-full w-full rounded-full bg-[#c47b3e] opacity-70 animate-ping" />
           <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#c47b3e]" />
         </span>
-        <span className="text-[11px] font-black uppercase tracking-[0.14em]">
+        <span className="text-[13px] font-black uppercase tracking-[0.14em]">
           {mode === "opens" ? "Opening now" : "Closing now"}
         </span>
       </div>
@@ -91,7 +91,7 @@ export default function AuctionCountdown({
 
   return (
     <div className={`flex items-center gap-1.5 ${labelTone}`} aria-live="off">
-      <span className="text-[10px] font-black uppercase tracking-[0.14em]">{label}</span>
+      <span className="text-[12px] font-black uppercase tracking-[0.14em]">{label}</span>
       {parts.map((p) => (
         <Unit key={p.u} v={p.v} u={p.u} tone={unitTone} pulse={urgent} />
       ))}
@@ -111,7 +111,7 @@ function Unit({ v, u, tone, pulse = false }: { v: string; u: string; tone: strin
       }`}
     >
       <span className="font-display font-black text-[13px]">{v}</span>
-      {u && <span className="text-[9px] font-bold ml-px opacity-85">{u}</span>}
+      {u && <span className="text-[12px] font-bold ml-px opacity-85">{u}</span>}
     </span>
   );
 }

@@ -76,7 +76,7 @@ export default function AuctionCard({
         {/* ── Header row: state pill + live clock ── */}
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <span
-            className={`inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.14em] px-2.5 py-1 rounded-full border whitespace-nowrap ${s.pill}`}
+            className={`inline-flex items-center gap-1.5 text-[12px] font-black uppercase tracking-[0.14em] px-2.5 py-1 rounded-full border whitespace-nowrap ${s.pill}`}
           >
             {isLive ? (
               <span className="relative flex h-1.5 w-1.5">
@@ -101,7 +101,7 @@ export default function AuctionCard({
           {showOrg && (
             <div className="flex items-center gap-2 mb-1.5">
               <OrgLogo name={auction.org.name} logoUrl={auction.org.logoUrl} size="xs" />
-              <span className="text-[11px] text-[#8a7559] font-bold uppercase tracking-wider truncate">
+              <span className="text-[13px] text-[#8a7559] font-bold uppercase tracking-wider truncate">
                 {auction.org.name}
               </span>
             </div>

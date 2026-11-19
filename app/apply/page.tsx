@@ -33,7 +33,7 @@ export default function ApplyPage() {
             </Link>
           </div>
         </div>
-        <p className="text-[#8a7559] text-xs mt-4 text-center flex items-center justify-center gap-1.5">
+        <p className="text-[#8a7559] text-sm mt-4 text-center flex items-center justify-center gap-1.5">
           <IcoShield className="w-3.5 h-3.5" />
           Corunna &amp; Gladwin, MI
         </p>

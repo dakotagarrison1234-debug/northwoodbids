@@ -37,7 +37,7 @@ export default function MaxBidExplainerModal({ onClose }: { onClose: () => void 
           <div className="sm:hidden mx-auto mb-3 h-1 w-10 rounded-full bg-[#f6ecda]/30" aria-hidden="true" />
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#f0a35a]">Max bid</p>
+              <p className="text-[12px] font-black uppercase tracking-[0.2em] text-[#f0a35a]">Max bid</p>
               <h2 id="maxbid-explainer-title" className="font-display text-xl font-black leading-tight mt-0.5">Set it once. We hold the line.</h2>
               <p className="text-[#f6ecda]/75 text-sm mt-1">No refreshing, no last-second scramble.</p>
             </div>
@@ -59,11 +59,11 @@ export default function MaxBidExplainerModal({ onClose }: { onClose: () => void 
             <li key={s.title} className="flex items-start gap-3">
               <span className="relative w-9 h-9 rounded-xl bg-white border border-[#e3d6bf] grid place-items-center shrink-0 text-[#6c4d39]">
                 <s.Icon className="w-4.5 h-4.5" />
-                <span className="absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full bg-[#6c4d39] text-white text-[9px] font-black grid place-items-center">{i + 1}</span>
+                <span className="absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full bg-[#6c4d39] text-white text-[12px] font-black grid place-items-center">{i + 1}</span>
               </span>
               <div className="min-w-0 pt-0.5">
                 <div className="text-sm font-bold text-[#241a12] leading-tight">{s.title}</div>
-                <div className="text-xs text-[#6f5b46] mt-0.5 leading-snug">{s.body}</div>
+                <div className="text-sm text-[#6f5b46] mt-0.5 leading-snug">{s.body}</div>
               </div>
             </li>
           ))}
@@ -71,24 +71,24 @@ export default function MaxBidExplainerModal({ onClose }: { onClose: () => void 
 
         {/* Worked example */}
         <div className="mx-5 mt-4 bg-white border border-[#e3d6bf] rounded-2xl px-4 py-3.5">
-          <div className="text-[10px] text-[#8a7559] font-black uppercase tracking-[0.18em] mb-2.5">Say you set $85</div>
+          <div className="text-[12px] text-[#8a7559] font-black uppercase tracking-[0.18em] mb-2.5">Say you set $85</div>
           <div className="flex items-center gap-2">
             <div className="text-center shrink-0">
-              <div className="text-[11px] text-[#8a7559] mb-0.5">Your ceiling</div>
+              <div className="text-[13px] text-[#8a7559] mb-0.5">Your ceiling</div>
               <div className="font-display font-black text-[#241a12] text-xl tabular-nums">$85</div>
             </div>
             <svg className="w-5 h-5 text-[#cdbda3] shrink-0" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 10h12M12 5l5 5-5 5"/></svg>
             <div className="text-center shrink-0">
-              <div className="text-[11px] text-[#8a7559] mb-0.5">Top rival bid</div>
+              <div className="text-[13px] text-[#8a7559] mb-0.5">Top rival bid</div>
               <div className="font-display font-black text-[#6f5b46] text-xl tabular-nums">$25</div>
             </div>
             <svg className="w-5 h-5 text-[#cdbda3] shrink-0" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 10h12M12 5l5 5-5 5"/></svg>
             <div className="flex-1 bg-[#4a7c59]/10 border border-[#4a7c59]/30 rounded-xl px-3 py-1.5 text-center">
-              <div className="text-[11px] text-[#3c6449] mb-0.5 font-semibold">You win at</div>
+              <div className="text-[13px] text-[#3c6449] mb-0.5 font-semibold">You win at</div>
               <div className="font-display font-black text-[#3c6449] text-xl tabular-nums">$30</div>
             </div>
           </div>
-          <p className="text-[11px] text-[#6f5b46] mt-2.5 leading-snug">One step over the next-best bidder. The other $55 stays in your pocket.</p>
+          <p className="text-[13px] text-[#6f5b46] mt-2.5 leading-snug">One step over the next-best bidder. The other $55 stays in your pocket.</p>
         </div>
 
         {/* CTA */}

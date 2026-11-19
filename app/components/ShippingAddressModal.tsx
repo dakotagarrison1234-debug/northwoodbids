@@ -73,7 +73,7 @@ export default function ShippingAddressModal({
   };
 
   const field = "w-full bg-white border border-[#cdbda3] rounded-xl px-3.5 py-2.5 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] text-base";
-  const label = "block text-[11px] font-black uppercase tracking-[0.14em] text-[#8a7559] mb-1";
+  const label = "block text-[13px] font-black uppercase tracking-[0.14em] text-[#8a7559] mb-1";
 
   return createPortal(
     <div
@@ -89,7 +89,7 @@ export default function ShippingAddressModal({
           <div className="sm:hidden mx-auto mb-3 h-1 w-10 rounded-full bg-[#f6ecda]/30" aria-hidden="true" />
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#f0a35a] inline-flex items-center gap-1.5">
+              <p className="text-[12px] font-black uppercase tracking-[0.2em] text-[#f0a35a] inline-flex items-center gap-1.5">
                 <IcoTruck className="w-3.5 h-3.5" /> Ship it
               </p>
               <h2 id="ship-address-title" className="font-display text-xl font-black leading-tight mt-0.5">Where should your box go?</h2>
@@ -125,7 +125,7 @@ export default function ShippingAddressModal({
           <ol className="space-y-1.5 text-sm text-[#4a3a2b]">
             {howItWorks.map((line, i) => (
               <li key={i} className="flex items-start gap-2.5">
-                <span className="w-5 h-5 rounded-full bg-[#6c4d39] text-[#f6ecda] text-[11px] font-black grid place-items-center shrink-0 mt-0.5 tabular-nums">{i + 1}</span>
+                <span className="w-5 h-5 rounded-full bg-[#6c4d39] text-[#f6ecda] text-[13px] font-black grid place-items-center shrink-0 mt-0.5 tabular-nums">{i + 1}</span>
                 <span className="leading-snug">{line}</span>
               </li>
             ))}
@@ -175,7 +175,7 @@ export default function ShippingAddressModal({
           >
             {saving ? "Saving…" : "Save address"}
           </button>
-          <p className="text-[12px] text-[#8a7559] text-center">Lower 48 only. Nothing is charged until you win.</p>
+          <p className="text-sm text-[#8a7559] text-center">Lower 48 only. Nothing is charged until you win.</p>
         </div>
         )}
       </div>

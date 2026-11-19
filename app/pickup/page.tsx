@@ -23,7 +23,7 @@ interface ItemCard {
 function SpotChip({ spot }: { spot?: string | null }) {
   if (!spot) return null;
   return (
-    <span className="inline-block bg-[#6c4d39]/10 text-[#6c4d39] border border-[#6c4d39]/25 rounded-full px-2 py-0.5 text-xs font-bold font-mono">
+    <span className="inline-block bg-[#6c4d39]/10 text-[#6c4d39] border border-[#6c4d39]/25 rounded-full px-2 py-0.5 text-sm font-bold font-mono">
       {spot}
     </span>
   );
@@ -221,7 +221,7 @@ function ItemLine({ title, extra }: { title: string; extra?: React.ReactNode }) 
 /** Section label used throughout the page. */
 function Eyebrow({ children, tone = "leather" }: { children: React.ReactNode; tone?: "leather" | "amber" | "moss" }) {
   const c = tone === "amber" ? "text-[#a85f28]" : tone === "moss" ? "text-[#2f5d3a]" : "text-[#6c4d39]";
-  return <div className={`text-[11px] font-black uppercase tracking-[0.18em] ${c}`}>{children}</div>;
+  return <div className={`text-[13px] font-black uppercase tracking-[0.18em] ${c}`}>{children}</div>;
 }
 
 /** "What happens next" strip — the three beats of a pickup, in order. */
@@ -239,11 +239,11 @@ function NextSteps({ hasAppointment, transferring }: { hasAppointment: boolean; 
           <li key={s.title} className="flex gap-3 sm:flex-col sm:gap-2">
             <span className="w-9 h-9 rounded-xl bg-[#faf5ea] border border-[#e3d6bf] text-[#6c4d39] flex items-center justify-center shrink-0 relative">
               <s.Icon className="w-4 h-4" />
-              <span className="absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full bg-[#6c4d39] text-white text-[9px] font-black flex items-center justify-center">{i + 1}</span>
+              <span className="absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full bg-[#6c4d39] text-white text-[12px] font-black flex items-center justify-center">{i + 1}</span>
             </span>
             <div className="min-w-0">
               <div className="text-sm font-bold text-[#241a12]">{s.title}</div>
-              <div className="text-xs text-[#6f5b46] mt-0.5 leading-snug">{s.text}</div>
+              <div className="text-sm text-[#6f5b46] mt-0.5 leading-snug">{s.text}</div>
             </div>
           </li>
         ))}
@@ -324,7 +324,7 @@ function SlotPicker({
   };
 
   const navBtn =
-    "inline-flex items-center gap-1 rounded-lg border border-[#e3d6bf] bg-white px-2.5 py-1.5 text-xs font-bold text-[#6c4d39] hover:bg-[#faf5ea] disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
+    "inline-flex items-center gap-1 rounded-lg border border-[#e3d6bf] bg-white px-2.5 py-1.5 text-sm font-bold text-[#6c4d39] hover:bg-[#faf5ea] disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
 
   return (
     <div className="space-y-5">
@@ -339,7 +339,7 @@ function SlotPicker({
         <div className="flex items-center justify-between gap-2 mb-2.5">
           <div>
             <Eyebrow>1. Pick a day</Eyebrow>
-            <div className="text-xs text-[#8a7559] mt-0.5">{rangeLabel} · Michigan time</div>
+            <div className="text-sm text-[#8a7559] mt-0.5">{rangeLabel} · Michigan time</div>
           </div>
           <div className="flex items-center gap-1.5">
             <button type="button" onClick={goPrev} disabled={!hasPrev} className={navBtn} aria-label="Previous week">
@@ -368,10 +368,10 @@ function SlotPicker({
                   isSel ? "border-[#6c4d39] bg-[#6c4d39] text-white" : "border-[#e3d6bf] bg-white hover:bg-[#faf5ea] hover:border-[#cdbda3]"
                 }`}
               >
-                <div className={`text-[10px] font-bold uppercase tracking-wider ${isSel ? "text-[#e7dcc6]" : "text-[#8a7559]"}`}>{fmtWeekday(d.iso)}</div>
+                <div className={`text-[12px] font-bold uppercase tracking-wider ${isSel ? "text-[#e7dcc6]" : "text-[#8a7559]"}`}>{fmtWeekday(d.iso)}</div>
                 <div className="font-display text-xl font-black leading-none mt-0.5">{fmtDayNum(d.iso)}</div>
-                <div className={`text-[10px] mt-0.5 ${isSel ? "text-[#e7dcc6]" : "text-[#8a7559]"}`}>{fmtMonthShort(d.iso)}</div>
-                <div className={`text-[10px] font-semibold mt-1 ${isSel ? "text-white" : "text-[#4a7c59]"}`}>
+                <div className={`text-[12px] mt-0.5 ${isSel ? "text-[#e7dcc6]" : "text-[#8a7559]"}`}>{fmtMonthShort(d.iso)}</div>
+                <div className={`text-[12px] font-semibold mt-1 ${isSel ? "text-white" : "text-[#4a7c59]"}`}>
                   {d.slots.length} open
                 </div>
               </button>
@@ -385,7 +385,7 @@ function SlotPicker({
         <Eyebrow>2. Pick a time</Eyebrow>
         {activeDay ? (
           <>
-            <div className="text-xs text-[#8a7559] mt-0.5 mb-2.5">{fmtDayShort(activeDay.iso)} · 30-minute windows</div>
+            <div className="text-sm text-[#8a7559] mt-0.5 mb-2.5">{fmtDayShort(activeDay.iso)} · 30-minute windows</div>
             <div className="flex flex-wrap gap-2">
               {activeDay.slots.map((s) => {
                 const isSelected = selected === s.startsAt;
@@ -405,7 +405,7 @@ function SlotPicker({
                     <span>{fmtTime(s.startsAt)}</span>
                     {low && (
                       <span
-                        className={`mt-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                        className={`mt-0.5 text-[12px] font-bold uppercase tracking-wider ${
                           isSelected ? "text-[#f1e7d5]" : s.remaining === 1 ? "text-red-600" : "text-[#a85f28]"
                         }`}
                       >
@@ -633,7 +633,7 @@ export default function PickupPage() {
   const pageHeader = (
     <div className="flex items-end justify-between gap-3 mb-6">
       <div className="min-w-0">
-        <div className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-[#a85f28]">
+        <div className="inline-flex items-center gap-1.5 text-[13px] font-black uppercase tracking-[0.18em] text-[#a85f28]">
           <PineMark className="w-3.5 h-3.5" /> Corunna &amp; Gladwin
         </div>
         <h1 className="font-display text-3xl sm:text-4xl font-black leading-[0.95] tracking-tight mt-1">Pickup</h1>
@@ -758,14 +758,14 @@ export default function PickupPage() {
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-display font-black text-lg text-[#241a12] leading-tight">{l.name}</span>
                       {current && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-[#2f5d3a] bg-[#4a7c59]/12 border border-[#4a7c59]/30 rounded-full px-2 py-0.5 shrink-0">
+                        <span className="inline-flex items-center gap-1 text-[12px] font-black uppercase tracking-wider text-[#2f5d3a] bg-[#4a7c59]/12 border border-[#4a7c59]/30 rounded-full px-2 py-0.5 shrink-0">
                           <IcoCheck className="w-3 h-3" /> Current
                         </span>
                       )}
                     </div>
                     {l.address && <div className="text-sm text-[#6f5b46] mt-0.5">{l.address}</div>}
-                    {l.instructions && <div className="text-xs text-[#8a7559] mt-1.5 leading-snug">{l.instructions}</div>}
-                    <div className="text-xs text-[#4a7c59] font-semibold mt-2">
+                    {l.instructions && <div className="text-sm text-[#8a7559] mt-1.5 leading-snug">{l.instructions}</div>}
+                    <div className="text-sm text-[#4a7c59] font-semibold mt-2">
                       {l.slots?.length ? `${l.slots.length} open windows this stretch` : "Windows post soon"}
                     </div>
                   </div>
@@ -816,13 +816,13 @@ export default function PickupPage() {
                   <IcoPin className="w-4 h-4" />
                 </span>
                 <div className="min-w-0 leading-tight">
-                  <div className="text-[10px] font-black uppercase tracking-wider text-[#8a7559]">Home warehouse</div>
+                  <div className="text-[12px] font-black uppercase tracking-wider text-[#8a7559]">Home warehouse</div>
                   <div className="font-bold text-[#241a12] truncate">{preferredName}</div>
                 </div>
               </div>
               <button
                 onClick={() => { setSwitching(true); setRescheduling(false); }}
-                className="text-xs font-bold text-[#6c4d39] hover:bg-[#faf5ea] border border-[#e3d6bf] rounded-lg px-3 py-1.5 shrink-0 transition-colors"
+                className="text-sm font-bold text-[#6c4d39] hover:bg-[#faf5ea] border border-[#e3d6bf] rounded-lg px-3 py-1.5 shrink-0 transition-colors"
               >
                 Switch
               </button>
@@ -863,7 +863,7 @@ export default function PickupPage() {
                       <Eyebrow tone={apptPassed ? "amber" : "moss"}>
                         {apptPassed ? "Window passed" : "You're booked"}
                       </Eyebrow>
-                      <span className="inline-flex items-center gap-1.5 text-[#6f5b46] text-xs font-semibold">
+                      <span className="inline-flex items-center gap-1.5 text-[#6f5b46] text-sm font-semibold">
                         <IcoCalendar className="w-3.5 h-3.5" /> 30-min window
                       </span>
                     </div>
@@ -876,7 +876,7 @@ export default function PickupPage() {
                       tell them, so it sits above everything else. */}
                   {appointment.stagedSpot && (
                     <div className="bg-[#4a7c59] text-white px-6 py-7 text-center">
-                      <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[#d8e6c8]">
+                      <div className="text-[13px] font-black uppercase tracking-[0.2em] text-[#d8e6c8]">
                         Staged and waiting
                       </div>
                       <div className="font-display text-5xl sm:text-6xl font-black leading-none mt-2 mb-1 break-words">
@@ -891,7 +891,7 @@ export default function PickupPage() {
                       door, so it's big, high-contrast and above the fold. */}
                   {appointment.door && (
                     <div className="bg-[#241a12] text-[#fbf4e6] px-6 py-6 text-center border-t border-white/10">
-                      <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[#f0a35a]">
+                      <div className="text-[13px] font-black uppercase tracking-[0.2em] text-[#f0a35a]">
                         Your door code
                       </div>
                       <div className="font-mono text-5xl sm:text-6xl font-black leading-none tracking-[0.18em] mt-2 mb-1 tabular-nums">
@@ -903,7 +903,7 @@ export default function PickupPage() {
                       </p>
                       <p className="text-sm text-white/85 mt-2 leading-relaxed max-w-md mx-auto">{appointment.door.howTo}</p>
                       {appointment.door.status === "failed" && (
-                        <p className="text-xs text-[#f0a35a] mt-3">Hmm, the lock hasn&apos;t accepted this code yet. Text us if it doesn&apos;t work when you arrive.</p>
+                        <p className="text-sm text-[#f0a35a] mt-3">Hmm, the lock hasn&apos;t accepted this code yet. Text us if it doesn&apos;t work when you arrive.</p>
                       )}
                     </div>
                   )}
@@ -935,12 +935,12 @@ export default function PickupPage() {
                 <div>
                   <div className="flex items-baseline justify-between gap-3 mb-3">
                     <h2 className="font-display text-xl font-black text-[#241a12]">On this pickup</h2>
-                    <span className="text-xs font-bold text-[#8a7559]">{appointment.items.length} item{appointment.items.length !== 1 ? "s" : ""}</span>
+                    <span className="text-sm font-bold text-[#8a7559]">{appointment.items.length} item{appointment.items.length !== 1 ? "s" : ""}</span>
                   </div>
                   <div className="space-y-4">
                     {groupByAuction(appointment.items).map(([auctionTitle, items]) => (
                       <div key={auctionTitle}>
-                        <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#8a7559] mb-2">{auctionTitle}</div>
+                        <div className="text-[13px] font-black uppercase tracking-[0.14em] text-[#8a7559] mb-2">{auctionTitle}</div>
                         <div className="space-y-2">
                           {items.map((it) => (
                             <div key={it.id} className="flex items-center gap-3 bg-white border border-[#e3d6bf] rounded-xl px-3.5 py-3">
@@ -951,7 +951,7 @@ export default function PickupPage() {
                                     box — the shelf it used to sit on is stale, and showing
                                     both would send the customer to two different places. */}
                                 {!appointment.stagedSpot && it.storageLocation && (
-                                  <div className="mt-1 text-xs text-[#6f5b46]">Find it at <SpotChip spot={it.storageLocation} /></div>
+                                  <div className="mt-1 text-sm text-[#6f5b46]">Find it at <SpotChip spot={it.storageLocation} /></div>
                                 )}
                               </div>
                             </div>
@@ -1052,7 +1052,7 @@ export default function PickupPage() {
               <div>
                 <div className="flex items-baseline justify-between gap-3 mb-3">
                   <h2 className="font-display text-xl font-black text-[#241a12]">Moving to {preferredName}</h2>
-                  <span className="text-xs font-bold text-[#8a7559]">{transferCount} item{transferCount !== 1 ? "s" : ""}</span>
+                  <span className="text-sm font-bold text-[#8a7559]">{transferCount} item{transferCount !== 1 ? "s" : ""}</span>
                 </div>
                 <div className="space-y-3">
                   {pendingTransfers.map((t) => (
@@ -1064,14 +1064,14 @@ export default function PickupPage() {
                             <IcoTruck className="w-4 h-4 text-[#a85f28]" />
                             {t.items.length} item{t.items.length !== 1 ? "s" : ""} on the way
                           </div>
-                          <span className="text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full font-black shrink-0 bg-[#f0a35a]/15 text-[#8a4f1c] border border-[#c47b3e]/30">
+                          <span className="text-[12px] uppercase tracking-wider px-2.5 py-1 rounded-full font-black shrink-0 bg-[#f0a35a]/15 text-[#8a4f1c] border border-[#c47b3e]/30">
                             {t.status === "LOADED" ? "On the truck" : "Being gathered"}
                           </span>
                         </div>
-                        <p className="text-xs text-[#6f5b46] mt-1.5">Usually 5 to 6 days. We text you at drop-off and they join your pickup on their own.</p>
+                        <p className="text-sm text-[#6f5b46] mt-1.5">Usually 5 to 6 days. We text you at drop-off and they join your pickup on their own.</p>
                         <ul className="mt-3 space-y-1.5">
                           {t.items.map((it) => (
-                            <ItemLine key={it.id} title={it.title} extra={<span className="text-[#8a7559] text-xs">from {it.fromLocationName}</span>} />
+                            <ItemLine key={it.id} title={it.title} extra={<span className="text-[#8a7559] text-sm">from {it.fromLocationName}</span>} />
                           ))}
                         </ul>
                       </div>
@@ -1085,7 +1085,7 @@ export default function PickupPage() {
             {(otherAppointments.length > 0 || otherLocationGroups.length > 0) && (
               <div className="pt-2">
                 <h2 className="font-display text-xl font-black text-[#241a12]">Collect at the other warehouse</h2>
-                <p className="text-xs text-[#8a7559] mt-1 mb-3">A few things can&apos;t ride the truck. These stay where you won them.</p>
+                <p className="text-sm text-[#8a7559] mt-1 mb-3">A few things can&apos;t ride the truck. These stay where you won them.</p>
                 <div className="space-y-4">
                   {otherAppointments.map((a) => (
                     <div key={a.id} className="bg-white border-2 border-[#4a7c59]/40 rounded-2xl overflow-hidden">
@@ -1096,8 +1096,8 @@ export default function PickupPage() {
                       {a.door && (
                         <div className="bg-[#241a12] text-[#fbf4e6] px-5 py-4 flex items-center justify-between gap-3">
                           <div>
-                            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#f0a35a]">Door code</div>
-                            <div className="text-xs text-[#c9b79a]">All day {a.door.dayLabel}</div>
+                            <div className="text-[12px] font-black uppercase tracking-[0.2em] text-[#f0a35a]">Door code</div>
+                            <div className="text-sm text-[#c9b79a]">All day {a.door.dayLabel}</div>
                           </div>
                           <div className="font-mono text-3xl font-black tracking-[0.18em] tabular-nums">{a.door.code}</div>
                         </div>
@@ -1125,7 +1125,7 @@ export default function PickupPage() {
                         <div>
                           <div className="flex items-center gap-2 mb-2 flex-wrap">
                             <LocationBadge name={name} />
-                            <span className="text-[10px] uppercase tracking-wider font-black text-[#8a4f1c]">Stays put</span>
+                            <span className="text-[12px] uppercase tracking-wider font-black text-[#8a4f1c]">Stays put</span>
                           </div>
                           <p className="text-sm text-[#6f5b46]">Collect {items.length === 1 ? "this item" : "these items"} at {name}. Pick a window below.</p>
                           <ul className="mt-2.5 space-y-1.5">

@@ -13,10 +13,10 @@ export default function PrivacyPage() {
       <div className="relative overflow-hidden border-b border-[#e3d6bf]" style={{ background: "linear-gradient(160deg,#241a12 0%,#3a2a1b 60%,#4a3524 100%)" }}>
         <PineRidge className="absolute inset-x-0 bottom-0 w-full h-24 opacity-20 pointer-events-none" />
         <div className="relative max-w-5xl mx-auto px-6 sm:px-8 pt-12 pb-14 sm:pt-16 sm:pb-16 text-[#f6ecda]">
-          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#f0a35a] mb-2">Privacy Policy</p>
+          <p className="text-[13px] font-black uppercase tracking-[0.22em] text-[#f0a35a] mb-2">Privacy Policy</p>
           <h1 className="font-display text-3xl sm:text-4xl font-black leading-tight max-w-2xl">What we keep, and why</h1>
           <p className="text-[#f6ecda]/80 text-base mt-3 max-w-xl leading-relaxed">We collect what it takes to run an auction and get your winnings to you. Nothing is sold, nothing is shared for ads.</p>
-          <p className="text-[#f6ecda]/60 text-xs mt-4 font-semibold">Last updated: June 15, 2026</p>
+          <p className="text-[#f6ecda]/60 text-sm mt-4 font-semibold">Last updated: June 15, 2026</p>
         </div>
       </div>
 
@@ -24,19 +24,19 @@ export default function PrivacyPage() {
         {/* Contents */}
         <aside className="mb-8 lg:mb-0">
           <nav aria-label="Contents" className="lg:sticky lg:top-24 bg-white border border-[#e3d6bf] rounded-2xl p-4 sm:p-5">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#8a7559] mb-2.5 flex items-center gap-1.5"><PineMark className="w-3.5 h-3.5" /> Contents</p>
+            <p className="text-[12px] font-black uppercase tracking-[0.2em] text-[#8a7559] mb-2.5 flex items-center gap-1.5"><PineMark className="w-3.5 h-3.5" /> Contents</p>
             <ol className="text-sm space-y-0.5 columns-2 lg:columns-1 gap-x-4">
-                <li><a href="#s1" className="flex items-baseline gap-2 text-[#6f5b46] hover:text-[#241a12] transition-colors py-0.5"><span className="text-[10px] font-black tabular-nums text-[#c47b3e] tracking-widest">01</span><span>Introduction</span></a></li>
-                <li><a href="#s2" className="flex items-baseline gap-2 text-[#6f5b46] hover:text-[#241a12] transition-colors py-0.5"><span className="text-[10px] font-black tabular-nums text-[#c47b3e] tracking-widest">02</span><span>Information We Collect</span></a></li>
-                <li><a href="#s3" className="flex items-baseline gap-2 text-[#6f5b46] hover:text-[#241a12] transition-colors py-0.5"><span className="text-[10px] font-black tabular-nums text-[#c47b3e] tracking-widest">03</span><span>How We Use Your Information</span></a></li>
-                <li><a href="#s4" className="flex items-baseline gap-2 text-[#6f5b46] hover:text-[#241a12] transition-colors py-0.5"><span className="text-[10px] font-black tabular-nums text-[#c47b3e] tracking-widest">04</span><span>How We Share Your Information</span></a></li>
-                <li><a href="#s5" className="flex items-baseline gap-2 text-[#6f5b46] hover:text-[#241a12] transition-colors py-0.5"><span className="text-[10px] font-black tabular-nums text-[#c47b3e] tracking-widest">05</span><span>Data Retention</span></a></li>
-                <li><a href="#s6" className="flex items-baseline gap-2 text-[#6f5b46] hover:text-[#241a12] transition-colors py-0.5"><span className="text-[10px] font-black tabular-nums text-[#c47b3e] tracking-widest">06</span><span>Your Rights and Choices</span></a></li>
-                <li><a href="#s7" className="flex items-baseline gap-2 text-[#6f5b46] hover:text-[#241a12] transition-colors py-0.5"><span className="text-[10px] font-black tabular-nums text-[#c47b3e] tracking-widest">07</span><span>Cookies and Tracking</span></a></li>
-                <li><a href="#s8" className="flex items-baseline gap-2 text-[#6f5b46] hover:text-[#241a12] transition-colors py-0.5"><span className="text-[10px] font-black tabular-nums text-[#c47b3e] tracking-widest">08</span><span>Security</span></a></li>
-                <li><a href="#s9" className="flex items-baseline gap-2 text-[#6f5b46] hover:text-[#241a12] transition-colors py-0.5"><span className="text-[10px] font-black tabular-nums text-[#c47b3e] tracking-widest">09</span><span>Children's Privacy</span></a></li>
-                <li><a href="#s10" className="flex items-baseline gap-2 text-[#6f5b46] hover:text-[#241a12] transition-colors py-0.5"><span className="text-[10px] font-black tabular-nums text-[#c47b3e] tracking-widest">10</span><span>Changes to This Policy</span></a></li>
-                <li><a href="#s11" className="flex items-baseline gap-2 text-[#6f5b46] hover:text-[#241a12] transition-colors py-0.5"><span className="text-[10px] font-black tabular-nums text-[#c47b3e] tracking-widest">11</span><span>Contact Us</span></a></li>
+                <li><a href="#s1" className="flex items-baseline gap-2 text-[#6f5b46] hover:text-[#241a12] transition-colors py-0.5"><span className="text-[12px] font-black tabular-nums text-[#c47b3e] tracking-widest">01</span><span>Introduction</span></a></li>
+                <li><a href="#s2" className="flex items-baseline gap-2 text-[#6f5b46] hover:text-[#241a12] transition-colors py-0.5"><span className="text-[12px] font-black tabular-nums text-[#c47b3e] tracking-widest">02</span><span>Information We Collect</span></a></li>
+                <li><a href="#s3" className="flex items-baseline gap-2 text-[#6f5b46] hover:text-[#241a12] transition-colors py-0.5"><span className="text-[12px] font-black tabular-nums text-[#c47b3e] tracking-widest">03</span><span>How We Use Your Information</span></a></li>
+                <li><a href="#s4" className="flex items-baseline gap-2 text-[#6f5b46] hover:text-[#241a12] transition-colors py-0.5"><span className="text-[12px] font-black tabular-nums text-[#c47b3e] tracking-widest">04</span><span>How We Share Your Information</span></a></li>
+                <li><a href="#s5" className="flex items-baseline gap-2 text-[#6f5b46] hover:text-[#241a12] transition-colors py-0.5"><span className="text-[12px] font-black tabular-nums text-[#c47b3e] tracking-widest">05</span><span>Data Retention</span></a></li>
+                <li><a href="#s6" className="flex items-baseline gap-2 text-[#6f5b46] hover:text-[#241a12] transition-colors py-0.5"><span className="text-[12px] font-black tabular-nums text-[#c47b3e] tracking-widest">06</span><span>Your Rights and Choices</span></a></li>
+                <li><a href="#s7" className="flex items-baseline gap-2 text-[#6f5b46] hover:text-[#241a12] transition-colors py-0.5"><span className="text-[12px] font-black tabular-nums text-[#c47b3e] tracking-widest">07</span><span>Cookies and Tracking</span></a></li>
+                <li><a href="#s8" className="flex items-baseline gap-2 text-[#6f5b46] hover:text-[#241a12] transition-colors py-0.5"><span className="text-[12px] font-black tabular-nums text-[#c47b3e] tracking-widest">08</span><span>Security</span></a></li>
+                <li><a href="#s9" className="flex items-baseline gap-2 text-[#6f5b46] hover:text-[#241a12] transition-colors py-0.5"><span className="text-[12px] font-black tabular-nums text-[#c47b3e] tracking-widest">09</span><span>Children's Privacy</span></a></li>
+                <li><a href="#s10" className="flex items-baseline gap-2 text-[#6f5b46] hover:text-[#241a12] transition-colors py-0.5"><span className="text-[12px] font-black tabular-nums text-[#c47b3e] tracking-widest">10</span><span>Changes to This Policy</span></a></li>
+                <li><a href="#s11" className="flex items-baseline gap-2 text-[#6f5b46] hover:text-[#241a12] transition-colors py-0.5"><span className="text-[12px] font-black tabular-nums text-[#c47b3e] tracking-widest">11</span><span>Contact Us</span></a></li>
             </ol>
           </nav>
         </aside>
@@ -45,12 +45,12 @@ export default function PrivacyPage() {
         <div className="space-y-9 text-[#4a3a2b] leading-relaxed text-[15px] max-w-[68ch] [&_ul]:marker:text-[#c47b3e] [&_a]:font-semibold">
 
           <section id="s1" className="scroll-mt-24">
-            <h2 className="font-display text-lg font-bold text-[#241a12] mb-3 flex items-baseline gap-3"><span className="font-sans text-[11px] font-black tabular-nums text-[#c47b3e] tracking-widest">01</span>Introduction</h2>
+            <h2 className="font-display text-lg font-bold text-[#241a12] mb-3 flex items-baseline gap-3"><span className="font-sans text-[13px] font-black tabular-nums text-[#c47b3e] tracking-widest">01</span>Introduction</h2>
             <p>Northwood Bids ("we," "us," or "our") operates this auction site at northwoodbids.com. This Privacy Policy explains how we collect, use, share, and protect your personal information when you use our Platform. By using Northwood Bids, you agree to the practices described in this policy.</p>
           </section>
 
           <section id="s2" className="scroll-mt-24">
-            <h2 className="font-display text-lg font-bold text-[#241a12] mb-3 flex items-baseline gap-3"><span className="font-sans text-[11px] font-black tabular-nums text-[#c47b3e] tracking-widest">02</span>Information We Collect</h2>
+            <h2 className="font-display text-lg font-bold text-[#241a12] mb-3 flex items-baseline gap-3"><span className="font-sans text-[13px] font-black tabular-nums text-[#c47b3e] tracking-widest">02</span>Information We Collect</h2>
             <p className="mb-3">We collect the following categories of information:</p>
 
             <h3 className="font-display font-semibold text-[15px] text-[#241a12] mb-2">Information you provide directly</h3>
@@ -69,7 +69,7 @@ export default function PrivacyPage() {
           </section>
 
           <section id="s3" className="scroll-mt-24">
-            <h2 className="font-display text-lg font-bold text-[#241a12] mb-3 flex items-baseline gap-3"><span className="font-sans text-[11px] font-black tabular-nums text-[#c47b3e] tracking-widest">03</span>How We Use Your Information</h2>
+            <h2 className="font-display text-lg font-bold text-[#241a12] mb-3 flex items-baseline gap-3"><span className="font-sans text-[13px] font-black tabular-nums text-[#c47b3e] tracking-widest">03</span>How We Use Your Information</h2>
             <ul className="list-disc pl-5 space-y-1.5">
               <li>To operate and maintain the Platform and your account.</li>
               <li>To process bids, payments, and auction transactions.</li>
@@ -82,7 +82,7 @@ export default function PrivacyPage() {
           </section>
 
           <section id="s4" className="scroll-mt-24">
-            <h2 className="font-display text-lg font-bold text-[#241a12] mb-3 flex items-baseline gap-3"><span className="font-sans text-[11px] font-black tabular-nums text-[#c47b3e] tracking-widest">04</span>How We Share Your Information</h2>
+            <h2 className="font-display text-lg font-bold text-[#241a12] mb-3 flex items-baseline gap-3"><span className="font-sans text-[13px] font-black tabular-nums text-[#c47b3e] tracking-widest">04</span>How We Share Your Information</h2>
             <p className="mb-3">We do not sell your personal information. We share information only in the following circumstances:</p>
 
             <h3 className="font-display font-semibold text-[15px] text-[#241a12] mb-2">When you win an auction</h3>
@@ -106,12 +106,12 @@ export default function PrivacyPage() {
           </section>
 
           <section id="s5" className="scroll-mt-24">
-            <h2 className="font-display text-lg font-bold text-[#241a12] mb-3 flex items-baseline gap-3"><span className="font-sans text-[11px] font-black tabular-nums text-[#c47b3e] tracking-widest">05</span>Data Retention</h2>
+            <h2 className="font-display text-lg font-bold text-[#241a12] mb-3 flex items-baseline gap-3"><span className="font-sans text-[13px] font-black tabular-nums text-[#c47b3e] tracking-widest">05</span>Data Retention</h2>
             <p>We retain your account information for as long as your account is active. Bid history and transaction records are retained for a minimum of 7 years for financial and legal compliance purposes. You may request deletion of your account at any time; however, transaction records required for legal or tax purposes will be retained as required by law.</p>
           </section>
 
           <section id="s6" className="scroll-mt-24">
-            <h2 className="font-display text-lg font-bold text-[#241a12] mb-3 flex items-baseline gap-3"><span className="font-sans text-[11px] font-black tabular-nums text-[#c47b3e] tracking-widest">06</span>Your Rights and Choices</h2>
+            <h2 className="font-display text-lg font-bold text-[#241a12] mb-3 flex items-baseline gap-3"><span className="font-sans text-[13px] font-black tabular-nums text-[#c47b3e] tracking-widest">06</span>Your Rights and Choices</h2>
             <p className="mb-3">Depending on your location, you may have the right to:</p>
             <ul className="list-disc pl-5 space-y-1.5">
               <li>Access the personal information we hold about you.</li>
@@ -123,27 +123,27 @@ export default function PrivacyPage() {
           </section>
 
           <section id="s7" className="scroll-mt-24">
-            <h2 className="font-display text-lg font-bold text-[#241a12] mb-3 flex items-baseline gap-3"><span className="font-sans text-[11px] font-black tabular-nums text-[#c47b3e] tracking-widest">07</span>Cookies and Tracking</h2>
+            <h2 className="font-display text-lg font-bold text-[#241a12] mb-3 flex items-baseline gap-3"><span className="font-sans text-[13px] font-black tabular-nums text-[#c47b3e] tracking-widest">07</span>Cookies and Tracking</h2>
             <p>We use cookies and similar technologies to maintain your session, remember your preferences, and improve the Platform experience. Authentication cookies are essential for the Platform to function. We do not use third-party advertising cookies or tracking pixels.</p>
           </section>
 
           <section id="s8" className="scroll-mt-24">
-            <h2 className="font-display text-lg font-bold text-[#241a12] mb-3 flex items-baseline gap-3"><span className="font-sans text-[11px] font-black tabular-nums text-[#c47b3e] tracking-widest">08</span>Security</h2>
+            <h2 className="font-display text-lg font-bold text-[#241a12] mb-3 flex items-baseline gap-3"><span className="font-sans text-[13px] font-black tabular-nums text-[#c47b3e] tracking-widest">08</span>Security</h2>
             <p>We implement industry-standard security measures including HTTPS encryption, secure password hashing, and access controls. Payment data is handled entirely by Stripe and is never stored on our servers. While we take security seriously, no system is completely secure and we cannot guarantee absolute security.</p>
           </section>
 
           <section id="s9" className="scroll-mt-24">
-            <h2 className="font-display text-lg font-bold text-[#241a12] mb-3 flex items-baseline gap-3"><span className="font-sans text-[11px] font-black tabular-nums text-[#c47b3e] tracking-widest">09</span>Children's Privacy</h2>
+            <h2 className="font-display text-lg font-bold text-[#241a12] mb-3 flex items-baseline gap-3"><span className="font-sans text-[13px] font-black tabular-nums text-[#c47b3e] tracking-widest">09</span>Children's Privacy</h2>
             <p>Northwood Bids is not intended for children under the age of 18. We do not knowingly collect personal information from minors. If you believe a minor has provided us with personal information, please contact us and we will promptly delete it.</p>
           </section>
 
           <section id="s10" className="scroll-mt-24">
-            <h2 className="font-display text-lg font-bold text-[#241a12] mb-3 flex items-baseline gap-3"><span className="font-sans text-[11px] font-black tabular-nums text-[#c47b3e] tracking-widest">10</span>Changes to This Policy</h2>
+            <h2 className="font-display text-lg font-bold text-[#241a12] mb-3 flex items-baseline gap-3"><span className="font-sans text-[13px] font-black tabular-nums text-[#c47b3e] tracking-widest">10</span>Changes to This Policy</h2>
             <p>We may update this Privacy Policy from time to time. We will notify you of material changes by updating the date at the top of this page. Your continued use of the Platform after changes are posted constitutes acceptance of the updated policy.</p>
           </section>
 
           <section id="s11" className="scroll-mt-24">
-            <h2 className="font-display text-lg font-bold text-[#241a12] mb-3 flex items-baseline gap-3"><span className="font-sans text-[11px] font-black tabular-nums text-[#c47b3e] tracking-widest">11</span>Contact Us</h2>
+            <h2 className="font-display text-lg font-bold text-[#241a12] mb-3 flex items-baseline gap-3"><span className="font-sans text-[13px] font-black tabular-nums text-[#c47b3e] tracking-widest">11</span>Contact Us</h2>
             <p>If you have any questions, concerns, or requests regarding this Privacy Policy, please contact us at:</p>
             <div className="mt-3 bg-[#f6ecda] border border-[#6c4d39]/20 rounded-xl p-4">
               <p className="font-semibold text-[#241a12]">Northwood Bids</p>

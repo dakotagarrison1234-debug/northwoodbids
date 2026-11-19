@@ -249,7 +249,6 @@ export default async function HomePage() {
           variant="live"
           eyebrow="Bidding is open"
           title="Live Right Now"
-          tagline="Going once, going twice — get your bids in before the gavel drops."
           count={activeAuctions.length}
           countLabel={activeAuctions.length === 1 ? "auction" : "auctions"}
         />
@@ -304,7 +303,6 @@ export default async function HomePage() {
             variant="upcoming"
             eyebrow="Preview before it opens"
             title="On Deck"
-            tagline="Scope the next drop early and line up your max bids."
             count={upcomingAuctions.length}
             countLabel={upcomingAuctions.length === 1 ? "auction" : "auctions"}
           />
@@ -339,13 +337,12 @@ export default async function HomePage() {
       <section className="px-6 sm:px-8 pt-4 pb-14 sm:pb-16 max-w-6xl mx-auto">
         <BranchDivider className="w-56 h-6 mx-auto mb-8 opacity-80" />
         <div className="text-center mb-8">
-          <p className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-[#6c4d39]">
+          <p className="inline-flex items-center gap-1.5 text-[13px] font-black uppercase tracking-[0.18em] text-[#6c4d39]">
             <IcoBolt className="w-3.5 h-3.5" /> How it works
           </p>
           <h2 className="font-display text-3xl sm:text-4xl font-black leading-[0.95] tracking-tight text-[#241a12] mt-1.5">
             Bid. Win. Pick up.
           </h2>
-          <p className="text-sm text-[#6f5b46] mt-2">Three steps, no fine print.</p>
         </div>
         <ol className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           {STEPS.map(({ n, Icon, title, desc }, idx) => (
@@ -377,16 +374,13 @@ export default async function HomePage() {
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
             <div>
-              <p className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-[#2f5d3a]">
+              <p className="inline-flex items-center gap-1.5 text-[13px] font-black uppercase tracking-[0.18em] text-[#2f5d3a]">
                 <IcoCheck className="w-3.5 h-3.5" /> Why Northwood
               </p>
               <h2 className="font-display text-3xl sm:text-4xl font-black leading-[0.95] tracking-tight text-[#241a12] mt-1.5">
                 Real brands. Honest lots. Local pickup.
               </h2>
             </div>
-            <p className="text-sm text-[#6f5b46] sm:max-w-xs sm:text-right leading-snug">
-              A Michigan auction house that runs like a handshake.
-            </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {WHY.map(({ Icon, title, desc }, idx) => (
@@ -419,7 +413,6 @@ export default async function HomePage() {
             </div>
             <div className="relative px-6 sm:px-10 pt-9 pb-24 sm:pb-28 text-center">
               <GavelEmblem className="w-14 h-14 mx-auto mb-4" />
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#f0a35a]">Two barns. One floor. Every week.</p>
               <h2 className="font-display text-3xl sm:text-5xl font-black leading-[0.95] tracking-tight text-white mt-2">
                 Every lot starts at $2.
                 <br />

@@ -20,7 +20,7 @@ function Shell({ title, sub, children }: { title: string; sub: string; children:
           </div>
           <div className="px-5 sm:px-7 pt-6 pb-7 text-center">{children}</div>
         </div>
-        <p className="text-[#8a7559] text-xs mt-4 text-center flex items-center justify-center gap-1.5">
+        <p className="text-[#8a7559] text-sm mt-4 text-center flex items-center justify-center gap-1.5">
           <IcoShield className="w-3.5 h-3.5" />
           Secured by Stripe &amp; Clerk · Corunna &amp; Gladwin, MI
         </p>

@@ -63,7 +63,7 @@ export default function SignUpHeader({ initialPromo }: { initialPromo: PromoHint
       </div>
       <div className="px-5 pt-4 flex flex-wrap justify-center gap-1.5">
         {CHIPS.map((c) => (
-          <span key={c.label} className="inline-flex items-center gap-1.5 bg-[#faf5ea] border border-[#e3d6bf] text-[#6f5b46] text-xs font-bold px-2.5 py-1.5 rounded-full">
+          <span key={c.label} className="inline-flex items-center gap-1.5 bg-[#faf5ea] border border-[#e3d6bf] text-[#6f5b46] text-sm font-bold px-2.5 py-1.5 rounded-full">
             <c.Icon className="w-3.5 h-3.5 text-[#6c4d39]" /> {c.label}
           </span>
         ))}

@@ -179,7 +179,7 @@ export default function CardSetupModal({ orgId, onSuccess, onClose }: Props) {
           {saving ? "Saving…" : "Save card"}
         </button>
 
-        <p className="text-xs text-[#8a7559] mt-3.5 text-center flex items-center justify-center gap-1.5">
+        <p className="text-sm text-[#8a7559] mt-3.5 text-center flex items-center justify-center gap-1.5">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
           Encrypted &amp; secured by Stripe
         </p>

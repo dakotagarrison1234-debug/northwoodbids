@@ -260,7 +260,7 @@ export default function QuickBidModal({ itemId, href, onClose }: { itemId: strin
       <div className="relative w-full sm:w-[min(92vw,480px)] max-h-[92vh] sm:max-h-[88vh] bg-[#fbf4e6] rounded-t-3xl sm:rounded-3xl shadow-[0_30px_80px_-20px_rgba(0,0,0,.6)] border border-[#e3d6bf] overflow-hidden flex flex-col nb-sheet-in">
         {/* Top bar */}
         <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-2 shrink-0">
-          <div className="text-[11px] font-black uppercase tracking-[0.18em] text-[#a85f28] inline-flex items-center gap-1.5">
+          <div className="text-[13px] font-black uppercase tracking-[0.18em] text-[#a85f28] inline-flex items-center gap-1.5">
             <IcoBolt className="w-3.5 h-3.5" /> Quick bid
           </div>
           <button onClick={onClose} aria-label="Close" className="w-9 h-9 rounded-full grid place-items-center text-[#6f5b46] hover:bg-[#efe3d0]">
@@ -310,16 +310,16 @@ export default function QuickBidModal({ itemId, href, onClose }: { itemId: strin
                     >
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3l5 5-5 5" /></svg>
                     </button>
-                    <span className="absolute bottom-2 right-2 rounded-full bg-[#241a12]/70 text-[#fbf4e6] text-[10px] font-bold px-2 py-0.5 tabular-nums">
+                    <span className="absolute bottom-2 right-2 rounded-full bg-[#241a12]/70 text-[#fbf4e6] text-[12px] font-bold px-2 py-0.5 tabular-nums">
                       {photoIdx + 1} / {photos.length}
                     </span>
                   </>
                 )}
                 {off >= 20 && (
-                  <span className="absolute top-2 left-2 rounded-md bg-[#c47b3e] text-white text-[11px] font-black px-2 py-0.5 shadow-sm tabular-nums">{off}% off</span>
+                  <span className="absolute top-2 left-2 rounded-md bg-[#c47b3e] text-white text-[13px] font-black px-2 py-0.5 shadow-sm tabular-nums">{off}% off</span>
                 )}
                 {item.packSize && item.packSize > 1 && (
-                  <span className="absolute bottom-2 left-2 bg-[#241a12]/85 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">{item.packSize}-Pack</span>
+                  <span className="absolute bottom-2 left-2 bg-[#241a12]/85 text-white text-[12px] px-2 py-0.5 rounded-full font-bold">{item.packSize}-Pack</span>
                 )}
               </div>
               {photos.length > 1 && (
@@ -334,7 +334,7 @@ export default function QuickBidModal({ itemId, href, onClose }: { itemId: strin
 
               {/* Title + meta */}
               <h3 className="font-display font-black text-lg leading-tight text-[#241a12] mt-3">{item.title}</h3>
-              <div className="mt-1 flex items-center gap-2 flex-wrap text-xs text-[#8a7559]">
+              <div className="mt-1 flex items-center gap-2 flex-wrap text-sm text-[#8a7559]">
                 <span className="capitalize">{item.condition.toLowerCase().replace(/_/g, " ")}</span>
                 {item.size && <span className="bg-[#efe3d0] border border-[#cdbda3] text-[#241a12] rounded-md px-1.5 py-0.5 font-bold">Sz {item.size}</span>}
                 {retail > 0 && <span className="tabular-nums">retail <span className="line-through">${retail.toLocaleString()}</span></span>}
@@ -344,11 +344,11 @@ export default function QuickBidModal({ itemId, href, onClose }: { itemId: strin
               {/* Price + timer */}
               <div className="mt-3 flex items-end justify-between gap-3 rounded-2xl bg-white border border-[#e3d6bf] px-4 py-3">
                 <div>
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-[#8a7559]">{current > 0 ? "Current bid" : "Starting bid"}</div>
+                  <div className="text-[12px] font-bold uppercase tracking-wider text-[#8a7559]">{current > 0 ? "Current bid" : "Starting bid"}</div>
                   <div className="font-display font-black text-3xl leading-none text-[#4a7c59] tabular-nums mt-0.5">${(current > 0 ? current : nextBid).toLocaleString()}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-[#8a7559]">{ended ? "Bidding" : "Ends in"}</div>
+                  <div className="text-[12px] font-bold uppercase tracking-wider text-[#8a7559]">{ended ? "Bidding" : "Ends in"}</div>
                   <div className="font-bold text-[#241a12] tabular-nums text-sm mt-0.5">
                     {ended ? "Ended" : endAt ? <Countdown endAt={endAt} onExpire={() => setEnded(true)} /> : "—"}
                   </div>
@@ -394,7 +394,7 @@ export default function QuickBidModal({ itemId, href, onClose }: { itemId: strin
                     <div className="mt-2 rounded-2xl border border-[#e3d6bf] bg-white p-3">
                       <div className="flex gap-1.5 flex-wrap mb-2">
                         {getProxySuggestions(current, 4, retail || null).map((v) => (
-                          <button key={v} onClick={() => setMaxAmount(String(v))} className={`text-xs font-bold rounded-full px-3 py-1 border ${maxAmount === String(v) ? "bg-[#6c4d39] text-white border-[#6c4d39]" : "bg-[#faf5ea] text-[#6c4d39] border-[#e3d6bf]"}`}>${v}</button>
+                          <button key={v} onClick={() => setMaxAmount(String(v))} className={`text-sm font-bold rounded-full px-3 py-1 border ${maxAmount === String(v) ? "bg-[#6c4d39] text-white border-[#6c4d39]" : "bg-[#faf5ea] text-[#6c4d39] border-[#e3d6bf]"}`}>${v}</button>
                         ))}
                       </div>
                       <div className="flex gap-2">
@@ -404,7 +404,7 @@ export default function QuickBidModal({ itemId, href, onClose }: { itemId: strin
                         </div>
                         <button onClick={setMax} disabled={maxBusy} className="bg-[#4a7c59] hover:bg-[#3c6449] text-white font-bold px-4 rounded-xl text-sm disabled:opacity-50">{maxBusy ? "…" : "Set max"}</button>
                       </div>
-                      <p className="text-[11px] text-[#8a7559] mt-1.5">We bid for you, one step at a time, only as high as needed — never past your max.</p>
+                      <p className="text-[13px] text-[#8a7559] mt-1.5">We bid for you, one step at a time, only as high as needed — never past your max.</p>
                     </div>
                   )}
                 </div>

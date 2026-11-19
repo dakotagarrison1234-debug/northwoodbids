@@ -63,7 +63,7 @@ function Section({
         <span className="w-9 h-9 rounded-xl bg-[#6c4d39] text-white flex items-center justify-center shrink-0">{icon}</span>
         <div className="min-w-0">
           <h2 className="font-display font-bold text-[#241a12] leading-tight">{title}</h2>
-          {hint && <p className="text-xs text-[#8a7559] mt-0.5">{hint}</p>}
+          {hint && <p className="text-sm text-[#8a7559] mt-0.5">{hint}</p>}
         </div>
       </div>
       <div className="px-5 py-5">{children}</div>
@@ -210,7 +210,7 @@ export default function AccountPage() {
             ) : initials}
           </div>
           <div className="min-w-0">
-            <div className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-[#6c4d39]">
+            <div className="inline-flex items-center gap-1.5 text-[13px] font-black uppercase tracking-[0.18em] text-[#6c4d39]">
               <PineMark className="w-3.5 h-3.5" /> Your account
             </div>
             <h1 className="font-display text-3xl sm:text-4xl font-black leading-[0.95] tracking-tight mt-1 truncate">
@@ -295,7 +295,7 @@ export default function AccountPage() {
                   placeholder={f.placeholder}
                   className="w-full bg-[#faf5ea] border border-[#cdbda3] rounded-xl px-4 py-3 text-[#241a12] placeholder-[#b3a085] focus:outline-none focus:border-[#6c4d39] transition-colors text-sm"
                 />
-                {f.hint && <p className="text-[#8a7559] text-xs mt-1.5">{f.hint}</p>}
+                {f.hint && <p className="text-[#8a7559] text-sm mt-1.5">{f.hint}</p>}
               </div>
             ))}
             {profileMsg && (
@@ -358,20 +358,20 @@ export default function AccountPage() {
                             : "Card on file"
                           : "No card saved"}
                       </div>
-                      <div className="text-xs text-[#8a7559] mt-0.5 truncate">{pm.orgName}</div>
+                      <div className="text-sm text-[#8a7559] mt-0.5 truncate">{pm.orgName}</div>
                     </div>
                   </div>
                   {pm.stripeChargesEnabled && (
                     <button
                       onClick={() => setCardModal({ orgId: pm.orgId, stripeAccountId: pm.stripeAccountId ?? "" })}
-                      className="text-xs text-[#6c4d39] hover:text-white hover:bg-[#6c4d39] font-bold shrink-0 transition-colors border border-[#6c4d39]/40 px-3 py-1.5 rounded-lg"
+                      className="text-sm text-[#6c4d39] hover:text-white hover:bg-[#6c4d39] font-bold shrink-0 transition-colors border border-[#6c4d39]/40 px-3 py-1.5 rounded-lg"
                     >
                       {pm.hasCard ? "Update" : "Add card"}
                     </button>
                   )}
                 </div>
               ))}
-              <p className="text-xs text-[#8a7559] flex items-center gap-1.5 pt-1">
+              <p className="text-sm text-[#8a7559] flex items-center gap-1.5 pt-1">
                 <IcoLock className="w-3.5 h-3.5" /> Stored securely by Stripe.
               </p>
             </div>
@@ -390,7 +390,7 @@ export default function AccountPage() {
           >
             <div className="text-sm">
               <p className="font-semibold text-[#241a12]">Choose or switch your warehouse</p>
-              <p className="text-[#8a7559] text-xs mt-0.5">Also where you book a pickup time once something&apos;s ready.</p>
+              <p className="text-[#8a7559] text-sm mt-0.5">Also where you book a pickup time once something&apos;s ready.</p>
             </div>
             <span className="text-[#6c4d39] group-hover:translate-x-0.5 transition-transform shrink-0"><IcoArrow /></span>
           </Link>
@@ -416,12 +416,12 @@ export default function AccountPage() {
               {shipAddress ? (
                 <>
                   <p className="font-semibold text-[#241a12] truncate">{shipAddress.street1}{shipAddress.street2 ? `, ${shipAddress.street2}` : ""}</p>
-                  <p className="text-[#8a7559] text-xs mt-0.5">{shipAddress.city}, {shipAddress.state} {shipAddress.zip} · applies to your next box</p>
+                  <p className="text-[#8a7559] text-sm mt-0.5">{shipAddress.city}, {shipAddress.state} {shipAddress.zip} · applies to your next box</p>
                 </>
               ) : (
                 <>
                   <p className="font-semibold text-[#241a12]">{shipAddress === undefined ? "Checking your address" : "No shipping address yet"}</p>
-                  <p className="text-[#8a7559] text-xs mt-0.5">Add one, then pick Ship on any lot. Lower 48 only.</p>
+                  <p className="text-[#8a7559] text-sm mt-0.5">Add one, then pick Ship on any lot. Lower 48 only.</p>
                 </>
               )}
             </div>

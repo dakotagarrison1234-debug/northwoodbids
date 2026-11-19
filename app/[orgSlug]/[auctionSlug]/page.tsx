@@ -107,7 +107,7 @@ function NextAuctionLink({ href, title, position }: { href: string; title: strin
       }`}
     >
       <span className="flex flex-col items-start leading-tight min-w-0">
-        <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f0a35a]">Next auction</span>
+        <span className="text-[12px] font-black uppercase tracking-[0.14em] text-[#f0a35a]">Next auction</span>
         <span className={`truncate max-w-[8rem] sm:max-w-[14rem] ${position === "top" ? "text-sm" : "text-base"}`}>{title}</span>
       </span>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 group-hover:translate-x-0.5 transition-transform" aria-hidden>
@@ -232,7 +232,7 @@ export default async function AuctionPage({ params }: Props) {
     // Outbid is called out by the red "Outbid" badge on the photo + the red card
     // border; the bar stays a plain "Bid now" so it reads as the action.
     const bidLabel = isUpcoming ? "Preview" : isItemUnsold ? "Ended" : isItemSold ? "Sold" : isClosed ? "Closed" : winning ? "You're winning" : "Bid now";
-    const bidClass = `block w-full text-center rounded-xl py-2 text-xs font-bold transition-colors ${
+    const bidClass = `block w-full text-center rounded-xl py-2 text-sm font-bold transition-colors ${
       isUpcoming
         ? "bg-[#efe3d0] text-[#6c4d39] border border-[#6c4d39]/20"
         : isClosed || isItemClosed
@@ -351,7 +351,7 @@ export default async function AuctionPage({ params }: Props) {
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-2">
               <span
-                className={`inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.14em] px-2.5 py-1 rounded-full border ${
+                className={`inline-flex items-center gap-1.5 text-[12px] font-black uppercase tracking-[0.14em] px-2.5 py-1 rounded-full border ${
                   isClosed
                     ? "bg-[#f4efe4] text-[#8a7559] border-[#e3d6bf]"
                     : isClosing
@@ -396,8 +396,10 @@ export default async function AuctionPage({ params }: Props) {
                 </>
               )}
               <span className="text-[#cdbda3]">&middot;</span>
+              <span>Pick up in Corunna or Gladwin</span>
+              <span className="text-[#cdbda3]">&middot;</span>
               <span className="inline-flex items-center gap-1.5">
-                <IcoClock className="w-3.5 h-3.5 text-[#8a7559]" />
+                <IcoClock className="w-4 h-4 text-[#8a7559]" />
                 {isUpcoming ? (
                   <>Opens <LocalDate iso={auction.startAt.toISOString()} /></>
                 ) : (
@@ -414,10 +416,6 @@ export default async function AuctionPage({ params }: Props) {
 
       {/* Item grid */}
       <section className="px-3 sm:px-8 py-4 sm:py-8 max-w-6xl mx-auto">
-        {/* Shipping explainer, only when this auction has lots that ship. */}
-        {visibleItems.length > 0 && viewItems.some((v) => v.shipSize) && (
-          <div className="mb-3 sm:mb-4"><ShippingIntro count={viewItems.filter((v) => v.shipSize).length} /></div>
-        )}
         {visibleItems.length === 0 ? (
           <div className="text-center py-16 px-6 rounded-2xl border border-dashed border-[#cdbda3] bg-[#fbf4e6]/70">
             <div className="nb-float flex justify-center mb-4">
@@ -445,13 +443,18 @@ export default async function AuctionPage({ params }: Props) {
         ) : (
           <AuctionItemsView items={viewItems} isStaff={isStaff} />
         )}
+        {/* Shipping comes AFTER the lots, as an option: leading with it made it
+            look like everything had to ship. Pickup is the default. */}
+        {visibleItems.length > 0 && viewItems.some((v) => v.shipSize) && (
+          <div className="mt-6 sm:mt-8"><ShippingIntro count={viewItems.filter((v) => v.shipSize).length} /></div>
+        )}
       </section>
 
       {/* Cycle to the next live auction — keep browsing without backing out. */}
       {nextAuction && (
         <div className="px-3 sm:px-8 pb-14 max-w-6xl mx-auto flex flex-col items-center gap-4">
           <BranchDivider className="w-56 h-6 opacity-80" />
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#8a7559]">Keep the streak going</p>
+          <p className="text-[13px] font-black uppercase tracking-[0.18em] text-[#8a7559]">Keep the streak going</p>
           <NextAuctionLink href={`/${orgSlug}/${nextAuction.slug}`} title={nextAuction.title} position="bottom" />
         </div>
       )}

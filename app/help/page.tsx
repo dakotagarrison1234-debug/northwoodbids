@@ -46,7 +46,7 @@ function Topic({ id, Icon, title, blurb, children }: { id: string; Icon: Icon; t
         </span>
         <div className="min-w-0">
           <h2 className="font-display text-lg font-bold text-[#241a12] leading-tight">{title}</h2>
-          <p className="text-xs text-[#8a7559] mt-0.5">{blurb}</p>
+          <p className="text-sm text-[#8a7559] mt-0.5">{blurb}</p>
         </div>
       </div>
       <div className="px-5">{children}</div>
@@ -81,7 +81,7 @@ export default function HelpPage() {
       <div className="relative overflow-hidden border-b border-[#e3d6bf]" style={{ background: "linear-gradient(160deg,#241a12 0%,#3a2a1b 60%,#4a3524 100%)" }}>
         <PineRidge className="absolute inset-x-0 bottom-0 w-full h-28 opacity-25 pointer-events-none" />
         <div className="relative max-w-4xl mx-auto px-6 sm:px-8 pt-12 pb-24 sm:pt-16 sm:pb-28 text-[#f6ecda]">
-          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#f0a35a] mb-2">Help &amp; FAQ</p>
+          <p className="text-[13px] font-black uppercase tracking-[0.22em] text-[#f0a35a] mb-2">Help &amp; FAQ</p>
           <h1 className="font-display text-3xl sm:text-5xl font-black leading-[1.05] max-w-2xl">
             Straight answers, no fine-print runaround.
           </h1>
@@ -93,7 +93,7 @@ export default function HelpPage() {
               <a
                 key={t.id}
                 href={`#${t.id}`}
-                className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/20 border border-white/15 text-[#f6ecda] text-xs font-bold px-3 py-1.5 rounded-full transition-colors"
+                className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/20 border border-white/15 text-[#f6ecda] text-sm font-bold px-3 py-1.5 rounded-full transition-colors"
               >
                 <t.Icon className="w-3.5 h-3.5 text-[#f0a35a]" /> {t.label}
               </a>
@@ -113,7 +113,7 @@ export default function HelpPage() {
             <div key={c.k} className="bg-white border border-[#e3d6bf] rounded-2xl p-4 shadow-[0_14px_30px_-20px_rgba(36,26,18,0.45)]">
               <c.Icon className="w-5 h-5 text-[#c47b3e] mb-2" />
               <div className="font-display font-bold text-[15px] leading-tight">{c.k}</div>
-              <p className="text-xs text-[#6f5b46] mt-1 leading-relaxed">{c.v}</p>
+              <p className="text-sm text-[#6f5b46] mt-1 leading-relaxed">{c.v}</p>
             </div>
           ))}
         </div>

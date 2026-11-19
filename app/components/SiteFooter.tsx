@@ -91,7 +91,7 @@ export default function SiteFooter() {
                     <span className="text-[#f0a35a]"><Pin /></span>
                     {p.town}
                   </div>
-                  <p className="text-[11px] text-[#b3a085] mt-0.5 pl-5">{p.note}, MI</p>
+                  <p className="text-[13px] text-[#b3a085] mt-0.5 pl-5">{p.note}, MI</p>
                 </li>
               ))}
             </ul>
@@ -100,7 +100,7 @@ export default function SiteFooter() {
           {/* Link columns */}
           {COLUMNS.map((c) => (
             <div key={c.heading} className="md:col-span-2 md:col-start-auto">
-              <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#a08b6e] mb-3">{c.heading}</div>
+              <div className="text-[13px] font-bold uppercase tracking-[0.14em] text-[#a08b6e] mb-3">{c.heading}</div>
               <ul className="space-y-2">
                 {c.links.map((l) => (
                   <li key={l.href}>
@@ -117,7 +117,7 @@ export default function SiteFooter() {
           ))}
         </div>
 
-        <div className="mt-9 pt-5 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[#a08b6e]">
+        <div className="mt-9 pt-5 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm text-[#a08b6e]">
           <span>&copy; {new Date().getFullYear()} Northwood Bids. Mid-Michigan, born and raised.</span>
           <span className="text-[#8a7559]">Real bids, real pickup, honest shipping.</span>
         </div>

@@ -48,10 +48,10 @@ export default function GiveawayCard() {
     <section className="max-w-6xl mx-auto px-5 sm:px-8 mt-4 mb-1">
       <ScrollReveal>
         <div className="flex items-center justify-between gap-3 mb-2">
-          <div className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-[#a85f28]">
+          <div className="inline-flex items-center gap-1.5 text-[13px] font-black uppercase tracking-[0.18em] text-[#a85f28]">
             <IcoGift className="w-3.5 h-3.5" /> Giveaways
           </div>
-          <Link href="/giveaways" className="nb-focus text-xs font-semibold text-[#6c4d39] hover:text-[#563e2c] underline underline-offset-2 whitespace-nowrap">
+          <Link href="/giveaways" className="nb-focus text-sm font-semibold text-[#6c4d39] hover:text-[#563e2c] underline underline-offset-2 whitespace-nowrap">
             All giveaways
           </Link>
         </div>
@@ -85,13 +85,13 @@ function HomeTile({
         <div className="flex items-center gap-2 flex-wrap">
           <PhaseChip g={g} />
           {g.totalValue > 0 && (
-            <span className="text-[10px] font-black uppercase tracking-wide text-[#a85f28] tabular-nums">{money(g.totalValue)} value</span>
+            <span className="text-[12px] font-black uppercase tracking-wide text-[#a85f28] tabular-nums">{money(g.totalValue)} value</span>
           )}
         </div>
         <h3 className={`font-display font-black text-[#241a12] leading-tight truncate ${roomy ? "text-lg sm:text-xl" : "text-base sm:text-lg"}`}>
           {g.title}
         </h3>
-        <p className="text-xs text-[#6f5b46] truncate">
+        <p className="text-sm text-[#6f5b46] truncate">
           {prizeLine(g)}
           {g.prizes.length > 1 && g.winners > 0 && <span className="text-[#8a7559]"> · {g.winners} winners</span>}
         </p>
@@ -101,7 +101,7 @@ function HomeTile({
             <ShareGiveaway g={g} />
           </span>
           {dimmed ? (
-            <Link href="/giveaways" className="text-xs font-semibold text-[#6c4d39] hover:text-[#563e2c] underline underline-offset-2">
+            <Link href="/giveaways" className="text-sm font-semibold text-[#6c4d39] hover:text-[#563e2c] underline underline-offset-2">
               Details
             </Link>
           ) : (

@@ -137,7 +137,7 @@ function PulseDot() {
   );
 }
 
-const CHIP = "inline-flex items-center gap-1.5 rounded-full text-[11px] font-black uppercase tracking-wide px-2.5 py-1 whitespace-nowrap tabular-nums";
+const CHIP = "inline-flex items-center gap-1.5 rounded-full text-[13px] font-black uppercase tracking-wide px-2.5 py-1 whitespace-nowrap tabular-nums";
 
 /** Status chip that reads differently per phase. Live and scheduled tick every second. */
 export function PhaseChip({ g }: { g: Giveaway }) {
@@ -183,7 +183,7 @@ export function PrizeArt({ g, className = "" }: { g: Giveaway; className?: strin
         </div>
       )}
       {extra > 0 && (
-        <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-md bg-[#241a12]/80 text-white text-[10px] font-black px-1.5 py-0.5 tabular-nums">
+        <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-md bg-[#241a12]/80 text-white text-[12px] font-black px-1.5 py-0.5 tabular-nums">
           <IcoGift className="w-3 h-3" /> +{extra} more
         </span>
       )}
@@ -203,7 +203,7 @@ export function TicketLine({ g, signedIn, className = "" }: { g: Giveaway; signe
           ? "You're in"
           : null;
   return (
-    <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#6f5b46] ${className}`}>
+    <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[#6f5b46] ${className}`}>
       <span className="inline-flex items-center gap-1.5 tabular-nums">
         <IcoTicket className="w-3.5 h-3.5 text-[#a85f28]" />
         {num(g.totalTickets)} {plural(g.totalTickets, "ticket")} in the drum
@@ -255,18 +255,18 @@ export function EntryBlock({
   if (g.phase !== "live") return null;
 
   if (compact) {
-    const sm = "inline-flex items-center justify-center font-bold text-xs px-3.5 py-2 rounded-lg transition-colors disabled:opacity-50";
+    const sm = "inline-flex items-center justify-center font-bold text-sm px-3.5 py-2 rounded-lg transition-colors disabled:opacity-50";
     if (!signedIn) return <Link href="/sign-up" className={`${sm} bg-[#6c4d39] hover:bg-[#563e2c] text-white`}>Sign up to enter</Link>;
     if (g.me.eligible === false && !g.me.won) {
       const r = g.me.reason;
       if (r === "no_card") return <Link href="/account" className={`${sm} bg-[#6c4d39] hover:bg-[#563e2c] text-white`}>Add a card to enter</Link>;
       if (r === "incomplete") return <Link href="/register" className={`${sm} bg-[#6c4d39] hover:bg-[#563e2c] text-white`}>Finish setup to enter</Link>;
-      return <span className="text-xs text-[#8a7559]">Not eligible</span>;
+      return <span className="text-sm text-[#8a7559]">Not eligible</span>;
     }
-    if (g.me.won) return <span className="inline-flex items-center gap-1 text-xs font-bold text-[#2f5d3a]"><IcoCheck className="w-3.5 h-3.5" /> You won here</span>;
-    if (g.entryMode === "AUTO") return <span className="inline-flex items-center gap-1 text-xs font-bold text-[#2f5d3a]"><IcoCheck className="w-3.5 h-3.5" /> You&apos;re in</span>;
+    if (g.me.won) return <span className="inline-flex items-center gap-1 text-sm font-bold text-[#2f5d3a]"><IcoCheck className="w-3.5 h-3.5" /> You won here</span>;
+    if (g.entryMode === "AUTO") return <span className="inline-flex items-center gap-1 text-sm font-bold text-[#2f5d3a]"><IcoCheck className="w-3.5 h-3.5" /> You&apos;re in</span>;
     if (g.entryMode === "BID") return <Link href="/auctions" className={`${sm} bg-[#4a7c59] hover:bg-[#3d6749] text-white`}>Bid = ticket · Go bid</Link>;
-    if (g.me.entered) return <span className="inline-flex items-center gap-1 text-xs font-bold text-[#2f5d3a]"><IcoCheck className="w-3.5 h-3.5" /> You&apos;re in</span>;
+    if (g.me.entered) return <span className="inline-flex items-center gap-1 text-sm font-bold text-[#2f5d3a]"><IcoCheck className="w-3.5 h-3.5" /> You&apos;re in</span>;
     // CLICK: with a question, hand off to the portal (the strip is too small for a form).
     if (g.requirement !== "NONE") return <Link href="/giveaways" className={`${sm} bg-[#4a7c59] hover:bg-[#3d6749] text-white`}>Answer to enter</Link>;
     const tap = async () => {
@@ -283,7 +283,7 @@ export function EntryBlock({
         <button type="button" onClick={tap} disabled={busy} className={`${sm} bg-[#4a7c59] hover:bg-[#3d6749] text-white`}>
           <IcoTicket className="w-3.5 h-3.5 mr-1" /> {busy ? "One sec" : "Take a ticket"}
         </button>
-        {err && <span className="text-[11px] text-red-600 font-semibold">{err}</span>}
+        {err && <span className="text-[13px] text-red-600 font-semibold">{err}</span>}
       </span>
     );
   }
@@ -346,7 +346,7 @@ export function EntryBlock({
       <div className={`flex flex-col sm:flex-row sm:items-center gap-3 ${className}`}>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-[#241a12] leading-snug">Every bid you place is a ticket</p>
-          {notes.length > 0 && <p className="text-xs text-[#8a7559] mt-0.5">{notes.join(" · ")}</p>}
+          {notes.length > 0 && <p className="text-sm text-[#8a7559] mt-0.5">{notes.join(" · ")}</p>}
         </div>
         <Link href="/auctions" className={`${BTN_MOSS} shrink-0`}>Go bid</Link>
       </div>
@@ -393,7 +393,7 @@ export function EntryBlock({
     <div className={className}>
       {needsAnswer ? (
         <label className="block">
-          <span className="block text-xs font-bold text-[#6f5b46] mb-1.5">{g.requirementPrompt || "Answer to enter"}</span>
+          <span className="block text-sm font-bold text-[#6f5b46] mb-1.5">{g.requirementPrompt || "Answer to enter"}</span>
           <div className="flex gap-2">
             <input
               value={answer}
@@ -414,9 +414,9 @@ export function EntryBlock({
           <IcoTicket className="w-4 h-4 mr-1.5" /> {busy ? "One sec" : "Take a ticket"}
         </button>
       )}
-      {err && <p className="text-xs text-red-600 font-semibold mt-1.5">{err}</p>}
+      {err && <p className="text-sm text-red-600 font-semibold mt-1.5">{err}</p>}
       {g.maxTicketsPerUser != null && (
-        <p className="text-[11px] text-[#8a7559] mt-1.5">Max {g.maxTicketsPerUser} {plural(g.maxTicketsPerUser, "ticket")} per person.</p>
+        <p className="text-[13px] text-[#8a7559] mt-1.5">Max {g.maxTicketsPerUser} {plural(g.maxTicketsPerUser, "ticket")} per person.</p>
       )}
     </div>
   );
@@ -457,7 +457,7 @@ export function ShareGiveaway({ g, className = "" }: { g: Giveaway; className?: 
     try { await navigator.clipboard.writeText(url); setNote("Link copied"); setTimeout(() => setNote(null), 1800); } catch { /* ignore */ }
   };
   return (
-    <button type="button" onClick={share} className={`inline-flex items-center gap-1 text-xs font-semibold text-[#6c4d39] hover:text-[#563e2c] ${className}`} aria-label="Share this giveaway">
+    <button type="button" onClick={share} className={`inline-flex items-center gap-1 text-sm font-semibold text-[#6c4d39] hover:text-[#563e2c] ${className}`} aria-label="Share this giveaway">
       <IcoShare className="w-3.5 h-3.5" /> {note ?? "Share"}
     </button>
   );

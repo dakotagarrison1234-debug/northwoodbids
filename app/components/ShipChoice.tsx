@@ -138,7 +138,7 @@ export default function ShipChoice({
     if (quote.mode !== "SHIP") return null;
     return (
       <div className={className}>
-        <p className={`${compact ? "text-[12px]" : "text-[13px]"} text-[#6f5b46]`}>Pickup only — too big or heavy to ship</p>
+        <p className={`${compact ? "text-sm" : "text-[13px]"} text-[#6f5b46]`}>Pickup only — too big or heavy to ship</p>
       </div>
     );
   }
@@ -177,7 +177,7 @@ export default function ShipChoice({
           )}
         </div>
       )}
-      {error && <p className="text-[12px] text-red-700 mt-1.5">{error}</p>}
+      {error && <p className="text-sm text-red-700 mt-1.5">{error}</p>}
       {showAddress && (
         <ShippingAddressModal
           initial={null}

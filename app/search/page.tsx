@@ -13,7 +13,7 @@ function GroupHeader({ label, count }: { label: string; count: number }) {
   return (
     <div className="flex items-center gap-2.5 mb-3.5">
       <h2 className="font-display text-lg font-black tracking-tight text-[#241a12]">{label}</h2>
-      <span className="inline-flex items-center rounded-full bg-[#6c4d39] text-white text-[11px] font-black px-2 py-0.5 tabular-nums">
+      <span className="inline-flex items-center rounded-full bg-[#6c4d39] text-white text-[13px] font-black px-2 py-0.5 tabular-nums">
         {count}
       </span>
       <span aria-hidden className="flex-1 h-px bg-[#e3d6bf]" />
@@ -41,7 +41,7 @@ export default async function SearchPage({ searchParams }: Props) {
           </h1>
           <p className="text-[#6f5b46] text-sm mb-7">Search live lots by name, brand or category.</p>
           <SearchBar size="large" />
-          <p className="text-[#8a7559] text-xs mt-4">Type at least two characters.</p>
+          <p className="text-[#8a7559] text-sm mt-4">Type at least two characters.</p>
           <BranchDivider className="w-48 h-5 mx-auto mt-12 opacity-80" />
         </div>
       </main>
@@ -102,7 +102,7 @@ export default async function SearchPage({ searchParams }: Props) {
 
         {/* Results headline */}
         <div className="mb-8">
-          <p className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-[#6c4d39]">
+          <p className="inline-flex items-center gap-1.5 text-[13px] font-black uppercase tracking-[0.18em] text-[#6c4d39]">
             <PineMark className="w-3.5 h-3.5" /> Search results
           </p>
           <h1 className="font-display text-2xl sm:text-3xl font-black tracking-tight leading-tight mt-1 break-words">
@@ -145,7 +145,7 @@ export default async function SearchPage({ searchParams }: Props) {
                     <div className="font-semibold text-sm leading-snug line-clamp-2 group-hover:text-[#6c4d39] transition-colors">
                       {item.title}
                     </div>
-                    <div className="mt-1 flex items-center gap-2 text-[11px] text-[#8a7559]">
+                    <div className="mt-1 flex items-center gap-2 text-[13px] text-[#8a7559]">
                       <span className="truncate">{item.auction?.title ?? item.organization.name}</span>
                       {item.auction &&
                       item.status === "ACTIVE" &&
@@ -163,7 +163,7 @@ export default async function SearchPage({ searchParams }: Props) {
                     </div>
                   </div>
                   <div className="text-right shrink-0 leading-none">
-                    <div className="text-[9px] font-bold uppercase tracking-wider text-[#8a7559]">
+                    <div className="text-[12px] font-bold uppercase tracking-wider text-[#8a7559]">
                       {Number(item.currentBid) > 0 ? "Current bid" : "Starts at"}
                     </div>
                     <div className="font-display font-black text-lg text-[#6c4d39] tabular-nums mt-0.5">
@@ -192,11 +192,11 @@ export default async function SearchPage({ searchParams }: Props) {
                       <div className="font-display font-black text-base tracking-tight truncate group-hover:text-[#6c4d39] transition-colors">
                         {auction.title}
                       </div>
-                      <div className="text-xs text-[#8a7559] mt-0.5 tabular-nums">
+                      <div className="text-sm text-[#8a7559] mt-0.5 tabular-nums">
                         {auction.organization.name} &middot; {auction.items.length} lot{auction.items.length !== 1 ? "s" : ""}
                       </div>
                     </div>
-                    <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.14em] bg-[#e4f2e4] text-[#2f5d3a] border border-[#4a7c59]/30 px-2.5 py-1 rounded-full shrink-0">
+                    <span className="inline-flex items-center gap-1.5 text-[12px] font-black uppercase tracking-[0.14em] bg-[#e4f2e4] text-[#2f5d3a] border border-[#4a7c59]/30 px-2.5 py-1 rounded-full shrink-0">
                       <span className="relative flex h-1.5 w-1.5">
                         <span className="absolute inline-flex h-full w-full rounded-full bg-[#4a7c59] opacity-70 animate-ping" />
                         <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#4a7c59]" />
@@ -227,7 +227,7 @@ export default async function SearchPage({ searchParams }: Props) {
                   <div className="font-semibold text-sm truncate group-hover:text-[#6c4d39] transition-colors">
                     {org.name}
                   </div>
-                  <div className="text-xs text-[#8a7559] mt-1 tabular-nums">
+                  <div className="text-sm text-[#8a7559] mt-1 tabular-nums">
                     {org.auctions.length > 0
                       ? <span className="text-[#2f5d3a] font-bold">{org.auctions.length} live now</span>
                       : `${org._count.auctions} auction${org._count.auctions !== 1 ? "s" : ""}`
