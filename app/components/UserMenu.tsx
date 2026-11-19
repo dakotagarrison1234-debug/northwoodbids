@@ -6,7 +6,6 @@ import { useUser, useClerk } from "@clerk/nextjs";
 import { useRouter, usePathname } from "next/navigation";
 import { Avatar, hasAvatar } from "./Avatars";
 import { IcoStar, IcoGavel, IcoMagnifier, IcoTruck, IcoGift, IcoTrophy, IcoTicket, IcoBox } from "./BidIcons";
-import { PineMark } from "./Illustrations";
 import { MenuHalloween } from "./Halloween";
 
 interface MeData {
@@ -48,7 +47,7 @@ function IcoClose() {
 // ── Section label ──────────────────────────────────────────────────────────────
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="px-4 pt-4 pb-1 text-[12px] font-bold uppercase tracking-[0.12em] text-[#b3a085]">
+    <div className="px-4 pt-5 pb-1.5 text-[13px] font-black uppercase tracking-[0.14em] text-[#8a7559]">
       {children}
     </div>
   );
@@ -77,21 +76,21 @@ function NavLink({
       href={href}
       onClick={onClick}
       aria-current={active ? "page" : undefined}
-      className="nb-drawer-link nb-focus group flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-[#efe3d0] no-underline"
+      className="nb-drawer-link nb-focus group flex items-center gap-3.5 px-3 min-h-[54px] rounded-2xl hover:bg-[#efe3d0] no-underline"
     >
       <span
-        className={`w-5 flex items-center justify-center shrink-0 transition-colors ${
-          accent || active ? "text-[#6c4d39]" : "text-[#a08b6e] group-hover:text-[#6c4d39]"
+        className={`w-10 h-10 rounded-xl grid place-items-center shrink-0 transition-colors [&>svg]:w-[22px] [&>svg]:h-[22px] ${
+          active ? "bg-[#6c4d39] text-[#f0a35a]" : accent ? "bg-[#efe3d0] text-[#6c4d39]" : "bg-white text-[#8a6a4c] group-hover:text-[#6c4d39]"
         }`}
       >
         {iconEl}
       </span>
       <span className="flex-1 min-w-0">
-        <span className={`block text-[14px] leading-tight truncate ${active ? "text-[#241a12] font-semibold" : "text-[#2c2317] font-medium group-hover:text-[#241a12]"}`}>
+        <span className={`block text-[17px] leading-tight truncate ${active ? "text-[#241a12] font-black" : "text-[#2c2317] font-bold group-hover:text-[#241a12]"}`}>
           {label}
         </span>
         {sublabel && (
-          <span className="block text-[11.5px] text-[#a08b6e] truncate mt-0.5">{sublabel}</span>
+          <span className="block text-[14px] text-[#8a7559] truncate mt-0.5">{sublabel}</span>
         )}
       </span>
     </Link>
@@ -153,13 +152,13 @@ export default function UserMenu() {
       <div className="flex items-center gap-1.5 sm:gap-2">
         <Link
           href="/sign-in"
-          className="nb-focus text-[#6f5b46] hover:text-[#241a12] text-sm font-medium px-3 py-2 rounded-xl hover:bg-[#efe3d0] transition-colors whitespace-nowrap"
+          className="nb-focus hidden min-[360px]:inline-flex items-center h-11 px-3 sm:px-4 rounded-full text-[#4a3a2b] hover:text-[#241a12] hover:bg-[#efe3d0] text-[15px] sm:text-[16px] font-bold transition-colors whitespace-nowrap"
         >
           Sign in
         </Link>
         <Link
           href="/sign-up"
-          className="nb-focus bg-[#6c4d39] hover:bg-[#563e2c] active:scale-[0.98] text-white text-sm font-semibold px-3.5 py-2 rounded-xl whitespace-nowrap transition-[background-color,transform] shadow-[0_1px_0_rgba(0,0,0,0.12)]"
+          className="nb-focus inline-flex items-center h-11 px-4 sm:px-5 rounded-full bg-[#f0a35a] hover:bg-[#f4b273] active:scale-[0.98] text-[#241a12] text-[15px] sm:text-[16px] font-black whitespace-nowrap transition-[background-color,transform] shadow-[0_6px_16px_-8px_rgba(196,123,62,0.9)]"
         >
           Join free
         </Link>
@@ -190,13 +189,13 @@ export default function UserMenu() {
         role="dialog"
         aria-modal="true"
         aria-label="Account menu"
-        className="nb-drawer-in fixed top-0 right-0 bottom-0 z-[9999] w-[300px] max-w-[88vw] flex flex-col bg-[#fbf4e6] border-l border-[#e3d6bf] shadow-[-12px_0_40px_rgba(36,26,18,0.22)]"
+        className="nb-drawer-in fixed top-0 right-0 bottom-0 z-[9999] w-[340px] max-w-[90vw] flex flex-col bg-[#fbf4e6] border-l border-[#e3d6bf] shadow-[-12px_0_40px_rgba(36,26,18,0.22)]"
       >
         {/* User header */}
         <div className="pt-safe shrink-0 border-b border-[#e3d6bf] bg-white/60">
           <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-4">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-full overflow-hidden bg-[#6c4d39]/10 border border-[#6c4d39]/20 flex items-center justify-center text-[#6c4d39] font-bold text-base shrink-0">
+              <div className="w-14 h-14 rounded-full overflow-hidden bg-[#6c4d39]/10 border-2 border-[#6c4d39]/20 flex items-center justify-center text-[#6c4d39] font-bold text-lg shrink-0">
                 {hasAvatar(me?.avatarKey) ? (
                   <Avatar avatarKey={me?.avatarKey} className="w-full h-full" />
                 ) : user?.imageUrl ? (
@@ -205,14 +204,14 @@ export default function UserMenu() {
                 ) : initials}
               </div>
               <div className="min-w-0">
-                <p className="font-display text-[#241a12] font-bold text-[15px] leading-tight truncate">{displayName}</p>
+                <p className="font-display text-[#241a12] font-black text-[19px] leading-tight truncate">{displayName}</p>
                 <p className="text-[#8a7559] text-sm truncate mt-0.5">{email}</p>
               </div>
             </div>
             <button
               onClick={close}
               aria-label="Close menu"
-              className="nb-focus text-[#a08b6e] hover:text-[#241a12] hover:bg-[#efe3d0] p-2 -mr-2 -mt-1 rounded-xl transition-colors shrink-0"
+              className="nb-focus w-11 h-11 grid place-items-center -mr-1.5 -mt-1 rounded-full bg-white text-[#6f5b46] hover:text-[#241a12] hover:bg-[#efe3d0] transition-colors shrink-0 [&>svg]:w-5 [&>svg]:h-5"
             >
               <IcoClose />
             </button>
@@ -224,21 +223,21 @@ export default function UserMenu() {
         {/* Navigation links */}
         <nav className="flex-1 px-2 pb-2 overflow-y-auto min-h-0">
           <SectionLabel>Bid</SectionLabel>
-          <NavLink href="/auctions" iconEl={<IcoGavel className="w-[18px] h-[18px]" />} label="Auctions" sublabel="Live now and on deck" onClick={close} active={on("/auctions")} />
-          <NavLink href="/search" iconEl={<IcoMagnifier className="w-[18px] h-[18px]" />} label="Search lots" onClick={close} active={on("/search")} />
+          <NavLink href="/auctions" iconEl={<IcoGavel className="w-[18px] h-[18px]" />} label="Auctions" onClick={close} active={on("/auctions")} />
+          <NavLink href="/search" iconEl={<IcoMagnifier className="w-[18px] h-[18px]" />} label="Search" onClick={close} active={on("/search")} />
 
           <SectionLabel>Yours</SectionLabel>
-          <NavLink href="/dashboard" iconEl={<IcoTrophy className="w-[18px] h-[18px]" />} label="My Bids" sublabel="Standing, wins and invoices" onClick={close} active={on("/dashboard", "/my-bids", "/invoice")} accent />
-          <NavLink href="/watchlist" iconEl={<IcoStar className="w-[18px] h-[18px]" filled />} label="Watchlist" sublabel="Lots you have your eye on" onClick={close} active={on("/watchlist")} />
-          <NavLink href="/pickup" iconEl={<IcoTruck className="w-[18px] h-[18px]" />} label="Pickup" sublabel="Corunna or Gladwin, your call" onClick={close} active={on("/pickup")} />
-          <NavLink href="/shipping" iconEl={<IcoBox className="w-[18px] h-[18px]" />} label="Shipping" sublabel="Boxes, room left, tracking" onClick={close} active={on("/shipping")} />
-          <NavLink href="/refer" iconEl={<IcoGift className="w-[18px] h-[18px]" />} label="Bid Bucks" sublabel="Invite a friend, earn $5 tickets" onClick={close} active={on("/refer")} />
-          <NavLink href="/giveaways" iconEl={<IcoTicket className="w-[18px] h-[18px]" />} label="Giveaways" sublabel="Free prizes, every bid's a ticket" onClick={close} active={on("/giveaways")} />
+          <NavLink href="/dashboard" iconEl={<IcoTrophy className="w-[18px] h-[18px]" />} label="My Bids" onClick={close} active={on("/dashboard", "/my-bids", "/invoice")} accent />
+          <NavLink href="/watchlist" iconEl={<IcoStar className="w-[18px] h-[18px]" filled />} label="Watchlist" onClick={close} active={on("/watchlist")} />
+          <NavLink href="/pickup" iconEl={<IcoTruck className="w-[18px] h-[18px]" />} label="Pickup" onClick={close} active={on("/pickup")} />
+          <NavLink href="/shipping" iconEl={<IcoBox className="w-[18px] h-[18px]" />} label="Shipping" onClick={close} active={on("/shipping")} />
+          <NavLink href="/refer" iconEl={<IcoGift className="w-[18px] h-[18px]" />} label="Bid Bucks" onClick={close} active={on("/refer")} />
+          <NavLink href="/giveaways" iconEl={<IcoTicket className="w-[18px] h-[18px]" />} label="Giveaways" onClick={close} active={on("/giveaways")} />
 
           <SectionLabel>Account</SectionLabel>
-          <NavLink href="/account" iconEl={<IcoUser />} label="Profile" sublabel="Name, phone, payment cards" onClick={close} active={on("/account")} />
-          <NavLink href="/help" iconEl={<IcoHelp />} label="Help" sublabel="How bidding, pickup and shipping work" onClick={close} active={on("/help")} />
-          <NavLink href="/play" iconEl={<IcoTicket className="w-[18px] h-[18px]" />} label="Northwood Arcade" sublabel="Seven games, one scoreboard" onClick={close} active={on("/play")} />
+          <NavLink href="/account" iconEl={<IcoUser />} label="My account" onClick={close} active={on("/account")} />
+          <NavLink href="/help" iconEl={<IcoHelp />} label="Help" onClick={close} active={on("/help")} />
+          <NavLink href="/play" iconEl={<IcoTicket className="w-[18px] h-[18px]" />} label="Northwood Arcade" onClick={close} active={on("/play")} />
 
           {(me?.orgId || me?.isSuperAdmin) && (
             <>
@@ -263,15 +262,12 @@ export default function UserMenu() {
               await signOut();
               router.push("/");
             }}
-            className="nb-focus w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[#6f5b46] hover:text-[#241a12] hover:bg-[#efe3d0] text-[14px] font-medium transition-colors"
+            className="nb-focus w-full flex items-center gap-3.5 px-3 min-h-[54px] rounded-2xl text-[#4a3a2b] hover:text-[#241a12] hover:bg-[#efe3d0] text-[17px] font-bold transition-colors"
           >
-            <span className="w-5 flex items-center justify-center shrink-0 text-[#a08b6e]"><IcoSignOut /></span>
+            <span className="w-10 h-10 rounded-xl grid place-items-center bg-white text-[#8a6a4c] shrink-0 [&>svg]:w-[22px] [&>svg]:h-[22px]"><IcoSignOut /></span>
             <span>Sign out</span>
           </button>
-          <div className="flex items-center gap-1.5 px-4 pt-3 text-[13px] text-[#b3a085]">
-            <PineMark className="w-3.5 h-3.5" />
-            <span>Northwood Bids, mid-Michigan</span>
-          </div>
+
         </div>
       </div>
     </>
@@ -281,17 +277,26 @@ export default function UserMenu() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="nb-focus w-9 h-9 rounded-full overflow-hidden bg-[#6c4d39]/10 border border-[#6c4d39]/25 flex items-center justify-center text-[#6c4d39] font-semibold text-sm hover:bg-[#6c4d39]/20 hover:border-[#6c4d39]/45 active:scale-95 transition-[background-color,border-color,transform] shrink-0"
-        aria-label="Open account menu"
+        className="nb-focus inline-flex items-center gap-2 h-11 pl-1 pr-3.5 sm:pr-4 rounded-full bg-white border-2 border-[#e3d6bf] hover:border-[#c9b391] active:scale-[0.98] transition-[border-color,transform] shrink-0"
+        aria-label="Open menu"
         aria-haspopup="dialog"
         aria-expanded={open}
       >
-        {hasAvatar(me?.avatarKey) ? (
-          <Avatar avatarKey={me?.avatarKey} className="w-full h-full" />
-        ) : user?.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={user.imageUrl} alt="" className="w-full h-full object-cover" />
-        ) : initials}
+        <span className="w-8 h-8 rounded-full overflow-hidden bg-[#6c4d39]/10 flex items-center justify-center text-[#6c4d39] font-bold text-sm shrink-0">
+          {hasAvatar(me?.avatarKey) ? (
+            <Avatar avatarKey={me?.avatarKey} className="w-full h-full" />
+          ) : user?.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={user.imageUrl} alt="" className="w-full h-full object-cover" />
+          ) : initials}
+        </span>
+        <span className="text-[15px] sm:text-[16px] font-bold text-[#241a12] max-w-[110px] truncate">
+          <span className="md:hidden">Menu</span>
+          <span className="hidden md:inline">{user?.firstName || "Menu"}</span>
+        </span>
+        <svg className="w-4 h-4 text-[#8a6a4c] shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M3 6l5 5 5-5" />
+        </svg>
       </button>
 
       {open && mounted && createPortal(drawer, document.body)}
