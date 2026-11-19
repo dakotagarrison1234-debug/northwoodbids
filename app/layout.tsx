@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import Script from "next/script";
 import { ClerkProvider } from "@clerk/nextjs";
 import HomeHeader from "@/app/components/HomeHeader";
 import { HalloweenRoot } from "@/app/components/Halloween";
@@ -142,6 +143,15 @@ export default function RootLayout({
           <link rel="dns-prefetch" href="https://pub-829fa846d09e430db535c94618889062.r2.dev" />
         </head>
         <body className="min-h-full flex flex-col">
+          {/* Google tag (Google Ads / Analytics, G-1V4Q1BPW6B). Loads after the page
+              is interactive so it never slows the first paint. */}
+          <Script src="https://www.googletagmanager.com/gtag/js?id=G-1V4Q1BPW6B" strategy="afterInteractive" />
+          <Script id="google-tag" strategy="afterInteractive">
+            {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-1V4Q1BPW6B');`}
+          </Script>
           {/* Site-wide brand + site-search structured data (invisible). */}
           <JsonLd data={siteGraphLd()} />
           <HalloweenRoot />
