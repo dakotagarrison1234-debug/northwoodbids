@@ -50,7 +50,7 @@ export default function SignUpHeader({ initialPromo }: { initialPromo: PromoHint
         <h1 className="font-display text-[1.75rem] leading-tight font-black">Sign up and get ${promo.amount} to bid. Completely free.</h1>
         <p className="text-white/85 text-sm mt-2">It lands in your account the moment you finish. One per person.</p>
       </div>
-      <div className="px-5 pt-4"><OpenSign /></div>
+      <div className="px-5 pt-6"><OpenSign /></div>
       </>
     );
   }
@@ -62,7 +62,7 @@ export default function SignUpHeader({ initialPromo }: { initialPromo: PromoHint
         <h1 className="font-display text-[1.7rem] leading-tight font-black">Brand-name deals from $2</h1>
         <p className="text-white/85 text-sm mt-1">Free to join. You only pay if you win.</p>
       </div>
-      <div className="px-5 pt-4"><OpenSign /></div>
+      <div className="px-5 pt-6"><OpenSign /></div>
       <div className="px-5 pt-4 flex flex-wrap justify-center gap-1.5">
         {CHIPS.map((c) => (
           <span key={c.label} className="inline-flex items-center gap-2 bg-[#faf5ea] border border-[#e3d6bf] text-[#4a3a2b] text-[15px] font-bold px-3.5 py-2 rounded-full">
