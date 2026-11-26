@@ -104,7 +104,7 @@ export default function ReferPage() {
     if (!data) return;
     const shareData = {
       title: "Northwood Bids",
-      text: "Brand-name overstock from $2 at Northwood Bids, with local pickup in Corunna and Gladwin. Join free with my link:",
+      text: "Brand-name overstock from $2 at Northwood Bids, with local pickup in Corunna (24/7) and Gladwin. Join free with my link:",
       url: data.link,
     };
     if (typeof navigator !== "undefined" && navigator.share) {

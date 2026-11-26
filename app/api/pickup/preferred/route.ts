@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-import { autoTransferToPreferred, switchPreferredCascade } from "@/lib/pickup";
+import { autoTransferToPreferred, isOpen247, switchPreferredCascade } from "@/lib/pickup";
 
 /**
  * POST /api/pickup/preferred
@@ -68,11 +68,12 @@ export async function GET() {
     const org = await prisma.organization.findFirst();
     if (!org) return NextResponse.json({ locations: [], preferredLocationId: null });
 
-    const locations = await prisma.pickupLocation.findMany({
+    const rows = await prisma.pickupLocation.findMany({
       where: { organizationId: org.id, isActive: true },
-      select: { id: true, name: true, address: true },
+      select: { id: true, name: true, address: true, windows: { select: { weekday: true, startMinutes: true, endMinutes: true } } },
       orderBy: { name: "asc" },
     });
+    const locations = rows.map((l) => ({ id: l.id, name: l.name, address: l.address, open247: isOpen247(l.windows) }));
 
     let preferredLocationId: string | null = null;
     if (userId) {

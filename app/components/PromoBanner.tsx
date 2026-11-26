@@ -2,6 +2,7 @@
 import { useSyncExternalStore } from "react";
 import { IcoNew, IcoCoin, IcoTruck, IcoGift, IcoShield } from "@/app/components/BidIcons";
 import AuthLogo from "@/app/components/AuthLogo";
+import OpenSign from "@/app/components/OpenSign";
 
 const CHIPS: { Icon: (p: { className?: string }) => React.ReactElement; label: string }[] = [
   { Icon: IcoNew, label: "99% brand-new" },
@@ -43,6 +44,7 @@ export default function SignUpHeader({ initialPromo }: { initialPromo: PromoHint
 
   if (promo) {
     return (
+      <>
       <div className="relative px-6 pt-8 pb-7 text-center text-white" style={{ background: "linear-gradient(140deg,#6c4d39,#8a5a2f)" }}>
         <AuthLogo size="lg" />
         <div className="inline-flex items-center gap-2 bg-[#f0a35a] text-[#241a12] font-black text-sm px-3 py-1.5 rounded-full mb-3">
@@ -51,6 +53,8 @@ export default function SignUpHeader({ initialPromo }: { initialPromo: PromoHint
         <h1 className="font-display text-[1.75rem] leading-tight font-black">Sign up and get ${promo.amount} to bid. Completely free.</h1>
         <p className="text-white/85 text-sm mt-2">It lands in your account the moment you finish. One per person.</p>
       </div>
+      <div className="px-5 pt-4"><OpenSign /></div>
+      </>
     );
   }
 
@@ -61,6 +65,7 @@ export default function SignUpHeader({ initialPromo }: { initialPromo: PromoHint
         <h1 className="font-display text-[1.7rem] leading-tight font-black">Brand-name deals from $2</h1>
         <p className="text-white/85 text-sm mt-1">Free to join. You only pay if you win.</p>
       </div>
+      <div className="px-5 pt-4"><OpenSign /></div>
       <div className="px-5 pt-4 flex flex-wrap justify-center gap-1.5">
         {CHIPS.map((c) => (
           <span key={c.label} className="inline-flex items-center gap-1.5 bg-[#faf5ea] border border-[#e3d6bf] text-[#6f5b46] text-sm font-bold px-2.5 py-1.5 rounded-full">

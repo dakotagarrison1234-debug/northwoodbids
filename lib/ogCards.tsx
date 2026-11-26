@@ -75,7 +75,7 @@ export function LotCard(p: LotCardProps) {
         </div>
       </div>
 
-      <OgFooter left={p.tone === "done" ? "More lots at northwoodbids.com" : "Bid at northwoodbids.com"} right="Pick up in Corunna or Gladwin" />
+      <OgFooter left={p.tone === "done" ? "More lots at northwoodbids.com" : "Bid at northwoodbids.com"} right="Pick up in Corunna (24/7) or Gladwin" />
     </div>
   );
 }
@@ -133,7 +133,7 @@ export function AuctionCard(p: AuctionCardProps) {
         ))}
       </div>
 
-      <OgFooter left="Bid at northwoodbids.com" right="Pick up in Corunna or Gladwin" />
+      <OgFooter left="Bid at northwoodbids.com" right="Pick up in Corunna (24/7) or Gladwin" />
     </div>
   );
 }

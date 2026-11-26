@@ -43,7 +43,7 @@ const COLUMNS: { heading: string; links: { href: string; label: string }[] }[] =
 ];
 
 const PICKUPS = [
-  { town: "Corunna", note: "Shiawassee County" },
+  { town: "Corunna", note: "Shiawassee County · 24/7 pickup" },
   { town: "Gladwin", note: "Gladwin County" },
 ];
 
@@ -80,7 +80,7 @@ export default function SiteFooter() {
               <span className="font-display font-extrabold text-xl text-white">Northwood Bids</span>
             </Link>
             <p className="mt-3 text-sm text-[#cdbda3] max-w-xs leading-relaxed">
-              Brand-name overstock and returns, every lot from $2. Bid online, pick up in Corunna or Gladwin.
+              Brand-name overstock and returns, every lot from $2. Bid online, pick up in Corunna (24/7) or Gladwin.
             </p>
 
             {/* Pickup locations */}

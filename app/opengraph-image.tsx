@@ -27,7 +27,7 @@ export default async function Image() {
             Brand-name overstock. Every lot from $2.
           </div>
           <div style={{ display: "flex", gap: 12, marginTop: 28 }}>
-            {["Bid live", "Pick up in Corunna or Gladwin", "Ships too"].map((t) => (
+            {["Bid live", "24/7 pickup in Corunna", "Gladwin too"].map((t) => (
               <div key={t} style={{ display: "flex", padding: "10px 20px", borderRadius: 999, background: C.creamHi, border: `2px solid ${C.line}`, fontFamily: "Inter", fontWeight: 700, fontSize: 24, color: C.leather }}>
                 {t}
               </div>

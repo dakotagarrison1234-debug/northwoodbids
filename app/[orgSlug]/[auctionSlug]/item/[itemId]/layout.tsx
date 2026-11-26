@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       retailN > 0 ? `retail $${Math.round(retailN).toLocaleString()}${off >= 20 ? ` (${off}% off)` : ""}` : null,
       item._count.bids > 0 ? `${item._count.bids} bid${item._count.bids === 1 ? "" : "s"}` : null,
     ].filter(Boolean);
-    const description = `${parts.join(" · ")}. Bid online at Northwood Bids, pick up in Corunna or Gladwin.`;
+    const description = `${parts.join(" · ")}. Bid online at Northwood Bids, pick up in Corunna (24/7) or Gladwin.`;
     const canonical = `/${orgSlug}/${auctionSlug}/item/${itemId}`;
 
     return {

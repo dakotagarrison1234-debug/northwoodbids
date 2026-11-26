@@ -152,6 +152,15 @@ export async function switchPreferredCascade(
   }
 }
 
+/**
+ * Open 24/7: every day of the week has a midnight-to-midnight window (Settings →
+ * Locations → "Open 24 hours" on "Every day"). Drives the "24/7 Pick Up" badges,
+ * so they're only ever shown when the hours really say so.
+ */
+export function isOpen247(windows: { weekday: number; startMinutes: number; endMinutes: number }[]): boolean {
+  return [0, 1, 2, 3, 4, 5, 6].every((d) => windows.some((w) => w.weekday === d && w.startMinutes <= 0 && w.endMinutes >= 1439));
+}
+
 const DAYS_AHEAD = 28;
 
 /**

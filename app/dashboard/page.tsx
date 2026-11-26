@@ -923,7 +923,7 @@ function BidderDashboardInner() {
                   art="critter"
                   framed
                   title="Your first $2 bid is waiting"
-                  message="Brand-name overstock, lots starting at two bucks, pickup in Corunna or Gladwin. Once you bid, everything you're chasing shows up here."
+                  message="Brand-name overstock, lots starting at two bucks, pickup in Corunna (24/7) or Gladwin. Once you bid, everything you're chasing shows up here."
                   cta={
                     <button
                       onClick={() => setTab("auctions")}

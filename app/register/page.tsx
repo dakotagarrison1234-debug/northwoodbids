@@ -5,6 +5,7 @@ import { useUser } from "@clerk/nextjs";
 import { AVATARS, Avatar } from "@/app/components/Avatars";
 import { IcoMegaphone, IcoCheck, IcoTruck, IcoShield } from "@/app/components/BidIcons";
 import { BranchDivider } from "@/app/components/Illustrations";
+import { Open247Badge } from "@/app/components/OpenSign";
 
 type Step = "phone" | "avatar" | "location";
 
@@ -94,7 +95,7 @@ function RegisterForm() {
   const [checking, setChecking] = useState(true);
   const [orgSlug, setOrgSlug] = useState<string | null>(null);
   const [savingAvatar, setSavingAvatar] = useState(false);
-  const [locations, setLocations] = useState<{ id: string; name: string; address: string | null }[]>([]);
+  const [locations, setLocations] = useState<{ id: string; name: string; address: string | null; open247?: boolean }[]>([]);
   const [savingLocation, setSavingLocation] = useState(false);
 
   // A welcome-code (QR) visitor has an nb_promo cookie — the $5 needs their phone.
@@ -310,9 +311,13 @@ function RegisterForm() {
                 <span className="w-10 h-10 rounded-xl bg-[#c47b3e]/12 text-[#a85f28] flex items-center justify-center shrink-0">
                   <IcoTruck className="w-5 h-5" />
                 </span>
-                <span className="min-w-0">
-                  <span className="block font-display font-bold text-[#241a12]">{l.name}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="block font-display font-bold text-[#241a12]">{l.name}</span>
+                    {l.open247 && <Open247Badge />}
+                  </span>
                   {l.address && <span className="block text-sm text-[#6f5b46] truncate">{l.address}</span>}
+                  {l.open247 && <span className="block text-[15px] font-semibold text-[#2f5d3a] mt-0.5">Open 24/7 with your door code</span>}
                 </span>
               </button>
             ))}

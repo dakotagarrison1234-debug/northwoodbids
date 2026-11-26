@@ -215,7 +215,7 @@ export default function HomeHero({
           className="nb-rise text-[#6f5b46] text-sm sm:text-base font-medium mb-7 max-w-md mx-auto leading-snug"
           style={{ animationDelay: "200ms" }}
         >
-          Name-brand overstock, every lot from $2. Bid online, pick up in Corunna or Gladwin.
+          Name-brand overstock, every lot from $2. Bid online, pick up in Corunna (24/7) or Gladwin.
         </p>
 
         {/* stat trio */}
@@ -383,7 +383,7 @@ function ThinHero({
               <span className="text-[#f0a35a]">Going twice.</span>
             </h1>
             <p className={`hidden lg:block nb-rise -mt-1 text-[#fbf4e6] text-lg font-semibold ${shadow}`} style={{ animationDelay: "180ms" }}>
-              Name-brand overstock, every lot from $2. Pick up in Corunna or Gladwin.
+              Name-brand overstock, every lot from $2. Pick up in Corunna (24/7) or Gladwin.
             </p>
             <div className="hidden sm:grid nb-rise grid-cols-3 gap-3 w-[440px] max-w-full" style={{ animationDelay: "240ms" }}>
               <Stat value={liveLots} label={liveLots === 1 ? "lot live" : "lots live"} solid />

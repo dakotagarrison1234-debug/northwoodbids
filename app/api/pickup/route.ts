@@ -6,6 +6,7 @@ import {
   consolidatePickup,
   getAvailableSlots,
   getSlotCapacity,
+  isOpen247,
   getUnscheduledPickupItemIds,
 } from "@/lib/pickup";
 import { notifyAppointmentBooked } from "@/lib/appointmentNotify";
@@ -169,6 +170,7 @@ export async function GET() {
     const activeLocations = await prisma.pickupLocation.findMany({
       where: { organizationId: org.id, isActive: true },
       orderBy: { createdAt: "asc" },
+      include: { windows: { select: { weekday: true, startMinutes: true, endMinutes: true } } },
     });
     const locations = await Promise.all(
       activeLocations.map(async (loc) => ({
@@ -176,6 +178,7 @@ export async function GET() {
         name: loc.name,
         address: loc.address,
         instructions: loc.instructions,
+        open247: isOpen247(loc.windows),
         slots: await getAvailableSlots(loc.id),
       }))
     );

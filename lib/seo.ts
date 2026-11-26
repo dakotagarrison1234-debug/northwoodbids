@@ -23,7 +23,7 @@ export function organizationLd() {
     image: LOGO,
     description:
       "Northwood Bids is a local online auction in mid-Michigan — bid on brand-name overstock, " +
-      "returns and surplus, then pick up local in Corunna or Gladwin.",
+      "returns and surplus, then pick up local in Corunna (open 24/7) or Gladwin.",
     areaServed: [
       { "@type": "State", name: "Michigan" },
       { "@type": "City", name: "Corunna" },

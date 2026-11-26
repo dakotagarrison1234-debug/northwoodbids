@@ -11,7 +11,7 @@ const SPOTS_OF = { S: "1 spot", M: "2 spots", L: "5 spots" } as const;
 export const metadata = {
   title: "Help & FAQ | Northwood Bids",
   description:
-    "How bidding works at Northwood Bids: $2 starts, max bids, buyer's premium and tax, pickup in Corunna and Gladwin, free transfers, shipping, Bid Bucks and when your card is charged.",
+    "How bidding works at Northwood Bids: $2 starts, max bids, buyer's premium and tax, 24/7 pickup in Corunna, pickup in Gladwin, free transfers, shipping, Bid Bucks and when your card is charged.",
 };
 
 /* ── Building blocks ──────────────────────────────────────────────────────── */
@@ -108,7 +108,7 @@ export default function HelpPage() {
           {[
             { Icon: IcoGavel, k: "Every lot starts at $2", v: "Brand-name overstock, no reserves. Where it lands is up to the room." },
             { Icon: IcoShield, k: "Charged only if you win", v: "A card on file is required to bid. It's untouched unless the hammer falls your way." },
-            { Icon: IcoTruck, k: "Pick up in Corunna or Gladwin", v: "Win anywhere, collect at your spot. Transfers between the two are free." },
+            { Icon: IcoTruck, k: "Pick up in Corunna (24/7) or Gladwin", v: "Win anywhere, collect at your spot. Corunna is open around the clock. Transfers between the two are free." },
           ].map((c) => (
             <div key={c.k} className="bg-white border border-[#e3d6bf] rounded-2xl p-4 shadow-[0_14px_30px_-20px_rgba(36,26,18,0.45)]">
               <c.Icon className="w-5 h-5 text-[#c47b3e] mb-2" />
@@ -189,7 +189,7 @@ export default function HelpPage() {
           {/* ── Pickup ── */}
           <Topic id="pickup" Icon={IcoTruck} title="Pickup & transfers" blurb="Two spots, one appointment, no waiting on a phone call.">
             <Q q="Where do I pick up what I've won?" open>
-              <p>At either of our two locations: <strong>Corunna</strong> or <strong>Gladwin</strong>. Pick your usual spot on the <Link href="/pickup">Pickup</Link> page and book a time that suits you. Everything you win before that appointment rides along on it automatically.</p>
+              <p>At either of our two locations: <strong>Corunna</strong> (open 24/7, any day, any hour) or <strong>Gladwin</strong>. Pick your usual spot on the <Link href="/pickup">Pickup</Link> page and book a time that suits you. Everything you win before that appointment rides along on it automatically.</p>
             </Q>
             <Q q="What if a lot is stored at the other location?">
               <p>We move it to your spot for free. Transfers usually take about five to six days, and we text you the moment it lands so you can book your pickup. A lot marked <strong>Pickup here only</strong> stays where it is; plan to collect those in person.</p>

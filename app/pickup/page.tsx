@@ -7,6 +7,7 @@ import LocationBadge from "@/app/components/LocationBadge";
 import EmptyState from "@/app/components/EmptyState";
 import { IcoTruck, IcoCheck, IcoLock, IcoTarget, IcoMegaphone } from "@/app/components/BidIcons";
 import { PineMark } from "@/app/components/Illustrations";
+import { Open247Badge } from "@/app/components/OpenSign";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface ItemCard {
@@ -61,6 +62,8 @@ interface SchedLocation {
   name: string;
   address: string | null;
   instructions: string | null;
+  /** Open midnight to midnight every day (self-serve with the door code). */
+  open247?: boolean;
   slots: Slot[];
 }
 interface PickupData {
@@ -634,7 +637,7 @@ export default function PickupPage() {
     <div className="flex items-end justify-between gap-3 mb-6">
       <div className="min-w-0">
         <div className="inline-flex items-center gap-1.5 text-[13px] font-black uppercase tracking-[0.18em] text-[#a85f28]">
-          <PineMark className="w-3.5 h-3.5" /> Corunna &amp; Gladwin
+          <PineMark className="w-3.5 h-3.5" /> Corunna (24/7) &amp; Gladwin
         </div>
         <h1 className="font-display text-3xl sm:text-4xl font-black leading-[0.95] tracking-tight mt-1">Pickup</h1>
       </div>
@@ -757,6 +760,7 @@ export default function PickupPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-display font-black text-lg text-[#241a12] leading-tight">{l.name}</span>
+                      {l.open247 && !current && <Open247Badge />}
                       {current && (
                         <span className="inline-flex items-center gap-1 text-[12px] font-black uppercase tracking-wider text-[#2f5d3a] bg-[#4a7c59]/12 border border-[#4a7c59]/30 rounded-full px-2 py-0.5 shrink-0">
                           <IcoCheck className="w-3 h-3" /> Current
@@ -764,6 +768,8 @@ export default function PickupPage() {
                       )}
                     </div>
                     {l.address && <div className="text-sm text-[#6f5b46] mt-0.5">{l.address}</div>}
+                    {l.open247 && current && <div className="mt-2"><Open247Badge /></div>}
+                    {l.open247 && <div className="text-[15px] font-semibold text-[#2f5d3a] mt-1.5">Open 24/7. Come any time on your pickup day; we text you the door code.</div>}
                     {l.instructions && <div className="text-sm text-[#8a7559] mt-1.5 leading-snug">{l.instructions}</div>}
                     <div className="text-sm text-[#4a7c59] font-semibold mt-2">
                       {l.slots?.length ? `${l.slots.length} open windows this stretch` : "Windows post soon"}

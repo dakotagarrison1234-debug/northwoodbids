@@ -47,7 +47,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const lots = auction._count.items;
     const when = closed ? "Auction closed" : upcoming ? `Bidding opens ${fmt(auction.startAt)}` : `Bidding closes ${fmt(auction.endAt)}`;
     const title = auction.title;
-    const description = `${lots} lot${lots === 1 ? "" : "s"}, every one from $2. ${when}. Pick up in Corunna or Gladwin.`;
+    const description = `${lots} lot${lots === 1 ? "" : "s"}, every one from $2. ${when}. Pick up in Corunna (24/7) or Gladwin.`;
 
     return {
       title,
@@ -375,7 +375,7 @@ export default async function AuctionPage({ params }: Props) {
                 <ShareButton
                   title={auction.title}
                   path={`/${orgSlug}/${auctionSlug}`}
-                  text={`${auction.title} on Northwood Bids: ${visibleItems.length} lot${visibleItems.length === 1 ? "" : "s"}, every one from $2. ${isUpcoming ? "Opens" : "Bidding closes"} ${(isUpcoming ? auction.startAt : auction.endAt).toLocaleString("en-US", { timeZone: "America/Detroit", weekday: "short", hour: "numeric", minute: "2-digit" })}. Pick up in Corunna or Gladwin.`}
+                  text={`${auction.title} on Northwood Bids: ${visibleItems.length} lot${visibleItems.length === 1 ? "" : "s"}, every one from $2. ${isUpcoming ? "Opens" : "Bidding closes"} ${(isUpcoming ? auction.startAt : auction.endAt).toLocaleString("en-US", { timeZone: "America/Detroit", weekday: "short", hour: "numeric", minute: "2-digit" })}. Pick up in Corunna (24/7) or Gladwin.`}
                 />
               )}
             </div>
@@ -396,7 +396,7 @@ export default async function AuctionPage({ params }: Props) {
                 </>
               )}
               <span className="text-[#cdbda3]">&middot;</span>
-              <span>Pick up in Corunna or Gladwin</span>
+              <span>Pick up in Corunna (24/7) or Gladwin</span>
               <span className="text-[#cdbda3]">&middot;</span>
               <span className="inline-flex items-center gap-1.5">
                 <IcoClock className="w-4 h-4 text-[#8a7559]" />
