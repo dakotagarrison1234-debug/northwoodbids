@@ -1,15 +1,12 @@
 "use client";
 import { useSyncExternalStore } from "react";
-import { IcoNew, IcoCoin, IcoTruck, IcoGift, IcoShield } from "@/app/components/BidIcons";
+import { IcoCoin, IcoTruck, IcoGift } from "@/app/components/BidIcons";
 import AuthLogo from "@/app/components/AuthLogo";
 import OpenSign from "@/app/components/OpenSign";
 
 const CHIPS: { Icon: (p: { className?: string }) => React.ReactElement; label: string }[] = [
-  { Icon: IcoNew, label: "99% brand-new" },
-  { Icon: IcoCoin, label: "Bids from $2" },
   { Icon: IcoTruck, label: "Free transfers" },
-  { Icon: IcoGift, label: "Free Bid Bucks" },
-  { Icon: IcoShield, label: "Pay only if you win" },
+  { Icon: IcoGift, label: "Free sign up" },
 ];
 
 export type PromoHint = { code: string; amount: number } | null;
@@ -68,8 +65,8 @@ export default function SignUpHeader({ initialPromo }: { initialPromo: PromoHint
       <div className="px-5 pt-4"><OpenSign /></div>
       <div className="px-5 pt-4 flex flex-wrap justify-center gap-1.5">
         {CHIPS.map((c) => (
-          <span key={c.label} className="inline-flex items-center gap-1.5 bg-[#faf5ea] border border-[#e3d6bf] text-[#6f5b46] text-sm font-bold px-2.5 py-1.5 rounded-full">
-            <c.Icon className="w-3.5 h-3.5 text-[#6c4d39]" /> {c.label}
+          <span key={c.label} className="inline-flex items-center gap-2 bg-[#faf5ea] border border-[#e3d6bf] text-[#4a3a2b] text-[15px] font-bold px-3.5 py-2 rounded-full">
+            <c.Icon className="w-4 h-4 text-[#6c4d39]" /> {c.label}
           </span>
         ))}
       </div>
